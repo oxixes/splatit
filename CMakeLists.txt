@@ -13,6 +13,8 @@ find_package(OpenSSL REQUIRED)
 
 set(HTTPLIB_REQUIRE_OPENSSL ON)
 add_subdirectory(libs/cpp-httplib)
+
+set(JWT_BUILD_EXAMPLES OFF)
 add_subdirectory(libs/jwt-cpp)
 
 target_include_directories(splatoon_server PRIVATE libs/json/single_include)
