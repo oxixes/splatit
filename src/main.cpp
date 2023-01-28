@@ -1,20 +1,10 @@
-#include <iostream>
+#include "argParser.hpp"
 
-#define CPPHTTPLIB_THREAD_POOL_COUNT 5
-#include "httplib.h"
+int main(int argc, char** argv) {
+    argParser::options serverOptions{};
+    if (!argParser::parseArgs(argc, argv, serverOptions)) return 0;
 
-int main() {
-    std::cout << "Hello, World!" << std::endl;
+    std::cout << "Account disabled: " << serverOptions.no_account << "\n";
 
-    httplib::SSLServer svr("certs\\any.nintendo.net.crt", "certs\\any.nintendo.net.key");
-
-    svr.Get("/", [](const httplib::Request &req, httplib::Response &res) {
-        std::string host = req.get_header_value("host");
-        res.status = 418;
-        res.set_content("Hello World!, you are coming from: " + host, "text/plain");
-        std::cout << "Received request!\n";
-    });
-
-    svr.listen("0.0.0.0", 443);
     return 0;
 }
