@@ -7,12 +7,16 @@ add_executable(splatoon_server)
 
 add_subdirectory(src)
 
+# Libraries setup
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 find_package(OpenSSL REQUIRED)
-target_link_libraries(splatoon_server OpenSSL::SSL)
+
+set(HTTPLIB_REQUIRE_OPENSSL ON)
+add_subdirectory(libs/cpp-httplib)
+add_subdirectory(libs/pugixml)
 
 if(WIN32)
-    target_link_libraries(splatoon_server wsock32 ws2_32)
+    target_link_libraries(splatoon_server wsock32 ws2_32 OpenSSL::SSL pugixml httplib)
+else()
+    target_link_libraries(splatoon_server OpenSSL::SSL pugixml httplib)
 endif()
-
-target_include_directories(splatoon_server PRIVATE libs/cpp-httplib)
