@@ -6,4 +6,6 @@ target_sources(splatoon_server PRIVATE
         settingsManager.cpp
         settingsManager.hpp
         argParser.cpp
-        argParser.hpp)
+        argParser.hpp
+        logger.cpp
+        logger.hpp)
