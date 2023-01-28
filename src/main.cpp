@@ -1,10 +1,14 @@
 #include "argParser.hpp"
 
 int main(int argc, char** argv) {
-    argParser::options serverOptions{};
-    if (!argParser::parseArgs(argc, argv, serverOptions)) return 0;
+    Logger::Logger logger;
 
-    std::cout << "Account disabled: " << serverOptions.no_account << "\n";
+    argParser::options serverOptions{};
+    if (!argParser::parseArgs(argc, argv, serverOptions, &logger)) return 0;
+
+    logger.setMinLevel(serverOptions.minLogLevel);
+
+    logger.log(Logger::level::INFO, Logger::group::SETUP, "Data path: " + serverOptions.data_path + "\n");
 
     return 0;
 }

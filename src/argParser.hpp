@@ -4,6 +4,8 @@
 #include <getopt.h>
 #include <iostream>
 
+#include "logger.hpp"
+
 namespace argParser {
 
     struct options {
@@ -13,9 +15,12 @@ namespace argParser {
         bool no_friends_secure;
         bool no_splatoon_auth;
         bool no_splatoon_secure;
+
+        std::string data_path = "data";
+        Logger::level minLogLevel = Logger::level::INFO;
     };
 
-    bool parseArgs(int argc, char** argv, options& serverOptions);
+    bool parseArgs(int argc, char** argv, options& serverOptions, Logger::Logger* logger);
 
     void printHelp(const char* argv0);
 
