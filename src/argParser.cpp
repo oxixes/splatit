@@ -74,7 +74,7 @@ namespace argParser {
 
     void printHelp(const char* argv0) {
         std::cout << "Usage: " << argv0 << " [options]\n"
-                                           "-d, --data           Specify the data folder path (Default: ./data).\n"
+                                           "-d, --data           Specify the data directory path (Default: ./data).\n"
                                            "-l, --log-level      Specify the minimum log level (Default: 1)\n"
                                            "--no-account         Disables the account server.\n"
                                            "--no-boss            Disables the BOSS server.\n"
