@@ -17,9 +17,9 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
                     "Data path didn't exist, creating directory.");
         try {
             fs::create_directory(dataDirPath);
-        } catch (...) {
+        } catch (const std::exception& ex) {
             logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                        "An error occurred while creating the data directory.");
+                        "An error occurred while creating the data directory: " + std::string(ex.what()));
             return false;
         }
     }
@@ -33,9 +33,9 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
         std::ofstream outputFileHandler;
         try {
             outputFileHandler = std::ofstream(settingsFilePath);
-        } catch (...) {
+        } catch (const std::exception& ex) {
             logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                        "An error occurred while creating the settings file.");
+                        "An error occurred while creating the settings file: " + std::string(ex.what()));
             return false;
         }
 
@@ -46,9 +46,9 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
 
     try {
         settingsFileHandler = std::ifstream(settingsFilePath);
-    } catch (...) {
+    } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                    "An error occurred while opening the settings file.");
+                    "An error occurred while opening the settings file: " + std::string(ex.what()));
         return false;
     }
 
@@ -61,9 +61,9 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
 
     try {
         settings = json::parse(settingsFileHandler);
-    } catch (...) {
+    } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                    "An error occurred while parsing the settings file.");
+                    "An error occurred while parsing the settings file: " + std::string(ex.what()));
         return false;
     }
 
@@ -106,9 +106,9 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
     try {
         if (!fs::exists(certsPath)) fs::create_directory(certsPath);
         if (!fs::exists(bossPath)) fs::create_directory(bossPath);
-    } catch (...) {
+    } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                    "An error occurred while creating the certs and boss directories.");
+                    "An error occurred while creating the certs and boss directories: " + std::string(ex.what()));
         return false;
     }
 
