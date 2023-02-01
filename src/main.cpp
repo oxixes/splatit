@@ -13,8 +13,10 @@ int main(int argc, char** argv) {
     SettingsManager settingsMgr = SettingsManager(&logger);
     settingsMgr.init(serverOptions);
 
+    EVP_PKEY* key;
+    X509* cert;
     CertManager certManager = CertManager(&settingsMgr, &logger);
-    certManager.createCA("data", "ca");
+    certManager.createCA("data", "ca", key, cert);
 
     return 0;
 }
