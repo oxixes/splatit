@@ -19,6 +19,10 @@ target_include_directories(splatoon_server PRIVATE libs/json/single_include)
 
 add_subdirectory(src)
 
+if (WIN32)
+    target_sources(splatoon_server PRIVATE ${OPENSSL_INCLUDE_DIR}/openssl/applink.c) # Allow file writing of OpenSSL
+endif()
+
 if(WIN32)
     target_link_libraries(splatoon_server PRIVATE wsock32 ws2_32 OpenSSL::SSL httplib jwt-cpp)
 else()

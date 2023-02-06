@@ -5,7 +5,6 @@
 #include <vector>
 #include <filesystem>
 
-#include <jwt-cpp/jwt.h>
 #include <nlohmann/json.hpp>
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
@@ -18,17 +17,19 @@ namespace fs = std::filesystem;
 
 class CertManager {
 public:
-    explicit CertManager(SettingsManager* settingsManager, Logger::Logger* logger);
+    CertManager(SettingsManager* settingsManager, Logger::Logger* logger);
 
 private:
     SettingsManager* settingsManager;
     Logger::Logger* logger;
 
 public:
-    bool createCA(const fs::path& path, const std::string& filename, EVP_PKEY* privKey, X509* CAcert);
-    bool createSSLCert(const std::string& caCertPath, const std::string& caKeyPath,
-                       const std::string& path, const std::string& filename, const std::vector<std::string>& domains);
+    bool createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert);
+    bool createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path& path,
+                       const std::string& filename, const std::vector<std::string>& domains,
+                       EVP_PKEY** pKey, X509** cert);
 
+    bool writeKeyAndCertToDisk(EVP_PKEY** pKey, X509** cert, const fs::path& keyPath, const fs::path& certPath);
     static void addExtToCert(X509* cert, int nid, const std::string& value);
     static std::string getOpenSSLerror();
 };
