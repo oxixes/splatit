@@ -24,12 +24,18 @@ private:
     Logger::Logger* logger;
 
 public:
-    bool createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert);
-    bool createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path& path,
-                       const std::string& filename, const std::vector<std::string>& domains,
-                       EVP_PKEY** pKey, X509** cert);
+    bool loadKey(const fs::path& keyPath, EVP_PKEY** pKey);
+    bool loadCert(const fs::path& certPath, X509** cert);
+    bool writeKey(EVP_PKEY* pKey, const fs::path& keyPath);
+    bool writeCert(X509* cert, const fs::path& certPath);
 
-    bool writeKeyAndCertToDisk(EVP_PKEY** pKey, X509** cert, const fs::path& keyPath, const fs::path& certPath);
+    bool genRSAKey(EVP_PKEY** pKey);
+
+    bool createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert);
+    bool createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& path,
+                             const std::string& filename, const std::vector<std::string>& domains,
+                             EVP_PKEY** pKey, X509** cert);
+
     static void addExtToCert(X509* cert, int nid, const std::string& value);
     static std::string getOpenSSLerror();
 };

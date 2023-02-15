@@ -3,6 +3,9 @@
 #include "ssl/certManager.hpp"
 
 int main(int argc, char** argv) {
+    // Init OpenSSL
+    OpenSSL_add_all_algorithms();
+
     Logger::Logger logger;
 
     argParser::options serverOptions{};
@@ -18,9 +21,15 @@ int main(int argc, char** argv) {
     EVP_PKEY* key;
     X509* cert;
     CertManager certManager = CertManager(&settingsMgr, &logger);
-    certManager.createCA("data", "ca", &CAkey, &CAcert);
-    certManager.createSSLCert(&CAcert, &CAkey, "data", "any.nintendo.net",
-                              std::vector<std::string>{"account.nintendo.net", "boss.cdn.nintendo.net"}, &key, &cert);
+    //certManager.createCA("data", "ca", &CAkey, &CAcert);
+    //certManager.createSSLServerCert(CAcert, CAkey, "data", "any.nintendo.net",
+    //                                std::vector<std::string>{"account.nintendo.net", "boss.cdn.nintendo.net"}, &key,
+    //                                &cert);
+
+    certManager.loadKey("data/ca.key", &CAkey);
+    certManager.loadKey("data/any.nintendo.net.key", &key);
+    certManager.loadCert("data/ca.crt", &CAcert);
+    certManager.loadCert("data/any.nintendo.net.crt", &cert);
 
     return 0;
 }

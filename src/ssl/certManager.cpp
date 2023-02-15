@@ -1,5 +1,3 @@
-// FIXME: Reduce code duplication in createCA and createSSLCert
-
 #include "certManager.hpp"
 
 CertManager::CertManager(SettingsManager* settingsManager, Logger::Logger* logger) {
@@ -7,17 +5,105 @@ CertManager::CertManager(SettingsManager* settingsManager, Logger::Logger* logge
     this->logger = logger;
 }
 
-bool CertManager::createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert) {
-    logger->log(Logger::level::INFO, Logger::group::SETUP, "Generating RSA private key for CA...");
+bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
+    FILE* pKeyFile = fopen(keyPath.string().c_str(), "rb");
+
+    if (pKeyFile == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be loaded: " +
+                                                                std::string(strerror(errno)));
+        return false;
+    }
+
+    *pKey = PEM_read_PrivateKey(pKeyFile, nullptr, nullptr, nullptr);
+    if (*pKey == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be loaded: " +
+                                                                getOpenSSLerror());
+        fclose(pKeyFile);
+        return false;
+    }
+
+    fclose(pKeyFile);
+    return true;
+}
+
+bool CertManager::loadCert(const fs::path& certPath, X509** cert) {
+    FILE* certFile = fopen(certPath.string().c_str(), "rb");
+
+    if (certFile == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be loaded: " +
+                                                                std::string(strerror(errno)));
+        return false;
+    }
+
+    *cert = PEM_read_X509(certFile, nullptr, nullptr, nullptr);
+    if (*cert == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be loaded: " +
+                                                                getOpenSSLerror());
+        fclose(certFile);
+        return false;
+    }
+
+    fclose(certFile);
+    return true;
+}
+
+bool CertManager::writeKey(EVP_PKEY* pKey, const fs::path& keyPath) {
+    FILE* pKeyFile = fopen(keyPath.string().c_str(), "wb");
+
+    if (pKeyFile == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be written to disk: " +
+                                                                std::string(strerror(errno)));
+        return false;
+    }
+
+    if (PEM_write_PrivateKey(pKeyFile, pKey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be written to disk: " +
+                                                                getOpenSSLerror());
+        fclose(pKeyFile);
+        return false;
+    }
+
+    fclose(pKeyFile);
+    return true;
+}
+
+bool CertManager::writeCert(X509 *cert, const fs::path &certPath) {
+    FILE* certFile = fopen(certPath.string().c_str(), "wb");
+
+    if (certFile == nullptr) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be written to disk: " +
+                                                                std::string(strerror(errno)));
+        return false;
+    }
+
+    if (PEM_write_X509(certFile, cert) == 0) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be written to disk: " +
+                                                                getOpenSSLerror());
+        fclose(certFile);
+        return false;
+    }
+
+    fclose(certFile);
+    return true;
+}
+
+bool CertManager::genRSAKey(EVP_PKEY** pKey) {
+    logger->log(Logger::level::INFO, Logger::group::SETUP, "Generating RSA private key...");
     *pKey = EVP_RSA_gen(2048);
 
     if (*pKey == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The RSA key couldn't be generated: " +
-                getOpenSSLerror());
+                                                                getOpenSSLerror());
         return false;
     }
 
+    return true;
+}
+
+bool CertManager::createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert) {
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Creating CA certificate...");
+    if (!genRSAKey(pKey)) return false;
+
     *cert = X509_new();
 
     if (*cert == nullptr) {
@@ -61,7 +147,7 @@ bool CertManager::createCA(const fs::path& path, const std::string& filename, EV
 
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Writing CA certificate and key to disk...");
 
-    if(!writeKeyAndCertToDisk(pKey, cert, path / (filename + ".key"), path / (filename + ".crt"))) {
+    if(!writeKey(*pKey, path / (filename + ".key")) || !writeCert(*cert, path / (filename + ".crt"))) {
         X509_free(*cert);
         EVP_PKEY_free(*pKey);
         return false;
@@ -70,20 +156,13 @@ bool CertManager::createCA(const fs::path& path, const std::string& filename, EV
     return true;
 }
 
-bool CertManager::createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path& path, const std::string& filename,
-                                const std::vector<std::string>& domains, EVP_PKEY** pKey, X509** cert) {
+bool CertManager::createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& path, const std::string& filename,
+                                      const std::vector<std::string>& domains, EVP_PKEY** pKey, X509** cert) {
     assert(!domains.empty());
 
-    logger->log(Logger::level::INFO, Logger::group::SETUP, "Generating RSA private key for server certificate...");
-    *pKey = EVP_RSA_gen(2048);
-
-    if (*pKey == nullptr) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The RSA key couldn't be generated: " +
-                                                                getOpenSSLerror());
-        return false;
-    }
-
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Creating server certificate...");
+    if (!genRSAKey(pKey)) return false;
+
     *cert = X509_new();
 
     if (*cert == nullptr) {
@@ -105,7 +184,7 @@ bool CertManager::createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path&
     X509_NAME_add_entry_by_txt(certName, "C", MBSTRING_ASC, (unsigned char *) "ES", -1, -1, 0);
 
     X509_set_subject_name(*cert, certName);
-    X509_set_issuer_name(*cert, X509_get_subject_name(*caCert));
+    X509_set_issuer_name(*cert, X509_get_subject_name(caCert));
 
     try {
         addExtToCert(*cert, NID_basic_constraints, "CA:FALSE");
@@ -128,7 +207,7 @@ bool CertManager::createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path&
         return false;
     }
 
-    if (X509_sign(*cert, *caKey, EVP_sha256()) == 0) {
+    if (X509_sign(*cert, caKey, EVP_sha256()) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The server certificate couldn't be signed: " +
                                                                 getOpenSSLerror());
         X509_free(*cert);
@@ -138,41 +217,9 @@ bool CertManager::createSSLCert(X509** caCert, EVP_PKEY** caKey, const fs::path&
 
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Writing server certificate and key to disk...");
 
-    if(!writeKeyAndCertToDisk(pKey, cert, path / (filename + ".key"), path / (filename + ".crt"))) {
+    if(!writeKey(*pKey, path / (filename + ".key")) || !writeCert(*cert, path / (filename + ".crt"))) {
         X509_free(*cert);
         EVP_PKEY_free(*pKey);
-        return false;
-    }
-
-    return true;
-}
-
-bool CertManager::writeKeyAndCertToDisk(EVP_PKEY** pKey, X509** cert, const fs::path& keyPath, const fs::path& certPath) {
-    FILE* pKeyFile = fopen(keyPath.string().c_str(), "wb");
-
-    if (pKeyFile == nullptr) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be written to disk: " +
-                                                                std::string(strerror(errno)));
-        return false;
-    }
-
-    if (PEM_write_PrivateKey(pKeyFile, *pKey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be written to disk: " +
-                                                                getOpenSSLerror());
-        return false;
-    }
-
-    FILE* certFile = fopen(certPath.string().c_str(), "wb");
-
-    if (certFile == nullptr) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be written to disk: " +
-                                                                std::string(strerror(errno)));
-        return false;
-    }
-
-    if (PEM_write_X509(certFile, *cert) == 0) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be written to disk: " +
-                                                                getOpenSSLerror());
         return false;
     }
 
@@ -182,7 +229,7 @@ bool CertManager::writeKeyAndCertToDisk(EVP_PKEY** pKey, X509** cert, const fs::
 void CertManager::addExtToCert(X509* cert, int nid, const std::string& value) {
     X509_EXTENSION* ext;
     X509V3_CTX ctx;
-    X509V3_set_ctx_nodb(&ctx);
+    X509V3_set_ctx_nodb(&ctx)
     X509V3_set_ctx(&ctx, cert, cert, nullptr, nullptr, 0);
     ext = X509V3_EXT_conf_nid(nullptr, &ctx, nid, value.c_str());
 
