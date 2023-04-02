@@ -117,26 +117,26 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
 
 // GETTERS
 
-std::string SettingsManager::getSSLCertPath() const {
+fs::path SettingsManager::getSSLCertPath() const {
     return settings["ssl"]["cert"];
 }
 
-std::string SettingsManager::getSSLCACertPath() const {
+fs::path SettingsManager::getSSLCACertPath() const {
     return settings["ssl"]["caCert"];
 }
 
-std::string SettingsManager::getSSLKeyPath() const {
+fs::path SettingsManager::getSSLKeyPath() const {
     return settings["ssl"]["key"];
 }
 
-std::string SettingsManager::getSSLCAKeyPath() const {
+fs::path SettingsManager::getSSLCAKeyPath() const {
     return settings["ssl"]["caKey"];
 }
 
-std::string SettingsManager::getDomain() const {
+fs::path SettingsManager::getDomain() const {
     return settings["domain"];
 }
 
-std::string SettingsManager::getBOSSPath() const {
+fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["data"];
 }

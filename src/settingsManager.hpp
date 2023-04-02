@@ -21,12 +21,12 @@ public:
 
     bool init(const argParser::options& serverOptions);
 
-    std::string getSSLCertPath() const;
-    std::string getSSLCACertPath() const;
-    std::string getSSLKeyPath() const;
-    std::string getSSLCAKeyPath() const;
-    std::string getDomain() const;
-    std::string getBOSSPath() const;
+    fs::path getSSLCertPath() const;
+    fs::path getSSLCACertPath() const;
+    fs::path getSSLKeyPath() const;
+    fs::path getSSLCAKeyPath() const;
+    fs::path getDomain() const;
+    fs::path getBOSSPath() const;
 private:
     json settings;
     Logger::Logger* logger;
