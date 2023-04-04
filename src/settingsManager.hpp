@@ -21,15 +21,40 @@ public:
 
     bool init(const argParser::options& serverOptions);
 
-    fs::path getSSLCertPath() const;
-    fs::path getSSLCACertPath() const;
-    fs::path getSSLKeyPath() const;
-    fs::path getSSLCAKeyPath() const;
-    fs::path getDomain() const;
-    fs::path getBOSSPath() const;
+    [[nodiscard]] bool isAccountEnabled() const;
+    [[nodiscard]] bool isBOSSEnabled() const;
+    [[nodiscard]] bool isFriendsAuthEnabled() const;
+    [[nodiscard]] bool isFriendsSecureEnabled() const;
+    [[nodiscard]] bool isSplatoonAuthEnabled() const;
+    [[nodiscard]] bool isSplatoonSecureEnabled() const;
+
+    [[nodiscard]] fs::path getSSLCertPath() const;
+    [[nodiscard]] fs::path getSSLCACertPath() const;
+    [[nodiscard]] fs::path getSSLKeyPath() const;
+    [[nodiscard]] fs::path getSSLCAKeyPath() const;
+    [[nodiscard]] fs::path getTopDomain() const;
+    [[nodiscard]] fs::path getBOSSPath() const;
+
+    [[nodiscard]] std::vector<std::string> getDomains() const;
 private:
     json settings;
     Logger::Logger* logger;
+
+    struct domains {
+        std::string account;
+        std::string bossNPTS;
+        std::string bossNPPL;
+        std::string bossNPDI;
+    } domains;
+
+    struct enabledServers {
+        bool account;
+        bool boss;
+        bool friendsAuth;
+        bool friendsSecure;
+        bool splatoonAuth;
+        bool splatoonSecure;
+    } enabledServers;
 
     bool openOrCreateFiles(const argParser::options& serverOptions, std::ifstream& settingsFileHandler);
     bool validateSettings(const argParser::options& serverOptions);

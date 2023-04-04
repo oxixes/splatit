@@ -16,23 +16,10 @@ int main(int argc, char** argv) {
     SettingsManager settingsMgr = SettingsManager(&logger);
     if (!settingsMgr.init(serverOptions)) return 1;
 
-    EVP_PKEY* CAkey;
-    X509* CAcert;
-    EVP_PKEY* key;
-    X509* cert;
     CertManager certManager = CertManager(&settingsMgr, &logger);
-//    certManager.createCA("data", "ca", &CAkey, &CAcert);
-//    certManager.createSSLServerCert(CAcert, CAkey, "data", "any.nintendo.net",
-//                                    std::vector<std::string>{"account.nintendo.net", "boss.cdn.nintendo.net"}, &key,
-//                                    &cert);
-
-    certManager.loadKey("data/ca.key", &CAkey);
-    certManager.loadKey("data/any.nintendo.net.key", &key);
-    certManager.loadCert("data/ca.crt", &CAcert);
-    certManager.loadCert("data/any.nintendo.net.crt", &cert);
-
-    if (certManager.validateSSLCert(cert, key, CAcert, std::vector<std::string>{"account.nintendo.net", "boss.cdn.nintendo.net"})) {
-        logger.log(Logger::level::INFO, Logger::group::SETUP, "Cert is valid!");
+    if (settingsMgr.isAccountEnabled() || settingsMgr.isBOSSEnabled()) {
+        // TODO Cleanup
+        if (!certManager.init()) return 1;
     }
 
     return 0;

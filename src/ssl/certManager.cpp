@@ -3,6 +3,78 @@
 CertManager::CertManager(SettingsManager* settingsManager, Logger::Logger* logger) {
     this->settingsManager = settingsManager;
     this->logger = logger;
+
+    this->CAkey = nullptr;
+    this->CAcert = nullptr;
+    this->key = nullptr;
+    this->cert = nullptr;
+}
+
+bool CertManager::init() {
+    if (!util::checkParentDirectory(settingsManager->getSSLCAKeyPath())) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+        return false;
+    }
+
+    if (fs::exists(settingsManager->getSSLCAKeyPath())) {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA key...");
+        if (!loadKey(settingsManager->getSSLCAKeyPath(), &CAkey)) return false;
+        if (!validateRSAKey(CAkey)) return false;
+    } else {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "CA key not found!");
+        if (!genRSAKey(&CAkey)) return false;
+    }
+
+    if (!util::checkParentDirectory(settingsManager->getSSLCACertPath())) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+        return false;
+    }
+
+    if (fs::exists(settingsManager->getSSLCACertPath())) {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA cert...");
+        if (!loadCert(settingsManager->getSSLCACertPath(), &CAcert)) return false;
+        if (!validateCA(CAcert, CAkey)) return false;
+    } else {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "CA cert not found!");
+        if (!createCA(settingsManager->getSSLCACertPath(),settingsManager->getSSLCAKeyPath(),
+                      CAkey, &CAcert)) return false;
+    }
+
+    if (!util::checkParentDirectory(settingsManager->getSSLKeyPath())) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+        return false;
+    }
+
+    if (fs::exists(settingsManager->getSSLKeyPath())) {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading key...");
+        if (!loadKey(settingsManager->getSSLKeyPath(), &key)) return false;
+        if (!validateRSAKey(CAkey)) return false;
+    } else {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Key not found!");
+        if (!genRSAKey(&key)) return false;
+    }
+
+    if (!util::checkParentDirectory(settingsManager->getSSLCertPath())) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+        return false;
+    }
+
+    if (fs::exists(settingsManager->getSSLCertPath())) {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading SSL certificate...");
+        if (!loadCert(settingsManager->getSSLCertPath(), &cert)) return false;
+        if (!validateSSLCert(cert, key, CAcert, settingsManager->getDomains())) return false;
+    } else {
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "Cert not found!");
+        if (!createSSLServerCert(CAcert, CAkey, settingsManager->getSSLCertPath(),
+                                 settingsManager->getSSLKeyPath(), settingsManager->getDomains(),
+                                 key, &cert)) return false;
+    }
+
+    return true;
 }
 
 bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
@@ -17,7 +89,7 @@ bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
     *pKey = PEM_read_PrivateKey(pKeyFile, nullptr, nullptr, nullptr);
     if (*pKey == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be loaded: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         fclose(pKeyFile);
         return false;
     }
@@ -26,7 +98,7 @@ bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
     return true;
 }
 
-bool CertManager::loadCert(const fs::path& certPath, X509** cert) {
+bool CertManager::loadCert(const fs::path& certPath, X509** outCert) {
     FILE* certFile = fopen(certPath.string().c_str(), "rb");
 
     if (certFile == nullptr) {
@@ -35,10 +107,10 @@ bool CertManager::loadCert(const fs::path& certPath, X509** cert) {
         return false;
     }
 
-    *cert = PEM_read_X509(certFile, nullptr, nullptr, nullptr);
-    if (*cert == nullptr) {
+    *outCert = PEM_read_X509(certFile, nullptr, nullptr, nullptr);
+    if (*outCert == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be loaded: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         fclose(certFile);
         return false;
     }
@@ -58,7 +130,7 @@ bool CertManager::writeKey(EVP_PKEY* pKey, const fs::path& keyPath) {
 
     if (PEM_write_PrivateKey(pKeyFile, pKey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be written to disk: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         fclose(pKeyFile);
         return false;
     }
@@ -67,7 +139,7 @@ bool CertManager::writeKey(EVP_PKEY* pKey, const fs::path& keyPath) {
     return true;
 }
 
-bool CertManager::writeCert(X509 *cert, const fs::path &certPath) {
+bool CertManager::writeCert(X509 *crt, const fs::path &certPath) {
     FILE* certFile = fopen(certPath.string().c_str(), "wb");
 
     if (certFile == nullptr) {
@@ -76,9 +148,9 @@ bool CertManager::writeCert(X509 *cert, const fs::path &certPath) {
         return false;
     }
 
-    if (PEM_write_X509(certFile, cert) == 0) {
+    if (PEM_write_X509(certFile, crt) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be written to disk: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         fclose(certFile);
         return false;
     }
@@ -87,10 +159,10 @@ bool CertManager::writeCert(X509 *cert, const fs::path &certPath) {
     return true;
 }
 
-bool CertManager::validateCA(X509* cert, EVP_PKEY* pKey) {
-    if (!validateCert(cert, pKey)) return false;
+bool CertManager::validateCA(X509* crt, EVP_PKEY* pKey) {
+    if (!validateCert(crt, pKey)) return false;
 
-    if (X509_check_ca(cert) == 0) {
+    if (X509_check_ca(crt) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate is not a CA!");
         return false;
     }
@@ -98,33 +170,33 @@ bool CertManager::validateCA(X509* cert, EVP_PKEY* pKey) {
     return true;
 }
 
-bool CertManager::validateSSLCert(X509* cert, EVP_PKEY* pKey, X509* CAcert, const std::vector<std::string>& domains) {
-    if (!validateCert(cert, pKey)) return false;
+bool CertManager::validateSSLCert(X509* crt, EVP_PKEY* pKey, X509* CAcrt, const std::vector<std::string>& domains) {
+    if (!validateCert(crt, pKey)) return false;
 
     // Check if the certificate is signed by the CA
     X509_STORE* store = X509_STORE_new();
     if(store == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be validated: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         return false;
     }
 
-    if(X509_STORE_add_cert(store, CAcert) == 0) {
+    if(X509_STORE_add_cert(store, CAcrt) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be validated: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         return false;
     }
 
     X509_STORE_CTX* storeCtx = X509_STORE_CTX_new();
     if(storeCtx == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be validated: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         return false;
     }
 
-    if (X509_STORE_CTX_init(storeCtx, store, cert, nullptr) == 0) {
+    if (X509_STORE_CTX_init(storeCtx, store, crt, nullptr) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be validated: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         return false;
     }
 
@@ -137,7 +209,7 @@ bool CertManager::validateSSLCert(X509* cert, EVP_PKEY* pKey, X509* CAcert, cons
     X509_STORE_free(store);
 
     // Check if the certificate is a CA certificate
-    if (X509_check_ca(cert) != 0) {
+    if (X509_check_ca(crt) != 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate is a CA certificate!");
         return false;
     }
@@ -145,8 +217,8 @@ bool CertManager::validateSSLCert(X509* cert, EVP_PKEY* pKey, X509* CAcert, cons
     // Check if the certificate is valid for the given domains
     std::vector<std::string> certDomains{};
 
-    int extLoc = X509_get_ext_by_NID(cert, NID_subject_alt_name, -1);
-    X509_EXTENSION* ext = X509_get_ext(cert, extLoc);
+    int extLoc = X509_get_ext_by_NID(crt, NID_subject_alt_name, -1);
+    X509_EXTENSION* ext = X509_get_ext(crt, extLoc);
     if (ext == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
                     "The certificate doesn't contain the subject alternative name extension!");
@@ -177,23 +249,25 @@ bool CertManager::validateSSLCert(X509* cert, EVP_PKEY* pKey, X509* CAcert, cons
         }
     }
 
+    sk_GENERAL_NAME_pop_free(domainsList, GENERAL_NAME_free);
+
     return !invalid;
 }
 
-bool CertManager::validateCert(X509* cert, EVP_PKEY* pKey) {
+bool CertManager::validateCert(X509* crt, EVP_PKEY* pKey) {
     if (!validateRSAKey(pKey)) return false;
 
-    if (X509_check_private_key(cert, pKey) == 0) {
+    if (X509_check_private_key(crt, pKey) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate and the key don't match!");
         return false;
     }
 
-    if (X509_cmp_current_time(X509_get_notBefore(cert)) >= 0) {
+    if (X509_cmp_current_time(X509_get_notBefore(crt)) >= 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate is not valid yet!");
         return false;
     }
 
-    if (X509_cmp_current_time(X509_get_notAfter(cert)) <= 0) {
+    if (X509_cmp_current_time(X509_get_notAfter(crt)) <= 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate is expired!");
         return false;
     }
@@ -218,105 +292,99 @@ bool CertManager::genRSAKey(EVP_PKEY** pKey) {
 
     if (*pKey == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The RSA key couldn't be generated: " +
-                                                                getOpenSSLerror());
+                util::getOpenSSLError());
         return false;
     }
 
     return true;
 }
 
-bool CertManager::createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert) {
+bool CertManager::createCA(const fs::path& crtFile, const fs::path& keyFile, EVP_PKEY* pKey, X509** outCert) {
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Creating CA certificate...");
-    if (!genRSAKey(pKey)) return false;
 
-    *cert = X509_new();
+    *outCert = X509_new();
 
-    if (*cert == nullptr) {
+    if (*outCert == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The CA certificate couldn't be generated: " +
-                getOpenSSLerror());
-        EVP_PKEY_free(*pKey);
+                util::getOpenSSLError());
         return false;
     }
 
-    X509_set_version(*cert, 2);
-    ASN1_INTEGER_set(X509_get_serialNumber(*cert), 1);
-    X509_gmtime_adj(X509_get_notBefore(*cert), 0);
-    X509_gmtime_adj(X509_get_notAfter(*cert), 315360000L); // 10 years aprox.
-    X509_set_pubkey(*cert, *pKey);
+    X509_set_version(*outCert, 2);
+    ASN1_INTEGER_set(X509_get_serialNumber(*outCert), 1);
+    X509_gmtime_adj(X509_get_notBefore(*outCert), 0);
+    X509_gmtime_adj(X509_get_notAfter(*outCert), 315360000L); // 10 years aprox.
+    X509_set_pubkey(*outCert, pKey);
 
-    X509_NAME* certName = X509_get_subject_name(*cert);
+    X509_NAME* certName = X509_get_subject_name(*outCert);
     X509_NAME_add_entry_by_txt(certName, "CN", MBSTRING_ASC, (unsigned char *) "SplatIt Server CA", -1, -1, 0);
     X509_NAME_add_entry_by_txt(certName, "O", MBSTRING_ASC, (unsigned char *) "SplatIt Server", -1, -1, 0);
     X509_NAME_add_entry_by_txt(certName, "C", MBSTRING_ASC, (unsigned char *) "ES", -1, -1, 0);
 
-    X509_set_issuer_name(*cert, certName);
+    X509_set_issuer_name(*outCert, certName);
 
     try {
-        addExtToCert(*cert, *cert, NID_subject_key_identifier, "hash");
-        addExtToCert(*cert, *cert, NID_authority_key_identifier, "keyid:always,issuer:always");
-        addExtToCert(*cert, *cert, NID_basic_constraints, "CA:TRUE");
+        addExtToCert(*outCert, *outCert, NID_subject_key_identifier, "hash");
+        addExtToCert(*outCert, *outCert, NID_authority_key_identifier, "keyid:always,issuer:always");
+        addExtToCert(*outCert, *outCert, NID_basic_constraints, "CA:TRUE");
     } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The CA certificate couldn't be generated: " + std::string(ex.what()));
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+        X509_free(*outCert);
         return false;
     }
 
-    if (X509_sign(*cert, *pKey, EVP_sha256()) == 0) {
+    if (X509_sign(*outCert, pKey, EVP_sha256()) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The CA certificate couldn't be signed: " +
-                getOpenSSLerror());
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+                util::getOpenSSLError());
+        X509_free(*outCert);
         return false;
     }
 
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Writing CA certificate and key to disk...");
 
-    if(!writeKey(*pKey, path / (filename + ".key")) || !writeCert(*cert, path / (filename + ".crt"))) {
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+    if(!writeKey(pKey, keyFile) || !writeCert(*outCert, crtFile)) {
+        X509_free(*outCert);
         return false;
     }
 
     return true;
 }
 
-bool CertManager::createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& path, const std::string& filename,
-                                      const std::vector<std::string>& domains, EVP_PKEY** pKey, X509** cert) {
+bool CertManager::createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& crtFile,
+                                      const fs::path& keyFile, const std::vector<std::string>& domains,
+                                      EVP_PKEY* pKey, X509** outCert) {
     assert(!domains.empty());
 
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Creating server certificate...");
-    if (!genRSAKey(pKey)) return false;
 
-    *cert = X509_new();
+    *outCert = X509_new();
 
-    if (*cert == nullptr) {
+    if (*outCert == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The server certificate couldn't be generated: " +
-                                                                getOpenSSLerror());
-        EVP_PKEY_free(*pKey);
+                util::getOpenSSLError());
         return false;
     }
 
-    X509_set_version(*cert, 2);
-    ASN1_INTEGER_set(X509_get_serialNumber(*cert), 0x495);
-    X509_gmtime_adj(X509_get_notBefore(*cert), 0);
-    X509_gmtime_adj(X509_get_notAfter(*cert), 157680000L); // 5 years aprox.
-    X509_set_pubkey(*cert, *pKey);
+    X509_set_version(*outCert, 2);
+    ASN1_INTEGER_set(X509_get_serialNumber(*outCert), 0x495);
+    X509_gmtime_adj(X509_get_notBefore(*outCert), 0);
+    X509_gmtime_adj(X509_get_notAfter(*outCert), 157680000L); // 5 years aprox.
+    X509_set_pubkey(*outCert, pKey);
 
-    X509_NAME* certName = X509_get_subject_name(*cert);
+    X509_NAME* certName = X509_get_subject_name(*outCert);
     X509_NAME_add_entry_by_txt(certName, "CN", MBSTRING_ASC, (unsigned char *) "SplatIt Server", -1, -1, 0);
     X509_NAME_add_entry_by_txt(certName, "O", MBSTRING_ASC, (unsigned char *) "SplatIt Server", -1, -1, 0);
     X509_NAME_add_entry_by_txt(certName, "C", MBSTRING_ASC, (unsigned char *) "ES", -1, -1, 0);
 
-    X509_set_subject_name(*cert, certName);
-    X509_set_issuer_name(*cert, X509_get_subject_name(caCert));
+    X509_set_subject_name(*outCert, certName);
+    X509_set_issuer_name(*outCert, X509_get_subject_name(caCert));
 
     try {
-        addExtToCert(caCert, *cert, NID_basic_constraints, "CA:FALSE");
-        addExtToCert(caCert, *cert, NID_subject_key_identifier, "hash");
-        addExtToCert(caCert, *cert, NID_authority_key_identifier, "keyid:always,issuer:always");
-        addExtToCert(caCert, *cert, NID_ext_key_usage, "serverAuth");
-        addExtToCert(caCert, *cert, NID_key_usage, "digitalSignature,keyEncipherment");
+        addExtToCert(caCert, *outCert, NID_basic_constraints, "CA:FALSE");
+        addExtToCert(caCert, *outCert, NID_subject_key_identifier, "hash");
+        addExtToCert(caCert, *outCert, NID_authority_key_identifier, "keyid:always,issuer:always");
+        addExtToCert(caCert, *outCert, NID_ext_key_usage, "serverAuth");
+        addExtToCert(caCert, *outCert, NID_key_usage, "digitalSignature,keyEncipherment");
 
         std::string cert_SAN;
         for (const std::string& domain : domains) {
@@ -324,27 +392,24 @@ bool CertManager::createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::p
         }
         cert_SAN.pop_back();
 
-        addExtToCert(caCert, *cert, NID_subject_alt_name, cert_SAN);
+        addExtToCert(caCert, *outCert, NID_subject_alt_name, cert_SAN);
     } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The server certificate couldn't be generated: " + std::string(ex.what()));
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+        X509_free(*outCert);
         return false;
     }
 
-    if (X509_sign(*cert, caKey, EVP_sha256()) == 0) {
+    if (X509_sign(*outCert, caKey, EVP_sha256()) == 0) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The server certificate couldn't be signed: " +
-                                                                getOpenSSLerror());
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+                util::getOpenSSLError());
+        X509_free(*outCert);
         return false;
     }
 
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Writing server certificate and key to disk...");
 
-    if(!writeKey(*pKey, path / (filename + ".key")) || !writeCert(*cert, path / (filename + ".crt"))) {
-        X509_free(*cert);
-        EVP_PKEY_free(*pKey);
+    if(!writeKey(pKey, keyFile) || !writeCert(*outCert, crtFile)) {
+        X509_free(*outCert);
         return false;
     }
 
@@ -358,14 +423,8 @@ void CertManager::addExtToCert(X509* ca, X509* cert, int nid, const std::string&
     X509V3_set_ctx(&ctx, ca, cert, nullptr, nullptr, 0);
     ext = X509V3_EXT_conf_nid(nullptr, &ctx, nid, value.c_str());
 
-    if (!ext) throw std::runtime_error(getOpenSSLerror());
+    if (!ext) throw std::runtime_error(util::getOpenSSLError());
 
     X509_add_ext(cert, ext, -1);
     X509_EXTENSION_free(ext);
-}
-
-std::string CertManager::getOpenSSLerror() {
-    char buff[512];
-    ERR_error_string(ERR_get_error(), buff);
-    return std::string{buff};
 }

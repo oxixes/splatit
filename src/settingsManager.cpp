@@ -5,7 +5,29 @@ SettingsManager::SettingsManager(Logger::Logger* logger) {
 }
 
 bool SettingsManager::init(const argParser::options& serverOptions) {
-    return validateSettings(serverOptions);
+    if(!validateSettings(serverOptions)) {
+        return false;
+    }
+
+    if (!serverOptions.no_account) {
+        domains.account = "account." + std::string(settings["domain"]);
+    }
+
+    if (!serverOptions.no_boss) {
+        domains.bossNPTS = "npts.app." + std::string(settings["domain"]);
+        domains.bossNPPL = "nppl.app." + std::string(settings["domain"]);
+        domains.bossNPDI = "npdi.cdn." + std::string(settings["domain"]);
+    }
+
+    // Keep a copy of the state of servers, as we might enable configuring this from the settings file
+    enabledServers.account = !serverOptions.no_account;
+    enabledServers.boss = !serverOptions.no_boss;
+    enabledServers.friendsAuth = !serverOptions.no_friends_auth;
+    enabledServers.friendsSecure = !serverOptions.no_friends_secure;
+    enabledServers.splatoonAuth = !serverOptions.no_splatoon_auth;
+    enabledServers.splatoonSecure = !serverOptions.no_splatoon_secure;
+
+    return true;
 }
 
 bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions, std::ifstream& settingsFileHandler) {
@@ -70,12 +92,14 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
     settingsFileHandler.close();
 
     // Check json structure
-    if (!settings.contains("ssl")
-        || !settings.contains("domain")
-        || !settings.contains("boss")
-        || !settings["ssl"].contains("caCert") || !settings["ssl"].contains("caKey")
-        || !settings["ssl"].contains("cert") || !settings["ssl"].contains("key")
-        || !settings["boss"].contains("data")) {
+    if (!(settings.contains("ssl") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings.contains("domain") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings.contains("boss") || serverOptions.no_boss)
+        || !(settings["ssl"].contains("caCert") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings["ssl"].contains("caKey") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings["ssl"].contains("cert") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings["ssl"].contains("key") || (serverOptions.no_boss && serverOptions.no_account))
+        || !(settings["boss"].contains("data") || serverOptions.no_boss)) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
                     "The settings file does not have the correct structure, please check"
                     " the docs to create a correct file.");
@@ -117,6 +141,30 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
 
 // GETTERS
 
+bool SettingsManager::isAccountEnabled() const {
+    return enabledServers.account;
+}
+
+bool SettingsManager::isBOSSEnabled() const {
+    return enabledServers.boss;
+}
+
+bool SettingsManager::isFriendsAuthEnabled() const {
+    return enabledServers.friendsAuth;
+}
+
+bool SettingsManager::isFriendsSecureEnabled() const {
+    return enabledServers.friendsSecure;
+}
+
+bool SettingsManager::isSplatoonAuthEnabled() const {
+    return enabledServers.splatoonAuth;
+}
+
+bool SettingsManager::isSplatoonSecureEnabled() const {
+    return enabledServers.splatoonSecure;
+}
+
 fs::path SettingsManager::getSSLCertPath() const {
     return settings["ssl"]["cert"];
 }
@@ -133,10 +181,21 @@ fs::path SettingsManager::getSSLCAKeyPath() const {
     return settings["ssl"]["caKey"];
 }
 
-fs::path SettingsManager::getDomain() const {
+fs::path SettingsManager::getTopDomain() const {
     return settings["domain"];
 }
 
 fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["data"];
+}
+
+std::vector<std::string> SettingsManager::getDomains() const {
+    std::vector<std::string> usedDomains;
+
+    if (!domains.account.empty()) usedDomains.push_back(domains.account);
+    if (!domains.bossNPTS.empty()) usedDomains.push_back(domains.bossNPTS);
+    if (!domains.bossNPPL.empty()) usedDomains.push_back(domains.bossNPPL);
+    if (!domains.bossNPDI.empty()) usedDomains.push_back(domains.bossNPDI);
+
+    return usedDomains;
 }

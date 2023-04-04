@@ -8,12 +8,12 @@
 #include <nlohmann/json.hpp>
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
-#include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/engine.h>
 
 #include "../settingsManager.hpp"
 #include "../logger.hpp"
+#include "../util/util.hpp"
 
 namespace fs = std::filesystem;
 
@@ -21,30 +21,35 @@ class CertManager {
 public:
     CertManager(SettingsManager* settingsManager, Logger::Logger* logger);
 
+    bool init();
+
 private:
     SettingsManager* settingsManager;
     Logger::Logger* logger;
 
-public:
-    bool loadKey(const fs::path& keyPath, EVP_PKEY** pKey);
-    bool loadCert(const fs::path& certPath, X509** cert);
-    bool writeKey(EVP_PKEY* pKey, const fs::path& keyPath);
-    bool writeCert(X509* cert, const fs::path& certPath);
+    EVP_PKEY* CAkey;
+    X509* CAcert;
+    EVP_PKEY* key;
+    X509* cert;
 
-    bool validateCert(X509* cert, EVP_PKEY* pKey);
+    bool loadKey(const fs::path& keyPath, EVP_PKEY** pKey);
+    bool loadCert(const fs::path& certPath, X509** outCert);
+    bool writeKey(EVP_PKEY* pKey, const fs::path& keyPath);
+    bool writeCert(X509* crt, const fs::path& certPath);
+
+    bool validateCert(X509* crt, EVP_PKEY* pKey);
     bool validateRSAKey(EVP_PKEY* pKey);
-    bool validateCA(X509* cert, EVP_PKEY* pKey);
-    bool validateSSLCert(X509* cert, EVP_PKEY* pKey, X509* CAcert, const std::vector<std::string>& domains);
+    bool validateCA(X509* crt, EVP_PKEY* pKey);
+    bool validateSSLCert(X509* crt, EVP_PKEY* pKey, X509* CAcrt, const std::vector<std::string>& domains);
 
     bool genRSAKey(EVP_PKEY** pKey);
 
-    bool createCA(const fs::path& path, const std::string& filename, EVP_PKEY** pKey, X509** cert);
-    bool createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& path,
-                             const std::string& filename, const std::vector<std::string>& domains,
-                             EVP_PKEY** pKey, X509** cert);
+    bool createCA(const fs::path& crtFile, const fs::path& keyFile, EVP_PKEY* pKey, X509** outCert);
+    bool createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& crtFile,
+                             const fs::path& keyFile, const std::vector<std::string>& domains,
+                             EVP_PKEY* pKey, X509** outCert);
 
     static void addExtToCert(X509* ca, X509* cert, int nid, const std::string& value);
-    static std::string getOpenSSLerror();
 };
 
 #endif //SPLATOON_SERVER_CERTMANAGER_HPP
