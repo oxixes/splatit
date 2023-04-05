@@ -1,0 +1,18 @@
+{
+  "name" : "splatoon-server",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "c4f39609d4b40bfa86056593816bf0c8d02d8346",
+  "dependencies" : [ {
+    "name" : "openssl",
+    "version>=" : "3.1.0#1"
+  }, {
+    "name" : "sqlite3",
+    "version>=" : "3.40.1#2"
+  }, {
+    "name" : "cpp-httplib",
+    "version>=" : "0.11.3#1"
+  }, {
+    "name" : "nlohmann-json",
+    "version>=" : "3.11.2"
+  } ]
+}

@@ -5,6 +5,7 @@
 #include "../settingsManager.hpp"
 #include "../ssl/certManager.hpp"
 
+#define CPPHTTPLIB_OPENSSL_SUPPORT
 #define CPPHTTPLIB_THREAD_POOL_COUNT 5
 #include <httplib.h>
 
