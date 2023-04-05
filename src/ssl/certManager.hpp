@@ -20,8 +20,11 @@ namespace fs = std::filesystem;
 class CertManager {
 public:
     CertManager(SettingsManager* settingsManager, Logger::Logger* logger);
+    ~CertManager();
 
     bool init();
+    EVP_PKEY* getSSLKey();
+    X509* getSSLCert();
 
 private:
     SettingsManager* settingsManager;

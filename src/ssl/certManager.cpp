@@ -10,6 +10,13 @@ CertManager::CertManager(SettingsManager* settingsManager, Logger::Logger* logge
     this->cert = nullptr;
 }
 
+CertManager::~CertManager() {
+    if (CAkey) EVP_PKEY_free(CAkey);
+    if (CAcert) X509_free(CAcert);
+    if (key) EVP_PKEY_free(key);
+    if (cert) X509_free(cert);
+}
+
 bool CertManager::init() {
     if (!util::checkParentDirectory(settingsManager->getSSLCAKeyPath())) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
@@ -427,4 +434,12 @@ void CertManager::addExtToCert(X509* ca, X509* cert, int nid, const std::string&
 
     X509_add_ext(cert, ext, -1);
     X509_EXTENSION_free(ext);
+}
+
+EVP_PKEY* CertManager::getSSLKey() {
+    return key;
+}
+
+X509* CertManager::getSSLCert() {
+    return cert;
 }

@@ -1,6 +1,7 @@
 #include "argParser.hpp"
 #include "settingsManager.hpp"
 #include "ssl/certManager.hpp"
+#include "http/server.hpp"
 
 int main(int argc, char** argv) {
     // Init OpenSSL
@@ -20,6 +21,9 @@ int main(int argc, char** argv) {
     if (settingsMgr.isAccountEnabled() || settingsMgr.isBOSSEnabled()) {
         // TODO Cleanup
         if (!certManager.init()) return 1;
+
+        HTTP_Server httpServer = HTTP_Server(&logger, &settingsMgr, &certManager);
+        httpServer.listen();
     }
 
     return 0;
