@@ -22,8 +22,8 @@ target_link_libraries(splatoon_server PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json::nlohmann_json)
 
-find_package(unofficial-sqlite3 CONFIG REQUIRED)
-target_link_libraries(splatoon_server PRIVATE unofficial::sqlite3::sqlite3)
+find_package(Sqlpp11 CONFIG REQUIRED)
+target_link_libraries(splatoon_server PRIVATE sqlpp11::sqlpp11)
 
 set(HTTPLIB_REQUIRE_OPENSSL ON)
 find_package(httplib CONFIG REQUIRED)
