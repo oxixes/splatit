@@ -14,6 +14,7 @@ class DBData {
 public:
     std::any data;
     dbDataType type;
+    int id = -1;
 
 protected:
     DBData(std::any data, dbDataType type) {

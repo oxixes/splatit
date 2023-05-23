@@ -5,6 +5,10 @@
 
 #include "db/sqlite3Database.hpp"
 
+
+#include <chrono>
+#include <thread>
+
 int main(int argc, char** argv) {
     // Init OpenSSL
     OpenSSL_add_all_algorithms();
@@ -34,10 +38,14 @@ int main(int argc, char** argv) {
         db->init();
 
         auto* sqlite3DB = dynamic_cast<sqlite3Database*>(db);
-        const std::string command = "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
-        sqlite3_stmt* statement;
-        sqlite3DB->craftCommand(command, &statement);
-        sqlite3DB->runStatement(statement, {}, nullptr);
+//        const std::string command = "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
+//        sqlite3_stmt* statement;
+//        sqlite3DB->craftCommand(command, &statement);
+//        sqlite3DB->runStatement(statement, {}, nullptr);
+
+        sqlite3DB->run();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        sqlite3DB->close();
     }
 
     return 0;

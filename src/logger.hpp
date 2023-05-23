@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <ctime>
 #include <iostream>
+#include <mutex>
 
 namespace Logger {
 
@@ -38,6 +39,7 @@ namespace Logger {
 
     private:
         level minLoggingLevel = level::INFO;
+        std::mutex logMutex; // We use a lock to prevent multiple threads from writing to the log at the same time
 
         static std::string getLevelName(level level);
         static std::string getGroupName(group group);

@@ -22,6 +22,62 @@ bool sqlite3Database::init() {
     return true;
 }
 
+bool sqlite3Database::run() {
+    running = true;
+    dbThreadHandle = std::thread(&sqlite3Database::dbThread, this);
+    logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread started.");
+    return true;
+}
+
+int sqlite3Database::queueCommand(DBCommand* command) {
+    //std::unique_lock dbLock(dbThreadMutex);
+    std::unique_lock lock(commandQueueMutex);
+    command->commandId = commandId++;
+    commandQueue.push(command);
+
+    return command->commandId;
+}
+
+void sqlite3Database::processQueue() {
+    dbThreadCV.notify_one();
+}
+
+void sqlite3Database::waitForCommand(int commandId) {
+    std::unique_lock lock(dbThreadMutex);
+    dbThreadCV.wait(lock, [this, commandId] {
+        if (!running || commandQueue.empty()) {
+            return true;
+        } else {
+            std::unique_lock resultsLock(resultsMutex);
+            return std::ranges::any_of(results, [commandId](DBResult* result) {
+                return result->commandId == commandId;
+            });
+        }
+    });
+}
+
+void sqlite3Database::waitForQueue() {
+    std::unique_lock lock(dbThreadMutex);
+    dbThreadCV.wait(lock, [this] { return !running || commandQueue.empty(); });
+}
+
+void sqlite3Database::dbThread() {
+    while (true) {
+        std::unique_lock lock(dbThreadMutex);
+        dbThreadCV.wait(lock, [this] {
+            if (!running) return true;
+            std::unique_lock lock(commandQueueMutex);
+            return !commandQueue.empty();
+        });
+
+        // TODO Process command queue
+
+        if (!running) {
+            break;
+        }
+    }
+}
+
 bool sqlite3Database::craftCommand(const std::string& command, sqlite3_stmt** outStatement) {
     if (sqlite3_prepare_v2(db, command.c_str(), -1, outStatement, nullptr) != SQLITE_OK) {
         logger->log(Logger::level::ERROR, Logger::group::DB,
@@ -91,5 +147,14 @@ void sqlite3Database::freeData(std::vector<std::vector<DBData*>*>* data) {
 }
 
 void sqlite3Database::close() {
+    running = false;
+    dbThreadCV.notify_one();
+    dbThreadHandle.join();
 
+    logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread stopped.");
+
+    if (db != nullptr) {
+        sqlite3_close(db);
+        db = nullptr;
+    }
 }

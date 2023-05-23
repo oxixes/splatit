@@ -5,6 +5,8 @@ namespace Logger {
     void Logger::log(level level, group group, const std::string& msg) {
         if (static_cast<int>(level) < static_cast<int>(minLoggingLevel)) return;
 
+        std::unique_lock lock(logMutex);
+
         time_t currentTime = std::time(nullptr);
         tm localTime = *std::localtime(&currentTime);
 
