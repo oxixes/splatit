@@ -84,6 +84,13 @@ bool CertManager::init() {
     return true;
 }
 
+void CertManager::cleanup() {
+    if (cert) X509_free(cert);
+    if (key) EVP_PKEY_free(key);
+    if (CAcert) X509_free(CAcert);
+    if (CAkey) EVP_PKEY_free(CAkey);
+}
+
 bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
     FILE* pKeyFile = fopen(keyPath.string().c_str(), "rb");
 

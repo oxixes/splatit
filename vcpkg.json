@@ -14,15 +14,5 @@
   }, {
     "name" : "nlohmann-json",
     "version>=" : "3.11.2"
-  }, {
-    "name" : "sqlpp11",
-    "version>=" : "0.61#2",
-    "$comment" : "    # this is heuristically generated, and may not be correct\n\n    find_package(Sqlpp11 CONFIG REQUIRED)\n\n    target_link_libraries(main PRIVATE sqlpp11::sqlpp11)\n"
-  }, {
-    "name" : "libmysql",
-    "version>=" : "8.0.20#10"
-  }, {
-    "name" : "libpq",
-    "version>=" : "15.2#1"
   } ]
 }

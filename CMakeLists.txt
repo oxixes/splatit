@@ -15,15 +15,15 @@ add_executable(splatoon_server)
 
 #target_include_directories(splatoon_server PRIVATE libs/json/single_include)
 
-set(OPENSSL_USE_STATIC_LIBS TRUE)
+# set(OPENSSL_USE_STATIC_LIBS TRUE)
 find_package(OpenSSL REQUIRED)
 target_link_libraries(splatoon_server PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json::nlohmann_json)
 
-find_package(Sqlpp11 CONFIG REQUIRED)
-target_link_libraries(splatoon_server PRIVATE sqlpp11::sqlpp11)
+find_package(SQLite3 REQUIRED)
+target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 
 set(HTTPLIB_REQUIRE_OPENSSL ON)
 find_package(httplib CONFIG REQUIRED)

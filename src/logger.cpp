@@ -37,6 +37,8 @@ namespace Logger {
         switch (group) {
             case group::ACCOUNT:
                 return "ACCOUNT";
+            case group::DB:
+                return "DB";
             case group::BOSS:
                 return "BOSS";
             case group::FRIENDS:

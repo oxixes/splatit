@@ -48,12 +48,12 @@ private:
     } domains;
 
     struct enabledServers {
-        bool account;
-        bool boss;
-        bool friendsAuth;
-        bool friendsSecure;
-        bool splatoonAuth;
-        bool splatoonSecure;
+        bool account = false;
+        bool boss = false;
+        bool friendsAuth = false;
+        bool friendsSecure = false;
+        bool splatoonAuth = false;
+        bool splatoonSecure = false;
     } enabledServers;
 
     bool openOrCreateFiles(const argParser::options& serverOptions, std::ifstream& settingsFileHandler);

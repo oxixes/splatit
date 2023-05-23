@@ -25,6 +25,7 @@ public:
     bool init();
     EVP_PKEY* getSSLKey();
     X509* getSSLCert();
+    void cleanup();
 
 private:
     SettingsManager* settingsManager;

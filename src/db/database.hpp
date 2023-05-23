@@ -1,9 +1,17 @@
 #ifndef SPLATOON_SERVER_DATABASE_HPP
 #define SPLATOON_SERVER_DATABASE_HPP
 
+#include "../logger.hpp"
+
+enum class dbType {
+    SQLITE3
+};
+
 class Database {
 protected:
-    Database() = default;
+    explicit Database(Logger::Logger* logger);
+
+    Logger::Logger* logger;
 
 public:
     virtual ~Database() = default;

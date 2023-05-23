@@ -17,6 +17,7 @@ namespace Logger {
 
     enum class group {
         SETUP,
+        DB,
         ACCOUNT,
         BOSS,
         FRIENDS,
