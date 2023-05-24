@@ -1,9 +1,12 @@
 #include <memory>
+#include <utility>
 #include "sqlite3Database.hpp"
 
 // TODO Switch to smart pointers
 
-sqlite3Database::sqlite3Database(Logger::Logger* logger, const fs::path& dbPath) : Database(logger) {
+namespace db {
+
+sqlite3Database::sqlite3Database(std::shared_ptr<Logger::Logger> logger, const fs::path& dbPath) : Database(std::move(logger)) {
     this->dbPath = dbPath;
 }
 
@@ -35,7 +38,7 @@ bool sqlite3Database::run() {
     return true;
 }
 
-int sqlite3Database::queueCommand(DBCommand* command, bool commandMutex) {
+int sqlite3Database::queueCommand(Command* command, bool commandMutex) {
     //std::unique_lock dbLock(dbThreadMutex);
     std::unique_lock lock(commandQueueMutex);
     command->commandId = commandId++;
@@ -80,7 +83,7 @@ void sqlite3Database::waitForCommand(int commandId, bool* shouldEnd) {
             return true;
         } else {
             std::unique_lock resultsLock(resultsMutex);
-            return std::ranges::any_of(results, [commandId](DBResult* result) {
+            return std::ranges::any_of(results, [commandId](Result* result) {
                 return result->commandId == commandId;
             });
         }
@@ -126,7 +129,7 @@ void sqlite3Database::dbThread() {
         while (!commandQueue.empty()) {
             if (!running) break;
 
-            DBCommand* command = commandQueue.front();
+            Command* command = commandQueue.front();
             processCommand(command);
             commandQueue.pop();
 
@@ -157,15 +160,15 @@ void sqlite3Database::dbThread() {
     }
 }
 
-void sqlite3Database::processCommand(DBCommand* command) {
+void sqlite3Database::processCommand(Command* command) {
     auto* returnedData = new std::vector<std::vector<DBData*>*>();
     sqlite3_stmt* statement = nullptr;
 
     std::vector<std::any> resultsData;
-    dbResultStatus resultStatus = dbResultStatus::SUCCESS;
+    resultStatus resultStatus = resultStatus::SUCCESS;
 
     switch (command->type) {
-        case dbCommandType::GENERIC:
+        case commandType::GENERIC:
             if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
                 command->data[1].type() != typeid(std::vector<dbDataType>) ||
                 command->data[2].type() != typeid(std::vector<DBData*>) ||
@@ -177,18 +180,18 @@ void sqlite3Database::processCommand(DBCommand* command) {
 
             // TODO Improve statuses
             if (!craftStatement(std::any_cast<std::string>(command->data[0]), &statement)) {
-                resultStatus = dbResultStatus::FAILURE_GENERIC;
+                resultStatus = resultStatus::FAILURE_GENERIC;
                 break;
             }
 
             if (!bindData(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]),
                           std::any_cast<std::vector<DBData*>>(command->data[2]))) {
-                resultStatus = dbResultStatus::FAILURE_GENERIC;
+                resultStatus = resultStatus::FAILURE_GENERIC;
                 break;
             }
 
             if (!runStatement(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]), returnedData)) {
-                resultStatus = dbResultStatus::FAILURE_GENERIC;
+                resultStatus = resultStatus::FAILURE_GENERIC;
                 break;
             }
 
@@ -216,7 +219,7 @@ void sqlite3Database::processCommand(DBCommand* command) {
     freeData(returnedData);
 
     std::unique_lock lock(resultsMutex);
-    results.push_back(new DBResult(command->commandId, resultStatus, resultsData));
+    results.push_back(new Result(command->commandId, resultStatus, resultsData));
 }
 
 bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** outStatement) {
@@ -331,7 +334,7 @@ void sqlite3Database::close() {
 
     std::unique_lock queueLock(commandQueueMutex);
     while (!commandQueue.empty()) {
-        DBCommand* command = commandQueue.front();
+        Command* command = commandQueue.front();
         commandQueue.pop();
         delete command;
     }
@@ -353,3 +356,5 @@ void sqlite3Database::close() {
     sqlite3_close(db);
     db = nullptr;
 }
+
+} // namespace db

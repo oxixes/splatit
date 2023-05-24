@@ -9,39 +9,41 @@
 
 #include "../logger.hpp"
 
-enum class dbType {
+namespace db {
+
+enum class type {
     SQLITE3
 };
 
-enum class dbCommandType {
+enum class commandType {
     GENERIC
 };
 
-enum class dbResultStatus {
+enum class resultStatus {
     SUCCESS,
     FAILURE_GENERIC
 };
 
-class DBCommand {
+class Command {
 public:
-    dbCommandType type;
+    commandType type;
     std::vector<std::any> data;
     int commandId = 0;
     bool hasMutex = false;
 
-    explicit DBCommand(dbCommandType type, std::vector<std::any> data) {
+    explicit Command(commandType type, std::vector<std::any> data) {
         this->type = type;
         this->data = std::move(data);
     }
 };
 
-class DBResult {
+class Result {
 public:
     std::vector<std::any> data;
-    dbResultStatus status;
+    resultStatus status;
     int commandId;
 
-    explicit DBResult(int commandId, dbResultStatus status, std::vector<std::any>& data) {
+    explicit Result(int commandId, resultStatus status, std::vector<std::any>& data) {
         this->commandId = commandId;
         this->status = status;
         this->data = std::move(data);
@@ -50,14 +52,14 @@ public:
 
 class Database {
 protected:
-    explicit Database(Logger::Logger* logger);
+    explicit Database(std::shared_ptr<Logger::Logger> logger);
 
-    Logger::Logger* logger;
+    std::shared_ptr<Logger::Logger> logger;
 
-    std::queue<DBCommand*> commandQueue;
+    std::queue<Command*> commandQueue;
     std::mutex commandQueueMutex;
 
-    std::vector<DBResult*> results;
+    std::vector<Result*> results;
     std::mutex resultsMutex;
 
     std::vector<std::tuple<int, std::mutex*, std::condition_variable*, std::thread::id>> commandCVs;
@@ -72,11 +74,13 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual int queueCommand(DBCommand* command, bool commandMutex) = 0;
+    virtual int queueCommand(Command* command, bool commandMutex) = 0;
     virtual void processQueue() = 0;
     virtual void waitForCommand(int commandId, bool* shouldEnd) = 0;
     virtual void waitForQueue(bool* shouldEnd) = 0;
     virtual void clearCommandMutex(int commandId) = 0;
 };
+
+} // namespace db
 
 #endif //SPLATOON_SERVER_DATABASE_HPP

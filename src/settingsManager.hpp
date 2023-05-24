@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 class SettingsManager {
 public:
-    explicit SettingsManager(Logger::Logger* logger);
+    explicit SettingsManager(std::shared_ptr<Logger::Logger> logger);
     ~SettingsManager() = default;
 
     bool init(const argParser::options& serverOptions);
@@ -38,7 +38,7 @@ public:
     [[nodiscard]] std::vector<std::string> getDomains() const;
 private:
     json settings;
-    Logger::Logger* logger;
+    std::shared_ptr<Logger::Logger> logger;
 
     struct domains {
         std::string account;

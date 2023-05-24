@@ -1,5 +1,11 @@
 #include "database.hpp"
 
-Database::Database(Logger::Logger* logger) {
-    this->logger = logger;
+#include <utility>
+
+namespace db {
+
+Database::Database(std::shared_ptr<Logger::Logger> logger) {
+    this->logger = std::move(logger);
 }
+
+} // namespace db

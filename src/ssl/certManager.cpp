@@ -1,8 +1,10 @@
 #include "certManager.hpp"
 
-CertManager::CertManager(SettingsManager* settingsManager, Logger::Logger* logger) {
-    this->settingsManager = settingsManager;
-    this->logger = logger;
+#include <utility>
+
+CertManager::CertManager(std::shared_ptr<SettingsManager> settingsManager, std::shared_ptr<Logger::Logger> logger) {
+    this->settingsManager = std::move(settingsManager);
+    this->logger = std::move(logger);
 
     this->CAkey = nullptr;
     this->CAcert = nullptr;

@@ -1,7 +1,9 @@
 #include "settingsManager.hpp"
 
-SettingsManager::SettingsManager(Logger::Logger* logger) {
-    this->logger = logger;
+#include <utility>
+
+SettingsManager::SettingsManager(std::shared_ptr<Logger::Logger> logger) {
+    this->logger = std::move(logger);
 }
 
 bool SettingsManager::init(const argParser::options& serverOptions) {

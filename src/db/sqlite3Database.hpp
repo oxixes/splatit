@@ -14,16 +14,18 @@
 
 namespace fs = std::filesystem;
 
+namespace db {
+
 class sqlite3Database final : public Database {
 public:
-    sqlite3Database(Logger::Logger* logger, const fs::path& dbPath);
+    sqlite3Database(std::shared_ptr<Logger::Logger> logger, const fs::path& dbPath);
     ~sqlite3Database() override;
 
     bool init() override;
     bool run() override;
     void close() override;
 
-    int queueCommand(DBCommand*, bool commandMutex) override;
+    int queueCommand(Command*, bool commandMutex) override;
     void processQueue() override;
     void waitForCommand(int commandId, bool* shouldEnd) override;
     void waitForQueue(bool* shouldEnd) override;
@@ -40,7 +42,7 @@ private:
 
     void dbThread();
 
-    void processCommand(DBCommand* command);
+    void processCommand(Command* command);
     bool craftStatement(const std::string& command, sqlite3_stmt** outStatement);
     bool bindData(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
                   const std::vector<DBData*>& data);
@@ -49,5 +51,7 @@ private:
 
     static void freeData(std::vector<std::vector<DBData*>*>* data);
 };
+
+} // namespace db
 
 #endif //SPLATOON_SERVER_SQLITE3DATABASE_HPP

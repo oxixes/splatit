@@ -4,21 +4,21 @@
 #include "../../logger.hpp"
 #include "../database.hpp"
 
-namespace migrations {
+namespace db::migrations {
 
-    enum class dbVersion {
-        NO_DATA = 0,
-        INITIAL
-    };
+enum class dbVersion {
+    NO_DATA = 0,
+    INITIAL
+};
 
-    const dbVersion CURRENT_VERSION = dbVersion::INITIAL;
+const dbVersion CURRENT_VERSION = dbVersion::INITIAL;
 
 
-    bool migration_initial(Logger::Logger* logger, Database* db, dbType type);
+bool migration_initial(Logger::Logger* logger, Database* db, type type);
 
-    bool migrate(Logger::Logger* logger, Database* db, dbType type, dbVersion fromVersion);
-    std::string getVersionString(dbVersion version);
+bool migrate(Logger::Logger* logger, Database* db, type type, dbVersion fromVersion);
+std::string getVersionString(dbVersion version);
 
-} // namespace migrations
+} // namespace db
 
 #endif //SPLATOON_SERVER_MIGRATIONS_HPP

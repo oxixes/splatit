@@ -1,9 +1,9 @@
 #include "migrations.hpp"
 
-namespace migrations {
+namespace db::migrations {
 
-    bool migration_initial(Logger::Logger* logger, Database* db, dbType type) {
-        return true;
-    }
+bool migration_initial(Logger::Logger* logger, Database* db, type type) {
+    return true;
+}
 
 }

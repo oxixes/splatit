@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 
 class CertManager {
 public:
-    CertManager(SettingsManager* settingsManager, Logger::Logger* logger);
+    CertManager(std::shared_ptr<SettingsManager> settingsManager, std::shared_ptr<Logger::Logger> logger);
     ~CertManager();
 
     bool init();
@@ -28,8 +28,8 @@ public:
     void cleanup();
 
 private:
-    SettingsManager* settingsManager;
-    Logger::Logger* logger;
+    std::shared_ptr<SettingsManager> settingsManager;
+    std::shared_ptr<Logger::Logger> logger;
 
     EVP_PKEY* CAkey;
     X509* CAcert;
