@@ -5,6 +5,7 @@
 #include <any>
 #include <queue>
 #include <mutex>
+#include <condition_variable>
 
 #include "../logger.hpp"
 
@@ -16,11 +17,17 @@ enum class dbCommandType {
     GENERIC
 };
 
+enum class dbResultStatus {
+    SUCCESS,
+    FAILURE_GENERIC
+};
+
 class DBCommand {
 public:
     dbCommandType type;
     std::vector<std::any> data;
     int commandId = 0;
+    bool hasMutex = false;
 
     explicit DBCommand(dbCommandType type, std::vector<std::any> data) {
         this->type = type;
@@ -31,9 +38,12 @@ public:
 class DBResult {
 public:
     std::vector<std::any> data;
-    int commandId = 0;
+    dbResultStatus status;
+    int commandId;
 
-    explicit DBResult(std::vector<std::any> data) {
+    explicit DBResult(int commandId, dbResultStatus status, std::vector<std::any>& data) {
+        this->commandId = commandId;
+        this->status = status;
         this->data = std::move(data);
     }
 };
@@ -50,6 +60,9 @@ protected:
     std::vector<DBResult*> results;
     std::mutex resultsMutex;
 
+    std::vector<std::tuple<int, std::mutex*, std::condition_variable*, std::thread::id>> commandCVs;
+    std::mutex commandCVsMutex;
+
     int commandId = 0;
 
 public:
@@ -59,10 +72,11 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual int queueCommand(DBCommand* command) = 0;
+    virtual int queueCommand(DBCommand* command, bool commandMutex) = 0;
     virtual void processQueue() = 0;
-    virtual void waitForCommand(int commandId) = 0;
-    virtual void waitForQueue() = 0;
+    virtual void waitForCommand(int commandId, bool* shouldEnd) = 0;
+    virtual void waitForQueue(bool* shouldEnd) = 0;
+    virtual void clearCommandMutex(int commandId) = 0;
 };
 
 #endif //SPLATOON_SERVER_DATABASE_HPP

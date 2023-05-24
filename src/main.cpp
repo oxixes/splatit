@@ -38,13 +38,17 @@ int main(int argc, char** argv) {
         db->init();
 
         auto* sqlite3DB = dynamic_cast<sqlite3Database*>(db);
-//        const std::string command = "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
-//        sqlite3_stmt* statement;
-//        sqlite3DB->craftCommand(command, &statement);
-//        sqlite3DB->runStatement(statement, {}, nullptr);
-
         sqlite3DB->run();
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+        const std::string command = "CREATE TABLE IF NOT EXISTS test2 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
+        auto* dbCommand = new DBCommand(dbCommandType::GENERIC,
+                                        {std::any(command), std::any(std::vector<dbDataType>{}),
+                                         std::any(std::vector<DBData*>{}), std::any(std::vector<dbDataType>{})});
+        bool shouldEnd = false;
+        sqlite3DB->queueCommand(dbCommand, false);
+        sqlite3DB->processQueue();
+        sqlite3DB->waitForQueue(&shouldEnd);
+        logger.log(Logger::level::INFO, Logger::group::SETUP, "Queue finished");
         sqlite3DB->close();
     }
 

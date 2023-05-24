@@ -16,6 +16,8 @@ public:
     dbDataType type;
     int id = -1;
 
+    virtual ~DBData() = default;
+
 protected:
     DBData(std::any data, dbDataType type) {
         this->data = std::move(data);
