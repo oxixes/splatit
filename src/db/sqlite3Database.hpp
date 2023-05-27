@@ -25,10 +25,10 @@ public:
     bool run() override;
     void close() override;
 
-    int queueCommand(Command*, bool commandMutex) override;
+    int queueCommand(std::unique_ptr<Command> command, bool commandMutex) override;
     void processQueue() override;
-    void waitForCommand(int commandId, bool* shouldEnd) override;
-    void waitForQueue(bool* shouldEnd) override;
+    void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) override;
+    void waitForQueue(std::shared_ptr<bool> shouldEnd) override;
     void clearCommandMutex(int commandId) override;
 
 private:
@@ -42,14 +42,12 @@ private:
 
     void dbThread();
 
-    void processCommand(Command* command);
+    void processCommand(const std::unique_ptr<Command>& command);
     bool craftStatement(const std::string& command, sqlite3_stmt** outStatement);
     bool bindData(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
-                  const std::vector<DBData*>& data);
+                  const std::vector<std::shared_ptr<DBData>>& data);
     bool runStatement(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
-                      std::vector<std::vector<DBData*>*>* returnedData);
-
-    static void freeData(std::vector<std::vector<DBData*>*>* data);
+                      const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData);
 };
 
 } // namespace db

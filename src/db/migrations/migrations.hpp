@@ -14,9 +14,10 @@ enum class dbVersion {
 const dbVersion CURRENT_VERSION = dbVersion::INITIAL;
 
 
-bool migration_initial(Logger::Logger* logger, Database* db, type type);
+bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, type type);
 
-bool migrate(Logger::Logger* logger, Database* db, type type, dbVersion fromVersion);
+bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, type type,
+             dbVersion fromVersion);
 std::string getVersionString(dbVersion version);
 
 } // namespace db

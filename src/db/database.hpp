@@ -56,13 +56,13 @@ protected:
 
     std::shared_ptr<Logger::Logger> logger;
 
-    std::queue<Command*> commandQueue;
+    std::queue<std::unique_ptr<Command>> commandQueue;
     std::mutex commandQueueMutex;
 
-    std::vector<Result*> results;
+    std::vector<std::unique_ptr<Result>> results;
     std::mutex resultsMutex;
 
-    std::vector<std::tuple<int, std::mutex*, std::condition_variable*, std::thread::id>> commandCVs;
+    std::vector<std::tuple<int, std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>, std::thread::id>> commandCVs;
     std::mutex commandCVsMutex;
 
     int commandId = 0;
@@ -74,10 +74,10 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual int queueCommand(Command* command, bool commandMutex) = 0;
+    virtual int queueCommand(std::unique_ptr<Command> command, bool commandMutex) = 0;
     virtual void processQueue() = 0;
-    virtual void waitForCommand(int commandId, bool* shouldEnd) = 0;
-    virtual void waitForQueue(bool* shouldEnd) = 0;
+    virtual void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) = 0;
+    virtual void waitForQueue(std::shared_ptr<bool> shouldEnd) = 0;
     virtual void clearCommandMutex(int commandId) = 0;
 };
 

@@ -3,11 +3,11 @@
 namespace db::migrations {
 
 // We store all migrations in an array, so we can iterate over them
-std::array<bool (*)(Logger::Logger*, Database*, type), 1> migrations = {
+std::array<bool (*)(const std::shared_ptr<Logger::Logger>&, const std::shared_ptr<Database>&, type), 1> migrations = {
         migration_initial
 };
 
-bool migrate(Logger::Logger* logger, Database* db, type type, dbVersion fromVersion) {
+bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, type type, dbVersion fromVersion) {
     logger->log(Logger::level::INFO, Logger::group::SETUP,
                 "Migrating database from version " + getVersionString(fromVersion) +
                 " to version " + getVersionString(CURRENT_VERSION));

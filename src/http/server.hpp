@@ -11,18 +11,19 @@
 
 class HTTP_Server {
 public:
-    HTTP_Server(Logger::Logger* logger, SettingsManager* settingsMgr, CertManager* certMgr);
+    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SettingsManager> settingsMgr,
+                std::shared_ptr<CertManager> certMgr);
     ~HTTP_Server();
 
     void listen();
     void stop();
 
 private:
-    httplib::SSLServer* server;
+    std::unique_ptr<httplib::SSLServer> server;
 
-    SettingsManager* settingsMgr;
-    Logger::Logger* logger;
-    CertManager* certMgr;
+    std::shared_ptr<SettingsManager> settingsMgr;
+    std::shared_ptr<Logger::Logger> logger;
+    std::shared_ptr<CertManager> certMgr;
 };
 
 #endif // SPLATOON_SERVER_SERVER_HPP

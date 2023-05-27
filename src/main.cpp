@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "argParser.hpp"
 #include "settingsManager.hpp"
 #include "ssl/certManager.hpp"
@@ -19,10 +21,10 @@ int main(int argc, char** argv) {
     std::shared_ptr<SettingsManager> settingsMgr(new SettingsManager(logger));
     if (!settingsMgr->init(serverOptions)) return 1;
 
-    CertManager certManager = CertManager(settingsMgr, logger);
+    std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
-        if (!certManager.init()) {
-            certManager.cleanup();
+        if (!certManager->init()) {
+            certManager->cleanup();
             return 1;
         }
 
@@ -37,13 +39,15 @@ int main(int argc, char** argv) {
         sqlite3DB->run();
 
         const std::string command = "CREATE TABLE IF NOT EXISTS test2 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
-        auto* dbCommand = new db::Command(db::commandType::GENERIC,
-                                          {std::any(command), std::any(std::vector<dbDataType>{}),
-                                         std::any(std::vector<DBData*>{}), std::any(std::vector<dbDataType>{})});
-        bool shouldEnd = false;
-        sqlite3DB->queueCommand(dbCommand, false);
+
+        auto dbCommand = std::make_unique<db::Command>(db::commandType::GENERIC,
+                                          std::vector<std::any>{std::any(command), std::any(std::vector<dbDataType>{}),
+                                         std::any(std::vector<std::shared_ptr<DBData>>{}), std::any(std::vector<dbDataType>{})});
+
+        std::shared_ptr<bool> shouldEnd = std::make_shared<bool>(false);
+        sqlite3DB->queueCommand(std::move(dbCommand), false);
         sqlite3DB->processQueue();
-        sqlite3DB->waitForQueue(&shouldEnd);
+        sqlite3DB->waitForQueue(shouldEnd);
         logger->log(Logger::level::INFO, Logger::group::SETUP, "Queue finished");
         sqlite3DB->close();
     }

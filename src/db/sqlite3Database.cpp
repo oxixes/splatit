@@ -38,29 +38,31 @@ bool sqlite3Database::run() {
     return true;
 }
 
-int sqlite3Database::queueCommand(Command* command, bool commandMutex) {
+int sqlite3Database::queueCommand(std::unique_ptr<Command> command, bool commandMutex) {
     //std::unique_lock dbLock(dbThreadMutex);
     std::unique_lock lock(commandQueueMutex);
-    command->commandId = commandId++;
-    commandQueue.push(command);
+    command->commandId = commandId;
 
     if (commandMutex) {
-        auto* mutex = new std::mutex();
-        auto* cv = new std::condition_variable();
-        auto condition_variable_info = std::make_tuple(command->commandId, mutex, cv, std::this_thread::get_id());
+        auto mutex = std::make_unique<std::mutex>();
+        auto cv = std::make_unique<std::condition_variable>();
+        auto condition_variable_info = std::make_tuple(command->commandId, std::move(mutex),
+                                                       std::move(cv), std::this_thread::get_id());
         std::unique_lock cmdMutexLock(commandCVsMutex);
         commandCVs.push_back(std::move(condition_variable_info));
         command->hasMutex = true;
     }
 
-    return command->commandId;
+    commandQueue.push(std::move(command));
+
+    return commandId++;
 }
 
 void sqlite3Database::processQueue() {
     dbThreadCV.notify_one();
 }
 
-void sqlite3Database::waitForCommand(int commandId, bool* shouldEnd) {
+void sqlite3Database::waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) {
     std::unique_lock commandCVsLock(commandCVsMutex);
     auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
         return std::get<0>(info) == commandId;
@@ -73,8 +75,9 @@ void sqlite3Database::waitForCommand(int commandId, bool* shouldEnd) {
         return;
     }
 
-    std::mutex* mutex = std::get<1>(*CVInfo);
-    std::condition_variable* cv = std::get<2>(*CVInfo);
+    // FIXME: Use smart pointers here?
+    std::mutex* mutex = std::get<1>(*CVInfo).get();
+    std::condition_variable* cv = std::get<2>(*CVInfo).get();
     commandCVsLock.unlock();
 
     std::unique_lock lock(*mutex);
@@ -83,14 +86,14 @@ void sqlite3Database::waitForCommand(int commandId, bool* shouldEnd) {
             return true;
         } else {
             std::unique_lock resultsLock(resultsMutex);
-            return std::ranges::any_of(results, [commandId](Result* result) {
+            return std::ranges::any_of(results, [commandId](const std::unique_ptr<Result>& result) {
                 return result->commandId == commandId;
             });
         }
     });
 }
 
-void sqlite3Database::waitForQueue(bool* shouldEnd) {
+void sqlite3Database::waitForQueue(std::shared_ptr<bool> shouldEnd) {
     std::unique_lock lock(dbThreadMutex);
     dbThreadCV.wait(lock, [this, shouldEnd] {
         if (!running || *shouldEnd) return true;
@@ -129,7 +132,7 @@ void sqlite3Database::dbThread() {
         while (!commandQueue.empty()) {
             if (!running) break;
 
-            Command* command = commandQueue.front();
+            std::unique_ptr<Command> command = std::move(commandQueue.front());
             processCommand(command);
             commandQueue.pop();
 
@@ -145,12 +148,9 @@ void sqlite3Database::dbThread() {
                                 "Attempted to notify a command that does not exist or doesn't have a mutex (ID: " +
                                 std::to_string(commandId) + ")");
                 } else {
-                    std::condition_variable* cv = std::get<2>(*CVInfo);
-                    cv->notify_all();
+                    std::get<2>(*CVInfo)->notify_all();
                 }
             }
-
-            delete command;
         }
 
         queueLock.unlock();
@@ -160,8 +160,8 @@ void sqlite3Database::dbThread() {
     }
 }
 
-void sqlite3Database::processCommand(Command* command) {
-    auto* returnedData = new std::vector<std::vector<DBData*>*>();
+void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
+    auto returnedData = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
     sqlite3_stmt* statement = nullptr;
 
     std::vector<std::any> resultsData;
@@ -171,7 +171,7 @@ void sqlite3Database::processCommand(Command* command) {
         case commandType::GENERIC:
             if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
                 command->data[1].type() != typeid(std::vector<dbDataType>) ||
-                command->data[2].type() != typeid(std::vector<DBData*>) ||
+                command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
                 command->data[3].type() != typeid(std::vector<dbDataType>)) {
                 logger->log(Logger::level::ERROR, Logger::group::DB,
                             "Failed to run SQLite 3 statement: invalid command data");
@@ -185,7 +185,7 @@ void sqlite3Database::processCommand(Command* command) {
             }
 
             if (!bindData(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]),
-                          std::any_cast<std::vector<DBData*>>(command->data[2]))) {
+                          std::any_cast<std::vector<std::shared_ptr<DBData>>>(command->data[2]))) {
                 resultStatus = resultStatus::FAILURE_GENERIC;
                 break;
             }
@@ -198,15 +198,15 @@ void sqlite3Database::processCommand(Command* command) {
             sqlite3_finalize(statement);
 
             // TODO This should be moved elsewhere
-            for (auto* row : *returnedData) {
+            for (const auto& row : *returnedData) {
                 std::vector<std::any> rowData;
-                for (auto* data : *row) {
+                for (const auto& data : row) {
                     switch (data->type) {
                         case dbDataType::INTEGER:
-                            rowData.emplace_back(dynamic_cast<DBInteger*>(data));
+                            rowData.emplace_back(std::dynamic_pointer_cast<DBInteger>(data));
                             break;
                         case dbDataType::STRING:
-                            rowData.emplace_back(dynamic_cast<DBString*>(data));
+                            rowData.emplace_back(std::dynamic_pointer_cast<DBString>(data));
                             break;
                     }
                 }
@@ -216,10 +216,8 @@ void sqlite3Database::processCommand(Command* command) {
             break;
     }
 
-    freeData(returnedData);
-
     std::unique_lock lock(resultsMutex);
-    results.push_back(new Result(command->commandId, resultStatus, resultsData));
+    results.push_back(std::make_unique<Result>(command->commandId, resultStatus, resultsData));
 }
 
 bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** outStatement) {
@@ -234,16 +232,17 @@ bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** 
 }
 
 bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbDataType>& dataTypes,
-                               const std::vector<DBData*>& data) {
+                               const std::vector<std::shared_ptr<DBData>>& data) {
     for (int i = 0; i < dataTypes.size(); i++) {
         int result = 0;
         switch (dataTypes[i]) {
             case dbDataType::INTEGER:
-                result = sqlite3_bind_int(statement, i + 1, std::any_cast<int>(dynamic_cast<DBInteger*>(data[i])->data));
+                result = sqlite3_bind_int(statement, i + 1, std::any_cast<int>(
+                        std::dynamic_pointer_cast<DBInteger>(data[i])->data));
                 break;
             case dbDataType::STRING:
-                result = sqlite3_bind_text(statement, i + 1, std::any_cast<std::string>(dynamic_cast<DBString*>(data[i])->data).c_str(), -1,
-                                           SQLITE_TRANSIENT);
+                result = sqlite3_bind_text(statement, i + 1, std::any_cast<std::string>(
+                        std::dynamic_pointer_cast<DBString>(data[i])->data).c_str(), -1, SQLITE_TRANSIENT);
                 break;
         }
 
@@ -258,7 +257,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
 }
 
 bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
-                                   std::vector<std::vector<DBData*>*>* returnedData) {
+                                   const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData) {
     if (statement == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::DB, "Failed to run SQLite 3 statement: statement is null");
         return false;
@@ -271,20 +270,19 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<db
     //returnedData = new std::vector<std::vector<DBData*>*>();
     while (result != SQLITE_DONE) {
         if (result == SQLITE_ROW && returnedData != nullptr) {
-            auto* row = new std::vector<DBData*>();
+            //auto* row = new std::vector<DBData*>();
+            returnedData->emplace_back();
             for (int i = 0; i < sqlite3_column_count(statement); i++) {
                 switch (dataTypes[i]) {
                     case dbDataType::INTEGER:
-                        row->push_back((DBData*) new DBInteger(sqlite3_column_int(statement, i)));
+                        returnedData->back().emplace_back(new DBInteger(sqlite3_column_int(statement, i)));
                         break;
                     case dbDataType::STRING:
-                        row->push_back((DBData*) new DBString(std::string(
+                        returnedData->back().emplace_back(new DBString(std::string(
                                 reinterpret_cast<const char *>(sqlite3_column_text(statement, i)))));
                         break;
                 }
             }
-
-            returnedData->push_back(row);
         } else {
             logger->log(Logger::level::ERROR, Logger::group::DB,
                         "Failed to run SQLite 3 statement: " + std::string(sqlite3_errmsg(db)));
@@ -296,23 +294,6 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<db
     }
 
     return true;
-}
-
-void sqlite3Database::freeData(std::vector<std::vector<DBData*>*>* data) {
-    if (data == nullptr) return;
-
-    for (auto& row : *data) {
-        if (row == nullptr) continue;
-
-        for (auto& column : *row) {
-            if (column == nullptr) continue;
-            delete column;
-        }
-
-        delete row;
-    }
-
-    delete data;
 }
 
 void sqlite3Database::close() {
@@ -328,28 +309,22 @@ void sqlite3Database::close() {
     //       we'll notify all the condition variables so that any thread that
     //       is waiting for a command to finish will be notified and can exit
     std::unique_lock CVLock(commandCVsMutex);
-    for (auto cv : commandCVs) {
+    for (auto& cv : commandCVs) {
         std::get<2>(cv)->notify_all();
     }
 
     std::unique_lock queueLock(commandQueueMutex);
     while (!commandQueue.empty()) {
-        Command* command = commandQueue.front();
+        std::unique_ptr<Command> command = std::move(commandQueue.front());
         commandQueue.pop();
-        delete command;
     }
     queueLock.unlock();
 
     std::unique_lock resultsLock(resultsMutex);
-    for (auto* result : results) delete result;
     results.clear();
     resultsLock.unlock();
 
     // NOTE: Maybe we should let all threads that created the mutexes destroy them?
-    for (auto CVInfo : commandCVs) {
-        delete std::get<1>(CVInfo);
-        delete std::get<2>(CVInfo);
-    }
     commandCVs.clear();
     CVLock.unlock();
 
