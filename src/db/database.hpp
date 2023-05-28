@@ -8,30 +8,38 @@
 #include <condition_variable>
 
 #include "../logger.hpp"
+#include "dbTypes.hpp"
 
 namespace db {
 
-enum class type {
+enum class DBType {
     SQLITE3
 };
 
-enum class commandType {
+enum class DBVersion {
+    NO_DATA = 0,
+    INITIAL
+};
+
+const DBVersion CURRENT_VERSION = DBVersion::INITIAL;
+
+enum class DBCommandType {
     GENERIC
 };
 
-enum class resultStatus {
+enum class DBResultStatus {
     SUCCESS,
     FAILURE_GENERIC
 };
 
 class Command {
 public:
-    commandType type;
+    DBCommandType type;
     std::vector<std::any> data;
     int commandId = 0;
     bool hasMutex = false;
 
-    explicit Command(commandType type, std::vector<std::any> data) {
+    explicit Command(DBCommandType type, std::vector<std::any> data) {
         this->type = type;
         this->data = std::move(data);
     }
@@ -40,10 +48,10 @@ public:
 class Result {
 public:
     std::vector<std::any> data;
-    resultStatus status;
+    DBResultStatus status;
     int commandId;
 
-    explicit Result(int commandId, resultStatus status, std::vector<std::any>& data) {
+    explicit Result(int commandId, DBResultStatus status, std::vector<std::any>& data) {
         this->commandId = commandId;
         this->status = status;
         this->data = std::move(data);
@@ -52,7 +60,7 @@ public:
 
 class Database {
 protected:
-    explicit Database(std::shared_ptr<Logger::Logger> logger);
+    explicit Database(std::shared_ptr<Logger::Logger> logger, DBType type, DBVersion version);
 
     std::shared_ptr<Logger::Logger> logger;
 
@@ -67,6 +75,8 @@ protected:
 
     int commandId = 0;
 
+    DBType dbType;
+    DBVersion dbVersion;
 public:
     virtual ~Database() = default;
 
@@ -79,6 +89,13 @@ public:
     virtual void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) = 0;
     virtual void waitForQueue(std::shared_ptr<bool> shouldEnd) = 0;
     virtual void clearCommandMutex(int commandId) = 0;
+
+    std::unique_ptr<Result> getResult(int commandID);
+
+    static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
+
+    [[nodiscard]] DBType getType() const;
+    [[nodiscard]] DBVersion getVersion() const;
 };
 
 } // namespace db

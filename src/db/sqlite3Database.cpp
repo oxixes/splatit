@@ -2,11 +2,10 @@
 #include <utility>
 #include "sqlite3Database.hpp"
 
-// TODO Switch to smart pointers
-
 namespace db {
 
-sqlite3Database::sqlite3Database(std::shared_ptr<Logger::Logger> logger, const fs::path& dbPath) : Database(std::move(logger)) {
+sqlite3Database::sqlite3Database(std::shared_ptr<Logger::Logger> logger, const fs::path& dbPath) :
+        Database(std::move(logger), DBType::SQLITE3, DBVersion::NO_DATA) {
     this->dbPath = dbPath;
 }
 
@@ -21,6 +20,8 @@ bool sqlite3Database::init() {
         return false;
     }
 
+    bool dbExists = fs::exists(dbPath);
+
     if (sqlite3_open_v2(dbPath.string().c_str(), &db,
                         SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
@@ -28,7 +29,47 @@ bool sqlite3Database::init() {
         return false;
     }
 
+    if (dbExists) {
+        try {
+            dbVersion = obtainVersion();
+
+            logger->log(Logger::level::DEBUG, Logger::group::DB, "DB version: "
+                + std::to_string(static_cast<int>(dbVersion)));
+        } catch (const std::runtime_error& e) {
+            logger->log(Logger::level::ERROR, Logger::group::DB,
+                        "Failed to obtain database version: " + std::string(e.what()));
+            return false;
+        }
+    }
+
     return true;
+}
+
+DBVersion sqlite3Database::obtainVersion() {
+    std::string sql = "SELECT version FROM db_info LIMIT 1;";
+
+    sqlite3_stmt* stmt;
+    if (!craftStatement(sql, &stmt)) {
+        throw std::runtime_error("Failed to craft statement");
+    }
+
+    auto results = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
+    auto dataTypes = std::vector<dbDataType>{dbDataType::STRING};
+
+    if (!runStatement(stmt, dataTypes, results)) {
+        throw std::runtime_error("Failed to run statement");
+    }
+
+    if (results->empty() || results->at(0).empty()) {
+        throw std::runtime_error("No version data found");
+    }
+
+    try {
+        return migrations::getVersionFromString(std::any_cast<std::string>(
+                std::dynamic_pointer_cast<DBString>(results->at(0).at(0))->data));
+    } catch (const std::runtime_error& e) {
+        throw std::runtime_error("Failed to parse version data: " + std::string(e.what()));
+    }
 }
 
 bool sqlite3Database::run() {
@@ -82,7 +123,7 @@ void sqlite3Database::waitForCommand(int commandId, std::shared_ptr<bool> should
 
     std::unique_lock lock(*mutex);
     (*cv).wait(lock, [this, commandId, shouldEnd] {
-        if (!running || *shouldEnd) {
+        if (!running || (shouldEnd != nullptr && *shouldEnd)) {
             return true;
         } else {
             std::unique_lock resultsLock(resultsMutex);
@@ -96,7 +137,7 @@ void sqlite3Database::waitForCommand(int commandId, std::shared_ptr<bool> should
 void sqlite3Database::waitForQueue(std::shared_ptr<bool> shouldEnd) {
     std::unique_lock lock(dbThreadMutex);
     dbThreadCV.wait(lock, [this, shouldEnd] {
-        if (!running || *shouldEnd) return true;
+        if (!running || (shouldEnd != nullptr && *shouldEnd)) return true;
         std::unique_lock lock(commandQueueMutex);
         return commandQueue.empty();
     });
@@ -165,10 +206,10 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
     sqlite3_stmt* statement = nullptr;
 
     std::vector<std::any> resultsData;
-    resultStatus resultStatus = resultStatus::SUCCESS;
+    DBResultStatus resultStatus = DBResultStatus::SUCCESS;
 
     switch (command->type) {
-        case commandType::GENERIC:
+        case DBCommandType::GENERIC:
             if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
                 command->data[1].type() != typeid(std::vector<dbDataType>) ||
                 command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
@@ -180,18 +221,18 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
             // TODO Improve statuses
             if (!craftStatement(std::any_cast<std::string>(command->data[0]), &statement)) {
-                resultStatus = resultStatus::FAILURE_GENERIC;
+                resultStatus = DBResultStatus::FAILURE_GENERIC;
                 break;
             }
 
             if (!bindData(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]),
                           std::any_cast<std::vector<std::shared_ptr<DBData>>>(command->data[2]))) {
-                resultStatus = resultStatus::FAILURE_GENERIC;
+                resultStatus = DBResultStatus::FAILURE_GENERIC;
                 break;
             }
 
             if (!runStatement(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]), returnedData)) {
-                resultStatus = resultStatus::FAILURE_GENERIC;
+                resultStatus = DBResultStatus::FAILURE_GENERIC;
                 break;
             }
 

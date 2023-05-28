@@ -5,6 +5,8 @@
 #include <utility>
 #include <any>
 
+namespace db {
+
 enum class dbDataType {
     INTEGER,
     STRING
@@ -34,5 +36,7 @@ class DBString : public DBData {
 public:
     explicit DBString(const std::string& data) : DBData(data, dbDataType::STRING) {}
 };
+
+} // namespace db
 
 #endif //SPLATOON_SERVER_DBTYPES_HPP

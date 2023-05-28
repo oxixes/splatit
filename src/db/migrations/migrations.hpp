@@ -6,19 +6,12 @@
 
 namespace db::migrations {
 
-enum class dbVersion {
-    NO_DATA = 0,
-    INITIAL
-};
+bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type);
 
-const dbVersion CURRENT_VERSION = dbVersion::INITIAL;
-
-
-bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, type type);
-
-bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, type type,
-             dbVersion fromVersion);
-std::string getVersionString(dbVersion version);
+bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type,
+             DBVersion fromVersion);
+std::string getVersionString(DBVersion version);
+DBVersion getVersionFromString(const std::string& str);
 
 } // namespace db
 

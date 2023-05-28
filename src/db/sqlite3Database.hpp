@@ -10,6 +10,7 @@
 
 #include "database.hpp"
 #include "dbTypes.hpp"
+#include "migrations/migrations.hpp"
 #include "../util/util.hpp"
 
 namespace fs = std::filesystem;
@@ -48,6 +49,8 @@ private:
                   const std::vector<std::shared_ptr<DBData>>& data);
     bool runStatement(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
                       const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData);
+
+    DBVersion obtainVersion();
 };
 
 } // namespace db
