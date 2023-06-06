@@ -10,13 +10,6 @@
 namespace argParser {
 
     struct options {
-        bool no_account;
-        bool no_boss;
-        bool no_friends_auth;
-        bool no_friends_secure;
-        bool no_splatoon_auth;
-        bool no_splatoon_secure;
-
         std::string data_path = "data";
         Logger::level minLogLevel = Logger::level::INFO;
     };

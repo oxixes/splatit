@@ -96,7 +96,16 @@
   "required": ["db"],
   "anyOf": [
     {
-      "required": ["accounts"]
+      "required": ["accounts"],
+      "properties": {
+        "accounts": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
     }
   ],
   "allOf": [
@@ -106,7 +115,7 @@
         "properties": {
           "accounts": {
             "properties": {
-              "enable": { "const": true }
+              "enabled": { "const": true }
             }
           }
         }

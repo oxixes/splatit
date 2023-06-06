@@ -7,11 +7,13 @@
 #include <filesystem>
 
 #include <nlohmann/json.hpp>
+#include <nlohmann/json-schema.hpp>
 
 #include "argParser.hpp"
 #include "logger.hpp"
 
 using json = nlohmann::json;
+using json_validator = nlohmann::json_schema::json_validator;
 namespace fs = std::filesystem;
 
 class SettingsManager {
@@ -56,7 +58,8 @@ private:
         bool splatoonSecure = false;
     } enabledServers;
 
-    bool openOrCreateFiles(const argParser::options& serverOptions, std::ifstream& settingsFileHandler);
+    bool openOrCreateFiles(const argParser::options& serverOptions, std::ifstream& settingsFileHandler,
+                           std::ifstream& schemaFileHandler);
     bool validateSettings(const argParser::options& serverOptions);
     bool generateDefaultSettingsJSON(const argParser::options& serverOptions);
 };

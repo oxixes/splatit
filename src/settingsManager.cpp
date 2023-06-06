@@ -11,28 +11,28 @@ bool SettingsManager::init(const argParser::options& serverOptions) {
         return false;
     }
 
-    if (!serverOptions.no_account) {
+//    if (!serverOptions.no_account) {
+//        domains.account = "account." + std::string(settings["domain"]);
+//    }
+
+//    if (!serverOptions.no_boss) {
+//        domains.bossNPTS = "npts.app." + std::string(settings["domain"]);
+//        domains.bossNPPL = "nppl.app." + std::string(settings["domain"]);
+//        domains.bossNPDI = "npdi.cdn." + std::string(settings["domain"]);
+//    }
+
+    if (settings.contains("accounts") && settings["accounts"]["enabled"]) {
+        enabledServers.account = true;
         domains.account = "account." + std::string(settings["domain"]);
     }
 
-    if (!serverOptions.no_boss) {
-        domains.bossNPTS = "npts.app." + std::string(settings["domain"]);
-        domains.bossNPPL = "nppl.app." + std::string(settings["domain"]);
-        domains.bossNPDI = "npdi.cdn." + std::string(settings["domain"]);
-    }
-
-    // Keep a copy of the state of servers, as we might enable configuring this from the settings file
-    enabledServers.account = !serverOptions.no_account;
-    enabledServers.boss = !serverOptions.no_boss;
-    enabledServers.friendsAuth = !serverOptions.no_friends_auth;
-    enabledServers.friendsSecure = !serverOptions.no_friends_secure;
-    enabledServers.splatoonAuth = !serverOptions.no_splatoon_auth;
-    enabledServers.splatoonSecure = !serverOptions.no_splatoon_secure;
+    // TODO Add BOSS and more to settings file
 
     return true;
 }
 
-bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions, std::ifstream& settingsFileHandler) {
+bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions, std::ifstream& settingsFileHandler,
+                                        std::ifstream& schemaFileHandler) {
     // Check if data directory exists
     fs::path dataDirPath = fs::path(serverOptions.data_path);
 
@@ -49,7 +49,7 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
     }
 
     // Check if settings file exists
-    std::filesystem::path settingsFilePath = dataDirPath/fs::path("settings.json");
+    fs::path settingsFilePath = dataDirPath/fs::path("settings.json");
     if (!fs::exists(settingsFilePath)) {
         logger->log(Logger::level::WARN, Logger::group::SETUP,
                     "Settings file didn't exist, creating one.");
@@ -76,12 +76,28 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
         return false;
     }
 
+    fs::path schemaFilePath = fs::path("settings.schema.json");
+    if (!fs::exists(schemaFilePath)) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    "Settings schema file didn't exist, cannot validate settings file.");
+        return false;
+    }
+
+    try {
+        schemaFileHandler = std::ifstream(schemaFilePath);
+    } catch (const std::exception& ex) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    "An error occurred while validating the settings file: " + std::string(ex.what()));
+        return false;
+    }
+
     return true;
 }
 
 bool SettingsManager::validateSettings(const argParser::options& serverOptions) {
     std::ifstream settingsFileHandler;
-    if (!openOrCreateFiles(serverOptions, settingsFileHandler)) return false;
+    std::ifstream schemaFileHandler;
+    if (!openOrCreateFiles(serverOptions, settingsFileHandler, schemaFileHandler)) return false;
 
     try {
         settings = json::parse(settingsFileHandler);
@@ -93,18 +109,22 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
 
     settingsFileHandler.close();
 
-    // Check json structure
-    if (!(settings.contains("ssl") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings.contains("domain") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings.contains("boss") || serverOptions.no_boss)
-        || !(settings["ssl"].contains("caCert") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings["ssl"].contains("caKey") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings["ssl"].contains("cert") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings["ssl"].contains("key") || (serverOptions.no_boss && serverOptions.no_account))
-        || !(settings["boss"].contains("data") || serverOptions.no_boss)) {
+    json_validator schemaValidator;
+    try {
+        json schema = json::parse(schemaFileHandler);
+        schemaValidator.set_root_schema(schema);
+    } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
-                    "The settings file does not have the correct structure, please check"
-                    " the docs to create a correct file.");
+                    "An error occurred while parsing the settings schema file: " + std::string(ex.what()));
+        return false;
+    }
+
+    // Check json structure
+    try {
+        schemaValidator.validate(settings);
+    } catch (const std::exception& ex) {
+        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+                    "The settings file does not have the correct structure: " + std::string(ex.what()));
         return false;
     }
 
@@ -114,9 +134,13 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
 bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serverOptions) {
     fs::path dataDirAbsPath = fs::absolute(fs::path(serverOptions.data_path));
     fs::path certsPath = dataDirAbsPath/fs::path("certs");
-    fs::path bossPath = dataDirAbsPath/fs::path("boss");
+    //fs::path bossPath = dataDirAbsPath/fs::path("boss");
 
     settings = {
+            {"db", {
+                    {"type", "SQLite3"},
+                    {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+            }},
             {"ssl", {
                     {"caCert", (certsPath/fs::path("ca.crt")).string()},
                     {"caKey", (certsPath/fs::path("ca.key")).string()},
@@ -124,14 +148,14 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"key", (certsPath/fs::path("any.nintendo.net.key")).string()}
             }},
             {"domain", "nintendo.net"},
-            {"boss", {
-                    {"data", bossPath.string()}
+            {"accounts", {
+                    {"enabled", true}
             }}
     };
 
     try {
         if (!fs::exists(certsPath)) fs::create_directory(certsPath);
-        if (!fs::exists(bossPath)) fs::create_directory(bossPath);
+        //if (!fs::exists(bossPath)) fs::create_directory(bossPath);
     } catch (const std::exception& ex) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP,
                     "An error occurred while creating the certs and boss directories: " + std::string(ex.what()));
