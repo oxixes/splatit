@@ -9,6 +9,11 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
         case DBType::SQLITE3:
             sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
             sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE users (pid INTEGER, username TEXT NOT NULL, password TEXT NOT NULL, PRIMARY KEY (pid));");
+            sqlCmds.emplace_back("CREATE TABLE friendships (pid INTEGER NOT NULL, friend_pid INTEGER NOT NULL, PRIMARY KEY (pid, friend_pid));");
+            sqlCmds.emplace_back("CREATE TABLE user_info (pid INTEGER NOT NULL, show_presence INTEGER NOT NULL DEFAULT (1), "
+                                 "show_playing INTEGER NOT NULL DEFAULT (1), block_requests INTEGER NOT NULL DEFAULT (0), "
+                                 "mii BLOB, PRIMARY KEY (pid));");
             break;
     }
 

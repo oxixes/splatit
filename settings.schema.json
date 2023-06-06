@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://json-schema.org/draft-07/schema#",
+  "title": "SplatIt settings file",
+  "description": "A settings file for the SplatIt Splatoon server",
+  "type": "object",
+  "properties": {
+    "domain": {
+        "description": "The domain name of the server",
+        "type": "string"
+    },
+    "ssl": {
+      "description": "SSL settings",
+      "type": "object",
+      "properties": {
+        "caCert": {
+          "description": "The path to the CA certificate",
+          "type": "string"
+        },
+        "cert": {
+          "description": "The path to the server certificate",
+          "type": "string"
+        },
+        "caKey": {
+          "description": "The path to the CA key",
+          "type": "string"
+        },
+        "key": {
+          "description": "The path to the server key",
+          "type": "string"
+        }
+      },
+      "required": ["caCert", "cert", "caKey", "key"]
+    },
+    "db": {
+      "description": "Database settings",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "The database type to use",
+          "type": "string",
+          "enum": ["SQLite3"]
+        },
+        "path": {
+          "description": "Path to the database file",
+          "type": "string"
+        },
+        "host": {
+          "description": "Host of the database",
+          "type": "string"
+        },
+        "port": {
+          "description": "Port of the database",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "user": {
+          "description": "User name of the database",
+          "type": "string"
+        },
+        "password": {
+          "description": "Password og the user in the database",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the database to connect to",
+          "type": "string"
+        }
+      },
+      "required": ["type"],
+      "if": {
+        "properties": {
+          "type": {"const": "SQLite3"}
+        },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["path"]
+      },
+      "else": {
+        "required": ["host", "port", "user", "password", "name"]
+      }
+    },
+    "accounts": {
+      "description": "Configuration of the accounts server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the account server",
+          "type": "boolean"
+        }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "required": ["db"],
+  "anyOf": [
+    {
+      "required": ["accounts"]
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": ["accounts"],
+        "properties": {
+          "accounts": {
+            "properties": {
+              "enable": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["domain", "ssl"]
+      }
+    }
+  ]
+}

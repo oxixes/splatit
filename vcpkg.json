@@ -14,5 +14,8 @@
   }, {
     "name" : "nlohmann-json",
     "version>=" : "3.11.2"
+  }, {
+    "name" : "json-schema-validator",
+    "version>=" : "2.2.0"
   } ]
 }
