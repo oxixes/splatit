@@ -215,6 +215,10 @@ fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["data"];
 }
 
+json SettingsManager::getDBSettings() const {
+    return settings["db"];
+}
+
 std::vector<std::string> SettingsManager::getDomains() const {
     std::vector<std::string> usedDomains;
 

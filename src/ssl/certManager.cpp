@@ -13,10 +13,7 @@ CertManager::CertManager(std::shared_ptr<SettingsManager> settingsManager, std::
 }
 
 CertManager::~CertManager() {
-    if (CAkey) EVP_PKEY_free(CAkey);
-    if (CAcert) X509_free(CAcert);
-    if (key) EVP_PKEY_free(key);
-    if (cert) X509_free(cert);
+    cleanup();
 }
 
 bool CertManager::init() {
@@ -103,6 +100,7 @@ bool CertManager::loadKey(const fs::path& keyPath, EVP_PKEY** pKey) {
     }
 
     *pKey = PEM_read_PrivateKey(pKeyFile, nullptr, nullptr, nullptr);
+    EVP_PKEY_up_ref(*pKey); // Solve refcount error in OpenSSL?
     if (*pKey == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The private key couldn't be loaded: " +
                 util::getOpenSSLError());
@@ -124,6 +122,7 @@ bool CertManager::loadCert(const fs::path& certPath, X509** outCert) {
     }
 
     *outCert = PEM_read_X509(certFile, nullptr, nullptr, nullptr);
+    X509_up_ref(*outCert); // Solve refcount error in OpenSSL?
     if (*outCert == nullptr) {
         logger->log(Logger::level::ERROR, Logger::group::SETUP, "The certificate couldn't be loaded: " +
                 util::getOpenSSLError());

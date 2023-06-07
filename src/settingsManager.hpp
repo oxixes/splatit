@@ -37,6 +37,8 @@ public:
     [[nodiscard]] fs::path getTopDomain() const;
     [[nodiscard]] fs::path getBOSSPath() const;
 
+    [[nodiscard]] json getDBSettings() const;
+
     [[nodiscard]] std::vector<std::string> getDomains() const;
 private:
     json settings;

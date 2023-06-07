@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "sqlite3Database.hpp"
 
 #include <utility>
 
@@ -32,6 +33,17 @@ std::unique_ptr<Result> Database::getResult(int commandID) {
     results.erase(result);
 
     return std::move(resultPtr);
+}
+
+std::shared_ptr<Database> Database::createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger) {
+    if (config["type"].get<std::string>() == "SQLite3") {
+        auto* db = new sqlite3Database(std::move(logger), config["path"].get<std::string>());
+        return std::move(std::shared_ptr<Database>((Database*) db));
+    } else {
+        logger->log(Logger::level::ERROR, Logger::group::DB, "Database type " +
+            config["type"].get<std::string>() + " is not supported.");
+        return nullptr;
+    }
 }
 
 DBType Database::getType() const {

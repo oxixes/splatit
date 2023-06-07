@@ -7,8 +7,12 @@
 #include <mutex>
 #include <condition_variable>
 
+#include <nlohmann/json.hpp>
+
 #include "../logger.hpp"
 #include "dbTypes.hpp"
+
+using json = nlohmann::json;
 
 namespace db {
 
@@ -93,6 +97,8 @@ public:
     std::unique_ptr<Result> getResult(int commandID);
 
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
+
+    static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;
