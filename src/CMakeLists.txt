@@ -1,4 +1,5 @@
 add_subdirectory(ssl)
+add_subdirectory(socket)
 add_subdirectory(http)
 add_subdirectory(nex)
 add_subdirectory(util)

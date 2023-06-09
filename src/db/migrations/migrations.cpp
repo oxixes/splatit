@@ -14,7 +14,7 @@ bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_pt
 
     for (int i = static_cast<int>(fromVersion) + 1; i <= static_cast<int>(CURRENT_VERSION); i++) {
         if (!migrations[i - 1](logger, db, type)) {
-            logger->log(Logger::level::ERROR, Logger::group::DB,
+            logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to migrate from version " + getVersionString(static_cast<DBVersion>(i - 1)) +
                         " to version " + getVersionString(static_cast<DBVersion>(i)));
             return false;

@@ -31,12 +31,12 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
         db->clearCommandMutex(commandId.first);
         std::unique_ptr<Result> result = db->getResult(commandId.first);
         if (result == nullptr) {
-            logger->log(Logger::level::ERROR, Logger::group::DB, "Failed to get result for command: " + commandId.second);
+            logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to get result for command: " + commandId.second);
             return false;
         }
 
         if (result->status != DBResultStatus::SUCCESS) {
-            logger->log(Logger::level::ERROR, Logger::group::DB, "Failed to execute command: " + commandId.second);
+            logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to execute command: " + commandId.second);
             return false;
         }
     }

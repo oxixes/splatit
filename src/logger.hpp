@@ -13,7 +13,7 @@ enum class level {
     DEBUG = 0,
     INFO,
     WARN,
-    ERROR
+    FAILURE
 };
 
 enum class group {

@@ -25,9 +25,10 @@ target_link_libraries(splatoon_server PRIVATE nlohmann_json::nlohmann_json)
 find_package(SQLite3 REQUIRED)
 target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 
-set(HTTPLIB_REQUIRE_OPENSSL ON)
-find_package(httplib CONFIG REQUIRED)
-target_link_libraries(splatoon_server PRIVATE httplib::httplib)
+#set(HTTPLIB_REQUIRE_OPENSSL ON)
+#add_compile_definitions(CPPHTTPLIB_OPENSSL_SUPPORT)
+#find_package(httplib CONFIG REQUIRED)
+#target_link_libraries(splatoon_server PRIVATE httplib::httplib)
 
 add_subdirectory(lib/json-schema-validator)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)

@@ -5,8 +5,6 @@
 #include "../settingsManager.hpp"
 #include "../ssl/certManager.hpp"
 
-#define CPPHTTPLIB_OPENSSL_SUPPORT
-#define CPPHTTPLIB_THREAD_POOL_COUNT 5
 #include <httplib.h>
 
 class HTTP_Server {
@@ -19,11 +17,13 @@ public:
     void stop();
 
 private:
-    std::unique_ptr<httplib::SSLServer> server;
+
 
     std::shared_ptr<SettingsManager> settingsMgr;
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<CertManager> certMgr;
+
+    void listenTask();
 };
 
 #endif // SPLATOON_SERVER_SERVER_HPP

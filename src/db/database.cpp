@@ -40,8 +40,8 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, std::shar
         auto* db = new sqlite3Database(std::move(logger), config["path"].get<std::string>());
         return std::move(std::shared_ptr<Database>((Database*) db));
     } else {
-        logger->log(Logger::level::ERROR, Logger::group::DB, "Database type " +
-            config["type"].get<std::string>() + " is not supported.");
+        logger->log(Logger::level::FAILURE, Logger::group::DB, "Database type " +
+                                                               config["type"].get<std::string>() + " is not supported.");
         return nullptr;
     }
 }

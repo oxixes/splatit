@@ -22,8 +22,8 @@ void Logger::setMinLevel(level minLevel) {
 
 std::string Logger::getLevelName(level level) {
     switch (level) {
-        case level::ERROR:
-            return "ERROR";
+        case level::FAILURE:
+            return "FAILURE";
         case level::WARN:
             return "WARNING";
         case level::INFO:

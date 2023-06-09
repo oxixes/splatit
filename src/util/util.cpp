@@ -2,9 +2,11 @@
 
 namespace util {
 
-std::string getOpenSSLError() {
+std::string getOpenSSLError(const unsigned long* error) {
     char buff[512];
-    ERR_error_string(ERR_get_error(), buff);
+    ERR_error_string((error == nullptr) ? ERR_get_error() : *error, buff);
+    ERR_clear_error();
+
     return std::string{buff};
 }
 

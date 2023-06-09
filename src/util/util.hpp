@@ -9,7 +9,7 @@
 namespace fs = std::filesystem;
 
 namespace util {
-    std::string getOpenSSLError();
+    std::string getOpenSSLError(const unsigned long* error = nullptr);
     bool checkParentDirectory(const fs::path& filePath);
 } // namespace util
 

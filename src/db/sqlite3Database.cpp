@@ -15,7 +15,7 @@ sqlite3Database::~sqlite3Database() {
 
 bool sqlite3Database::init() {
     if (!util::checkParentDirectory(dbPath)) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "Failed to open SQLite 3 database: parent directory does not exist");
         return false;
     }
@@ -24,7 +24,7 @@ bool sqlite3Database::init() {
 
     if (sqlite3_open_v2(dbPath.string().c_str(), &db,
                         SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "Failed to open SQLite 3 database: " + std::string(sqlite3_errmsg(db)));
         return false;
     }
@@ -36,7 +36,7 @@ bool sqlite3Database::init() {
             logger->log(Logger::level::DEBUG, Logger::group::DB, "DB version: "
                 + std::to_string(static_cast<int>(dbVersion)));
         } catch (const std::runtime_error& e) {
-            logger->log(Logger::level::ERROR, Logger::group::DB,
+            logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to obtain database version: " + std::string(e.what()));
             return false;
         }
@@ -214,7 +214,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
                 command->data[1].type() != typeid(std::vector<dbDataType>) ||
                 command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
                 command->data[3].type() != typeid(std::vector<dbDataType>)) {
-                logger->log(Logger::level::ERROR, Logger::group::DB,
+                logger->log(Logger::level::FAILURE, Logger::group::DB,
                             "Failed to run SQLite 3 statement: invalid command data");
                 break;
             }
@@ -263,7 +263,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
 bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** outStatement) {
     if (sqlite3_prepare_v2(db, command.c_str(), -1, outStatement, nullptr) != SQLITE_OK) {
-        logger->log(Logger::level::ERROR, Logger::group::DB,
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Failed to craft SQLite 3 statement: " + std::string(sqlite3_errmsg(db)) +
                     " (command: " + command + ")");
         return false;
@@ -288,7 +288,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
         }
 
         if (result != SQLITE_OK) {
-            logger->log(Logger::level::ERROR, Logger::group::DB,
+            logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to bind SQLite 3 statement data: " + std::string(sqlite3_errmsg(db)));
             return false;
         }
@@ -300,7 +300,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
 bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
                                    const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData) {
     if (statement == nullptr) {
-        logger->log(Logger::level::ERROR, Logger::group::DB, "Failed to run SQLite 3 statement: statement is null");
+        logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to run SQLite 3 statement: statement is null");
         return false;
     }
 
@@ -325,7 +325,7 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<db
                 }
             }
         } else {
-            logger->log(Logger::level::ERROR, Logger::group::DB,
+            logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to run SQLite 3 statement: " + std::string(sqlite3_errmsg(db)));
             //freeData(returnedData);
             return false;

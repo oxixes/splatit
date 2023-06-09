@@ -42,7 +42,7 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
         try {
             fs::create_directory(dataDirPath);
         } catch (const std::exception& ex) {
-            logger->log(Logger::level::ERROR, Logger::group::SETUP,
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         "An error occurred while creating the data directory: " + std::string(ex.what()));
             return false;
         }
@@ -58,7 +58,7 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
         try {
             outputFileHandler = std::ofstream(settingsFilePath);
         } catch (const std::exception& ex) {
-            logger->log(Logger::level::ERROR, Logger::group::SETUP,
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         "An error occurred while creating the settings file: " + std::string(ex.what()));
             return false;
         }
@@ -71,14 +71,14 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
     try {
         settingsFileHandler = std::ifstream(settingsFilePath);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while opening the settings file: " + std::string(ex.what()));
         return false;
     }
 
     fs::path schemaFilePath = fs::path("settings.schema.json");
     if (!fs::exists(schemaFilePath)) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "Settings schema file didn't exist, cannot validate settings file.");
         return false;
     }
@@ -86,7 +86,7 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
     try {
         schemaFileHandler = std::ifstream(schemaFilePath);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while validating the settings file: " + std::string(ex.what()));
         return false;
     }
@@ -102,7 +102,7 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
     try {
         settings = json::parse(settingsFileHandler);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while parsing the settings file: " + std::string(ex.what()));
         return false;
     }
@@ -114,7 +114,7 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
         json schema = json::parse(schemaFileHandler);
         schemaValidator.set_root_schema(schema);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while parsing the settings schema file: " + std::string(ex.what()));
         return false;
     }
@@ -123,7 +123,7 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
     try {
         schemaValidator.validate(settings);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "The settings file does not have the correct structure: " + std::string(ex.what()));
         return false;
     }
@@ -157,7 +157,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
         if (!fs::exists(certsPath)) fs::create_directory(certsPath);
         //if (!fs::exists(bossPath)) fs::create_directory(bossPath);
     } catch (const std::exception& ex) {
-        logger->log(Logger::level::ERROR, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while creating the certs and boss directories: " + std::string(ex.what()));
         return false;
     }
