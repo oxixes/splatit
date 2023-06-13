@@ -1,6 +1,9 @@
 #include <stdexcept>
 #include "tlsSocket.hpp"
 
+// TODO Handle non blocking accept
+// TODO Improve error handling by using SSL_get_error
+
 namespace sock {
 
 TLSSocket::TLSSocket(bool server, EVP_PKEY* key, X509* cert) : TCPSocket() {
@@ -49,7 +52,8 @@ TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) const {
         throw FatalException("Failed to set SSL file descriptor: " + util::getOpenSSLError());
     }
 
-    if (SSL_accept(newSocket->ssl) <= 0) {
+    int ret = SSL_accept(newSocket->ssl);
+    if (ret <= 0) {
         throw FatalException("Failed to accept TLS connection: " + util::getOpenSSLError());
     }
 

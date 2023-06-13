@@ -41,6 +41,8 @@ std::string Logger::getGroupName(group group) {
             return "ACCOUNT";
         case group::DB:
             return "DB";
+        case group::NETWORK:
+            return "NETWORK";
         case group::BOSS:
             return "BOSS";
         case group::FRIENDS:

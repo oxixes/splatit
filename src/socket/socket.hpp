@@ -16,6 +16,10 @@
 
 #include <stdexcept>
 
+// Defines the maximum number of times a socket operation can be retried
+// before giving up.
+#define MAX_TRIES 3
+
 namespace sock {
 
 bool initialize();
@@ -33,6 +37,14 @@ public:
     explicit FatalException(const char* what_arg) : std::runtime_error(what_arg) {};
 };
 
+struct IPv4Dir {
+    uint8_t a;
+    uint8_t b;
+    uint8_t c;
+    uint8_t d;
+    uint16_t port;
+};
+
 class Socket {
 public:
     Socket(int domain, int type, int protocol);
@@ -41,11 +53,7 @@ public:
     void setsockopt(int level, int optname, const void* optval, socklen_t optlen) const;
     void bind(const struct sockaddr* addr, socklen_t addrlen) const;
     void listen(int backlog = SOMAXCONN) const;
-
-    virtual Socket* accept(struct sockaddr* addr, socklen_t* addrlen) const;
-    virtual void connect(const struct sockaddr* addr, socklen_t addrlen);
-    virtual int send(const void* buf, size_t len, int flags) const;
-    virtual int recv(void* buf, size_t len, int flags) const;
+    void setBlocking(bool blocking) const;
 
     virtual void close();
     virtual void shutdown() const;
@@ -59,7 +67,6 @@ public:
 protected:
 #ifdef _WIN32
     explicit Socket(SOCKET socket);
-    SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen) const;
 
     SOCKET socket;
 #else
@@ -67,10 +74,6 @@ protected:
     int SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen) const;
 
     int socket;
-#endif
-
-#ifdef _WIN32
-        static std::string getError(int error);
 #endif
 };
 
@@ -83,9 +86,18 @@ public:
 #endif
     ~TCPSocket() override = default;
 
+    virtual TCPSocket* accept(struct sockaddr* addr, socklen_t* addrlen) const;
+    virtual void connect(const struct sockaddr* addr, socklen_t addrlen);
+    virtual int send(const void* buf, size_t len, int flags) const;
+    virtual int recv(void* buf, size_t len, int flags) const;
+
+    void sendall(const void* buf, size_t len, int flags) const;
+
 protected:
 #ifdef _WIN32
     explicit TCPSocket(SOCKET socket) : Socket(socket) {};
+
+    SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen) const;
 #else
     explicit TCPSocket(int socket) : Socket(socket) {};
 #endif

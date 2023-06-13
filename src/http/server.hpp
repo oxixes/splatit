@@ -5,8 +5,6 @@
 #include "../settingsManager.hpp"
 #include "../ssl/certManager.hpp"
 
-#include <httplib.h>
-
 class HTTP_Server {
 public:
     HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SettingsManager> settingsMgr,
@@ -17,8 +15,6 @@ public:
     void stop();
 
 private:
-
-
     std::shared_ptr<SettingsManager> settingsMgr;
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<CertManager> certMgr;

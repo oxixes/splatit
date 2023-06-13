@@ -19,6 +19,7 @@ enum class level {
 enum class group {
     SETUP,
     DB,
+    NETWORK,
     ACCOUNT,
     BOSS,
     FRIENDS,
