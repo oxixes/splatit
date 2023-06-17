@@ -13,12 +13,12 @@ public:
     explicit TLSSocket(bool server = true, EVP_PKEY* key = nullptr, X509* cert = nullptr);
     ~TLSSocket() override;
 
-    TLSSocket* accept(struct sockaddr* addr, socklen_t* addrlen) const override;
+    TLSSocket* accept(struct sockaddr* addr, socklen_t* addrlen) override;
     void connect(const struct sockaddr* addr, socklen_t addrlen) override;
-    int send(const void* buf, size_t len, int flags) const override;
-    int recv(void* buf, size_t len, int flags) const override;
-    void close() override;
-    void shutdown() const override;
+    void connect() override;
+    int send(const void* buf, size_t len, int flags) override;
+    int recv(void* buf, size_t len, int flags) override;
+    void close(bool force) override;
 
 private:
 #ifdef _WIN32
@@ -29,6 +29,9 @@ private:
 
     SSL_CTX* ctx;
     SSL* ssl = nullptr;
+
+    bool server = false;
+    bool fatalErrorOcurred = false;
 };
 
 } // namespace sock::tcp

@@ -37,6 +37,12 @@ public:
     explicit FatalException(const char* what_arg) : std::runtime_error(what_arg) {};
 };
 
+class SSLException : public std::runtime_error {
+public:
+    explicit SSLException(const std::string& what_arg) : std::runtime_error(what_arg) {};
+    explicit SSLException(const char* what_arg) : std::runtime_error(what_arg) {};
+};
+
 struct IPv4Dir {
     uint8_t a;
     uint8_t b;
@@ -45,24 +51,42 @@ struct IPv4Dir {
     uint16_t port;
 };
 
+enum class SocketStatus {
+    NOT_CONNECTED,
+    CONNECTING,
+    CONNECTED,
+    CLOSING,
+    CLOSED,
+    LISTENING,
+    FAILURE
+};
+
+enum class ResultType {
+    SUCCESS,
+    NEEDS_READ,
+    NEEDS_WRITE
+};
+
 class Socket {
 public:
     Socket(int domain, int type, int protocol);
     virtual ~Socket();
 
-    void setsockopt(int level, int optname, const void* optval, socklen_t optlen) const;
-    void bind(const struct sockaddr* addr, socklen_t addrlen) const;
-    void listen(int backlog = SOMAXCONN) const;
-    void setBlocking(bool blocking) const;
+    void setsockopt(int level, int optname, const void* optval, socklen_t optlen);
+    void bind(const struct sockaddr* addr, socklen_t addrlen);
+    void listen(int backlog = SOMAXCONN);
+    void setBlocking(bool blocking);
 
-    virtual void close();
-    virtual void shutdown() const;
+    virtual void close(bool force);
 
 #ifdef _WIN32
     [[nodiscard]] SOCKET getSocket() const;
 #else
     [[nodiscard]] int getSocket() const;
 #endif
+
+    [[nodiscard]] SocketStatus getStatus() const;
+    [[nodiscard]] ResultType getLastResult() const;
 
 protected:
 #ifdef _WIN32
@@ -75,6 +99,9 @@ protected:
 
     int socket;
 #endif
+
+    SocketStatus status = SocketStatus::NOT_CONNECTED;
+    ResultType lastResult = ResultType::SUCCESS;
 };
 
 class TCPSocket : public Socket {
@@ -86,18 +113,17 @@ public:
 #endif
     ~TCPSocket() override = default;
 
-    virtual TCPSocket* accept(struct sockaddr* addr, socklen_t* addrlen) const;
+    virtual TCPSocket* accept(struct sockaddr* addr, socklen_t* addrlen);
     virtual void connect(const struct sockaddr* addr, socklen_t addrlen);
-    virtual int send(const void* buf, size_t len, int flags) const;
-    virtual int recv(void* buf, size_t len, int flags) const;
-
-    void sendall(const void* buf, size_t len, int flags) const;
+    virtual void connect();
+    virtual int send(const void* buf, size_t len, int flags);
+    virtual int recv(void* buf, size_t len, int flags);
 
 protected:
 #ifdef _WIN32
     explicit TCPSocket(SOCKET socket) : Socket(socket) {};
 
-    SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen) const;
+    SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen);
 #else
     explicit TCPSocket(int socket) : Socket(socket) {};
 #endif

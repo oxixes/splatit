@@ -18,8 +18,11 @@ void closeCallbackTest(unsigned int socketId) {
     std::cout << "Socket " << socketId << " closed." << std::endl;
 }
 
-void readCallbackTest(unsigned int socketId, std::vector<unsigned char> data) {
+void readCallbackTest(std::shared_ptr<SocketManager> sm, unsigned int socketId, std::vector<unsigned char> data) {
     std::cout << "Socket " << socketId << " read: " << std::string((char*) data.data()) << std::endl;
+
+    std::string dataToSend = "HTTP 1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 39\r\n\r\n<html><body><h1>Test</h1></body></html>";
+    sm->send(socketId, std::vector<unsigned char>(dataToSend.begin(), dataToSend.end()));
 }
 
 int main(int argc, char** argv) {
@@ -85,7 +88,8 @@ int main(int argc, char** argv) {
         socket->listen();
 
         socketManager->addTCPSocket(socket, acceptCallbackTest, closeCallbackTest,
-                                    readCallbackTest, closeCallbackTest);
+                                    std::bind(readCallbackTest, socketManager, std::placeholders::_1, std::placeholders::_2),
+                                    closeCallbackTest);
 
         certManager->cleanup();
     }

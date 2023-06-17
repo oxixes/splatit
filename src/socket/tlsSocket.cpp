@@ -38,7 +38,11 @@ TLSSocket::~TLSSocket() {
     }
 }
 
-TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) const {
+TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
+    if (status != SocketStatus::LISTENING) {
+        throw FatalException("Not listening, cannot continue (tried accepting)");
+    }
+
     SSL* sslPtr = SSL_new(ctx);
 
     if (!sslPtr) {
@@ -48,80 +52,206 @@ TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) const {
     auto* newSocket = new TLSSocket(acceptAux(addr, addrlen), ctx, sslPtr);
     SSL_CTX_up_ref(ctx);
 
+    newSocket->server = true;
+
     if (!SSL_set_fd(newSocket->ssl, (int) newSocket->socket)) {
-        throw FatalException("Failed to set SSL file descriptor: " + util::getOpenSSLError());
+        delete newSocket;
+        throw SSLException("Failed to set SSL file descriptor: " + util::getOpenSSLError());
     }
 
     int ret = SSL_accept(newSocket->ssl);
     if (ret <= 0) {
-        throw FatalException("Failed to accept TLS connection: " + util::getOpenSSLError());
+        unsigned long error = SSL_get_error(newSocket->ssl, ret);
+        if (error == SSL_ERROR_WANT_WRITE) {
+            newSocket->lastResult = ResultType::NEEDS_WRITE;
+            newSocket->status = SocketStatus::CONNECTING;
+//            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_WANT_READ) {
+            newSocket->lastResult = ResultType::NEEDS_READ;
+            newSocket->status = SocketStatus::CONNECTING;
+//            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else {
+//            newSocket->status = SocketStatus::FAILURE;
+            delete newSocket;
+            throw SSLException("Failed to accept TLS connection: " + util::getOpenSSLError(&error));
+        }
+    } else {
+        newSocket->lastResult = ResultType::SUCCESS;
+        newSocket->status = SocketStatus::CONNECTED;
     }
 
     return newSocket;
 }
 
 void TLSSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
+    if (status != SocketStatus::NOT_CONNECTED) {
+        throw FatalException("Not disconnected, cannot continue (tried connecting)");
+    }
+    if (status == SocketStatus::CONNECTED) {
+        lastResult = ResultType::SUCCESS;
+        return;
+    }
+
     ssl = SSL_new(ctx);
 
     if (!ssl) {
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to create SSL object: " + util::getOpenSSLError());
     }
 
     if (!SSL_set_fd(ssl, (int) socket)) {
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to set SSL file descriptor: " + util::getOpenSSLError());
     }
 
     TCPSocket::connect(addr, addrlen);
 
-    if (SSL_connect(ssl) <= 0) {
-        throw FatalException("Failed to connect TLS connection: " + util::getOpenSSLError());
+    int result = SSL_connect(ssl);
+    if (result <= 0) {
+        unsigned long error = SSL_get_error(ssl, result);
+        if (error == SSL_ERROR_WANT_WRITE) {
+            lastResult = ResultType::NEEDS_WRITE;
+            status = SocketStatus::CONNECTING;
+            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_WANT_READ) {
+            lastResult = ResultType::NEEDS_READ;
+            status = SocketStatus::CONNECTING;
+            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else {
+            if (error == SSL_ERROR_SYSCALL || error == SSL_ERROR_SSL) fatalErrorOcurred = true;
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to connect TLS connection: " + util::getOpenSSLError());
+        }
+    }
+
+    status = SocketStatus::CONNECTED;
+    lastResult = ResultType::SUCCESS;
+}
+
+void TLSSocket::connect() {
+    if (status != SocketStatus::CONNECTING) {
+        throw FatalException("Not connecting, cannot continue (tried connecting)");
+    }
+    if (status == SocketStatus::CONNECTED) {
+        lastResult = ResultType::SUCCESS;
+        return;
+    }
+
+    int result;
+    if (server) {
+        result = SSL_accept(ssl);
+    } else {
+        result = SSL_connect(ssl);
+    }
+
+    if (result <= 0) {
+        unsigned long error = SSL_get_error(ssl, result);
+        if (error == SSL_ERROR_WANT_WRITE) {
+            lastResult = ResultType::NEEDS_WRITE;
+            status = SocketStatus::CONNECTING;
+            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_WANT_READ) {
+            lastResult = ResultType::NEEDS_READ;
+            status = SocketStatus::CONNECTING;
+            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else {
+            if (error == SSL_ERROR_SYSCALL || error == SSL_ERROR_SSL) fatalErrorOcurred = true;
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to connect TLS connection: " + util::getOpenSSLError());
+        }
+    } else {
+        status = SocketStatus::CONNECTED;
+        lastResult = ResultType::SUCCESS;
     }
 }
 
-int TLSSocket::send(const void* buf, size_t len, int flags) const {
+int TLSSocket::send(const void* buf, size_t len, int flags) {
+    if (status != SocketStatus::CONNECTED) {
+        throw FatalException("Not connected, cannot continue (tried sending)");
+    }
+
     size_t bytesWritten = 0;
     int result = SSL_write_ex(ssl, buf, len, &bytesWritten);
 
-    if (result < 0) {
+    if (result <= 0) {
         unsigned long error = SSL_get_error(ssl, result);
-        if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) {
+        if (error == SSL_ERROR_WANT_WRITE) {
+            lastResult = ResultType::NEEDS_WRITE;
+            throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_WANT_READ) {
+            lastResult = ResultType::NEEDS_READ;
             throw RetryableException("Failed to send data: " + util::getOpenSSLError(&error));
         } else {
+            if (error == SSL_ERROR_SYSCALL || error == SSL_ERROR_SSL) fatalErrorOcurred = true;
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to send data: " + util::getOpenSSLError(&error));
         }
     }
 
+    lastResult = ResultType::SUCCESS;
+
     return (int) bytesWritten;
 }
 
-int TLSSocket::recv(void* buf, size_t len, int flags) const {
+int TLSSocket::recv(void* buf, size_t len, int flags) {
+    if (status != SocketStatus::CONNECTED) {
+        throw FatalException("Not connected, cannot continue (tried reading)");
+    }
+
     size_t bytesRead = 0;
     int result = SSL_read_ex(ssl, buf, len, &bytesRead);
 
-    if (result < 0) {
+    if (result <= 0) {
         unsigned long error = SSL_get_error(ssl, result);
-        if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) {
+        if (error == SSL_ERROR_WANT_WRITE) {
+            lastResult = ResultType::NEEDS_WRITE;
             throw RetryableException("Failed to receive data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_WANT_READ) {
+            lastResult = ResultType::NEEDS_READ;
+            throw RetryableException("Failed to receive data: " + util::getOpenSSLError(&error));
+        } else if (error == SSL_ERROR_ZERO_RETURN) {
+            bytesRead = 0;
+            // Just in case
+            ERR_clear_error();
         } else {
+            if (error == SSL_ERROR_SYSCALL || error == SSL_ERROR_SSL) fatalErrorOcurred = true;
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to receive data: " + util::getOpenSSLError(&error));
         }
     }
 
+    lastResult = ResultType::SUCCESS;
+
     return (int) bytesRead;
 }
 
-void TLSSocket::shutdown() const {
-    SSL_shutdown(ssl);
-    TCPSocket::shutdown();
-}
+void TLSSocket::close(bool force) {
+    if (!fatalErrorOcurred && !force && ssl != nullptr) {
+        int result = SSL_shutdown(ssl);
+        if (result <= 0) {
+            unsigned long error = SSL_get_error(ssl, result);
+            if (error == SSL_ERROR_WANT_WRITE) {
+                lastResult = ResultType::NEEDS_WRITE;
+                status = SocketStatus::CLOSING;
+                throw RetryableException("Failed to close: " + util::getOpenSSLError(&error));
+            } else if (error == SSL_ERROR_WANT_READ) {
+                lastResult = ResultType::NEEDS_READ;
+                status = SocketStatus::CLOSING;
+                throw RetryableException("Failed to close: " + util::getOpenSSLError(&error));
+            }
+        }
+    } else if (!fatalErrorOcurred && ssl != nullptr) {
+        SSL_shutdown(ssl); // Since we're force closing the connection, we don't care about the result,
+                              // but it's still better to try and close the connection gracefully (by sending
+                              // a close alert).
+    }
 
-void TLSSocket::close() {
     if (ssl) {
         SSL_free(ssl);
         ssl = nullptr;
     }
 
-    TCPSocket::close();
+    TCPSocket::close(force);
 }
 
 } // namespace sock::tcp

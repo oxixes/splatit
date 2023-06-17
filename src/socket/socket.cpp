@@ -49,7 +49,7 @@ Socket::~Socket() {
     Socket::Socket(int socket) : socket(socket) {}
 #endif
 
-void Socket::setsockopt(int level, int optname, const void* optval, socklen_t optlen) const {
+void Socket::setsockopt(int level, int optname, const void* optval, socklen_t optlen) {
     int result;
 #ifdef _WIN32
     result = ::setsockopt(socket, level, optname, static_cast<const char*>(optval), optlen);
@@ -59,36 +59,44 @@ void Socket::setsockopt(int level, int optname, const void* optval, socklen_t op
 
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to set socket option: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to set socket option: " + std::string(strerror(errno)));
 #endif
     }
 }
 
-void Socket::bind(const struct sockaddr* addr, socklen_t addrlen) const {
+void Socket::bind(const struct sockaddr* addr, socklen_t addrlen) {
     int result = ::bind(socket, addr, addrlen);
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to bind socket: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to bind socket: " + std::string(strerror(errno)));
 #endif
     }
 }
 
-void Socket::listen(int backlog) const {
+void Socket::listen(int backlog) {
     int result = ::listen(socket, backlog);
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to listen on socket: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to listen on socket: " + std::string(strerror(errno)));
 #endif
     }
+
+    status = SocketStatus::LISTENING;
 }
 
-void Socket::setBlocking(bool blocking) const {
+void Socket::setBlocking(bool blocking) {
 #ifdef _WIN32
     u_long mode = blocking ? 0 : 1;
     int result = ioctlsocket(socket, FIONBIO, &mode);
@@ -104,14 +112,20 @@ void Socket::setBlocking(bool blocking) const {
 
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to set socket blocking: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to set socket blocking: " + std::string(strerror(errno)));
 #endif
     }
 }
 
-void Socket::close() {
+void Socket::close(bool force) {
+    // Try to shut down the socket gracefully, but don't care if it fails
+    // as we're closing it anyway
+    ::shutdown(socket, SD_BOTH);
+
     int result;
 #ifdef _WIN32
     result = closesocket(socket);
@@ -121,28 +135,15 @@ void Socket::close() {
 
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to close socket: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to close socket: " + std::string(strerror(errno)));
 #endif
     }
-}
 
-void Socket::shutdown() const {
-    int result;
-#ifdef _WIN32
-    result = ::shutdown(socket, SD_BOTH);
-#else
-    result = ::shutdown(socket, SHUT_RDWR);
-#endif
-
-    if (result < 0) {
-#ifdef _WIN32
-        throw FatalException("Failed to shutdown socket: " + util::getWSAError(WSAGetLastError()));
-#else
-        throw FatalException("Failed to shutdown socket: " + std::string(strerror(errno)));
-#endif
-    }
+    status = SocketStatus::CLOSED;
 }
 
 #ifdef _WIN32
@@ -155,8 +156,16 @@ int Socket::getSocket() const {
 }
 #endif
 
+SocketStatus Socket::getStatus() const {
+    return status;
+}
+
+ResultType Socket::getLastResult() const {
+    return lastResult;
+}
+
 #ifdef _WIN32
-SOCKET TCPSocket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) const {
+SOCKET TCPSocket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) {
 #else
 int Socket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) const {
 #endif
@@ -164,12 +173,14 @@ int Socket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) const {
     SOCKET newSocket = ::accept(socket, addr, addrlen);
 
     if (newSocket == INVALID_SOCKET) {
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to accept socket: " + util::getWSAError(WSAGetLastError()));
     }
 #else
     int newSocket = ::accept(socket, addr, addrlen);
 
     if (newSocket < 0) {
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to accept socket: " + std::string(strerror(errno)));
     }
 #endif
@@ -177,22 +188,46 @@ int Socket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) const {
     return newSocket;
 }
 
-TCPSocket* TCPSocket::accept(struct sockaddr* addr, socklen_t* addrlen) const {
-    return new TCPSocket(acceptAux(addr, addrlen));
+TCPSocket* TCPSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
+    if (status != SocketStatus::LISTENING) {
+        throw FatalException("Not listening, cannot continue (tried accepting)");
+    }
+
+    auto newSocket = new TCPSocket(acceptAux(addr, addrlen));
+    newSocket->status = SocketStatus::CONNECTED;
+    return newSocket;
 }
 
 void TCPSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
+    if (status != SocketStatus::NOT_CONNECTED) {
+        throw FatalException("Not disconnected, cannot continue (tried connecting)");
+    }
+
     int result = ::connect(socket, addr, addrlen);
     if (result < 0) {
 #ifdef _WIN32
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to connect socket: " + util::getWSAError(WSAGetLastError()));
 #else
+        status = SocketStatus::FAILURE;
         throw FatalException("Failed to connect socket: " + std::string(strerror(errno)));
 #endif
     }
+
+    status = SocketStatus::CONNECTED;
 }
 
-int TCPSocket::send(const void* buf, size_t len, int flags) const {
+void TCPSocket::connect() {
+    if (status != SocketStatus::CONNECTING) {
+        throw FatalException("Not connecting, cannot continue (tried connecting)");
+    }
+}
+
+int TCPSocket::send(const void* buf, size_t len, int flags) {
+    if (status != SocketStatus::CONNECTED) {
+        throw FatalException("Not connected, cannot continue (tried sending)");
+    }
+
     int result;
 #ifdef _WIN32
     result = ::send(socket, static_cast<const char*>(buf), static_cast<int>(len), flags);
@@ -204,24 +239,34 @@ int TCPSocket::send(const void* buf, size_t len, int flags) const {
 #ifdef _WIN32
         int error = WSAGetLastError();
         if (error == WSAEWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_WRITE;
             throw RetryableException("Failed to send data: " + util::getWSAError(error));
         } else {
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to send data: " + util::getWSAError(error));
         }
 #else
         int error = errno;
         if (error == EAGAIN || error == EWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_WRITE;
             throw RetryableException("Failed to send data: " + std::string(strerror(error)));
         } else {
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to send data: " + std::string(strerror(error)));
         }
 #endif
     }
 
+    lastResult = ResultType::SUCCESS;
+
     return result;
 }
 
-int TCPSocket::recv(void* buf, size_t len, int flags) const {
+int TCPSocket::recv(void* buf, size_t len, int flags) {
+    if (status != SocketStatus::CONNECTED) {
+        throw FatalException("Not connected, cannot continue (tried reading)");
+    }
+
     int result;
 #ifdef _WIN32
     result = ::recv(socket, static_cast<char*>(buf), static_cast<int>(len), flags);
@@ -233,39 +278,27 @@ int TCPSocket::recv(void* buf, size_t len, int flags) const {
 #ifdef _WIN32
         int error = WSAGetLastError();
         if (error == WSAEWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_READ;
             throw RetryableException("Failed to receive data: " + util::getWSAError(error));
         } else {
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to receive data: " + util::getWSAError(error));
         }
 #else
         int error = errno;
         if (error == EAGAIN || error == EWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_READ;
             throw RetryableException("Failed to receive data: " + std::string(strerror(error)));
         } else {
+            status = SocketStatus::FAILURE;
             throw FatalException("Failed to receive data: " + std::string(strerror(error)));
         }
 #endif
     }
 
+    lastResult = ResultType::SUCCESS;
+
     return result;
-}
-
-void TCPSocket::sendall(const void* buf, size_t len, int flags) const {
-    size_t total = 0;
-    int numTries = 0;
-    while (total < len) {
-        try {
-            int result = send(static_cast<const char *>(buf) + total, len - total, flags);
-            total += result;
-        } catch (const RetryableException& e) {
-            if (numTries >= MAX_TRIES) {
-                throw FatalException("Failed to send data: " + std::string(e.what()));
-            }
-
-            numTries++;
-            continue;
-        }
-    }
 }
 
 } // namespace sock

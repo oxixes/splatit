@@ -12,6 +12,9 @@
 // It is not infinity because we need to check if enough time has passed to close
 // keep alive sockets.
 #define POLL_TIMEOUT 200
+// Defines the amount of time to wait after a close notification has been sent to
+// a socket before force closing it if a response hasn't been received.
+#define CLOSE_TIMEOUT 3000
 
 enum class SocketType {
     TCP,
@@ -24,13 +27,14 @@ public:
     ~SocketManager() = default;
 
     unsigned int addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
-                     void(*acceptCallback)(unsigned int, unsigned int, sock::IPv4Dir),
-                     void(*closeCallback)(unsigned int),
-                     void(*connRecvCallback)(unsigned int, std::vector<unsigned char>),
-                     void(*connCloseCallback)(unsigned int), int keepAliveTimeout = 0);
+                     std::function<void(unsigned int, unsigned int, sock::IPv4Dir)> acceptCallback,
+                     std::function<void(unsigned int)> closeCallback,
+                     std::function<void(unsigned int, std::vector<unsigned char>)> connRecvCallback,
+                     std::function<void(unsigned int)> connCloseCallback, int keepAliveTimeout = 0);
     unsigned int addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket,
-                         void(*recvCallback)(unsigned int, std::vector<unsigned char>),
-                         void(*closeCallback)(unsigned int), int keepAliveTimeout = 0);
+                         std::function<void(unsigned int)> connectCallback,
+                         std::function<void(unsigned int, std::vector<unsigned char>)> recvCallback,
+                         std::function<void(unsigned int)> closeCallback, int keepAliveTimeout = 0);
 
     void process();
 
@@ -39,13 +43,15 @@ public:
 
 private:
     std::map<unsigned int, std::pair<SocketType, std::shared_ptr<sock::Socket>>> sockets;
-    std::map<unsigned int, void(*)(unsigned int, unsigned int, sock::IPv4Dir)> acceptCallbacks;
-    std::map<unsigned int, void(*)(unsigned int, std::vector<unsigned char>)> recvCallbacks;
+    std::map<unsigned int, std::function<void(unsigned int, unsigned int, sock::IPv4Dir)>> acceptCallbacks;
+    std::map<unsigned int, std::function<void(unsigned int)>> connectCallbacks;
+    std::map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>)>> recvCallbacks;
     // The first callback in the pair is the socket close callback, and the second is the close callback for
     // any connections accepted by the socket.
-    std::map<unsigned int, std::pair<void(*)(unsigned int), void(*)(unsigned int)>> closeCallbacks;
+    std::map<unsigned int, std::pair<std::function<void(unsigned int)>, std::function<void(unsigned int)>>> closeCallbacks;
     std::map<unsigned int, std::vector<unsigned char>> sendBuffers;
     std::map<unsigned int, unsigned long long> keepAliveTimeouts;
+    std::map<unsigned int, unsigned long long> closeTimeouts;
     std::vector<unsigned int> closeQueue;
 
     unsigned int nextSocketId = 0;
@@ -56,6 +62,7 @@ private:
 
     // Sends data from the write buffer of the socket with the given ID.
     void send(unsigned int socketId);
+    void recv(unsigned int socketId);
     void accept(unsigned int socketId);
 };
 
