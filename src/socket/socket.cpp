@@ -1,3 +1,4 @@
+#include <iostream>
 #include "socket.hpp"
 
 #include "../util/util.hpp"
@@ -204,15 +205,31 @@ void TCPSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     }
 
     int result = ::connect(socket, addr, addrlen);
-    if (result < 0) {
 #ifdef _WIN32
-        status = SocketStatus::FAILURE;
-        throw FatalException("Failed to connect socket: " + util::getWSAError(WSAGetLastError()));
-#else
-        status = SocketStatus::FAILURE;
-        throw FatalException("Failed to connect socket: " + std::string(strerror(errno)));
-#endif
+    if (result == SOCKET_ERROR) {
+        int error = WSAGetLastError();
+        if (error == WSAEWOULDBLOCK || error == WSAEINPROGRESS) {
+            status = SocketStatus::CONNECTING;
+            lastResult = ResultType::NEEDS_WRITE;
+            throw RetryableException("Failed to connect socket: " + util::getWSAError(error));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to connect socket: " + util::getWSAError(WSAGetLastError()));
+        }
     }
+#else
+    if (result < 0) {
+        int error = errno;
+        if (error == EAGAIN || error == EINPROGRESS) {
+            status = SocketStatus::CONNECTING;
+            lastResult = ResultType::NEEDS_WRITE;
+            throw RetryableException("Failed to connect socket: " + std::string(strerror(error)));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to connect socket: " + std::string(strerror(errno)));
+        }
+    }
+#endif
 
     status = SocketStatus::CONNECTED;
 }
@@ -221,6 +238,10 @@ void TCPSocket::connect() {
     if (status != SocketStatus::CONNECTING) {
         throw FatalException("Not connecting, cannot continue (tried connecting)");
     }
+
+    // This is supposed to be called after select() has indicated that the socket is ready for writing
+    status = SocketStatus::CONNECTED;
+    lastResult = ResultType::SUCCESS;
 }
 
 int TCPSocket::send(const void* buf, size_t len, int flags) {

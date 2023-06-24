@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <mutex>
 
 #include "socket.hpp"
 #include "../logger.hpp"
@@ -38,21 +39,31 @@ public:
 
     void process();
 
+    void connect(unsigned int socketId, sock::IPv4Dir address);
     bool send(unsigned int socketId, std::vector<unsigned char> data);
-    void close(unsigned int socketId, bool force = false);
+    bool close(unsigned int socketId, bool force = false);
 
 private:
     std::map<unsigned int, std::pair<SocketType, std::shared_ptr<sock::Socket>>> sockets;
+    std::mutex socketsMutex;
     std::map<unsigned int, std::function<void(unsigned int, unsigned int, sock::IPv4Dir)>> acceptCallbacks;
+    std::mutex acceptCallbacksMutex;
     std::map<unsigned int, std::function<void(unsigned int)>> connectCallbacks;
+    std::mutex connectCallbacksMutex;
     std::map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>)>> recvCallbacks;
+    std::mutex recvCallbacksMutex;
     // The first callback in the pair is the socket close callback, and the second is the close callback for
     // any connections accepted by the socket.
     std::map<unsigned int, std::pair<std::function<void(unsigned int)>, std::function<void(unsigned int)>>> closeCallbacks;
+    std::mutex closeCallbacksMutex;
     std::map<unsigned int, std::vector<unsigned char>> sendBuffers;
+    std::mutex sendBuffersMutex;
     std::map<unsigned int, unsigned long long> keepAliveTimeouts;
+    std::mutex keepAliveTimeoutsMutex;
     std::map<unsigned int, unsigned long long> closeTimeouts;
+    std::mutex closeTimeoutsMutex;
     std::vector<unsigned int> closeQueue;
+    std::mutex closeQueueMutex;
 
     unsigned int nextSocketId = 0;
 

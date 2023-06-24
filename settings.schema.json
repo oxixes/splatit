@@ -60,7 +60,7 @@
           "type": "string"
         },
         "password": {
-          "description": "Password og the user in the database",
+          "description": "Password of the user in the database",
           "type": "string"
         },
         "name": {

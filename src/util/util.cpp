@@ -21,7 +21,7 @@ bool checkParentDirectory(const fs::path& filePath) {
 std::string getWSAError(int error) {
     char* buffer;
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                   nullptr, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                   nullptr, error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
                    reinterpret_cast<char*>(&buffer), 0, nullptr);
     std::string message(buffer);
     LocalFree(buffer);
