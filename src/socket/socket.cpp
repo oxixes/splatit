@@ -1,4 +1,3 @@
-#include <iostream>
 #include "socket.hpp"
 
 #include "../util/util.hpp"
