@@ -36,7 +36,13 @@ class VersionNotSupportedException : public std::runtime_error {
         explicit VersionNotSupportedException(const char* what_arg) : std::runtime_error(what_arg) {};
 };
 
-void parseHeader(const std::string_view& header, std::map<std::string, std::vector<std::string>>& headers);
+void parseHeader(const std::string_view& header, std::map<std::string, std::vector<std::string>>& headers, bool fromChunked = false);
+bool isChunkedComplete(const std::vector<unsigned char>& data, size_t headerLength, size_t& length);
+void parseChunked(const std::vector<unsigned char>& data, std::map<std::string, std::vector<std::string>>& headers,
+                  size_t length, size_t headerLength, std::vector<unsigned char>& body);
+
+std::string percentDecode(const std::string& str);
+std::string percentEncode(const std::string& str);
 
 } // namespace http
 
