@@ -93,7 +93,8 @@ public:
     virtual void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) = 0;
     virtual void waitForQueue(std::shared_ptr<bool> shouldEnd) = 0;
     virtual void clearCommandMutex(int commandId) = 0;
-    // TODO Missing a way of notifying the CV when shouldEnd is set to true to stop waiting
+    virtual void notifyCommand(int commandId) = 0;
+    virtual void notifyQueue() = 0;
 
     std::unique_ptr<Result> getResult(int commandID);
 

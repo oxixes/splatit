@@ -154,6 +154,28 @@ void sqlite3Database::clearCommandMutex(int commandId) {
     });
 }
 
+void sqlite3Database::notifyCommand(int commandId) {
+    std::unique_lock lock(commandCVsMutex);
+    auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
+        return std::get<0>(info) == commandId;
+    });
+
+    if (CVInfo == commandCVs.end()) {
+        logger->log(Logger::level::DEBUG, Logger::group::DB,
+                    "Attempted to notify a command that does not exist or doesn't have a mutex (ID: " +
+                    std::to_string(commandId) + ")");
+        return;
+    }
+
+    std::condition_variable* cv = std::get<2>(*CVInfo).get();
+    lock.unlock();
+    (*cv).notify_all();
+}
+
+void sqlite3Database::notifyQueue() {
+    dbThreadCV.notify_all();
+}
+
 void sqlite3Database::dbThread() {
     while (true) {
         std::unique_lock lock(dbThreadMutex);

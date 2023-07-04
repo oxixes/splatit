@@ -31,6 +31,8 @@ public:
     void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) override;
     void waitForQueue(std::shared_ptr<bool> shouldEnd) override;
     void clearCommandMutex(int commandId) override;
+    void notifyCommand(int commandId) override;
+    void notifyQueue() override;
 
 private:
     sqlite3* db = nullptr;
