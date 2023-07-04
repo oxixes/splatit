@@ -1,10 +1,8 @@
 #include "request.hpp"
 
-// TODO Handle % encoding
-
 namespace http {
 
-Request::Request(const std::string &path, http::Method method, http::Version version) {
+Request::Request(const std::string& path, http::Method method, http::Version version) {
     this->path = path;
     this->method = method;
     this->version = version;
@@ -81,12 +79,7 @@ Request Request::parse(const std::vector<unsigned char>& data, size_t& length) {
 }
 
 bool Request::isHeaderComplete(const std::vector<unsigned char>& data, size_t& length) {
-    std::string_view dataView(reinterpret_cast<const char*>(data.data()), data.size());
-    size_t pos = dataView.find("\r\n\r\n");
-    if (pos == std::string_view::npos) return false;
-
-    length = pos + 4;
-    return true;
+    return isHTTPHeaderComplete(data, length);
 }
 
 // It is assumed that the header is complete, as isHeaderComplete() should be called before this
@@ -120,7 +113,10 @@ void Request::parseHTTPHeader(const std::vector<unsigned char>& data, size_t len
     std::string_view firstLineParams = firstLine.substr(firstLine.find(' ') + 1);
     std::string_view pathStr = firstLineParams.substr(0, firstLineParams.find(' '));
     std::string_view pathNoFragment = pathStr.substr(0, pathStr.find('#'));
-    path = std::string(pathNoFragment.substr(0, pathStr.find('?')));
+
+    // This will parse %2F as /, which means that it will be interpreted as a path separator
+    // This is intended.
+    path = percentDecode(std::string(pathNoFragment.substr(0, pathStr.find('?'))));
 
     if (path.empty()) throw MalformedException("Path is empty");
     if (path[0] != '/') throw MalformedException("Path does not start with '/'");
@@ -171,68 +167,22 @@ void Request::parseHTTPHeader(const std::vector<unsigned char>& data, size_t len
 
 // It is assumed that the header is valid and has been parsed, as parseHTTPHeader() should be called before this.
 bool Request::isBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength) {
-    if (headers.find("content-length") == headers.end() && headers.find("transfer-encoding") == headers.end()) {
-        length = 0;
-        return true;
-    }
-
-    std::string_view finalTransferEncoding;
-    if (headers.find("transfer-encoding") != headers.end()) {
-        finalTransferEncoding = headers["transfer-encoding"][0].substr(
-            headers["transfer-encoding"][0].find_last_of(',') + 1);
-
-        if (finalTransferEncoding[0] == ' ') finalTransferEncoding.remove_prefix(1);
-    }
-
-    if (headers.find("transfer-encoding") != headers.end() && finalTransferEncoding != "chunked") {
-        throw LengthUnknownException("Length unknown");
-    }
-
-    if (headers.find("transfer-encoding") != headers.end() &&
-        headers["transfer-encoding"][0] == "chunked") {
-        return isChunkedComplete(data, headerLength, length);
-    }
-
-    if (headers.find("content-length") != headers.end() && headers.find("transfer-encoding") == headers.end()) {
-        // Content length could be bigger than 64 bits, check for overflow
-
-        std::string content_length = headers["content-length"][0];
-        if (!std::all_of(content_length.begin(), content_length.end(), [](char c) { return std::isdigit(c) != 0; })) {
-            throw MalformedException("Content length is not a number");
-        }
-
-        try {
-            size_t contentLength = std::stoul(content_length);
-            if (data.size() >= headerLength + contentLength) {
-                length = contentLength;
-                return true;
-            }
-        } catch (std::out_of_range&) {
-            throw MalformedException("Content length too big");
-        }
-    }
-
-    return false;
+    return isHTTPBodyComplete(data, length, headerLength, headers);
 }
 
 // It is assumed that the body is complete, and the header is parsed, as this function is only called after isBodyComplete.
 // Also, the length is known.
 void Request::parseHTTPBody(const std::vector<unsigned char>& data, size_t headerLength, size_t length) {
-    std::string_view finalTransferEncoding;
+    std::string finalTransferEncoding;
     if (headers.find("transfer-encoding") != headers.end()) {
-        finalTransferEncoding = headers["transfer-encoding"][0].substr(
-                headers["transfer-encoding"][0].find_last_of(',') + 1);
-
-        if (finalTransferEncoding[0] == ' ') finalTransferEncoding.remove_prefix(1);
+        finalTransferEncoding = getFinalTransferEncoding(headers["transfer-encoding"][0]);
     }
 
     if (headers.find("transfer-encoding") != headers.end() && finalTransferEncoding == "chunked") {
         parseChunked(data, headers, length, headerLength, body);
-        return;
     } else if (headers.find("content-length") != headers.end() && headers.find("transfer-encoding") == headers.end()) {
         body.insert(body.end(), data.begin() + (long long) headerLength, data.begin()
                         + (long long) headerLength + (long long) length);
-        return;
     }
 }
 
@@ -273,7 +223,7 @@ std::vector<unsigned char> Request::serialize() const {
     data.insert(data.end(), methodStr.begin(), methodStr.end());
     data.push_back(' ');
 
-    std::string pathStr = path;
+    std::string pathStr = percentEncode(path, true);
 
     bool first = true;
     for (auto& queryParam : query) {
@@ -283,12 +233,13 @@ std::vector<unsigned char> Request::serialize() const {
         } else {
             pathStr.push_back('&');
         }
-        pathStr.insert(pathStr.end(), queryParam.first.begin(), queryParam.first.end());
-        pathStr.push_back('=');
-        pathStr.insert(pathStr.end(), queryParam.second.begin(), queryParam.second.end());
-    }
 
-    pathStr = percentEncode(pathStr);
+        std::string queryParamStr = percentEncode(queryParam.first);
+        pathStr.insert(pathStr.end(), queryParamStr.begin(), queryParamStr.end());
+        pathStr.push_back('=');
+        queryParamStr = percentEncode(queryParam.second);
+        pathStr.insert(pathStr.end(), queryParamStr.begin(), queryParamStr.end());
+    }
 
     data.insert(data.end(), pathStr.begin(), pathStr.end());
 
@@ -301,10 +252,7 @@ std::vector<unsigned char> Request::serialize() const {
 
         // We won't support chunked encoding for now
         if (header.first == "transfer-encoding") {
-            std::string finalTransferEncoding = header.second[0].substr(
-                    header.second[0].find_last_of(',') + 1);
-
-            if (finalTransferEncoding[0] == ' ') finalTransferEncoding.erase(0, 1);
+            std::string finalTransferEncoding = getFinalTransferEncoding(header.second[0]);
 
             if (finalTransferEncoding == "chunked") continue;
         }

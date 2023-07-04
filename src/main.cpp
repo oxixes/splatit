@@ -10,6 +10,7 @@
 #include "socket/tlsSocket.hpp"
 
 #include "http/parser/request.hpp"
+#include "http/parser/response.hpp"
 
 //void acceptCallbackTest(unsigned int socketId, unsigned int newSocketId, sock::IPv4Dir addr) {
 //    std::cout << "New connection from " << (int) addr.a << "." << (int) addr.b << "."
@@ -111,7 +112,7 @@ int main(int argc, char** argv) {
 //    }
 
 
-    std::string requestTest = "GET /hola/car%20cola?query1=a&query2=b HTTP/1.1\r\n"
+    std::string requestTest = "HTTP/1.1 200 OK\r\n"
                               "Host: localhost\r\n"
                               "Transfer-Encoding: chunked\r\n"
                               "\r\n"
@@ -129,11 +130,12 @@ int main(int argc, char** argv) {
 
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Parsing " + std::to_string(data.size()) + " bytes.");
 
-    http::Request req = http::Request::parse(data, length);
+    http::Response req = http::Response::parse(data, length, false, false);
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Parsed " + std::to_string(length) + " bytes.");
-    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Request: " + req.getPath());
-    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Query1: " + req.getQuery("query1"));
-    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Query2: " + req.getQuery("query2"));
+//    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Request: " + req.getPath());
+//    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Query1: " + req.getQuery("query1"));
+//    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Query2: " + req.getQuery("query2"));
+    logger->log(Logger::level::INFO, Logger::group::NETWORK, "Status: " + std::to_string(req.getStatus()));
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Header host: " + req.getHeader("host")[0]);
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Header connection 1: " + req.getHeader("connection")[0]);
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Header connection 2: " + req.getHeader("connection")[1]);
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
     std::vector serialized = req.serialize();
     std::string serializedStr(serialized.begin(), serialized.end());
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Serialized: " + serializedStr);
-    http::Request::parse(serialized, length);
+    http::Response::parse(serialized, length, false, false);
 
 
     db->close();

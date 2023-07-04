@@ -4,6 +4,15 @@
 
 namespace http {
 
+bool isHTTPHeaderComplete(const std::vector<unsigned char>& data, size_t& length) {
+    std::string_view dataView(reinterpret_cast<const char*>(data.data()), data.size());
+    size_t pos = dataView.find("\r\n\r\n");
+    if (pos == std::string_view::npos) return false;
+
+    length = pos + 4;
+    return true;
+}
+
 void parseHeader(const std::string_view& header, std::map<std::string, std::vector<std::string>>& headers, bool fromChunked) {
     size_t pos = header.find(':');
     if (pos == std::string::npos) {
@@ -146,6 +155,69 @@ void parseChunked(const std::vector<unsigned char>& data, std::map<std::string, 
     }
 }
 
+std::string getFinalTransferEncoding(const std::string& transferEncoding) {
+    std::string finalTransferEncoding = transferEncoding.substr(
+            transferEncoding.find_last_of(',') + 1);
+
+    if (finalTransferEncoding[0] == ' ') finalTransferEncoding = finalTransferEncoding.substr(1);
+
+    return finalTransferEncoding;
+}
+
+bool isHTTPBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength,
+                        std::map<std::string, std::vector<std::string>>& headers,
+                        bool isResponse, int status, bool reqWasHead, bool connectionClose) {
+    if (isResponse && (reqWasHead || status == 204 || status == 304 || (status >= 100 && status < 200))) {
+        length = 0;
+        return true;
+    }
+
+    if (headers.find("content-length") == headers.end() && headers.find("transfer-encoding") == headers.end()) {
+        length = 0;
+        return true;
+    }
+
+    std::string finalTransferEncoding;
+    if (headers.find("transfer-encoding") != headers.end()) {
+        finalTransferEncoding = getFinalTransferEncoding(headers["transfer-encoding"][0]);
+    }
+
+    if (headers.find("transfer-encoding") != headers.end() && finalTransferEncoding != "chunked") {
+        if (!isResponse) throw LengthUnknownException("Length unknown");
+
+        if (connectionClose) {
+            length = data.size() - headerLength;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    if (headers.find("transfer-encoding") != headers.end() &&
+        headers["transfer-encoding"][0] == "chunked") {
+        return isChunkedComplete(data, headerLength, length);
+    }
+
+    if (headers.find("content-length") != headers.end() && headers.find("transfer-encoding") == headers.end()) {
+        std::string content_length = headers["content-length"][0];
+        if (!std::all_of(content_length.begin(), content_length.end(), [](char c) { return std::isdigit(c) != 0; })) {
+            throw MalformedException("Content length is not a number");
+        }
+
+        try {
+            size_t contentLength = std::stoul(content_length);
+            if (data.size() >= headerLength + contentLength) {
+                length = contentLength;
+                return true;
+            }
+        } catch (std::out_of_range&) {
+            throw MalformedException("Content length too big");
+        }
+    }
+
+    return false;
+}
+
 std::string percentDecode(const std::string& str) {
     std::string result;
     result.reserve(str.size());
@@ -175,14 +247,19 @@ std::string percentDecode(const std::string& str) {
     return std::move(result);
 }
 
-std::string percentEncode(const std::string& str) {
+std::string percentEncode(const std::string& str, bool allowSlash) {
     std::string reserved = " !\"#$%&'()*+,/:;=?@[]";
 
     std::string result;
     result.reserve(str.size());
 
     for (char i : str) {
-        // Check if character is in the unreserved set
+        if (i == '/' && allowSlash) {
+            result += i;
+            continue;
+        }
+
+        // Check if character is in the reserved set
         if (reserved.find(i) != std::string::npos || i > 0x7F) {
             result += '%';
             std::stringstream ss;

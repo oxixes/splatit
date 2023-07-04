@@ -238,6 +238,11 @@ void SocketManager::process() {
     std::unique_lock closeTimeoutsLock(closeTimeoutsMutex);
 
     for (auto socketId = closeQueue.begin(); socketId != closeQueue.end(); ) {
+        if (sockets.find(*socketId) == sockets.end()) {
+            socketId = closeQueue.erase(socketId);
+            continue;
+        }
+
         auto socket = sockets[*socketId];
         if (socket.first == SocketType::TCP_CONN) {
             if (sendBuffers[*socketId].empty() && closeTimeouts.find(*socketId) == closeTimeouts.end()) {
