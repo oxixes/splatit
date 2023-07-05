@@ -25,9 +25,12 @@ public:
     unsigned int registerCloseCall(std::function<void()> closeFunc);
     void unregisterCloseCall(unsigned int id);
 
-    void registerRoute(const std::string& path, std::function<http::Response(
+    void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
             std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func);
+
+    void registerErrorPage(const std::string& host, std::function<http::Response(
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)> func);
 
 private:
     std::shared_ptr<Logger::Logger> logger;
@@ -46,10 +49,15 @@ private:
     std::mutex workerMutex;
     std::condition_variable workerCV;
 
-    std::map<std::string, std::function<http::Response(
+    // This is a map of maps, the first key is the host, the second key is the path for that given host
+    std::map<std::string, std::map<std::string, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
-            std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>> routes;
+            std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>> routes;
     std::mutex routesMutex;
+
+    std::map<std::string, std::function<http::Response(
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)>> errorPages;
+    std::mutex errorPagesMutex;
 
     std::map<unsigned int, sock::IPv4Dir> clients;
     std::mutex clientsMutex;
@@ -66,7 +74,9 @@ private:
     void onDataReceived(unsigned int sockId, std::vector<unsigned char> data);
 
     static http::Response getError(http::Version version, int status);
-    void sendError(unsigned int sockId, int status, http::Version version);
+    void sendError(unsigned int sockId, int status, const http::Request& request, sock::IPv4Dir client);
+    // Sent when a request is not available, as it couldn't be parsed
+    void sendError(unsigned int sockId, int status);
 };
 
 #endif // SPLATOON_SERVER_SERVER_HPP

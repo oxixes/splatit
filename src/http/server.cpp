@@ -71,7 +71,7 @@ void HTTP_Server::onDataReceived(unsigned int sockId, std::vector<unsigned char>
 
     auto& buffer = buffers.find(sockId)->second;
     if (buffer.size() + data.size() > MAX_PAYLOAD_SIZE) {
-        sendError(sockId, HTTP_STATUS_PAYLOAD_TOO_LARGE, http::Version::HTTP_1_1);
+        sendError(sockId, HTTP_STATUS_PAYLOAD_TOO_LARGE);
         return;
     }
 
@@ -119,13 +119,13 @@ void HTTP_Server::onDataReceived(unsigned int sockId, std::vector<unsigned char>
     } catch (http::NotCompleteException& e) {
         // Do nothing, wait for more data
     } catch (http::LengthUnknownException& e) {
-        sendError(sockId, HTTP_STATUS_BAD_REQUEST, http::Version::HTTP_1_1);
+        sendError(sockId, HTTP_STATUS_BAD_REQUEST);
     } catch (http::VersionNotSupportedException& e) {
-        sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED, http::Version::HTTP_1_1);
+        sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
     } catch (http::MethodNotSupportedException& e) {
-        sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED, http::Version::HTTP_1_1);
+        sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED);
     } catch (http::MalformedException& e) {
-        sendError(sockId, HTTP_STATUS_BAD_REQUEST, http::Version::HTTP_1_1);
+        sendError(sockId, HTTP_STATUS_BAD_REQUEST);
     }
 }
 
@@ -152,30 +152,37 @@ void HTTP_Server::serverThread() {
             shouldContinue = !requestsQueue.empty();
             queueLock.unlock();
 
+            std::function<http::Response( std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+                    std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> handler = nullptr;
+
             std::unique_lock routesLock(routesMutex);
-            auto handlerIt = routes.find(request.second.getPath());
-            auto handler = handlerIt == routes.end() ? nullptr : handlerIt->second;
+            if (request.second.hasHeader("host") && routes.find(request.second.getHeader("host")[0]) != routes.end()
+            && routes[request.second.getHeader("host")[0]].find(request.second.getPath()) != routes[request.second.getHeader("host")[0]].end()) {
+                handler = routes[request.second.getHeader("host")[0]][request.second.getPath()];
+            }
+
             routesLock.unlock();
 
-            if (handler == nullptr) {
-                sendError(request.first, HTTP_STATUS_NOT_FOUND, request.second.getVersion());
-            } else {
-                std::unique_lock clientsLock(clientsMutex);
-                sock::IPv4Dir clientDir = clients[request.first];
-                clientsLock.unlock();
+            std::unique_lock clientsLock(clientsMutex);
+            sock::IPv4Dir clientDir = clients[request.first];
+            clientsLock.unlock();
 
+            if (handler == nullptr) {
+                sendError(request.first, HTTP_STATUS_NOT_FOUND, request.second, clientDir);
+            } else {
                 try {
                     bool shouldClose = false;
                     auto response = handler(logger, request.second, clientDir, shouldStop, shouldClose,
                                             [this] (std::function<void()> func) { return registerCloseCall(std::move(func)); },
                                             [this] (unsigned int id) { return unregisterCloseCall(id); });
 
+                    // The handler may take a long time to execute, so we need to check if the socket is still open
                     if (!socketMgr->isClosed(request.first)) {
                         socketMgr->send(request.first, std::move(response.serialize()));
                         if (shouldClose) socketMgr->close(request.first);
                     }
                 } catch (std::exception& e) {
-                    sendError(request.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, request.second.getVersion());
+                    sendError(request.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, request.second, clientDir);
                 }
             }
         }
@@ -198,10 +205,19 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
     return std::move(response);
 }
 
-void HTTP_Server::sendError(unsigned int sockId, int status, http::Version version) {
-    auto response = getError(version, status);
+void HTTP_Server::sendError(unsigned int sockId, int status, const http::Request& request, sock::IPv4Dir client) {
+    std::unique_lock lock(errorPagesMutex);
+    auto response = (!request.hasHeader("host")
+            || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
+            errorPages[request.getHeader("host")[0]](logger, request, client, status);
     socketMgr->send(sockId, std::move(response.serialize()));
     socketMgr->close(sockId);
+}
+
+void HTTP_Server::sendError(unsigned int sockId, int status) {
+    http::Request req("", http::Method::M_GET, http::Version::HTTP_1_1);
+    sock::IPv4Dir client{};
+    sendError(sockId, status, req, client);
 }
 
 void HTTP_Server::stop() {
@@ -225,6 +241,16 @@ void HTTP_Server::stop() {
     }
     threads.clear();
 
+    std::unique_lock clientsLock(clientsMutex);
+    for (auto& client : clients) {
+        socketMgr->close(client.first, true);
+    }
+    clients.clear();
+    buffers.clear();
+
+    std::unique_lock requestsQueueLock(requestsQueueMutex);
+    while (!requestsQueue.empty()) requestsQueue.pop();
+
     mainSocket = nullptr;
 }
 
@@ -240,9 +266,21 @@ void HTTP_Server::unregisterCloseCall(unsigned int id) {
     closeCalls.erase(id);
 }
 
-void HTTP_Server::registerRoute(const std::string& path, std::function<http::Response(
+void HTTP_Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
         std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
         std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func) {
     std::unique_lock lock(routesMutex);
-    routes[path] = std::move(func);
+    if (routes.find(host) == routes.end()) {
+        routes[host] = std::map<std::string, std::function<http::Response(
+                std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+                std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>();
+    }
+
+    routes[host][path] = std::move(func);
+}
+
+void HTTP_Server::registerErrorPage(const std::string &host, std::function<http::Response(
+        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)> func) {
+    std::unique_lock lock(errorPagesMutex);
+    errorPages[host] = std::move(func);
 }
