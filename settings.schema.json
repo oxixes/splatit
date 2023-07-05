@@ -82,6 +82,25 @@
         "required": ["host", "port", "user", "password", "name"]
       }
     },
+    "http": {
+      "description": "HTTP settings (apply to the account and BOSS servers)",
+      "listenAddress": {
+        "description": "IP address to listen to",
+        "type": "string",
+        "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+      },
+      "workerCount": {
+        "description": "Number of worker threads to use",
+        "type": "integer",
+        "minimum": 1
+      },
+      "keepAliveTimeout": {
+        "description": "Timeout for keep-alive connections (in seconds)",
+        "type": "integer",
+        "minimum": 1
+      },
+      "required": ["listenAddress", "workerCount", "keepAliveTimeout"]
+    },
     "accounts": {
       "description": "Configuration of the accounts server",
       "properties": {
@@ -121,7 +140,7 @@
         }
       },
       "then": {
-        "required": ["domain", "ssl"]
+        "required": ["domain", "ssl", "http"]
       }
     }
   ]

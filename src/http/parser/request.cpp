@@ -56,6 +56,10 @@ const std::vector<unsigned char>& Request::getBody() const {
     return body;
 }
 
+void Request::setBody(std::vector<unsigned char>& newBody) {
+    body = std::move(newBody);
+}
+
 Request Request::parse(const std::vector<unsigned char>& data, size_t& length) {
     length = 0;
     Request request;
@@ -268,7 +272,7 @@ std::vector<unsigned char> Request::serialize() const {
     }
 
     // Add content length
-    std::string contentLengthHeader = "content-length: " + std::to_string(body.size()) + "\r\n";
+    std::string contentLengthHeader = "Content-Length: " + std::to_string(body.size()) + "\r\n";
     data.insert(data.end(), contentLengthHeader.begin(), contentLengthHeader.end());
 
     data.insert(data.end(), delimiter.begin(), delimiter.end());

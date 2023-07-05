@@ -44,6 +44,10 @@ public:
     bool send(unsigned int socketId, std::vector<unsigned char> data);
     bool close(unsigned int socketId, bool force = false);
 
+    bool isClosed(unsigned int socketId);
+
+    void cleanup();
+
 private:
     std::map<unsigned int, std::pair<SocketType, std::shared_ptr<sock::Socket>>> sockets;
     std::recursive_mutex socketsMutex;

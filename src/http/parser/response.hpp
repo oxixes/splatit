@@ -25,6 +25,7 @@ public:
     void addHeader(const std::string& key, const std::string& value);
 
     [[nodiscard]] const std::vector<unsigned char>& getBody() const;
+    void setBody(std::vector<unsigned char>& newBody);
 
     [[nodiscard]] std::vector<unsigned char> serialize() const;
 

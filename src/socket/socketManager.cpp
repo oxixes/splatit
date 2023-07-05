@@ -217,8 +217,8 @@ void SocketManager::process() {
     auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
 
-    std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
     socketsLock.lock();
+    std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
     for (auto& timeout : keepAliveTimeouts) {
         if (timeout.second < now) {
             if (sockets[timeout.first].first == SocketType::TCP_CONN) {
@@ -499,4 +499,19 @@ void SocketManager::removeSocket(unsigned int socketId) {
 
 //    auto it = std::find(closeQueue.begin(), closeQueue.end(), socketId);
 //    if (it != closeQueue.end()) closeQueue.erase(it);
+}
+
+bool SocketManager::isClosed(unsigned int socketId) {
+    std::unique_lock socketsLock(socketsMutex);
+    return sockets.find(socketId) == sockets.end();
+}
+
+void SocketManager::cleanup() {
+    std::scoped_lock lock(socketsMutex, sendBuffersMutex, acceptCallbacksMutex,
+                          connectCallbacksMutex, recvCallbacksMutex, closeCallbacksMutex,
+                          keepAliveTimeoutsMutex, closeTimeoutsMutex);
+
+    for (auto& socket : sockets) {
+        close(socket.first, true);
+    }
 }

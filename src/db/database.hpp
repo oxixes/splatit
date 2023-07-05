@@ -21,7 +21,7 @@ enum class DBType {
 };
 
 enum class DBVersion {
-    NO_DATA = 0,
+    EMPTY = 0,
     INITIAL
 };
 

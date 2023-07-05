@@ -5,15 +5,19 @@
 #include <vector>
 #include <filesystem>
 
+#include "../settingsManager.hpp"
+#include "../logger.hpp"
+#include "../util/util.hpp"
+
+// Windows libraries present in socket.hpp imported from settingsManager.hpp
+// conflict with some OpenSSL names, so we include them here instead.
+// Why Microsoft, why do you make this so hard?
+
 #include <nlohmann/json.hpp>
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/engine.h>
-
-#include "../settingsManager.hpp"
-#include "../logger.hpp"
-#include "../util/util.hpp"
 
 namespace fs = std::filesystem;
 

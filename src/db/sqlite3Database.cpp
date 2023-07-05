@@ -5,7 +5,7 @@
 namespace db {
 
 sqlite3Database::sqlite3Database(std::shared_ptr<Logger::Logger> logger, const fs::path& dbPath) :
-        Database(std::move(logger), DBType::SQLITE3, DBVersion::NO_DATA) {
+        Database(std::move(logger), DBType::SQLITE3, DBVersion::EMPTY) {
     this->dbPath = dbPath;
 }
 

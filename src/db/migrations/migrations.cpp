@@ -26,7 +26,7 @@ bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_pt
 
 std::string getVersionString(DBVersion version) {
     switch (version) {
-        case DBVersion::NO_DATA:
+        case DBVersion::EMPTY:
             return "new";
         case DBVersion::INITIAL:
             return "0.0.1";

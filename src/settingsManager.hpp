@@ -11,6 +11,7 @@
 
 #include "argParser.hpp"
 #include "logger.hpp"
+#include "socket/socket.hpp"
 
 using json = nlohmann::json;
 using json_validator = nlohmann::json_schema::json_validator;
@@ -38,6 +39,10 @@ public:
     [[nodiscard]] fs::path getBOSSPath() const;
 
     [[nodiscard]] json getDBSettings() const;
+
+    [[nodiscard]] sock::IPv4Dir getHTTPListenAddress() const;
+    [[nodiscard]] int getHTTPWorkerCount() const;
+    [[nodiscard]] int getHTTPKeepAliveTimeout() const;
 
     [[nodiscard]] std::vector<std::string> getDomains() const;
 private:

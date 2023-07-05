@@ -17,15 +17,13 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
             break;
     }
 
-    for (auto sql = sqlCmds.begin(); sql != sqlCmds.end() - 1; ++sql) {
-        std::unique_ptr<Command> command = Database::craftVoidCommand(*sql);
-        commandIds.emplace_back(db->queueCommand(std::move(command), false), *sql);
+    for (auto & sqlCmd : sqlCmds) {
+        std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmd);
+        commandIds.emplace_back(db->queueCommand(std::move(command), false), sqlCmd);
     }
-    std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmds.back());
-    commandIds.emplace_back(db->queueCommand(std::move(command), true), sqlCmds.back());
 
     db->processQueue();
-    db->waitForCommand(commandIds.back().first, nullptr);
+    db->waitForQueue(nullptr);
 
     for (const auto& commandId : commandIds) {
         db->clearCommandMutex(commandId.first);

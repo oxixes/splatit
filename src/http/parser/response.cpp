@@ -40,6 +40,10 @@ const std::vector<unsigned char>& Response::getBody() const {
     return body;
 }
 
+void Response::setBody(std::vector<unsigned char>& newBody) {
+    this->body = std::move(newBody);
+}
+
 Response Response::parse(const std::vector<unsigned char>& data, size_t& length, bool connectionClose, bool reqWasHead) {
     length = 0;
     Response response;
@@ -157,7 +161,7 @@ std::vector<unsigned char> Response::serialize() const {
     }
 
     // Add content length
-    std::string contentLengthHeader = "content-length: " + std::to_string(body.size()) + "\r\n";
+    std::string contentLengthHeader = "Content-Length: " + std::to_string(body.size()) + "\r\n";
     data.insert(data.end(), contentLengthHeader.begin(), contentLengthHeader.end());
     data.insert(data.end(), delimiter.begin(), delimiter.end());
 

@@ -16,10 +16,6 @@
 
 #include <stdexcept>
 
-// Defines the maximum number of times a socket operation can be retried
-// before giving up.
-#define MAX_TRIES 3
-
 namespace sock {
 
 bool initialize();

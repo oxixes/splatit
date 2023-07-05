@@ -215,6 +215,30 @@ fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["data"];
 }
 
+sock::IPv4Dir SettingsManager::getHTTPListenAddress() const {
+    std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
+
+    auto a = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
+    addressStr = addressStr.substr(addressStr.find('.') + 1);
+    auto b = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
+    addressStr = addressStr.substr(addressStr.find('.') + 1);
+    auto c = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
+    addressStr = addressStr.substr(addressStr.find('.') + 1);
+    auto d = (uint8_t) std::stoi(addressStr);
+
+
+    sock::IPv4Dir address{a, b, c, d, 443};
+    return address;
+}
+
+int SettingsManager::getHTTPWorkerCount() const {
+    return settings["http"]["workerCount"];
+}
+
+int SettingsManager::getHTTPKeepAliveTimeout() const {
+    return settings["http"]["keepAliveTimeout"];
+}
+
 json SettingsManager::getDBSettings() const {
     return settings["db"];
 }

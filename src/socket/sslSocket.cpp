@@ -1,11 +1,11 @@
 #include <stdexcept>
-#include "tlsSocket.hpp"
+#include "sslSocket.hpp"
 
 // TODO Allow for client / server certificates checking
 
 namespace sock {
 
-TLSSocket::TLSSocket(bool server, EVP_PKEY* key, X509* cert) : TCPSocket() {
+SSLSocket::SSLSocket(bool server, EVP_PKEY* key, X509* cert) : TCPSocket() {
     this->server = server;
     const SSL_METHOD* method = server ? TLS_server_method() : TLS_client_method();
     ctx = SSL_CTX_new(method);
@@ -21,12 +21,12 @@ TLSSocket::TLSSocket(bool server, EVP_PKEY* key, X509* cert) : TCPSocket() {
 }
 
 #ifdef _WIN32
-TLSSocket::TLSSocket(SOCKET socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
+SSLSocket::SSLSocket(SOCKET socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
 #else
 TLSSocket::TLSSocket(int socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
 #endif
 
-TLSSocket::~TLSSocket() {
+SSLSocket::~SSLSocket() {
     if (ssl) {
         SSL_free(ssl);
         ssl = nullptr;
@@ -38,7 +38,7 @@ TLSSocket::~TLSSocket() {
     }
 }
 
-TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
+SSLSocket* SSLSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
     if (status != SocketStatus::LISTENING) {
         throw FatalException("Not listening, cannot continue (tried accepting)");
     }
@@ -49,7 +49,7 @@ TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
         throw FatalException("Failed to create SSL object: " + util::getOpenSSLError());
     }
 
-    auto* newSocket = new TLSSocket(acceptAux(addr, addrlen), ctx, sslPtr);
+    auto* newSocket = new SSLSocket(acceptAux(addr, addrlen), ctx, sslPtr);
     SSL_CTX_up_ref(ctx);
 
     newSocket->server = true;
@@ -83,7 +83,7 @@ TLSSocket* TLSSocket::accept(struct sockaddr* addr, socklen_t* addrlen) {
     return newSocket;
 }
 
-void TLSSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
+void SSLSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     if (status != SocketStatus::NOT_CONNECTED) {
         throw FatalException("Not disconnected, cannot continue (tried connecting)");
     }
@@ -113,7 +113,7 @@ void TLSSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     lastResult = ResultType::SUCCESS;
 }
 
-void TLSSocket::connect() {
+void SSLSocket::connect() {
     if (status != SocketStatus::CONNECTING) {
         throw FatalException("Not connecting, cannot continue (tried connecting)");
     }
@@ -150,7 +150,7 @@ void TLSSocket::connect() {
     }
 }
 
-int TLSSocket::send(const void* buf, size_t len, int flags) {
+int SSLSocket::send(const void* buf, size_t len, int flags) {
     if (status != SocketStatus::CONNECTED) {
         throw FatalException("Not connected, cannot continue (tried sending)");
     }
@@ -178,7 +178,7 @@ int TLSSocket::send(const void* buf, size_t len, int flags) {
     return (int) bytesWritten;
 }
 
-int TLSSocket::recv(void* buf, size_t len, int flags) {
+int SSLSocket::recv(void* buf, size_t len, int flags) {
     if (status != SocketStatus::CONNECTED) {
         throw FatalException("Not connected, cannot continue (tried reading)");
     }
@@ -210,7 +210,7 @@ int TLSSocket::recv(void* buf, size_t len, int flags) {
     return (int) bytesRead;
 }
 
-void TLSSocket::close(bool force) {
+void SSLSocket::close(bool force) {
     if (!fatalErrorOcurred && !force && ssl != nullptr) {
         int result = SSL_shutdown(ssl);
         if (result <= 0) {
