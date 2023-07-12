@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 #include <winsock2.h>
+#include <bit>
 
 namespace util {
 
@@ -28,5 +29,57 @@ std::string getWSAError(int error) {
     return message;
 }
 #endif
+
+std::string ipv4ToString(sock::IPv4Dir dir) {
+    return std::to_string(dir.a) + "." + std::to_string(dir.b) + "." + std::to_string(dir.c) + "." + std::to_string(dir.d);
+}
+
+std::string getDateHeader() {
+    char buff[128];
+    time_t now = time(nullptr);
+    tm* gmt = gmtime(&now);
+    strftime(buff, sizeof(buff), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+    return std::string{buff};
+}
+
+std::string getXNintendoDateHeader() {
+    auto now = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    return std::to_string(duration);
+}
+
+void getu32Little(uint32_t& v) {
+    // If the host is little endian, return the value as-is
+    if (std::endian::native == std::endian::little) {
+        return;
+    }
+
+    v = ((v & 0xFF000000) >> 24) | ((v & 0x00FF0000) >> 8) | ((v & 0x0000FF00) << 8) | ((v & 0x000000FF) << 24);
+}
+
+void getu32Big(uint32_t& v) {
+    // If the host is big endian, return the value as-is
+    if (std::endian::native == std::endian::big) {
+        return;
+    }
+
+    v = ((v & 0xFF000000) >> 24) | ((v & 0x00FF0000) >> 8) | ((v & 0x0000FF00) << 8) | ((v & 0x000000FF) << 24);
+}
+
+std::vector<std::string> split(const std::string& str, const std::string& delim) {
+    std::vector<std::string> tokens;
+    size_t prev = 0, pos = 0;
+    do {
+        pos = str.find(delim, prev);
+        if (pos == std::string::npos) pos = str.length();
+
+        std::string token = str.substr(prev, pos - prev);
+        if (!token.empty()) tokens.push_back(token);
+
+        prev = pos + delim.length();
+    } while (pos < str.length() && prev < str.length());
+
+    return std::move(tokens);
+}
 
 } // namespace util

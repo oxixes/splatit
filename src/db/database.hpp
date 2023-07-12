@@ -28,12 +28,19 @@ enum class DBVersion {
 const DBVersion CURRENT_VERSION = DBVersion::INITIAL;
 
 enum class DBCommandType {
-    GENERIC
+    GENERIC,
+    GET_USER_BY_PID,
+    GET_USER_BY_USERNAME,
+    GET_GAME_SERVER_ACCESS
 };
 
 enum class DBResultStatus {
     SUCCESS,
-    FAILURE_GENERIC
+    FAILURE_GENERIC,
+    FAILURE_ARGS,
+    FAILURE_STMT,
+    FAILURE_DATA,
+    FAILURE_EXEC
 };
 
 class Command {
@@ -81,6 +88,8 @@ protected:
 
     DBType dbType;
     DBVersion dbVersion;
+
+    static bool verifyCommandArgs(const std::unique_ptr<Command>& command);
 public:
     virtual ~Database() = default;
 
@@ -99,6 +108,9 @@ public:
     std::unique_ptr<Result> getResult(int commandID);
 
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
+    static std::unique_ptr<Command> craftGetUserByPIDCommand(int pid);
+    static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
+    static std::unique_ptr<Command> craftGetGameServerAccessCommand(int pid, const std::string& serverId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 

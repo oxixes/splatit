@@ -35,7 +35,7 @@ public:
     [[nodiscard]] fs::path getSSLCACertPath() const;
     [[nodiscard]] fs::path getSSLKeyPath() const;
     [[nodiscard]] fs::path getSSLCAKeyPath() const;
-    [[nodiscard]] fs::path getTopDomain() const;
+    [[nodiscard]] std::string getTopDomain() const;
     [[nodiscard]] fs::path getBOSSPath() const;
 
     [[nodiscard]] json getDBSettings() const;
@@ -45,6 +45,12 @@ public:
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
 
     [[nodiscard]] std::vector<std::string> getDomains() const;
+
+    // These functions return the base64 encoded key
+    [[nodiscard]] std::string getTokenKey() const;
+    [[nodiscard]] std::string getRefreshTokenKey() const;
+    [[nodiscard]] std::string getNEXTokenKey() const;
+
 private:
     json settings;
     std::shared_ptr<Logger::Logger> logger;

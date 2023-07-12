@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include <openssl/err.h>
+#include "../socket/socket.hpp"
 
 namespace fs = std::filesystem;
 
@@ -15,6 +16,16 @@ namespace util {
 #ifdef _WIN32
     std::string getWSAError(int error);
 #endif
+
+    std::string ipv4ToString(sock::IPv4Dir dir);
+
+    std::string getDateHeader();
+    std::string getXNintendoDateHeader();
+
+    void getu32Little(uint32_t& v);
+    void getu32Big(uint32_t& v);
+
+    std::vector<std::string> split(const std::string& str, const std::string& delim);
 } // namespace util
 
 #endif //SPLATOON_SERVER_UTIL_HPP

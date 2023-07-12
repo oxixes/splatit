@@ -13,7 +13,33 @@ bool isHTTPHeaderComplete(const std::vector<unsigned char>& data, size_t& length
     return true;
 }
 
-void parseHeader(const std::string_view& header, std::map<std::string, std::vector<std::string>>& headers, bool fromChunked) {
+void parseQuery(std::string_view queryStr, std::unordered_map<std::string, std::string>& queries) {
+    while (!queryStr.empty()) {
+        std::string_view param = queryStr.substr(0, queryStr.find('&'));
+        std::string paramStr = std::string(param);
+        for (char& i : paramStr) {
+            if (i == '+') i = ' ';
+        }
+
+        std::string key = paramStr.substr(0, param.find('='));
+        std::string value;
+
+        if (key.empty()) throw MalformedException("Query key is empty");
+
+        if (paramStr.find('=') != std::string_view::npos) {
+            value = paramStr.substr(paramStr.find('=') + 1);
+        } else {
+            value = "";
+        }
+
+        queries.insert({percentDecode(key), percentDecode(value)});
+
+        if (queryStr.find('&') == std::string_view::npos) break;
+        queryStr.remove_prefix(param.size() + 1);
+    }
+}
+
+void parseHeader(const std::string_view& header, std::unordered_map<std::string, std::vector<std::string>>& headers, bool fromChunked) {
     size_t pos = header.find(':');
     if (pos == std::string::npos) {
         throw MalformedException("Header malformed");
@@ -84,7 +110,7 @@ bool isChunkedComplete(const std::vector<unsigned char>& data, size_t headerLeng
     return false;
 }
 
-void parseChunked(const std::vector<unsigned char>& data, std::map<std::string, std::vector<std::string>>& headers,
+void parseChunked(const std::vector<unsigned char>& data, std::unordered_map<std::string, std::vector<std::string>>& headers,
                   size_t length, size_t headerLength, std::vector<unsigned char>& body) {
     size_t pos = headerLength;
     while (pos < headerLength + length) {
@@ -165,7 +191,7 @@ std::string getFinalTransferEncoding(const std::string& transferEncoding) {
 }
 
 bool isHTTPBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength,
-                        std::map<std::string, std::vector<std::string>>& headers,
+                        std::unordered_map<std::string, std::vector<std::string>>& headers,
                         bool isResponse, int status, bool reqWasHead, bool connectionClose) {
     if (isResponse && (reqWasHead || status == 204 || status == 304 || (status >= 100 && status < 200))) {
         length = 0;

@@ -43,6 +43,10 @@ private:
     std::mutex dbThreadMutex;
     std::condition_variable dbThreadCV;
 
+    sqlite3_stmt* getUserByPIDStatement = nullptr;
+    sqlite3_stmt* getUserByUsernameStatement = nullptr;
+    sqlite3_stmt* getGameServerAccessStatement = nullptr;
+
     void dbThread();
 
     void processCommand(const std::unique_ptr<Command>& command);

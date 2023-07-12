@@ -19,6 +19,27 @@ std::unique_ptr<Command> Database::craftVoidCommand(const std::string& command) 
     return std::move(dbCommand);
 }
 
+std::unique_ptr<Command> Database::craftGetUserByPIDCommand(int pid) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_PID,
+        std::vector<std::any>{std::any(pid)});
+
+    return std::move(dbCommand);
+}
+
+std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::string& username) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_USERNAME,
+        std::vector<std::any>{std::any(username)});
+
+    return std::move(dbCommand);
+}
+
+std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(int pid, const std::string& serverId) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,
+        std::vector<std::any>{std::any(pid), std::any(serverId)});
+
+    return std::move(dbCommand);
+}
+
 std::unique_ptr<Result> Database::getResult(int commandID) {
     std::unique_lock<std::mutex> lock(resultsMutex);
 
@@ -52,6 +73,50 @@ DBType Database::getType() const {
 
 DBVersion Database::getVersion() const {
     return this->dbVersion;
+}
+
+bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
+    switch (command->type) {
+        case DBCommandType::GENERIC:
+            // Generic commands can run any SQL command, therefore we need the SQL string,
+            // the types of the data to bind, the data to bind, and the types of the data to return.
+            // (Actually the same would be necessary for non-SQL commands, but we don't have any of those yet.)
+            if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
+                command->data[1].type() != typeid(std::vector<dbDataType>) ||
+                command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
+                command->data[3].type() != typeid(std::vector<dbDataType>)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_USER_BY_PID:
+            // Get user by PID commands need the PID of the user to get.
+            if (command->data.size() != 1 || command->data[0].type() != typeid(int)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_USER_BY_USERNAME:
+            // Get user by username commands need the username of the user to get.
+            if (command->data.size() != 1 || command->data[0].type() != typeid(std::string)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_GAME_SERVER_ACCESS:
+            // Get game server access commands need the PID of the user to get and the ID of the game server.
+            if (command->data.size() != 2 || command->data[0].type() != typeid(int) ||
+                command->data[1].type() != typeid(std::string)) {
+                return false;
+            }
+
+            break;
+    }
+
+    return true;
 }
 
 } // namespace db

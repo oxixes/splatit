@@ -34,7 +34,7 @@ private:
 
     Version version = Version::HTTP_1_1;
     int status = HTTP_STATUS_OK;
-    std::map<std::string, std::vector<std::string>> headers;
+    std::unordered_map<std::string, std::vector<std::string>> headers;
     std::vector<unsigned char> body;
 
     static bool isHeaderComplete(const std::vector<unsigned char>& data, size_t& length);

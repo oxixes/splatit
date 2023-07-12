@@ -11,5 +11,8 @@
   }, {
     "name" : "nlohmann-json",
     "version>=" : "3.11.2"
+  }, {
+    "name" : "pugixml",
+    "version>=" : "1.13.0"
   } ]
 }

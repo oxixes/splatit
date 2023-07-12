@@ -3,12 +3,15 @@
 
 #include "argParser.hpp"
 #include "settingsManager.hpp"
-#include "ssl/certManager.hpp"
+#include "crypto/certManager.hpp"
 #include "db/database.hpp"
 #include "db/migrations/migrations.hpp"
 #include "socket/socket.hpp"
 #include "socket/socketManager.hpp"
 #include "http/server.hpp"
+#include "http/account.hpp"
+
+#include "crypto/tools.hpp"
 
 bool shouldStop = false;
 
@@ -76,10 +79,13 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        httpServer = std::make_shared<HTTP_Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
+        httpServer = std::make_shared<HTTP_Server>(logger, socketManager, db, settingsMgr->getHTTPListenAddress(),
                                                    settingsMgr->getHTTPKeepAliveTimeout(),
                                                    certManager->getSSLKey(),
                                                    certManager->getSSLCert());
+
+        if (settingsMgr->isAccountEnabled())
+            acc::registerCalls(httpServer, settingsMgr->getTopDomain(), settingsMgr);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }

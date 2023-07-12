@@ -101,15 +101,39 @@
       },
       "required": ["listenAddress", "workerCount", "keepAliveTimeout"]
     },
+    "nex": {
+      "description": "NEX settings",
+      "tokenKey": {
+        "description": "The key to use for signing access tokens (32 bytes base64 encoded)",
+        "type": "string"
+      },
+      "required": ["tokenKey"]
+    },
     "accounts": {
       "description": "Configuration of the accounts server",
       "properties": {
         "enabled": {
           "description": "Enable or disable the account server",
           "type": "boolean"
+        },
+        "tokenKey": {
+          "description": "The key to use for signing tokens (32 bytes base64 encoded)",
+          "type": "string"
+        },
+        "refreshTokenKey": {
+          "description": "The key to use for signing refresh tokens (32 bytes base64 encoded)",
+          "type": "string"
+        },
+        "allowRealWiiU": {
+            "description": "Allow real Wii U consoles to connect",
+            "type": "boolean"
+        },
+        "allowGeneratedWiiU": {
+            "description": "Allow generated Wii U consoles (fake files) to connect",
+            "type": "boolean"
         }
       },
-      "required": ["enabled"]
+      "required": ["enabled", "tokenKey", "refreshTokenKey", "allowRealWiiU", "allowGeneratedWiiU"]
     }
   },
   "required": ["db"],
@@ -140,7 +164,7 @@
         }
       },
       "then": {
-        "required": ["domain", "ssl", "http"]
+        "required": ["domain", "ssl", "http", "nex"]
       }
     }
   ]

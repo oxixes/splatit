@@ -1,4 +1,4 @@
-add_subdirectory(ssl)
+add_subdirectory(crypto)
 add_subdirectory(socket)
 add_subdirectory(http)
 add_subdirectory(nex)
@@ -12,4 +12,5 @@ target_sources(splatoon_server PRIVATE
         argParser.cpp
         argParser.hpp
         logger.cpp
-        logger.hpp)
+        logger.hpp
+        constants.hpp)

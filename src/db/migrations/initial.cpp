@@ -10,10 +10,16 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
             sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
             sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
             sqlCmds.emplace_back("CREATE TABLE users (pid INTEGER, username TEXT NOT NULL, password TEXT NOT NULL, PRIMARY KEY (pid));");
-            sqlCmds.emplace_back("CREATE TABLE friendships (pid INTEGER NOT NULL, friend_pid INTEGER NOT NULL, PRIMARY KEY (pid, friend_pid));");
+            sqlCmds.emplace_back("CREATE TABLE friendships (pid INTEGER NOT NULL, friend_pid INTEGER NOT NULL, PRIMARY KEY (pid, friend_pid),"
+                                 "FOREIGN KEY(pid) REFERENCES users(pid), FOREIGN KEY(friend_pid) REFERENCES users(pid));");
             sqlCmds.emplace_back("CREATE TABLE user_info (pid INTEGER NOT NULL, show_presence INTEGER NOT NULL DEFAULT (1), "
                                  "show_playing INTEGER NOT NULL DEFAULT (1), block_requests INTEGER NOT NULL DEFAULT (0), "
-                                 "mii BLOB, PRIMARY KEY (pid));");
+                                 "mii BLOB, PRIMARY KEY (pid), FOREIGN KEY(pid) REFERENCES users(pid));");
+            sqlCmds.emplace_back("CREATE TABLE game_servers (id TEXT NOT NULL, host TEXT NOT NULL, port INTEGER NOT NULL, "
+                                 "PRIMARY KEY (id));");
+            sqlCmds.emplace_back("CREATE TABLE game_server_access (pid INTEGER NOT NULL, game_server_id TEXT NOT NULL, "
+                                 "password TEXT NOT NULL, PRIMARY KEY (pid, game_server_id), FOREIGN KEY(pid) REFERENCES users(pid),"
+                                 "FOREIGN KEY(game_server_id) REFERENCES game_servers(id));");
             break;
     }
 

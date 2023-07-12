@@ -1,4 +1,5 @@
 #include "settingsManager.hpp"
+#include "crypto/tools.hpp"
 
 #include <utility>
 
@@ -136,6 +137,25 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
     fs::path certsPath = dataDirAbsPath/fs::path("certs");
     //fs::path bossPath = dataDirAbsPath/fs::path("boss");
 
+    std::string tokenKeyString;
+    std::string refreshTokenKeyString;
+    std::string nexTokenKeyString;
+
+    try {
+        std::vector<unsigned char> tokenKey = crypto::genSHA256Key();
+        tokenKeyString = crypto::base64Encode(tokenKey);
+
+        std::vector<unsigned char> refreshTokenKey = crypto::genSHA256Key();
+        refreshTokenKeyString = crypto::base64Encode(refreshTokenKey);
+
+        std::vector<unsigned char> nexTokenKey = crypto::genSHA256Key();
+        nexTokenKeyString = crypto::base64Encode(refreshTokenKey);
+    } catch (const std::exception& ex) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "An error occurred while generating the token keys: " + std::string(ex.what()));
+        return false;
+    }
+
     settings = {
             {"db", {
                     {"type", "SQLite3"},
@@ -149,7 +169,19 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
             }},
             {"domain", "nintendo.net"},
             {"accounts", {
-                    {"enabled", true}
+                    {"enabled", true},
+                    {"tokenKey", tokenKeyString},
+                    {"refreshTokenKey", refreshTokenKeyString},
+                    {"allowRealWiiU", true},
+                    {"allowGeneratedWiiU", true}
+            }},
+            {"http", {
+                    {"listenAddress", "0.0.0.0"},
+                    {"workerCount", 3}, // TODO Make this dynamic depending on the machine CPU thread count
+                    {"keepAliveTimeout", 10}
+            }},
+            {"nex", {
+                    {"tokenKey", nexTokenKeyString}
             }}
     };
 
@@ -207,7 +239,7 @@ fs::path SettingsManager::getSSLCAKeyPath() const {
     return settings["ssl"]["caKey"];
 }
 
-fs::path SettingsManager::getTopDomain() const {
+std::string SettingsManager::getTopDomain() const {
     return settings["domain"];
 }
 
@@ -252,4 +284,16 @@ std::vector<std::string> SettingsManager::getDomains() const {
     if (!domains.bossNPDI.empty()) usedDomains.push_back(domains.bossNPDI);
 
     return usedDomains;
+}
+
+std::string SettingsManager::getTokenKey() const {
+    return settings["accounts"]["tokenKey"];
+}
+
+std::string SettingsManager::getRefreshTokenKey() const {
+    return settings["accounts"]["refreshTokenKey"];
+}
+
+std::string SettingsManager::getNEXTokenKey() const {
+    return settings["nex"]["tokenKey"];
 }

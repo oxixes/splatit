@@ -2,7 +2,7 @@
 #define SPLATOON_SERVER_COMMON_HPP
 
 #include <stdexcept>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace http {
@@ -38,13 +38,15 @@ class VersionNotSupportedException : public std::runtime_error {
 
 bool isHTTPHeaderComplete(const std::vector<unsigned char>& data, size_t& length);
 
-void parseHeader(const std::string_view& header, std::map<std::string, std::vector<std::string>>& headers, bool fromChunked = false);
+void parseQuery(std::string_view queryStr, std::unordered_map<std::string, std::string>& queries);
+void parseHeader(const std::string_view& header, std::unordered_map<std::string, std::vector<std::string>>& headers,
+                 bool fromChunked = false);
 bool isChunkedComplete(const std::vector<unsigned char>& data, size_t headerLength, size_t& length);
-void parseChunked(const std::vector<unsigned char>& data, std::map<std::string, std::vector<std::string>>& headers,
+void parseChunked(const std::vector<unsigned char>& data, std::unordered_map<std::string, std::vector<std::string>>& headers,
                   size_t length, size_t headerLength, std::vector<unsigned char>& body);
 std::string getFinalTransferEncoding(const std::string& transferEncoding);
 bool isHTTPBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength,
-                        std::map<std::string, std::vector<std::string>>& headers,
+                        std::unordered_map<std::string, std::vector<std::string>>& headers,
                         bool isResponse = false, int status = 0, bool reqWasHead = false,
                         bool connectionClose = false);
 

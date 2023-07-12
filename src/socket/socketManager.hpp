@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <mutex>
 #include <thread>
 
@@ -49,23 +49,23 @@ public:
     void cleanup();
 
 private:
-    std::map<unsigned int, std::pair<SocketType, std::shared_ptr<sock::Socket>>> sockets;
+    std::unordered_map<unsigned int, std::pair<SocketType, std::shared_ptr<sock::Socket>>> sockets;
     std::recursive_mutex socketsMutex;
-    std::map<unsigned int, std::function<void(unsigned int, unsigned int, sock::IPv4Dir)>> acceptCallbacks;
+    std::unordered_map<unsigned int, std::function<void(unsigned int, unsigned int, sock::IPv4Dir)>> acceptCallbacks;
     std::recursive_mutex acceptCallbacksMutex;
-    std::map<unsigned int, std::function<void(unsigned int)>> connectCallbacks;
+    std::unordered_map<unsigned int, std::function<void(unsigned int)>> connectCallbacks;
     std::recursive_mutex connectCallbacksMutex;
-    std::map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>)>> recvCallbacks;
+    std::unordered_map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>)>> recvCallbacks;
     std::recursive_mutex recvCallbacksMutex;
     // The first callback in the pair is the socket close callback, and the second is the close callback for
     // any connections accepted by the socket.
-    std::map<unsigned int, std::pair<std::function<void(unsigned int)>, std::function<void(unsigned int)>>> closeCallbacks;
+    std::unordered_map<unsigned int, std::pair<std::function<void(unsigned int)>, std::function<void(unsigned int)>>> closeCallbacks;
     std::recursive_mutex closeCallbacksMutex;
-    std::map<unsigned int, std::vector<unsigned char>> sendBuffers;
+    std::unordered_map<unsigned int, std::vector<unsigned char>> sendBuffers;
     std::recursive_mutex sendBuffersMutex;
-    std::map<unsigned int, unsigned long long> keepAliveTimeouts;
+    std::unordered_map<unsigned int, unsigned long long> keepAliveTimeouts;
     std::recursive_mutex keepAliveTimeoutsMutex;
-    std::map<unsigned int, unsigned long long> closeTimeouts;
+    std::unordered_map<unsigned int, unsigned long long> closeTimeouts;
     std::recursive_mutex closeTimeoutsMutex;
     std::vector<unsigned int> closeQueue;
     std::recursive_mutex closeQueueMutex;

@@ -10,12 +10,13 @@
 #include "../http/parser/request.hpp"
 #include "../socket/sslSocket.hpp"
 #include "parser/response.hpp"
+#include "../db/database.hpp"
 
 #define MAX_PAYLOAD_SIZE 0x6400000 // 100 MiB
 
 class HTTP_Server {
 public:
-    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
+    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr, std::shared_ptr<db::Database> db,
                 sock::IPv4Dir listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
     ~HTTP_Server();
 
@@ -26,7 +27,7 @@ public:
     void unregisterCloseCall(unsigned int id);
 
     void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+            std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
             std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func);
 
     void registerErrorPage(const std::string& host, std::function<http::Response(
@@ -35,6 +36,7 @@ public:
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<SocketManager> socketMgr;
+    std::shared_ptr<db::Database> db;
 
     int keepAliveTimeout;
     unsigned int mainSocketID;
@@ -51,7 +53,7 @@ private:
 
     // This is a map of maps, the first key is the host, the second key is the path for that given host
     std::map<std::string, std::map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+            std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
             std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>> routes;
     std::mutex routesMutex;
 

@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <stdexcept>
 
 #include "common.hpp"
@@ -53,8 +53,8 @@ private:
     Method method = Method::M_GET;
     Version version = Version::HTTP_1_1;
     std::string path;
-    std::map<std::string, std::string> query;
-    std::map<std::string, std::vector<std::string>> headers;
+    std::unordered_map<std::string, std::string> query;
+    std::unordered_map<std::string, std::vector<std::string>> headers;
     std::vector<unsigned char> body;
 
     static bool isHeaderComplete(const std::vector<unsigned char>& data, size_t& length);

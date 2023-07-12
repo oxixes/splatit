@@ -128,24 +128,7 @@ void Request::parseHTTPHeader(const std::vector<unsigned char>& data, size_t len
 
     if (pathNoFragment.find('?') != std::string_view::npos) {
         std::string_view queryStr = pathNoFragment.substr(pathNoFragment.find('?') + 1);
-        while (!queryStr.empty()) {
-            std::string_view param = queryStr.substr(0, queryStr.find('&'));
-            std::string_view key = param.substr(0, param.find('='));
-            std::string_view value;
-
-            if (key.empty()) throw MalformedException("Query key is empty");
-
-            if (param.find('=') != std::string_view::npos) {
-                value = param.substr(param.find('=') + 1);
-            } else {
-                value = "";
-            }
-
-            query.insert({percentDecode(std::string(key)), percentDecode(std::string(value))});
-
-            if (queryStr.find('&') == std::string_view::npos) break;
-            queryStr.remove_prefix(param.size() + 1);
-        }
+        parseQuery(queryStr, query);
     }
 
     std::string_view versionStr = firstLineParams.substr(firstLineParams.find(' ') + 1);

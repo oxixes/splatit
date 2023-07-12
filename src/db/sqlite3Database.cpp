@@ -230,55 +230,141 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
     std::vector<std::any> resultsData;
     DBResultStatus resultStatus = DBResultStatus::SUCCESS;
 
-    switch (command->type) {
-        case DBCommandType::GENERIC:
-            if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
-                command->data[1].type() != typeid(std::vector<dbDataType>) ||
-                command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
-                command->data[3].type() != typeid(std::vector<dbDataType>)) {
-                logger->log(Logger::level::FAILURE, Logger::group::DB,
-                            "Failed to run SQLite 3 statement: invalid command data");
-                break;
-            }
+    if (!verifyCommandArgs(command)) {
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
+                    "Failed to run SQLite 3 statement: invalid command arguments");
+        resultStatus = DBResultStatus::FAILURE_ARGS;
 
-            // TODO Improve statuses
-            if (!craftStatement(std::any_cast<std::string>(command->data[0]), &statement)) {
-                resultStatus = DBResultStatus::FAILURE_GENERIC;
-                break;
-            }
-
-            if (!bindData(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]),
-                          std::any_cast<std::vector<std::shared_ptr<DBData>>>(command->data[2]))) {
-                resultStatus = DBResultStatus::FAILURE_GENERIC;
-                break;
-            }
-
-            if (!runStatement(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]), returnedData)) {
-                resultStatus = DBResultStatus::FAILURE_GENERIC;
-                break;
-            }
-
-            sqlite3_finalize(statement);
-
-            // TODO This should be moved elsewhere
-            for (const auto& row : *returnedData) {
-                std::vector<std::any> rowData;
-                for (const auto& data : row) {
-                    switch (data->type) {
-                        case dbDataType::INTEGER:
-                            rowData.emplace_back(std::dynamic_pointer_cast<DBInteger>(data));
-                            break;
-                        case dbDataType::STRING:
-                            rowData.emplace_back(std::dynamic_pointer_cast<DBString>(data));
-                            break;
-                    }
-                }
-
-                resultsData.emplace_back(std::move(rowData));
-            }
-            break;
+        goto push_results;
     }
 
+    if (command->type == DBCommandType::GENERIC) {
+        if (!craftStatement(std::any_cast<std::string>(command->data[0]), &statement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]),
+                      std::any_cast<std::vector<std::shared_ptr<DBData>>>(command->data[2]))) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        if (!runStatement(statement, std::any_cast<std::vector<dbDataType>>(command->data[3]), returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        sqlite3_finalize(statement);
+
+        // TODO This should be moved elsewhere
+        for (const auto& row : *returnedData) {
+            std::vector<std::any> rowData;
+            for (const auto& data : row) {
+                switch (data->type) {
+                    case dbDataType::INTEGER:
+                        rowData.emplace_back(std::dynamic_pointer_cast<DBInteger>(data));
+                        break;
+                    case dbDataType::STRING:
+                        rowData.emplace_back(std::dynamic_pointer_cast<DBString>(data));
+                        break;
+                }
+            }
+
+            resultsData.emplace_back(std::move(rowData));
+        }
+    } else if (command->type == DBCommandType::GET_USER_BY_PID || command->type == DBCommandType::GET_USER_BY_USERNAME) {
+        // Since the statement is always the same, we can just prepare it once
+        if (command->type == DBCommandType::GET_USER_BY_PID && getUserByPIDStatement == nullptr) {
+            if (!craftStatement("SELECT * FROM users WHERE pid = ?;", &getUserByPIDStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        } else if (command->type == DBCommandType::GET_USER_BY_USERNAME && getUserByUsernameStatement == nullptr) {
+            if (!craftStatement("SELECT * FROM users WHERE username = ?;", &getUserByUsernameStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        statement = (command->type == DBCommandType::GET_USER_BY_PID) ? getUserByPIDStatement : getUserByUsernameStatement;
+
+        std::shared_ptr<DBData> identifier;
+        dbDataType identifierType;
+        if (command->type == DBCommandType::GET_USER_BY_PID) {
+            identifierType = dbDataType::INTEGER;
+            identifier = std::make_shared<DBInteger>(std::any_cast<int>(command->data[0]));
+        } else {
+            identifierType = dbDataType::STRING;
+            identifier = std::make_shared<DBString>(std::any_cast<std::string>(command->data[0]));
+        }
+
+        if (!bindData(statement, {identifierType}, {identifier})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(statement);
+            goto push_results;
+        }
+
+        std::vector<dbDataType> returnedDataTypes {dbDataType::INTEGER, dbDataType::STRING, dbDataType::STRING};
+
+        if (!runStatement(statement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(statement);
+            sqlite3_clear_bindings(statement);
+            goto push_results;
+        }
+
+        sqlite3_reset(statement);
+        sqlite3_clear_bindings(statement);
+
+        // There will be none or one row returned, so just add the data to the results vector
+        for (const auto& row : *returnedData) {
+            for (const auto& data : row) {
+                switch (data->type) {
+                    case dbDataType::INTEGER:
+                        resultsData.emplace_back(std::any_cast<int>(data->data));
+                        break;
+                    case dbDataType::STRING:
+                        resultsData.emplace_back(std::any_cast<std::string>(data->data));
+                        break;
+                }
+            }
+        }
+    } else if (command->type == DBCommandType::GET_GAME_SERVER_ACCESS) {
+        if (getGameServerAccessStatement == nullptr) {
+            if (!craftStatement("SELECT * FROM game_server_access WHERE pid = ? AND game_server_id = ?;",
+                                &getGameServerAccessStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(getGameServerAccessStatement, {dbDataType::INTEGER, dbDataType::STRING},
+                      {std::make_shared<DBInteger>(std::any_cast<int>(command->data[0])),
+                       std::make_shared<DBString>(std::any_cast<std::string>(command->data[1]))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(getGameServerAccessStatement);
+            goto push_results;
+        }
+
+        std::vector<dbDataType> returnedDataTypes {dbDataType::INTEGER, dbDataType::STRING, dbDataType::STRING};
+
+        if (!runStatement(getGameServerAccessStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getGameServerAccessStatement);
+            sqlite3_clear_bindings(getGameServerAccessStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(getGameServerAccessStatement);
+        sqlite3_clear_bindings(getGameServerAccessStatement);
+
+        if (!returnedData->empty()) resultsData.emplace_back(std::any_cast<std::string>((*returnedData)[0][2]->data));
+    }
+
+    push_results:
     std::unique_lock lock(resultsMutex);
     results.push_back(std::make_unique<Result>(command->commandId, resultStatus, resultsData));
 }

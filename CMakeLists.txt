@@ -22,6 +22,9 @@ target_link_libraries(splatoon_server PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 find_package(nlohmann_json REQUIRED)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json::nlohmann_json)
 
+add_subdirectory(lib/pugixml)
+target_link_libraries(splatoon_server PRIVATE pugixml::pugixml)
+
 find_package(SQLite3 REQUIRED)
 target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 
