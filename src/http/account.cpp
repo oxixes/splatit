@@ -111,7 +111,10 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
         return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
     }
 
-    // TODO Verify client certificate
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
+        return std::move(res);
+    }
 
     if (!req.hasHeader("content-type") || req.getHeader("content-type")[0] != "application/x-www-form-urlencoded") {
         return createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
@@ -232,6 +235,11 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     if (req.getMethod() != http::Method::M_GET) {
         return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
+        return std::move(res);
     }
 
     if (!req.hasQuery("game_server_id")) {
