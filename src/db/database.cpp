@@ -67,6 +67,25 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, std::shar
     }
 }
 
+int Database::runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
+                const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                const std::function<void(unsigned int)>& unregisterCloseCall,
+                bool& shouldStop) {
+
+    int cmdId = db->queueCommand(std::move(command), true);
+    unsigned int closeCallId;
+    if (registerCloseCall != nullptr)
+        closeCallId = registerCloseCall([cmdId, &db]() { db->notifyCommand(cmdId); });
+    db->processQueue();
+    db->waitForCommand(cmdId, std::make_shared<bool>(shouldStop));
+    if (shouldStop) throw std::runtime_error("Server is stopping");
+    db->clearCommandMutex(cmdId);
+    if (unregisterCloseCall != nullptr && registerCloseCall != nullptr)
+        unregisterCloseCall(closeCallId);
+
+    return cmdId;
+}
+
 DBType Database::getType() const {
     return this->dbType;
 }

@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
                                                    certManager->getSSLCert());
 
         if (settingsMgr->isAccountEnabled())
-            acc::registerCalls(httpServer, settingsMgr->getTopDomain(), settingsMgr);
+            acc::registerCalls(httpServer, settingsMgr->getTopDomain(), settingsMgr, certManager);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }

@@ -25,6 +25,8 @@ public:
     bool init(const argParser::options& serverOptions);
 
     [[nodiscard]] bool isAccountEnabled() const;
+    [[nodiscard]] bool allowRealWiiU() const;
+    [[nodiscard]] bool allowGeneratedWiiU() const;
     [[nodiscard]] bool isBOSSEnabled() const;
     [[nodiscard]] bool isFriendsAuthEnabled() const;
     [[nodiscard]] bool isFriendsSecureEnabled() const;
@@ -35,6 +37,7 @@ public:
     [[nodiscard]] fs::path getSSLCACertPath() const;
     [[nodiscard]] fs::path getSSLKeyPath() const;
     [[nodiscard]] fs::path getSSLCAKeyPath() const;
+    [[nodiscard]] fs::path getDeviceKeyPath() const;
     [[nodiscard]] std::string getTopDomain() const;
     [[nodiscard]] fs::path getBOSSPath() const;
 
@@ -50,6 +53,8 @@ public:
     [[nodiscard]] std::string getTokenKey() const;
     [[nodiscard]] std::string getRefreshTokenKey() const;
     [[nodiscard]] std::string getNEXTokenKey() const;
+
+    [[nodiscard]] std::string getGameServerHost(const std::string& id) const;
 
 private:
     json settings;

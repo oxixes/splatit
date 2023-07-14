@@ -1,9 +1,9 @@
 #ifndef SPLATOON_SERVER_CONSTANTS_HPP
 #define SPLATOON_SERVER_CONSTANTS_HPP
 
-#define WII_U_PUB_KEY "-----BEGIN PUBLIC KEY-----" \
-                    "MFIwEAYHKoZIzj0CAQYFK4EEABsDPgAEAP1WBBgs8XUJIQDDCK5IOZEbb5+h1TqV" \
-                    "rwgzSUcrAAFxMWm1kf/TDL9z2nZkuo0N+VtNEQREZDXA7aQv" \
+#define WII_U_PUB_KEY "-----BEGIN PUBLIC KEY-----\n" \
+                    "MFIwEAYHKoZIzj0CAQYFK4EEABsDPgAEAP1WBBgs8XUJIQDDCK5IOZEbb5+h1TqV\n" \
+                    "rwgzSUcrAAFxMWm1kf/TDL9z2nZkuo0N+VtNEQREZDXA7aQv\n" \
                     "-----END PUBLIC KEY-----"
 
 #endif //SPLATOON_SERVER_CONSTANTS_HPP

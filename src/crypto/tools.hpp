@@ -27,8 +27,7 @@ std::string hashPassword(const std::string& password, const std::string& salt = 
 bool verifyPassword(const std::string& password, const std::string& hash);
 
 bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std::vector<unsigned char>& message, EVP_PKEY* publicKey);
-bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std::vector<unsigned char>& message,
-                          const std::string& publicKey);
+EVP_PKEY* loadPublicKey(const std::string& publicKey);
 
 } // namespace crypto
 

@@ -10,6 +10,7 @@ CertManager::CertManager(std::shared_ptr<SettingsManager> settingsManager, std::
     this->CAcert = nullptr;
     this->key = nullptr;
     this->cert = nullptr;
+    this->deviceKey = nullptr;
 }
 
 CertManager::~CertManager() {
@@ -80,6 +81,24 @@ bool CertManager::init() {
                                  key, &cert)) return false;
     }
 
+    if (settingsManager->isAccountEnabled()) {
+        if (!util::checkParentDirectory(settingsManager->getDeviceKeyPath())) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        settingsManager->getDeviceKeyPath().parent_path().string() + " is not a directory!");
+            return false;
+        }
+
+        if (fs::exists(settingsManager->getDeviceKeyPath())) {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading device key...");
+            if (!loadKey(settingsManager->getDeviceKeyPath(), &deviceKey)) return false;
+            if (!validateECDSAKey(deviceKey)) return false;
+        } else {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Device key not found!");
+            if (!genECDSAKey(&deviceKey)) return false;
+            if (!writeKey(deviceKey, settingsManager->getDeviceKeyPath())) return false;
+        }
+    }
+
     return true;
 }
 
@@ -102,6 +121,11 @@ void CertManager::cleanup() {
     if (CAkey) {
         EVP_PKEY_free(CAkey);
         CAkey = nullptr;
+    }
+
+    if (deviceKey) {
+        EVP_PKEY_free(deviceKey);
+        deviceKey = nullptr;
     }
 }
 
@@ -316,6 +340,17 @@ bool CertManager::validateRSAKey(EVP_PKEY* pKey) {
     return true;
 }
 
+bool CertManager::validateECDSAKey(EVP_PKEY* pKey) {
+    int keyType = EVP_PKEY_type(EVP_PKEY_get_id(pKey));
+
+    if (keyType != EVP_PKEY_EC) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP, "The key is not an ECDSA key!");
+        return false;
+    }
+
+    return true;
+}
+
 bool CertManager::genRSAKey(EVP_PKEY** pKey) {
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Generating RSA private key...");
     *pKey = EVP_RSA_gen(2048);
@@ -327,6 +362,23 @@ bool CertManager::genRSAKey(EVP_PKEY** pKey) {
     }
 
     return true;
+}
+
+bool CertManager::genECDSAKey(EVP_PKEY** pKey) {
+    logger->log(Logger::level::INFO, Logger::group::SETUP, "Generating ECDSA private key...");
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr);
+    if (ctx == nullptr) goto error;
+    if (EVP_PKEY_keygen_init(ctx) <= 0) goto error;
+    if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx, NID_sect233r1) <= 0) goto error;
+    if (EVP_PKEY_keygen(ctx, pKey) <= 0) goto error;
+
+    return true;
+
+    error:
+    logger->log(Logger::level::FAILURE, Logger::group::SETUP, "The ECDSA key couldn't be generated: " +
+                                                              util::getOpenSSLError());
+    if (ctx != nullptr) EVP_PKEY_CTX_free(ctx);
+    return false;
 }
 
 bool CertManager::createCA(const fs::path& crtFile, const fs::path& keyFile, EVP_PKEY* pKey, X509** outCert) {
@@ -465,4 +517,8 @@ EVP_PKEY* CertManager::getSSLKey() {
 
 X509* CertManager::getSSLCert() {
     return cert;
+}
+
+EVP_PKEY* CertManager::getDeviceKey() {
+    return deviceKey;
 }

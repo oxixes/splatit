@@ -124,6 +124,21 @@
           "description": "The key to use for signing refresh tokens (32 bytes base64 encoded)",
           "type": "string"
         },
+        "deviceKeyPath": {
+          "description": "The path to the key used to generate device certificates",
+          "type": "string"
+        },
+        "hosts": {
+          "description": "Mapping of server ids to hosts",
+          "type": "object",
+          "patternProperties": {
+            "^[A-F0-9]{8}$": {
+              "description": "The host of the server",
+              "type": "string",
+              "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+            }
+          }
+        },
         "allowRealWiiU": {
             "description": "Allow real Wii U consoles to connect",
             "type": "boolean"
@@ -133,7 +148,7 @@
             "type": "boolean"
         }
       },
-      "required": ["enabled", "tokenKey", "refreshTokenKey", "allowRealWiiU", "allowGeneratedWiiU"]
+      "required": ["enabled", "tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU"]
     }
   },
   "required": ["db"],

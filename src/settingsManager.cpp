@@ -172,6 +172,11 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"enabled", true},
                     {"tokenKey", tokenKeyString},
                     {"refreshTokenKey", refreshTokenKeyString},
+                    {"deviceKeyPath", (certsPath/fs::path("device.key")).string()},
+                    {"hosts", { // TODO Change this to a real address
+                        {"00003200", "127.0.0.1:1201"},
+                        {"10162B00", "127.0.0.1:1203"}
+                    }},
                     {"allowRealWiiU", true},
                     {"allowGeneratedWiiU", true}
             }},
@@ -201,6 +206,14 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
 
 bool SettingsManager::isAccountEnabled() const {
     return enabledServers.account;
+}
+
+bool SettingsManager::allowRealWiiU() const {
+    return settings["accounts"]["allowRealWiiU"];
+}
+
+bool SettingsManager::allowGeneratedWiiU() const {
+    return settings["accounts"]["allowGeneratedWiiU"];
 }
 
 bool SettingsManager::isBOSSEnabled() const {
@@ -237,6 +250,10 @@ fs::path SettingsManager::getSSLKeyPath() const {
 
 fs::path SettingsManager::getSSLCAKeyPath() const {
     return settings["ssl"]["caKey"];
+}
+
+fs::path SettingsManager::getDeviceKeyPath() const {
+    return settings["accounts"]["deviceKeyPath"];
 }
 
 std::string SettingsManager::getTopDomain() const {
@@ -296,4 +313,8 @@ std::string SettingsManager::getRefreshTokenKey() const {
 
 std::string SettingsManager::getNEXTokenKey() const {
     return settings["nex"]["tokenKey"];
+}
+
+std::string SettingsManager::getGameServerHost(const std::string& id) const {
+    return settings["accounts"]["hosts"][id];
 }

@@ -29,6 +29,7 @@ public:
     bool init();
     EVP_PKEY* getSSLKey();
     X509* getSSLCert();
+    EVP_PKEY* getDeviceKey();
     void cleanup();
 
 private:
@@ -39,6 +40,7 @@ private:
     X509* CAcert;
     EVP_PKEY* key;
     X509* cert;
+    EVP_PKEY* deviceKey;
 
     bool loadKey(const fs::path& keyPath, EVP_PKEY** pKey);
     bool loadCert(const fs::path& certPath, X509** outCert);
@@ -47,10 +49,12 @@ private:
 
     bool validateCert(X509* crt, EVP_PKEY* pKey);
     bool validateRSAKey(EVP_PKEY* pKey);
+    bool validateECDSAKey(EVP_PKEY* pKey);
     bool validateCA(X509* crt, EVP_PKEY* pKey);
     bool validateSSLCert(X509* crt, EVP_PKEY* pKey, X509* CAcrt, const std::vector<std::string>& domains);
 
     bool genRSAKey(EVP_PKEY** pKey);
+    bool genECDSAKey(EVP_PKEY** pKey);
 
     bool createCA(const fs::path& crtFile, const fs::path& keyFile, EVP_PKEY* pKey, X509** outCert);
     bool createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& crtFile,

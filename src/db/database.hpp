@@ -114,6 +114,10 @@ public:
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 
+    static int runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
+                           const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                           const std::function<void(unsigned int)>& unregisterCloseCall, bool& shouldStop);
+
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;
 };

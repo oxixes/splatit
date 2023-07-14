@@ -259,30 +259,59 @@ bool verifyPassword(const std::string& password, const std::string& hash) {
 }
 
 bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std::vector<unsigned char>& message, EVP_PKEY* publicKey) {
+    ECDSA_SIG* sig = ECDSA_SIG_new();
+    if (!sig) {
+        throw std::runtime_error("Failed to create ECDSA_SIG: " + util::getOpenSSLError());
+    }
+
+    // OpenSSL expects the signature to be in DER format
+    // but the signature is in raw format, so we need to
+    // convert it
+    BIGNUM* r = BN_bin2bn(signature.data(), 30, nullptr);
+    BIGNUM* s = BN_bin2bn(signature.data() + 30, 30, nullptr);
+
+    if (!r || !s) {
+        ECDSA_SIG_free(sig);
+        if (r) BN_free(r);
+        if (s) BN_free(s);
+        throw std::runtime_error("Failed to convert signature to BIGNUM: " + util::getOpenSSLError());
+    }
+
+    if (ECDSA_SIG_set0(sig, r, s) != 1) {
+        ECDSA_SIG_free(sig);
+        throw std::runtime_error("Failed to set ECDSA_SIG: " + util::getOpenSSLError());
+    }
+
+    unsigned char* derSignatureData = nullptr;
+    int derSignatureLength = i2d_ECDSA_SIG(sig, &derSignatureData);
+    if (derSignatureLength < 0) {
+        ECDSA_SIG_free(sig);
+        throw std::runtime_error("Failed to convert ECDSA_SIG to DER: " + util::getOpenSSLError());
+    }
+
+    ECDSA_SIG_free(sig);
+
+    std::vector<unsigned char> derSignature(derSignatureData, derSignatureData + derSignatureLength);
+
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx) {
         throw std::runtime_error("Failed to create EVP_MD_CTX: " + util::getOpenSSLError());
     }
 
-    if (EVP_DigestVerifyInit(ctx, nullptr, EVP_sha256(), nullptr, publicKey) <= 0) {
+    if (EVP_DigestVerifyInit(ctx, nullptr, EVP_sha256(), nullptr, publicKey) != 1) {
         EVP_MD_CTX_free(ctx);
         throw std::runtime_error("Failed to initialize EVP_MD_CTX: " + util::getOpenSSLError());
     }
 
-    if (EVP_DigestVerifyUpdate(ctx, message.data(), message.size()) <= 0) {
-        EVP_MD_CTX_free(ctx);
-        throw std::runtime_error("Failed to update EVP_MD_CTX: " + util::getOpenSSLError());
-    }
+    int result = EVP_DigestVerify(ctx, derSignature.data(), derSignature.size(),
+                                  message.data(), message.size());
 
-    int result = EVP_DigestVerifyFinal(ctx, signature.data(), signature.size());
     EVP_MD_CTX_free(ctx);
 
     return result == 1;
 }
 
-bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std::vector<unsigned char>& message,
-                          const std::string& publicKey) {
-    // Convert public key to EVP_PKEY
+EVP_PKEY* loadPublicKey(const std::string& publicKey) {
     EVP_PKEY* pkey;
     BIO* bio = BIO_new_mem_buf((void*) publicKey.data(), (int) publicKey.size());
     if (!bio) {
@@ -296,10 +325,7 @@ bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std
         throw std::runtime_error("Failed to read public key: " + util::getOpenSSLError());
     }
 
-    bool result = verifyECDSASignature(signature, message, pkey);
-    EVP_PKEY_free(pkey);
-
-    return result;
+    return pkey;
 }
 
 } // namespace crypto
