@@ -3,11 +3,9 @@
 #include <utility>
 
 HTTP_Server::HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-                         std::shared_ptr<db::Database> db, sock::IPv4Dir listenDir, int keepAliveTimeout,
-                         EVP_PKEY* key, X509* cert) {
+                         sock::IPv4Dir listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
     this->logger = std::move(logger);
     this->socketMgr = std::move(socketMgr);
-    this->db = std::move(db);
     this->keepAliveTimeout = keepAliveTimeout;
     this->mainSocketID = 0;
 
@@ -168,7 +166,7 @@ void HTTP_Server::serverThread() {
             shouldContinue = !requestsQueue.empty();
             queueLock.unlock();
 
-            std::function<http::Response( std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request,
+            std::function<http::Response( std::shared_ptr<Logger::Logger>, http::Request,
                     sock::IPv4Dir, bool&, bool&, std::function<unsigned int(std::function<void()>)>,
                     std::function<void(unsigned int)>)> handler = nullptr;
 
@@ -191,7 +189,7 @@ void HTTP_Server::serverThread() {
             } else {
                 try {
                     bool shouldClose = false;
-                    auto response = handler(logger, db, request.second, clientDir, shouldStop, shouldClose,
+                    auto response = handler(logger, request.second, clientDir, shouldStop, shouldClose,
                                             [this] (std::function<void()> func) { return registerCloseCall(std::move(func)); },
                                             [this] (unsigned int id) { return unregisterCloseCall(id); });
 
@@ -287,12 +285,12 @@ void HTTP_Server::unregisterCloseCall(unsigned int id) {
 }
 
 void HTTP_Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-        std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
+        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
         std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
-        routes[host] = std::map<std::string, std::function<http::Response(
-                std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
+        routes[host] = std::unordered_map<std::string, std::function<http::Response(
+                std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
                 std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>();
     }
 

@@ -5,14 +5,14 @@
 
 #include <pugixml.hpp>
 
-#include "parser/response.hpp"
-#include "../logger.hpp"
-#include "../db/database.hpp"
-#include "parser/request.hpp"
-#include "../socket/socket.hpp"
-#include "server.hpp"
-#include "../settingsManager.hpp"
-#include "../crypto/certManager.hpp"
+#include "../parser/response.hpp"
+#include "../../logger.hpp"
+#include "../../db/database.hpp"
+#include "../parser/request.hpp"
+#include "../../socket/socket.hpp"
+#include "../server.hpp"
+#include "../../settingsManager.hpp"
+#include "../../crypto/certManager.hpp"
 
 namespace acc {
 
@@ -52,8 +52,8 @@ bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey);
 bool checkRequestParams(const http::Request& req, const std::shared_ptr<SettingsManager>& settingsManager,
                         const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose);
 
-void registerCalls(const std::shared_ptr<HTTP_Server>& server, const std::string& domain,
-                   std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<CertManager> certMgr);
+void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
+                    std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db);
 
 } // namespace acc
 

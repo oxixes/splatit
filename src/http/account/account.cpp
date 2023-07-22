@@ -1,11 +1,16 @@
 #include "account.hpp"
-#include "../crypto/tools.hpp"
-#include "../constants.hpp"
+#include "../../crypto/tools.hpp"
+#include "../../constants.hpp"
 
 #include <unordered_map>
 
 namespace acc {
 
+/*
+ * Handler for GET https://account.<domain>/v1/api/admin/time
+ * Doesn't actually return anything, but the time is in the response headers.
+ * Since it's such a simple request, we won't require a device certificate.
+ */
 http::Response v1_api_admin_time(const http::Request& req, bool& shouldClose) {
     if (req.getMethod() != http::Method::M_GET) {
         return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
@@ -16,6 +21,12 @@ http::Response v1_api_admin_time(const http::Request& req, bool& shouldClose) {
     return std::move(prepareResponse(req.getVersion()));
 }
 
+/*
+ * Handler for GET https://account.<domain>/v1/api/admin/mapped_ids
+ * Returns a list of mapped ids for the given input.
+ * The input can be either a principal id or a username.
+ * Requires a device certificate.
+ */
 http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
                                        const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
@@ -100,6 +111,11 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
     return std::move(prepareResponse(req.getVersion(), doc));
 }
 
+/*
+ * Handler for POST https://account.<domain>/v1/api/oauth20/access_token/generate
+ * Generates an access token for the given user.
+ * Requires a device certificate. The password can be given directly or as a hash.
+ */
 http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
                                        const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
@@ -226,6 +242,12 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
     return std::move(prepareResponse(req.getVersion(), doc));
 }
 
+/*
+ * Handler for GET https://account.<domain>/v1/api/provider/nex_token/@me
+ * Creates an access token for the given NEX game server.
+ * Requires a device certificate, as well as authentication with an
+ * access token generated at /v1/api/oauth20/access_token/generate.
+ */
 http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
                                          const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                                          const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
@@ -425,18 +447,19 @@ bool checkRequestParams(const http::Request& req, const std::shared_ptr<Settings
     return true;
 }
 
-void registerCalls(const std::shared_ptr<HTTP_Server>& server, const std::string& domain,
-                   std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<CertManager> certMgr) {
+void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
+                    std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db) {
+
+    std::string domain = settingsMgr->getTopDomain();
 
     server->registerRoute("account." + domain, "/v1/api/admin/time", [](
-            const std::shared_ptr<Logger::Logger>&, const std::shared_ptr<db::Database>&,
-            const http::Request& req, sock::IPv4Dir, bool& shouldStop, bool& shouldClose,
-            const std::function<unsigned int(std::function<void()>)>&, const std::function<void(unsigned int)>&)
-            -> http::Response { return v1_api_admin_time(req, shouldClose); });
+            const std::shared_ptr<Logger::Logger>&, const http::Request& req, sock::IPv4Dir, bool& shouldStop,
+            bool& shouldClose, const std::function<unsigned int(std::function<void()>)>&,
+            const std::function<void(unsigned int)>&) -> http::Response { return v1_api_admin_time(req, shouldClose); });
 
     server->registerRoute("account." + domain, "/v1/api/admin/mapped_ids",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                              const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                              sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
                               return v1_api_admin_mapped_ids(logger, db, req, client, shouldStop, shouldClose,
@@ -445,18 +468,18 @@ void registerCalls(const std::shared_ptr<HTTP_Server>& server, const std::string
                           });
 
     server->registerRoute("account." + domain, "/v1/api/oauth20/access_token/generate",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                             const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                             sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                              const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                              const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
-                              return v1_api_access_token_gen(logger, db, req, client, shouldStop, shouldClose,
+                             return v1_api_access_token_gen(logger, db, req, client, shouldStop, shouldClose,
                                                              registerCloseCall, unregisterCloseCall, settingsMgr,
                                                              certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/provider/nex_token/@me",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                              const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                              sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
                               return v1_api_provider_nex_token(logger, db, req, client, shouldStop, shouldClose,

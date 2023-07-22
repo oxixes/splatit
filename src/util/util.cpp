@@ -2,6 +2,7 @@
 
 #include <winsock2.h>
 #include <bit>
+#include <chrono>
 
 namespace util {
 
@@ -35,9 +36,12 @@ std::string ipv4ToString(sock::IPv4Dir dir) {
 }
 
 std::string getDateHeader() {
+    return std::move(getDateHeader(time(nullptr)));
+}
+
+std::string getDateHeader(time_t time) {
     char buff[128];
-    time_t now = time(nullptr);
-    tm* gmt = gmtime(&now);
+    tm* gmt = gmtime(&time);
     strftime(buff, sizeof(buff), "%a, %d %b %Y %H:%M:%S GMT", gmt);
     return std::string{buff};
 }

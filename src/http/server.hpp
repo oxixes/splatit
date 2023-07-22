@@ -16,7 +16,7 @@
 
 class HTTP_Server {
 public:
-    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr, std::shared_ptr<db::Database> db,
+    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
                 sock::IPv4Dir listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
     ~HTTP_Server();
 
@@ -27,7 +27,7 @@ public:
     void unregisterCloseCall(unsigned int id);
 
     void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
             std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func);
 
     void registerErrorPage(const std::string& host, std::function<http::Response(
@@ -36,13 +36,12 @@ public:
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<SocketManager> socketMgr;
-    std::shared_ptr<db::Database> db;
 
     int keepAliveTimeout;
     unsigned int mainSocketID;
     std::shared_ptr<sock::SSLSocket> mainSocket;
 
-    std::map<unsigned int, std::vector<unsigned char>> buffers;
+    std::unordered_map<unsigned int, std::vector<unsigned char>> buffers;
     std::vector<std::thread> threads;
 
     std::queue<std::pair<unsigned int, http::Request>> requestsQueue;
@@ -52,12 +51,12 @@ private:
     std::condition_variable workerCV;
 
     // This is a map of maps, the first key is the host, the second key is the path for that given host
-    std::map<std::string, std::map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, std::shared_ptr<db::Database>, http::Request, sock::IPv4Dir, bool&, bool&,
+    std::unordered_map<std::string, std::unordered_map<std::string, std::function<http::Response(
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
             std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>> routes;
     std::mutex routesMutex;
 
-    std::map<std::string, std::function<http::Response(
+    std::unordered_map<std::string, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)>> errorPages;
     std::mutex errorPagesMutex;
 

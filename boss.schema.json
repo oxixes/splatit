@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "patternProperties": {
+    "^[a-zA-Z0-9]{16}$": {
+      "type": "object",
+      "properties": {
+        "titleId": { "type": "string" },
+        "tasksheets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "open": { "type": "boolean" },
+              "files": {
+                "type": "object",
+                "patternProperties": {
+                  "^[a-zA-Z0-9]{32}$": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "type": { "type": "string" },
+                      "filename": { "type": "string" },
+                      "path": { "type": "string" },
+                      "notify": {
+                        "type": "object",
+                        "properties": {
+                          "new": { "type": "string" },
+                          "LED": { "type": "boolean" }
+                        },
+                        "required": ["new", "LED"]
+                      }
+                    },
+                    "required": ["id", "type", "filename", "path", "notify"]
+                  }
+                }
+              }
+            },
+            "required": ["open", "files"]
+          }
+        }
+      },
+      "required": ["titleId", "tasksheets"]
+    }
+  }
+}

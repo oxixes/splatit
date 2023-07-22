@@ -20,6 +20,7 @@ namespace util {
     std::string ipv4ToString(sock::IPv4Dir dir);
 
     std::string getDateHeader();
+    std::string getDateHeader(time_t time);
     std::string getXNintendoDateHeader();
 
     void getu32Little(uint32_t& v);

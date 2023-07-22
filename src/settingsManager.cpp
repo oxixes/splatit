@@ -27,7 +27,12 @@ bool SettingsManager::init(const argParser::options& serverOptions) {
         domains.account = "account." + std::string(settings["domain"]);
     }
 
-    // TODO Add BOSS and more to settings file
+    if (settings.contains("boss") && settings["boss"]["enabled"]) {
+        enabledServers.boss = true;
+        domains.bossNPTS = "npts.app." + std::string(settings["domain"]);
+        domains.bossNPPL = "nppl.app." + std::string(settings["domain"]);
+        domains.bossNPDI = "npdi.cdn." + std::string(settings["domain"]);
+    }
 
     return true;
 }
@@ -78,9 +83,9 @@ bool SettingsManager::openOrCreateFiles(const argParser::options &serverOptions,
     }
 
     fs::path schemaFilePath = fs::path("settings.schema.json");
-    if (!fs::exists(schemaFilePath)) {
+    if (!fs::exists(schemaFilePath) || !fs::is_regular_file(schemaFilePath)) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "Settings schema file didn't exist, cannot validate settings file.");
+                    "Settings schema file didn't exist or wasn't a file, cannot validate settings file.");
         return false;
     }
 
@@ -135,7 +140,6 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
 bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serverOptions) {
     fs::path dataDirAbsPath = fs::absolute(fs::path(serverOptions.data_path));
     fs::path certsPath = dataDirAbsPath/fs::path("certs");
-    //fs::path bossPath = dataDirAbsPath/fs::path("boss");
 
     std::string tokenKeyString;
     std::string refreshTokenKeyString;
@@ -180,6 +184,10 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"allowRealWiiU", true},
                     {"allowGeneratedWiiU", true}
             }},
+            {"boss", {
+                    {"enabled", true},
+                    {"path", (dataDirAbsPath/fs::path("boss")).string()}
+            }},
             {"http", {
                     {"listenAddress", "0.0.0.0"},
                     {"workerCount", 3}, // TODO Make this dynamic depending on the machine CPU thread count
@@ -192,7 +200,6 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
 
     try {
         if (!fs::exists(certsPath)) fs::create_directory(certsPath);
-        //if (!fs::exists(bossPath)) fs::create_directory(bossPath);
     } catch (const std::exception& ex) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while creating the certs and boss directories: " + std::string(ex.what()));
@@ -261,7 +268,7 @@ std::string SettingsManager::getTopDomain() const {
 }
 
 fs::path SettingsManager::getBOSSPath() const {
-    return settings["boss"]["data"];
+    return settings["boss"]["path"];
 }
 
 sock::IPv4Dir SettingsManager::getHTTPListenAddress() const {

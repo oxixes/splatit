@@ -148,7 +148,21 @@
             "type": "boolean"
         }
       },
-      "required": ["enabled", "tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU"]
+      "required": ["enabled", "tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU",
+                  "hosts"]
+    },
+    "boss": {
+      "description": "Configuration of the BOSS server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the BOSS server",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "Path to the BOSS server files",
+          "type": "string"
+        }
+      }
     }
   },
   "required": ["db"],
@@ -157,6 +171,18 @@
       "required": ["accounts"],
       "properties": {
         "accounts": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["boss"],
+      "properties": {
+        "boss": {
           "properties": {
             "enabled": {
               "const": true
@@ -180,6 +206,21 @@
       },
       "then": {
         "required": ["domain", "ssl", "http", "nex"]
+      }
+    },
+    {
+      "if": {
+        "required": ["boss"],
+        "properties": {
+          "boss": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["domain", "ssl", "http"]
       }
     }
   ]

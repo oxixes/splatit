@@ -9,9 +9,8 @@
 #include "socket/socket.hpp"
 #include "socket/socketManager.hpp"
 #include "http/server.hpp"
-#include "http/account.hpp"
-
-#include "crypto/tools.hpp"
+#include "http/account/account.hpp"
+#include "http/boss/boss.hpp"
 
 bool shouldStop = false;
 
@@ -71,7 +70,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<HTTP_Server> httpServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
-        if (!certManager->init()) {
+        if (!certManager->init() || (settingsMgr->isAccountEnabled() && !boss::init(logger, settingsMgr))) {
             socketManager->cleanup();
             certManager->cleanup();
             db->close();
@@ -79,13 +78,16 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        httpServer = std::make_shared<HTTP_Server>(logger, socketManager, db, settingsMgr->getHTTPListenAddress(),
+        httpServer = std::make_shared<HTTP_Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
                                                    settingsMgr->getHTTPKeepAliveTimeout(),
                                                    certManager->getSSLKey(),
                                                    certManager->getSSLCert());
 
         if (settingsMgr->isAccountEnabled())
-            acc::registerCalls(httpServer, settingsMgr->getTopDomain(), settingsMgr, certManager);
+            acc::registerRoutes(httpServer, settingsMgr, certManager, db);
+
+        if (settingsMgr->isBOSSEnabled())
+            boss::registerRoutes(httpServer, settingsMgr);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }
