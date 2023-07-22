@@ -463,12 +463,12 @@ void SocketManager::recvfrom(unsigned int socketId) {
     std::vector<unsigned char> recvBuf;
     recvBuf.resize(65535); // A UDP won't receive more than 65535 bytes (it's actually 65507, but we'll use 65535)
 
-    struct sockaddr addr{};
+    struct sockaddr_in addr{};
     int addrLen = sizeof(addr);
 
     auto udpSocket = std::dynamic_pointer_cast<sock::UDPSocket>(sockets[socketId].second);
     try {
-        int recvBytes = udpSocket->recvfrom(recvBuf.data(), recvBuf.capacity(), 0, &addr, &addrLen);
+        int recvBytes = udpSocket->recvfrom(recvBuf.data(), recvBuf.capacity(), 0, (sockaddr*) &addr, &addrLen);
         if (std::find(closeQueue.begin(), closeQueue.end(), socketId) != closeQueue.end()) {
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                         "Socket with ID " + std::to_string(socketId) + " has received some data"
@@ -476,11 +476,12 @@ void SocketManager::recvfrom(unsigned int socketId) {
             return;
         }
 
+        if (recvBytes == 0) return;
+
         recvBuf.resize(recvBytes);
 
-        auto *addrIn = (struct sockaddr_in *) &addr;
-        auto *ipv4addr = (uint8_t *) &addrIn->sin_addr.S_un.S_un_b;
-        sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], addrIn->sin_port};
+        auto* ipv4addr = (uint8_t*) &addr.sin_addr.S_un.S_un_b;
+        sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
 
         std::unique_lock recvCallbacksLock(udpRecvCallbacksMutex);
         if (udpRecvCallbacks.find(socketId) != udpRecvCallbacks.end()) {

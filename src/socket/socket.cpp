@@ -2,6 +2,8 @@
 
 #include "../util/util.hpp"
 
+#include <iostream>
+
 namespace sock {
 
 bool initialize() {
@@ -331,6 +333,8 @@ void UDPSocket::sendto(const void* buf, size_t len, int flags, const struct sock
     if (result < 0) {
 #ifdef _WIN32
         int error = WSAGetLastError();
+        if (error == WSAECONNRESET || error == WSAECONNREFUSED) return; // This is sent by Windows to indicate the last packet was dropped
+                                                                        // so we can just ignore it
         if (error == WSAEWOULDBLOCK) {
             lastResult = ResultType::NEEDS_WRITE;
             throw RetryableException("Failed to send data: " + util::getWSAError(error));
@@ -340,6 +344,8 @@ void UDPSocket::sendto(const void* buf, size_t len, int flags, const struct sock
         }
 #else
         int error = errno;
+        if (error == ECONNREFUSED || error == ECONNRESET) return; // This is sent by Linux to indicate the last packet was dropped
+                                                                  // so we can just ignore it
         if (error == EAGAIN || error == EWOULDBLOCK) {
             lastResult = ResultType::NEEDS_WRITE;
             throw RetryableException("Failed to send data: " + std::string(strerror(error)));
@@ -361,6 +367,8 @@ int UDPSocket::recvfrom(void* buf, size_t len, int flags, struct sockaddr* src_a
     if (result < 0) {
 #ifdef _WIN32
         int error = WSAGetLastError();
+        if (error == WSAECONNRESET || error == WSAECONNREFUSED) return 0; // This is sent by Windows to indicate the last packet was dropped
+                                                                          // so we can just ignore it
         if (error == WSAEWOULDBLOCK) {
             lastResult = ResultType::NEEDS_READ;
             throw RetryableException("Failed to receive data: " + util::getWSAError(error));
@@ -370,6 +378,8 @@ int UDPSocket::recvfrom(void* buf, size_t len, int flags, struct sockaddr* src_a
         }
 #else
         int error = errno;
+        if (error == ECONNREFUSED || error == ECONNRESET) return 0; // This is sent by Linux to indicate the last packet was dropped
+                                                                    // so we can just ignore it
         if (error == EAGAIN || error == EWOULDBLOCK) {
             lastResult = ResultType::NEEDS_READ;
             throw RetryableException("Failed to receive data: " + std::string(strerror(error)));
