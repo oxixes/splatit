@@ -117,8 +117,8 @@ void SocketManager::process() {
 
     for (auto& socket : sockets) {
         short events = POLLIN;
-        if (socket.second.first == SocketType::TCP_CONN) {
-            // If the type is TCP_CONN, it is guaranteed to be in the tcpSendBuffers map
+        if (socket.second.first == SocketType::TCP_CONN || socket.second.first == SocketType::UDP) {
+            // If the type is TCP_CONN or UDP, it is guaranteed to be in the sendBuffers map
             if (socket.second.second->getLastResult() == sock::ResultType::NEEDS_WRITE) {
                 events |= POLLOUT;
             }
