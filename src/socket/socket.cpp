@@ -321,4 +321,66 @@ int TCPSocket::recv(void* buf, size_t len, int flags) {
     return result;
 }
 
+void UDPSocket::sendto(const void* buf, size_t len, int flags, const struct sockaddr* dest_addr, socklen_t addrlen) {
+#ifdef _WIN32
+    int result = ::sendto(socket, (const char*) buf, (int) len, flags, dest_addr, addrlen);
+#else
+    int result = ::sendto(socket, buf, len, flags, dest_addr, addrlen);
+#endif
+
+    if (result < 0) {
+#ifdef _WIN32
+        int error = WSAGetLastError();
+        if (error == WSAEWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_WRITE;
+            throw RetryableException("Failed to send data: " + util::getWSAError(error));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to send data: " + util::getWSAError(error));
+        }
+#else
+        int error = errno;
+        if (error == EAGAIN || error == EWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_WRITE;
+            throw RetryableException("Failed to send data: " + std::string(strerror(error)));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to send data: " + std::string(strerror(error)));
+        }
+#endif
+    }
+}
+
+int UDPSocket::recvfrom(void* buf, size_t len, int flags, struct sockaddr* src_addr, socklen_t* addrlen) {
+#ifdef _WIN32
+    int result = ::recvfrom(socket, (char*) buf, (int) len, flags, src_addr, addrlen);
+#else
+    int result = ::recvfrom(socket, buf, len, flags, src_addr, addrlen);
+#endif
+
+    if (result < 0) {
+#ifdef _WIN32
+        int error = WSAGetLastError();
+        if (error == WSAEWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_READ;
+            throw RetryableException("Failed to receive data: " + util::getWSAError(error));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to receive data: " + util::getWSAError(error));
+        }
+#else
+        int error = errno;
+        if (error == EAGAIN || error == EWOULDBLOCK) {
+            lastResult = ResultType::NEEDS_READ;
+            throw RetryableException("Failed to receive data: " + std::string(strerror(error)));
+        } else {
+            status = SocketStatus::FAILURE;
+            throw FatalException("Failed to receive data: " + std::string(strerror(error)));
+        }
+#endif
+    }
+
+    return result;
+}
+
 } // namespace sock

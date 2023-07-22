@@ -54,6 +54,11 @@ bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<S
     return true;
 }
 
+/*
+ * Handler for GET https://npts.app.<domain>/p01/tasksheet/1/<titleId>/<tasksheetId>
+ * Returns the appropiate tasksheet requested, based on the title id (which game)
+ * and tasksheet id.
+ */
 http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                              const std::string& titleId, const std::string& tasksheetId,
                              const std::shared_ptr<SettingsManager>& settingsMgr) {
@@ -127,6 +132,11 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     return std::move(res);
 }
 
+/*
+ * Handler for GET https://npdi.cdn.<domain>/p01/data/1/<titleId>/<tasksheetId>/<fileHash>
+ * Returns the requested file. These URLs are obtained from the tasksheets returned by
+ * p01_tasksheet.
+ */
 http::Response p01_data(const http::Request& req, const std::string& titleId, const std::string& tasksheetId,
                         const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (req.getMethod() != http::Method::M_GET) return std::move(getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion()));

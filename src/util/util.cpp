@@ -31,6 +31,17 @@ std::string getWSAError(int error) {
 }
 #endif
 
+sockaddr_in ipv4ToSockAddr(sock::IPv4Dir dir) {
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(dir.port);
+    addr.sin_addr.S_un.S_un_b.s_b1 = dir.a;
+    addr.sin_addr.S_un.S_un_b.s_b2 = dir.b;
+    addr.sin_addr.S_un.S_un_b.s_b3 = dir.c;
+    addr.sin_addr.S_un.S_un_b.s_b4 = dir.d;
+    return addr;
+}
+
 std::string ipv4ToString(sock::IPv4Dir dir) {
     return std::to_string(dir.a) + "." + std::to_string(dir.b) + "." + std::to_string(dir.c) + "." + std::to_string(dir.d);
 }

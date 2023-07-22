@@ -134,6 +134,9 @@ public:
 #endif
     ~UDPSocket() override = default;
 
+    void sendto(const void* buf, size_t len, int flags, const struct sockaddr* dest_addr, socklen_t addrlen);
+    int recvfrom(void* buf, size_t len, int flags, struct sockaddr* src_addr, socklen_t* addrlen);
+
 protected:
 #ifdef _WIN32
     explicit UDPSocket(SOCKET socket) : Socket(socket) {};

@@ -17,6 +17,8 @@ namespace util {
     std::string getWSAError(int error);
 #endif
 
+    sockaddr_in ipv4ToSockAddr(sock::IPv4Dir dir);
+
     std::string ipv4ToString(sock::IPv4Dir dir);
 
     std::string getDateHeader();
