@@ -38,13 +38,13 @@ private:
     std::shared_ptr<SocketManager> socketMgr;
 
     int keepAliveTimeout;
-    unsigned int mainSocketID;
+    uint32_t mainSocketID;
     std::shared_ptr<sock::SSLSocket> mainSocket;
 
-    std::unordered_map<unsigned int, std::vector<uint8_t>> buffers;
+    std::unordered_map<uint32_t, std::vector<uint8_t>> buffers;
     std::vector<std::thread> threads;
 
-    std::queue<std::pair<unsigned int, http::Request>> requestsQueue;
+    std::queue<std::pair<uint32_t, http::Request>> requestsQueue;
     std::mutex requestsQueueMutex;
 
     std::mutex workerMutex;
@@ -60,24 +60,24 @@ private:
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)>> errorPages;
     std::mutex errorPagesMutex;
 
-    std::map<unsigned int, sock::IPv4Dir> clients;
+    std::map<uint32_t, sock::IPv4Dir> clients;
     std::mutex clientsMutex;
 
     uint32_t closeCallID = 0;
-    std::map<unsigned int, std::function<void()>> closeCalls;
+    std::map<uint32_t, std::function<void()>> closeCalls;
     std::mutex closeCallsMutex;
 
     bool shouldStop = false;
 
     void serverThread();
-    void onAccept(unsigned int newSockId, sock::IPv4Dir dir);
-    void onClose(unsigned int sockId);
-    void onDataReceived(unsigned int sockId, std::vector<uint8_t> data);
+    void onAccept(uint32_t newSockId, sock::IPv4Dir dir);
+    void onClose(uint32_t sockId);
+    void onDataReceived(uint32_t sockId, std::vector<uint8_t> data);
 
     static http::Response getError(http::Version version, int status);
-    void sendError(unsigned int sockId, int status, const http::Request& request, sock::IPv4Dir client);
+    void sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Dir client);
     // Sent when a request is not available, as it couldn't be parsed
-    void sendError(unsigned int sockId, int status);
+    void sendError(uint32_t sockId, int status);
 };
 
 #endif // SPLATOON_SERVER_SERVER_HPP

@@ -40,36 +40,36 @@ void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc
 
     mainSocket->listen();
 
-    std::function<void(unsigned int)> closeCallback = nullptr;
+    std::function<void(uint32_t)> closeCallback = nullptr;
     if (closeFunc != nullptr) {
-        closeCallback = [closeFunc] (unsigned int) { closeFunc(); };
+        closeCallback = [closeFunc] (uint32_t) { closeFunc(); };
     }
 
     mainSocketID = this->socketMgr->addTCPSocket(mainSocket,
-                                                 [this] (unsigned int id, unsigned int newSockId, sock::IPv4Dir dir)
+                                                 [this] (uint32_t id, uint32_t newSockId, sock::IPv4Dir dir)
                                                  { onAccept(newSockId, dir); },
                                                  closeCallback,
-                                                 [this] (unsigned int id, std::vector<uint8_t> data)
+                                                 [this] (uint32_t id, std::vector<uint8_t> data)
                                                  { onDataReceived(id, std::move(data)); },
-                                                 [this] (unsigned int id) { onClose(id); },
+                                                 [this] (uint32_t id) { onClose(id); },
                                                  keepAliveTimeout);
 }
 
-void HTTP_Server::onAccept(unsigned int newSockId, sock::IPv4Dir dir) {
+void HTTP_Server::onAccept(uint32_t newSockId, sock::IPv4Dir dir) {
     buffers[newSockId] = std::vector<uint8_t>();
 
     std::unique_lock clientsLock(clientsMutex);
     clients[newSockId] = dir;
 }
 
-void HTTP_Server::onClose(unsigned int sockId) {
+void HTTP_Server::onClose(uint32_t sockId) {
     buffers.erase(sockId);
 
     std::unique_lock clientsLock(clientsMutex);
     clients.erase(sockId);
 }
 
-void HTTP_Server::onDataReceived(unsigned int sockId, std::vector<uint8_t> data) {
+void HTTP_Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
     if (data.empty()) return;
 
     auto& buffer = buffers.find(sockId)->second;
@@ -223,7 +223,7 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
     return std::move(response);
 }
 
-void HTTP_Server::sendError(unsigned int sockId, int status, const http::Request& request, sock::IPv4Dir client) {
+void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Dir client) {
     std::unique_lock lock(errorPagesMutex);
     auto response = (!request.hasHeader("host")
             || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
@@ -232,7 +232,7 @@ void HTTP_Server::sendError(unsigned int sockId, int status, const http::Request
     socketMgr->close(sockId);
 }
 
-void HTTP_Server::sendError(unsigned int sockId, int status) {
+void HTTP_Server::sendError(uint32_t sockId, int status) {
     http::Request req("", http::Method::M_GET, http::Version::HTTP_1_1);
     sock::IPv4Dir client{};
     sendError(sockId, status, req, client);

@@ -5,12 +5,12 @@
 
 SocketManager::SocketManager(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {}
 
-unsigned int SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
-                                         std::function<void(unsigned int, unsigned int, sock::IPv4Dir)> acceptCallback,
-                                         std::function<void(unsigned int)> closeCallback,
-                                         std::function<void(unsigned int, std::vector<uint8_t>)> connRecvCallback,
-                                         std::function<void(unsigned int)> connCloseCallback, int keepAliveTimeout) {
-    unsigned int socketId = nextSocketId++;
+uint32_t SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
+                                         std::function<void(uint32_t, uint32_t, sock::IPv4Dir)> acceptCallback,
+                                         std::function<void(uint32_t)> closeCallback,
+                                         std::function<void(uint32_t, std::vector<uint8_t>)> connRecvCallback,
+                                         std::function<void(uint32_t)> connCloseCallback, int keepAliveTimeout) {
+    uint32_t socketId = nextSocketId++;
 
     std::unique_lock acceptCallbackLock(acceptCallbacksMutex);
     if (acceptCallback != nullptr) {
@@ -42,11 +42,11 @@ unsigned int SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket
     return socketId;
 }
 
-unsigned int SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket,
-                                             std::function<void(unsigned int)> connectCallback,
-                                             std::function<void(unsigned int, std::vector<uint8_t>)> recvCallback,
-                                             std::function<void(unsigned int)> closeCallback, int keepAliveTimeout) {
-    unsigned int socketId = nextSocketId++;
+uint32_t SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket,
+                                             std::function<void(uint32_t)> connectCallback,
+                                             std::function<void(uint32_t, std::vector<uint8_t>)> recvCallback,
+                                             std::function<void(uint32_t)> closeCallback, int keepAliveTimeout) {
+    uint32_t socketId = nextSocketId++;
 
     std::unique_lock connectCallbackLock(connectCallbacksMutex);
     if (connectCallback != nullptr) {
@@ -82,10 +82,10 @@ unsigned int SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> so
     return socketId;
 }
 
-unsigned int SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
-                          std::function<void(unsigned int, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
-                          std::function<void(unsigned int)> closeCallback) {
-    unsigned int socketId = nextSocketId++;
+uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
+                          std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
+                          std::function<void(uint32_t)> closeCallback) {
+    uint32_t socketId = nextSocketId++;
 
     std::unique_lock recvCallbackLock(udpRecvCallbacksMutex);
     if (recvCallback != nullptr) {
@@ -113,7 +113,7 @@ void SocketManager::process() {
     if (sockets.empty()) return;
 
     std::vector<pollfd> fds;
-    std::vector<unsigned int> socketIndexToId;
+    std::vector<uint32_t> socketIndexToId;
 
     for (auto& socket : sockets) {
         short events = POLLIN;
@@ -302,7 +302,7 @@ void SocketManager::process() {
     }
 }
 
-void SocketManager::connect(unsigned int socketId, sock::IPv4Dir address) {
+void SocketManager::connect(uint32_t socketId, sock::IPv4Dir address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
@@ -322,7 +322,7 @@ void SocketManager::connect(unsigned int socketId, sock::IPv4Dir address) {
     }
 }
 
-bool SocketManager::send(unsigned int socketId, std::vector<uint8_t> data) {
+bool SocketManager::send(uint32_t socketId, std::vector<uint8_t> data) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -351,7 +351,7 @@ bool SocketManager::send(unsigned int socketId, std::vector<uint8_t> data) {
     return true;
 }
 
-void SocketManager::send(unsigned int socketId) {
+void SocketManager::send(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
     std::unique_lock sendBuffersLock(tcpSendBuffersMutex);
 
@@ -369,7 +369,7 @@ void SocketManager::send(unsigned int socketId) {
     }
 }
 
-bool SocketManager::sendto(unsigned int socketId, std::vector<uint8_t> data, sock::IPv4Dir address) {
+bool SocketManager::sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Dir address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -395,7 +395,7 @@ bool SocketManager::sendto(unsigned int socketId, std::vector<uint8_t> data, soc
     return true;
 }
 
-void SocketManager::sendto(unsigned int socketId) {
+void SocketManager::sendto(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
     std::unique_lock sendBuffersLock(udpSendBuffersMutex);
 
@@ -411,7 +411,7 @@ void SocketManager::sendto(unsigned int socketId) {
     }
 }
 
-void SocketManager::recv(unsigned int socketId) {
+void SocketManager::recv(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
@@ -454,7 +454,7 @@ void SocketManager::recv(unsigned int socketId) {
     }
 }
 
-void SocketManager::recvfrom(unsigned int socketId) {
+void SocketManager::recvfrom(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
@@ -498,7 +498,7 @@ void SocketManager::recvfrom(unsigned int socketId) {
     }
 }
 
-void SocketManager::accept(unsigned int socketId) {
+void SocketManager::accept(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
     //bool socketsLocked = true;
 
@@ -531,14 +531,14 @@ void SocketManager::accept(unsigned int socketId) {
         auto recvCallback = tcpRecvCallbacks.find(socketId);
         auto closeCallback = closeCallbacks.find(socketId);
 
-        std::function<void(unsigned int)> connectCallback;
+        std::function<void(uint32_t)> connectCallback;
         if (acceptCallback != acceptCallbacks.end()) {
-            connectCallback = [acceptCallback, socketId, dir](unsigned int newSocketId) {
+            connectCallback = [acceptCallback, socketId, dir](uint32_t newSocketId) {
                 acceptCallback->second(socketId, newSocketId, dir);
             };
         }
 
-        unsigned int newSocketId = addTCPSocketConn(std::shared_ptr<sock::TCPSocket>(newSocket),
+        uint32_t newSocketId = addTCPSocketConn(std::shared_ptr<sock::TCPSocket>(newSocket),
                                                     std::move(connectCallback),
                                                     (recvCallback == tcpRecvCallbacks.end()) ? nullptr
                                                                                              : recvCallback->second,
@@ -559,7 +559,7 @@ void SocketManager::accept(unsigned int socketId) {
     }
 }
 
-bool SocketManager::close(unsigned int socketId, bool force) {
+bool SocketManager::close(uint32_t socketId, bool force) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -606,7 +606,7 @@ bool SocketManager::close(unsigned int socketId, bool force) {
     return false;
 }
 
-void SocketManager::removeSocket(unsigned int socketId) {
+void SocketManager::removeSocket(uint32_t socketId) {
     std::scoped_lock lock(socketsMutex, tcpSendBuffersMutex, udpSendBuffersMutex, acceptCallbacksMutex,
                           connectCallbacksMutex, tcpRecvCallbacksMutex, udpRecvCallbacksMutex,
                           closeCallbacksMutex,keepAliveTimeoutsMutex, closeTimeoutsMutex);
@@ -626,7 +626,7 @@ void SocketManager::removeSocket(unsigned int socketId) {
 //    if (it != closeQueue.end()) closeQueue.erase(it);
 }
 
-bool SocketManager::isClosed(unsigned int socketId) {
+bool SocketManager::isClosed(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
     return sockets.find(socketId) == sockets.end();
 }
