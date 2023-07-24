@@ -40,7 +40,7 @@ std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(int pid, cons
     return std::move(dbCommand);
 }
 
-std::unique_ptr<Result> Database::getResult(int commandID) {
+std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
     std::unique_lock<std::mutex> lock(resultsMutex);
 
     auto result = std::find_if(this->results.begin(), this->results.end(),
@@ -67,12 +67,12 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, std::shar
     }
 }
 
-int Database::runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
+uint32_t Database::runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
                 const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                 const std::function<void(unsigned int)>& unregisterCloseCall,
                 bool& shouldStop) {
 
-    int cmdId = db->queueCommand(std::move(command), true);
+    uint32_t cmdId = db->queueCommand(std::move(command), true);
     unsigned int closeCallId;
     if (registerCloseCall != nullptr)
         closeCallId = registerCloseCall([cmdId, &db]() { db->notifyCommand(cmdId); });

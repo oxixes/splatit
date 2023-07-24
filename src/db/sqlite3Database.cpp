@@ -79,7 +79,7 @@ bool sqlite3Database::run() {
     return true;
 }
 
-int sqlite3Database::queueCommand(std::unique_ptr<Command> command, bool commandMutex) {
+uint32_t sqlite3Database::queueCommand(std::unique_ptr<Command> command, bool commandMutex) {
     //std::unique_lock dbLock(dbThreadMutex);
     std::unique_lock lock(commandQueueMutex);
     command->commandId = commandId;
@@ -103,7 +103,7 @@ void sqlite3Database::processQueue() {
     dbThreadCV.notify_one();
 }
 
-void sqlite3Database::waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) {
+void sqlite3Database::waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) {
     std::unique_lock commandCVsLock(commandCVsMutex);
     auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
         return std::get<0>(info) == commandId;
@@ -143,7 +143,7 @@ void sqlite3Database::waitForQueue(std::shared_ptr<bool> shouldEnd) {
     });
 }
 
-void sqlite3Database::clearCommandMutex(int commandId) {
+void sqlite3Database::clearCommandMutex(uint32_t commandId) {
     std::unique_lock lock(commandCVsMutex);
     std::erase_if(commandCVs, [commandId](const auto& info) {
         if (std::get<0>(info) == commandId && std::this_thread::get_id() != std::get<3>(info)) {
@@ -154,7 +154,7 @@ void sqlite3Database::clearCommandMutex(int commandId) {
     });
 }
 
-void sqlite3Database::notifyCommand(int commandId) {
+void sqlite3Database::notifyCommand(uint32_t commandId) {
     std::unique_lock lock(commandCVsMutex);
     auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
         return std::get<0>(info) == commandId;
@@ -200,7 +200,7 @@ void sqlite3Database::dbThread() {
             commandQueue.pop();
 
             if (command->hasMutex) {
-                int commandId = command->commandId;
+                uint32_t commandId = command->commandId;
                 std::unique_lock commandCVsLock(commandCVsMutex);
                 auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
                     return std::get<0>(info) == commandId;

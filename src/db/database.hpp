@@ -47,7 +47,7 @@ class Command {
 public:
     DBCommandType type;
     std::vector<std::any> data;
-    int commandId = 0;
+    uint32_t commandId = 0;
     bool hasMutex = false;
 
     explicit Command(DBCommandType type, std::vector<std::any> data) {
@@ -60,9 +60,9 @@ class Result {
 public:
     std::vector<std::any> data;
     DBResultStatus status;
-    int commandId;
+    uint32_t commandId;
 
-    explicit Result(int commandId, DBResultStatus status, std::vector<std::any>& data) {
+    explicit Result(uint32_t commandId, DBResultStatus status, std::vector<std::any>& data) {
         this->commandId = commandId;
         this->status = status;
         this->data = std::move(data);
@@ -81,10 +81,10 @@ protected:
     std::vector<std::unique_ptr<Result>> results;
     std::mutex resultsMutex;
 
-    std::vector<std::tuple<int, std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>, std::thread::id>> commandCVs;
+    std::vector<std::tuple<uint32_t, std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>, std::thread::id>> commandCVs;
     std::mutex commandCVsMutex;
 
-    int commandId = 0;
+    uint32_t commandId = 0;
 
     DBType dbType;
     DBVersion dbVersion;
@@ -97,15 +97,15 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual int queueCommand(std::unique_ptr<Command> command, bool commandMutex) = 0;
+    virtual uint32_t queueCommand(std::unique_ptr<Command> command, bool commandMutex) = 0;
     virtual void processQueue() = 0;
-    virtual void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) = 0;
+    virtual void waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) = 0;
     virtual void waitForQueue(std::shared_ptr<bool> shouldEnd) = 0;
-    virtual void clearCommandMutex(int commandId) = 0;
-    virtual void notifyCommand(int commandId) = 0;
+    virtual void clearCommandMutex(uint32_t commandId) = 0;
+    virtual void notifyCommand(uint32_t commandId) = 0;
     virtual void notifyQueue() = 0;
 
-    std::unique_ptr<Result> getResult(int commandID);
+    std::unique_ptr<Result> getResult(uint32_t commandID);
 
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
     static std::unique_ptr<Command> craftGetUserByPIDCommand(int pid);
@@ -114,7 +114,7 @@ public:
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 
-    static int runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
+    static uint32_t runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
                            const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                            const std::function<void(unsigned int)>& unregisterCloseCall, bool& shouldStop);
 

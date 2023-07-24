@@ -26,12 +26,12 @@ public:
     bool run() override;
     void close() override;
 
-    int queueCommand(std::unique_ptr<Command> command, bool commandMutex) override;
+    uint32_t queueCommand(std::unique_ptr<Command> command, bool commandMutex) override;
     void processQueue() override;
-    void waitForCommand(int commandId, std::shared_ptr<bool> shouldEnd) override;
+    void waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) override;
     void waitForQueue(std::shared_ptr<bool> shouldEnd) override;
-    void clearCommandMutex(int commandId) override;
-    void notifyCommand(int commandId) override;
+    void clearCommandMutex(uint32_t commandId) override;
+    void notifyCommand(uint32_t commandId) override;
     void notifyQueue() override;
 
 private:
