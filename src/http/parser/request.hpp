@@ -27,7 +27,7 @@ class MethodNotSupportedException : public std::runtime_error {
 class Request {
 public:
     explicit Request(const std::string& path, Method method = Method::M_GET, Version version = Version::HTTP_1_1);
-    static Request parse(const std::vector<unsigned char>& data, size_t& length);
+    static Request parse(const std::vector<uint8_t>& data, size_t& length);
 
     [[nodiscard]] Method getMethod() const;
     [[nodiscard]] Version getVersion() const;
@@ -42,10 +42,10 @@ public:
     void setHeader(const std::string& key, const std::string& value);
     void addHeader(const std::string& key, const std::string& value);
 
-    [[nodiscard]] const std::vector<unsigned char>& getBody() const;
-    void setBody(std::vector<unsigned char>& newBody);
+    [[nodiscard]] const std::vector<uint8_t>& getBody() const;
+    void setBody(std::vector<uint8_t>& newBody);
 
-    [[nodiscard]] std::vector<unsigned char> serialize() const;
+    [[nodiscard]] std::vector<uint8_t> serialize() const;
 
 private:
     Request() = default;
@@ -55,12 +55,12 @@ private:
     std::string path;
     std::unordered_map<std::string, std::string> query;
     std::unordered_map<std::string, std::vector<std::string>> headers;
-    std::vector<unsigned char> body;
+    std::vector<uint8_t> body;
 
-    static bool isHeaderComplete(const std::vector<unsigned char>& data, size_t& length);
-    void parseHTTPHeader(const std::vector<unsigned char>& data, size_t length);
-    bool isBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength);
-    void parseHTTPBody(const std::vector<unsigned char>& data, size_t headerLength, size_t length);
+    static bool isHeaderComplete(const std::vector<uint8_t>& data, size_t& length);
+    void parseHTTPHeader(const std::vector<uint8_t>& data, size_t length);
+    bool isBodyComplete(const std::vector<uint8_t>& data, size_t& length, size_t headerLength);
+    void parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLength, size_t length);
 };
 
 } // namespace http

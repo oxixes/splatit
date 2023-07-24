@@ -41,7 +41,7 @@ private:
     unsigned int mainSocketID;
     std::shared_ptr<sock::SSLSocket> mainSocket;
 
-    std::unordered_map<unsigned int, std::vector<unsigned char>> buffers;
+    std::unordered_map<unsigned int, std::vector<uint8_t>> buffers;
     std::vector<std::thread> threads;
 
     std::queue<std::pair<unsigned int, http::Request>> requestsQueue;
@@ -72,7 +72,7 @@ private:
     void serverThread();
     void onAccept(unsigned int newSockId, sock::IPv4Dir dir);
     void onClose(unsigned int sockId);
-    void onDataReceived(unsigned int sockId, std::vector<unsigned char> data);
+    void onDataReceived(unsigned int sockId, std::vector<uint8_t> data);
 
     static http::Response getError(http::Version version, int status);
     void sendError(unsigned int sockId, int status, const http::Request& request, sock::IPv4Dir client);

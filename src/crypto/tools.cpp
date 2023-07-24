@@ -11,7 +11,7 @@
 
 namespace crypto {
 
-std::string base64Encode(const std::vector<unsigned char>& data) {
+std::string base64Encode(const std::vector<uint8_t>& data) {
     BIO* bmem = BIO_new(BIO_s_mem());
     BIO* b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
@@ -30,7 +30,7 @@ std::string base64Encode(const std::vector<unsigned char>& data) {
     return result;
 }
 
-std::string base64UrlEncode(const std::vector<unsigned char>& data) {
+std::string base64UrlEncode(const std::vector<uint8_t>& data) {
     std::string result = base64Encode(data);
     int i = 0;
     for (char& c : result) {
@@ -50,12 +50,12 @@ std::string base64UrlEncode(const std::vector<unsigned char>& data) {
     return result;
 }
 
-std::vector<unsigned char> base64Decode(const std::string& data) {
+std::vector<uint8_t> base64Decode(const std::string& data) {
     BIO* bmem = BIO_new_mem_buf(data.data(), (int) data.size());
     BIO* b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     bmem = BIO_push(b64, bmem);
-    std::vector<unsigned char> result(data.size());
+    std::vector<uint8_t> result(data.size());
     int length = BIO_read(bmem, result.data(), (int) data.size());
     if (length < 0) {
         BIO_free_all(bmem);
@@ -67,7 +67,7 @@ std::vector<unsigned char> base64Decode(const std::string& data) {
     return result;
 }
 
-std::vector<unsigned char> base64UrlDecode(const std::string& data) {
+std::vector<uint8_t> base64UrlDecode(const std::string& data) {
     std::string result = data;
     for (char& c : result) {
         if (c == '-') {
@@ -85,8 +85,8 @@ std::vector<unsigned char> base64UrlDecode(const std::string& data) {
     return base64Decode(result);
 }
 
-std::vector<unsigned char> HMAC_SHA256(const std::vector<unsigned char>& key, const std::vector<unsigned char>& data) {
-    std::vector<unsigned char> result(EVP_MAX_MD_SIZE);
+std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> result(EVP_MAX_MD_SIZE);
     unsigned int length = 0;
     HMAC(EVP_sha256(), key.data(), (int) key.size(), data.data(), (int) data.size(), result.data(), &length);
     result.resize(length);
@@ -103,18 +103,18 @@ std::string signJWT(const std::string& base64Key, const json& payload) {
     std::string headerStr = header.dump();
     std::string payloadStr = payload.dump();
 
-    std::vector<unsigned char> headerVec(headerStr.begin(), headerStr.end());
-    std::vector<unsigned char> payloadVec(payloadStr.begin(), payloadStr.end());
+    std::vector<uint8_t> headerVec(headerStr.begin(), headerStr.end());
+    std::vector<uint8_t> payloadVec(payloadStr.begin(), payloadStr.end());
 
     headerStr = base64UrlEncode(headerVec);
     payloadStr = base64UrlEncode(payloadVec);
 
-    std::vector<unsigned char> jwt;
+    std::vector<uint8_t> jwt;
     jwt.insert(jwt.end(), headerStr.begin(), headerStr.end());
     jwt.push_back('.');
     jwt.insert(jwt.end(), payloadStr.begin(), payloadStr.end());
 
-    std::vector<unsigned char> signature = HMAC_SHA256(base64Decode(base64Key), jwt);
+    std::vector<uint8_t> signature = HMAC_SHA256(base64Decode(base64Key), jwt);
     std::string signatureStr = base64UrlEncode(signature);
     jwt.push_back('.');
     jwt.insert(jwt.end(), signatureStr.begin(), signatureStr.end());
@@ -131,16 +131,16 @@ bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
         return false;
     }
 
-    std::vector<unsigned char> signedData(jwt.begin(), jwt.begin() + (long long) jwt.find_last_of('.'));
-    std::vector<unsigned char> signature = base64UrlDecode(jwt.substr((long long) jwt.find_last_of('.') + 1));
+    std::vector<uint8_t> signedData(jwt.begin(), jwt.begin() + (long long) jwt.find_last_of('.'));
+    std::vector<uint8_t> signature = base64UrlDecode(jwt.substr((long long) jwt.find_last_of('.') + 1));
 
-    std::vector<unsigned char> expectedSignature = HMAC_SHA256(base64Decode(base64Key), signedData);
+    std::vector<uint8_t> expectedSignature = HMAC_SHA256(base64Decode(base64Key), signedData);
 
     return signature == expectedSignature;
 }
 
-std::vector<unsigned char> genSHA256Key() {
-    std::vector<unsigned char> key(32);
+std::vector<uint8_t> genSHA256Key() {
+    std::vector<uint8_t> key(32);
     int result = RAND_priv_bytes(key.data(), (int) key.size());
     if (result != 1) {
         throw std::runtime_error("Failed to generate SHA256 key: " + util::getOpenSSLError());
@@ -151,21 +151,21 @@ std::vector<unsigned char> genSHA256Key() {
 
 std::string genNintendoPasswordHash(uint32_t pid, const std::string& password) {
     util::getu32Little(pid);
-    std::vector<unsigned char> data(4);
+    std::vector<uint8_t> data(4);
     // Get the bytes of pid and append them to data
     memcpy(data.data(), &pid, 4);
 
-    std::vector<unsigned char> constant {0x02, 0x65, 0x43, 0x46};
+    std::vector<uint8_t> constant {0x02, 0x65, 0x43, 0x46};
     data.insert(data.end(), constant.begin(), constant.end());
     data.insert(data.end(), password.begin(), password.end());
 
-    std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
+    std::vector<uint8_t> hash(SHA256_DIGEST_LENGTH);
     SHA256(data.data(), data.size(), hash.data());
 
     // Convert to hex
     std::stringstream ss;
     ss << std::hex << std::setfill('0');
-    for (unsigned char c : hash) {
+    for (uint8_t c : hash) {
         ss << std::setw(2) << (int) c;
     }
 
@@ -173,7 +173,7 @@ std::string genNintendoPasswordHash(uint32_t pid, const std::string& password) {
 }
 
 std::string genSalt() {
-    std::vector<unsigned char> salt(32);
+    std::vector<uint8_t> salt(32);
     int result = RAND_priv_bytes(salt.data(), (int) salt.size());
     if (result != 1) {
         throw std::runtime_error("Failed to generate salt: " + util::getOpenSSLError());
@@ -221,12 +221,12 @@ std::string hashPassword(const std::string& password, const std::string& salt) {
         saltStr = salt;
     }
 
-    if (EVP_PKEY_CTX_set1_scrypt_salt(pctx, (unsigned char*) saltStr.data(), (int) saltStr.size()) <= 0) {
+    if (EVP_PKEY_CTX_set1_scrypt_salt(pctx, (uint8_t*) saltStr.data(), (int) saltStr.size()) <= 0) {
         EVP_PKEY_CTX_free(pctx);
         throw std::runtime_error("Failed to set salt for EVP_PKEY_CTX: " + util::getOpenSSLError());
     }
 
-    std::vector<unsigned char> key(64);
+    std::vector<uint8_t> key(64);
     size_t keySize = key.size();
     if (EVP_PKEY_derive(pctx, key.data(), &keySize) <= 0) {
         EVP_PKEY_CTX_free(pctx);
@@ -240,7 +240,7 @@ std::string hashPassword(const std::string& password, const std::string& salt) {
     std::stringstream ss;
     ss << saltStr << ';';
     ss << std::hex << std::setfill('0');
-    for (unsigned char c : key) {
+    for (uint8_t c : key) {
         ss << std::setw(2) << (int) c;
     }
 
@@ -258,7 +258,7 @@ bool verifyPassword(const std::string& password, const std::string& hash) {
     return newHash == hash;
 }
 
-bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std::vector<unsigned char>& message, EVP_PKEY* publicKey) {
+bool verifyECDSASignature(const std::vector<uint8_t>& signature, const std::vector<uint8_t>& message, EVP_PKEY* publicKey) {
     ECDSA_SIG* sig = ECDSA_SIG_new();
     if (!sig) {
         throw std::runtime_error("Failed to create ECDSA_SIG: " + util::getOpenSSLError());
@@ -282,7 +282,7 @@ bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std
         throw std::runtime_error("Failed to set ECDSA_SIG: " + util::getOpenSSLError());
     }
 
-    unsigned char* derSignatureData = nullptr;
+    uint8_t* derSignatureData = nullptr;
     int derSignatureLength = i2d_ECDSA_SIG(sig, &derSignatureData);
     if (derSignatureLength < 0) {
         ECDSA_SIG_free(sig);
@@ -291,7 +291,7 @@ bool verifyECDSASignature(const std::vector<unsigned char>& signature, const std
 
     ECDSA_SIG_free(sig);
 
-    std::vector<unsigned char> derSignature(derSignatureData, derSignatureData + derSignatureLength);
+    std::vector<uint8_t> derSignature(derSignatureData, derSignatureData + derSignatureLength);
 
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx) {

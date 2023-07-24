@@ -4,7 +4,7 @@
 
 namespace http {
 
-bool isHTTPHeaderComplete(const std::vector<unsigned char>& data, size_t& length) {
+bool isHTTPHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
     std::string_view dataView(reinterpret_cast<const char*>(data.data()), data.size());
     size_t pos = dataView.find("\r\n\r\n");
     if (pos == std::string_view::npos) return false;
@@ -74,7 +74,7 @@ void parseHeader(const std::string_view& header, std::unordered_map<std::string,
     headers[key].emplace_back(value);
 }
 
-bool isChunkedComplete(const std::vector<unsigned char>& data, size_t headerLength, size_t& length) {
+bool isChunkedComplete(const std::vector<uint8_t>& data, size_t headerLength, size_t& length) {
     std::string_view dataView(reinterpret_cast<const char*>(data.data() + headerLength), data.size() - headerLength);
     size_t pos = 0;
     while (!dataView.empty()) {
@@ -110,8 +110,8 @@ bool isChunkedComplete(const std::vector<unsigned char>& data, size_t headerLeng
     return false;
 }
 
-void parseChunked(const std::vector<unsigned char>& data, std::unordered_map<std::string, std::vector<std::string>>& headers,
-                  size_t length, size_t headerLength, std::vector<unsigned char>& body) {
+void parseChunked(const std::vector<uint8_t>& data, std::unordered_map<std::string, std::vector<std::string>>& headers,
+                  size_t length, size_t headerLength, std::vector<uint8_t>& body) {
     size_t pos = headerLength;
     while (pos < headerLength + length) {
         auto end = data.begin() + (long long) headerLength + (long long) length;
@@ -156,7 +156,7 @@ void parseChunked(const std::vector<unsigned char>& data, std::unordered_map<std
                     if (trailer.empty()) break;
 
                     // Check for non-ascii characters
-                    if (!std::all_of(trailer.begin(), trailer.end(), [](unsigned char c) { return c < 128; })) {
+                    if (!std::all_of(trailer.begin(), trailer.end(), [](uint8_t c) { return c < 128; })) {
                         throw MalformedException("Non-ascii characters in trailer");
                     }
 
@@ -190,7 +190,7 @@ std::string getFinalTransferEncoding(const std::string& transferEncoding) {
     return finalTransferEncoding;
 }
 
-bool isHTTPBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength,
+bool isHTTPBodyComplete(const std::vector<uint8_t>& data, size_t& length, size_t headerLength,
                         std::unordered_map<std::string, std::vector<std::string>>& headers,
                         bool isResponse, int status, bool reqWasHead, bool connectionClose) {
     if (isResponse && (reqWasHead || status == 204 || status == 304 || (status >= 100 && status < 200))) {

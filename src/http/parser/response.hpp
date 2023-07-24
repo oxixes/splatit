@@ -13,7 +13,7 @@ namespace http {
 class Response {
 public:
     explicit Response(Version version, int status = HTTP_STATUS_OK);
-    static Response parse(const std::vector<unsigned char>& data, size_t& length, bool connectionClose,
+    static Response parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose,
                           bool reqWasHead);
 
     [[nodiscard]] Version getVersion() const;
@@ -24,10 +24,10 @@ public:
     void setHeader(const std::string& key, const std::string& value);
     void addHeader(const std::string& key, const std::string& value);
 
-    [[nodiscard]] const std::vector<unsigned char>& getBody() const;
-    void setBody(std::vector<unsigned char>& newBody);
+    [[nodiscard]] const std::vector<uint8_t>& getBody() const;
+    void setBody(std::vector<uint8_t>& newBody);
 
-    [[nodiscard]] std::vector<unsigned char> serialize() const;
+    [[nodiscard]] std::vector<uint8_t> serialize() const;
 
 private:
     Response() = default;
@@ -35,13 +35,13 @@ private:
     Version version = Version::HTTP_1_1;
     int status = HTTP_STATUS_OK;
     std::unordered_map<std::string, std::vector<std::string>> headers;
-    std::vector<unsigned char> body;
+    std::vector<uint8_t> body;
 
-    static bool isHeaderComplete(const std::vector<unsigned char>& data, size_t& length);
-    void parseHTTPHeader(const std::vector<unsigned char>& data, size_t length);
-    bool isBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength, bool connectionClose,
+    static bool isHeaderComplete(const std::vector<uint8_t>& data, size_t& length);
+    void parseHTTPHeader(const std::vector<uint8_t>& data, size_t length);
+    bool isBodyComplete(const std::vector<uint8_t>& data, size_t& length, size_t headerLength, bool connectionClose,
                         bool reqWasHead);
-    void parseHTTPBody(const std::vector<unsigned char>& data, size_t headerLength, size_t length);
+    void parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLength, size_t length);
 };
 
 } // namespace http

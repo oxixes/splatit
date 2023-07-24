@@ -52,15 +52,15 @@ void Request::addHeader(const std::string& key, const std::string& value) {
     }
 }
 
-const std::vector<unsigned char>& Request::getBody() const {
+const std::vector<uint8_t>& Request::getBody() const {
     return body;
 }
 
-void Request::setBody(std::vector<unsigned char>& newBody) {
+void Request::setBody(std::vector<uint8_t>& newBody) {
     body = std::move(newBody);
 }
 
-Request Request::parse(const std::vector<unsigned char>& data, size_t& length) {
+Request Request::parse(const std::vector<uint8_t>& data, size_t& length) {
     length = 0;
     Request request;
 
@@ -82,12 +82,12 @@ Request Request::parse(const std::vector<unsigned char>& data, size_t& length) {
     return std::move(request);
 }
 
-bool Request::isHeaderComplete(const std::vector<unsigned char>& data, size_t& length) {
+bool Request::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
     return isHTTPHeaderComplete(data, length);
 }
 
 // It is assumed that the header is complete, as isHeaderComplete() should be called before this
-void Request::parseHTTPHeader(const std::vector<unsigned char>& data, size_t length) {
+void Request::parseHTTPHeader(const std::vector<uint8_t>& data, size_t length) {
     std::string_view dataView(reinterpret_cast<const char*>(data.data()), length);
 
     // Check that only valid ascii characters are used
@@ -153,13 +153,13 @@ void Request::parseHTTPHeader(const std::vector<unsigned char>& data, size_t len
 }
 
 // It is assumed that the header is valid and has been parsed, as parseHTTPHeader() should be called before this.
-bool Request::isBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength) {
+bool Request::isBodyComplete(const std::vector<uint8_t>& data, size_t& length, size_t headerLength) {
     return isHTTPBodyComplete(data, length, headerLength, headers);
 }
 
 // It is assumed that the body is complete, and the header is parsed, as this function is only called after isBodyComplete.
 // Also, the length is known.
-void Request::parseHTTPBody(const std::vector<unsigned char>& data, size_t headerLength, size_t length) {
+void Request::parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLength, size_t length) {
     std::string finalTransferEncoding;
     if (headers.find("transfer-encoding") != headers.end()) {
         finalTransferEncoding = getFinalTransferEncoding(headers["transfer-encoding"][0]);
@@ -173,8 +173,8 @@ void Request::parseHTTPBody(const std::vector<unsigned char>& data, size_t heade
     }
 }
 
-std::vector<unsigned char> Request::serialize() const {
-    std::vector<unsigned char> data;
+std::vector<uint8_t> Request::serialize() const {
+    std::vector<uint8_t> data;
 
     std::string delimiter = "\r\n";
 

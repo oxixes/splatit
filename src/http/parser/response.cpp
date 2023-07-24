@@ -36,15 +36,15 @@ void Response::addHeader(const std::string& key, const std::string& value) {
     }
 }
 
-const std::vector<unsigned char>& Response::getBody() const {
+const std::vector<uint8_t>& Response::getBody() const {
     return body;
 }
 
-void Response::setBody(std::vector<unsigned char>& newBody) {
+void Response::setBody(std::vector<uint8_t>& newBody) {
     this->body = std::move(newBody);
 }
 
-Response Response::parse(const std::vector<unsigned char>& data, size_t& length, bool connectionClose, bool reqWasHead) {
+Response Response::parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose, bool reqWasHead) {
     length = 0;
     Response response;
 
@@ -66,11 +66,11 @@ Response Response::parse(const std::vector<unsigned char>& data, size_t& length,
     return std::move(response);
 }
 
-bool Response::isHeaderComplete(const std::vector<unsigned char>& data, size_t& length) {
+bool Response::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
     return isHTTPHeaderComplete(data, length);
 }
 
-void Response::parseHTTPHeader(const std::vector<unsigned char>& data, size_t length) {
+void Response::parseHTTPHeader(const std::vector<uint8_t>& data, size_t length) {
     std::string_view headerStr(reinterpret_cast<const char*>(data.data()), length);
 
     std::string_view statusLine = headerStr.substr(0, headerStr.find("\r\n"));
@@ -110,12 +110,12 @@ void Response::parseHTTPHeader(const std::vector<unsigned char>& data, size_t le
     }
 }
 
-bool Response::isBodyComplete(const std::vector<unsigned char>& data, size_t& length, size_t headerLength,
+bool Response::isBodyComplete(const std::vector<uint8_t>& data, size_t& length, size_t headerLength,
                               bool connectionClose, bool reqWasHead) {
     return isHTTPBodyComplete(data, length, headerLength, headers, true, status, reqWasHead, connectionClose);
 }
 
-void Response::parseHTTPBody(const std::vector<unsigned char>& data, size_t headerLength, size_t length) {
+void Response::parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLength, size_t length) {
     std::string finalTransferEncoding;
     if (headers.find("transfer-encoding") != headers.end()) {
         finalTransferEncoding = getFinalTransferEncoding(headers["transfer-encoding"][0]);
@@ -129,8 +129,8 @@ void Response::parseHTTPBody(const std::vector<unsigned char>& data, size_t head
     }
 }
 
-std::vector<unsigned char> Response::serialize() const {
-    std::vector<unsigned char> data;
+std::vector<uint8_t> Response::serialize() const {
+    std::vector<uint8_t> data;
 
     std::string delimiter = "\r\n";
 

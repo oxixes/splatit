@@ -49,14 +49,14 @@ void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc
                                                  [this] (unsigned int id, unsigned int newSockId, sock::IPv4Dir dir)
                                                  { onAccept(newSockId, dir); },
                                                  closeCallback,
-                                                 [this] (unsigned int id, std::vector<unsigned char> data)
+                                                 [this] (unsigned int id, std::vector<uint8_t> data)
                                                  { onDataReceived(id, std::move(data)); },
                                                  [this] (unsigned int id) { onClose(id); },
                                                  keepAliveTimeout);
 }
 
 void HTTP_Server::onAccept(unsigned int newSockId, sock::IPv4Dir dir) {
-    buffers[newSockId] = std::vector<unsigned char>();
+    buffers[newSockId] = std::vector<uint8_t>();
 
     std::unique_lock clientsLock(clientsMutex);
     clients[newSockId] = dir;
@@ -69,7 +69,7 @@ void HTTP_Server::onClose(unsigned int sockId) {
     clients.erase(sockId);
 }
 
-void HTTP_Server::onDataReceived(unsigned int sockId, std::vector<unsigned char> data) {
+void HTTP_Server::onDataReceived(unsigned int sockId, std::vector<uint8_t> data) {
     if (data.empty()) return;
 
     auto& buffer = buffers.find(sockId)->second;
@@ -217,7 +217,7 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
 
     std::string body = "<!DOCTYPE html><html><head><title>" + statusString +
                        "</title></head><body><h1>" + statusString + "</h1></body></html>";
-    std::vector<unsigned char> bodyVec(body.begin(), body.end());
+    std::vector<uint8_t> bodyVec(body.begin(), body.end());
     response.setBody(bodyVec);
 
     return std::move(response);

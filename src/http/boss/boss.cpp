@@ -126,7 +126,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     doc.save(ss, "    ");
 
     std::string body = ss.str();
-    std::vector<unsigned char> bodyVec(body.begin(), body.end());
+    std::vector<uint8_t> bodyVec(body.begin(), body.end());
     res.setBody(bodyVec);
 
     return std::move(res);
@@ -148,7 +148,7 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
     }
 
     std::ifstream file(filePath, std::ios::binary);
-    std::vector<unsigned char> body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    std::vector<uint8_t> body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
     res.setHeader("Content-Type", "applicatoin/octet-stream"); // Yes, "applicatoin", Nintendo made a typo
@@ -182,7 +182,7 @@ http::Response getError(int status, http::Version version) {
     if (version == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
 
     std::string error = http::STATUS_CODE_MSG.at(status);
-    std::vector<unsigned char> body(error.begin(), error.end());
+    std::vector<uint8_t> body(error.begin(), error.end());
 
     res.setBody(body);
 

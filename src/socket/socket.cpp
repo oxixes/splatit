@@ -2,8 +2,6 @@
 
 #include "../util/util.hpp"
 
-#include <iostream>
-
 namespace sock {
 
 bool initialize() {

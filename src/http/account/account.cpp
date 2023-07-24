@@ -397,7 +397,7 @@ http::Response prepareResponse(http::Version version, pugi::xml_document& doc) {
     doc.save(ss);
 
     std::string body = ss.str();
-    std::vector<unsigned char> bodyVec(body.begin(), body.end());
+    std::vector<uint8_t> bodyVec(body.begin(), body.end());
 
     http::Response res = prepareResponse(version);
     res.setHeader("Content-Type", "text/xml");
@@ -407,7 +407,7 @@ http::Response prepareResponse(http::Version version, pugi::xml_document& doc) {
 }
 
 bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey) {
-    std::vector<unsigned char> certBin;
+    std::vector<uint8_t> certBin;
 
     try {
         certBin = crypto::base64Decode(cert);
@@ -417,8 +417,8 @@ bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey) {
 
     if (certBin.size() != 384) return false;
 
-    std::vector<unsigned char> signature = std::vector<unsigned char>(certBin.begin() + 0x4, certBin.begin() + 0x40);
-    std::vector<unsigned char> certData = std::vector<unsigned char>(certBin.begin() + 0x80, certBin.end());
+    std::vector<uint8_t> signature = std::vector<uint8_t>(certBin.begin() + 0x4, certBin.begin() + 0x40);
+    std::vector<uint8_t> certData = std::vector<uint8_t>(certBin.begin() + 0x80, certBin.end());
 
     return crypto::verifyECDSASignature(signature, certData, pubKey);
 }

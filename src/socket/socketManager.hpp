@@ -32,21 +32,21 @@ public:
     unsigned int addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
                      std::function<void(unsigned int, unsigned int, sock::IPv4Dir)> acceptCallback,
                      std::function<void(unsigned int)> closeCallback,
-                     std::function<void(unsigned int, std::vector<unsigned char>)> connRecvCallback,
+                     std::function<void(unsigned int, std::vector<uint8_t>)> connRecvCallback,
                      std::function<void(unsigned int)> connCloseCallback, int keepAliveTimeout = 0);
     unsigned int addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket,
                      std::function<void(unsigned int)> connectCallback,
-                     std::function<void(unsigned int, std::vector<unsigned char>)> recvCallback,
+                     std::function<void(unsigned int, std::vector<uint8_t>)> recvCallback,
                      std::function<void(unsigned int)> closeCallback, int keepAliveTimeout = 0);
     unsigned int addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
-                     std::function<void(unsigned int, std::vector<unsigned char>, sock::IPv4Dir)> recvCallback,
+                     std::function<void(unsigned int, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
                      std::function<void(unsigned int)> closeCallback);
 
     void process();
 
     void connect(unsigned int socketId, sock::IPv4Dir address);
-    bool send(unsigned int socketId, std::vector<unsigned char> data);
-    bool sendto(unsigned int socketId, std::vector<unsigned char> data, sock::IPv4Dir address);
+    bool send(unsigned int socketId, std::vector<uint8_t> data);
+    bool sendto(unsigned int socketId, std::vector<uint8_t> data, sock::IPv4Dir address);
     bool close(unsigned int socketId, bool force = false);
 
     bool isClosed(unsigned int socketId);
@@ -60,18 +60,18 @@ private:
     std::recursive_mutex acceptCallbacksMutex;
     std::unordered_map<unsigned int, std::function<void(unsigned int)>> connectCallbacks;
     std::recursive_mutex connectCallbacksMutex;
-    std::unordered_map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>)>> tcpRecvCallbacks;
+    std::unordered_map<unsigned int, std::function<void(unsigned int, std::vector<uint8_t>)>> tcpRecvCallbacks;
     std::recursive_mutex tcpRecvCallbacksMutex;
-    std::unordered_map<unsigned int, std::function<void(unsigned int, std::vector<unsigned char>, sock::IPv4Dir)>> udpRecvCallbacks;
+    std::unordered_map<unsigned int, std::function<void(unsigned int, std::vector<uint8_t>, sock::IPv4Dir)>> udpRecvCallbacks;
     std::recursive_mutex udpRecvCallbacksMutex;
     // The first callback in the pair is the socket close callback, and the second is the close callback for
     // any connections accepted by the socket.
     std::unordered_map<unsigned int, std::pair<std::function<void(unsigned int)>, std::function<void(unsigned int)>>> closeCallbacks;
     std::recursive_mutex closeCallbacksMutex;
-    std::unordered_map<unsigned int, std::vector<unsigned char>> tcpSendBuffers;
+    std::unordered_map<unsigned int, std::vector<uint8_t>> tcpSendBuffers;
     std::recursive_mutex tcpSendBuffersMutex;
     // This is a map of socket IDs to a vector of pairs of addresses and data to send to those addresses.
-    std::unordered_map<unsigned int, std::vector<std::pair<sock::IPv4Dir, std::vector<unsigned char>>>> udpSendBuffers;
+    std::unordered_map<unsigned int, std::vector<std::pair<sock::IPv4Dir, std::vector<uint8_t>>>> udpSendBuffers;
     std::recursive_mutex udpSendBuffersMutex;
     std::unordered_map<unsigned int, unsigned long long> keepAliveTimeouts;
     std::recursive_mutex keepAliveTimeoutsMutex;

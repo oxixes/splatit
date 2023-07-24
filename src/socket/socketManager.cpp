@@ -8,7 +8,7 @@ SocketManager::SocketManager(std::shared_ptr<Logger::Logger> logger) : logger(st
 unsigned int SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
                                          std::function<void(unsigned int, unsigned int, sock::IPv4Dir)> acceptCallback,
                                          std::function<void(unsigned int)> closeCallback,
-                                         std::function<void(unsigned int, std::vector<unsigned char>)> connRecvCallback,
+                                         std::function<void(unsigned int, std::vector<uint8_t>)> connRecvCallback,
                                          std::function<void(unsigned int)> connCloseCallback, int keepAliveTimeout) {
     unsigned int socketId = nextSocketId++;
 
@@ -44,7 +44,7 @@ unsigned int SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket
 
 unsigned int SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket,
                                              std::function<void(unsigned int)> connectCallback,
-                                             std::function<void(unsigned int, std::vector<unsigned char>)> recvCallback,
+                                             std::function<void(unsigned int, std::vector<uint8_t>)> recvCallback,
                                              std::function<void(unsigned int)> closeCallback, int keepAliveTimeout) {
     unsigned int socketId = nextSocketId++;
 
@@ -76,14 +76,14 @@ unsigned int SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> so
     std::unique_lock socketsLock(socketsMutex);
     std::unique_lock sendBuffersLock(tcpSendBuffersMutex);
 
-    tcpSendBuffers.insert(std::make_pair(socketId, std::vector<unsigned char>()));
+    tcpSendBuffers.insert(std::make_pair(socketId, std::vector<uint8_t>()));
 
     sockets.insert(std::make_pair(socketId, std::make_pair(SocketType::TCP_CONN, std::move(socket))));
     return socketId;
 }
 
 unsigned int SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
-                          std::function<void(unsigned int, std::vector<unsigned char>, sock::IPv4Dir)> recvCallback,
+                          std::function<void(unsigned int, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
                           std::function<void(unsigned int)> closeCallback) {
     unsigned int socketId = nextSocketId++;
 
@@ -102,7 +102,7 @@ unsigned int SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket
     std::unique_lock socketsLock(socketsMutex);
     std::unique_lock sendBuffersLock(udpSendBuffersMutex);
 
-    udpSendBuffers.insert(std::make_pair(socketId, std::vector<std::pair<sock::IPv4Dir, std::vector<unsigned char>>>()));
+    udpSendBuffers.insert(std::make_pair(socketId, std::vector<std::pair<sock::IPv4Dir, std::vector<uint8_t>>>()));
 
     sockets.insert(std::make_pair(socketId, std::make_pair(SocketType::UDP, std::move(socket))));
     return socketId;
@@ -322,7 +322,7 @@ void SocketManager::connect(unsigned int socketId, sock::IPv4Dir address) {
     }
 }
 
-bool SocketManager::send(unsigned int socketId, std::vector<unsigned char> data) {
+bool SocketManager::send(unsigned int socketId, std::vector<uint8_t> data) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -369,7 +369,7 @@ void SocketManager::send(unsigned int socketId) {
     }
 }
 
-bool SocketManager::sendto(unsigned int socketId, std::vector<unsigned char> data, sock::IPv4Dir address) {
+bool SocketManager::sendto(unsigned int socketId, std::vector<uint8_t> data, sock::IPv4Dir address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -417,7 +417,7 @@ void SocketManager::recv(unsigned int socketId) {
     if (sockets.find(socketId) == sockets.end()) return;
     if (sockets[socketId].first != SocketType::TCP_CONN) return;
 
-    std::vector<unsigned char> recvBuf;
+    std::vector<uint8_t> recvBuf;
     recvBuf.resize(1024 * 16); // 16k should be enough for most (if not all) packets
     auto tcpSocket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketId].second);
     try {
@@ -460,7 +460,7 @@ void SocketManager::recvfrom(unsigned int socketId) {
     if (sockets.find(socketId) == sockets.end()) return;
     if (sockets[socketId].first != SocketType::UDP) return;
 
-    std::vector<unsigned char> recvBuf;
+    std::vector<uint8_t> recvBuf;
     recvBuf.resize(65535); // A UDP won't receive more than 65535 bytes (it's actually 65507, but we'll use 65535)
 
     struct sockaddr_in addr{};
