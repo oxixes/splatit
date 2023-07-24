@@ -23,12 +23,12 @@ public:
     void listen(int workerCount, const std::function<void()>& closeFunc);
     void stop();
 
-    unsigned int registerCloseCall(std::function<void()> closeFunc);
-    void unregisterCloseCall(unsigned int id);
+    uint32_t registerCloseCall(std::function<void()> closeFunc);
+    void unregisterCloseCall(uint32_t id);
 
     void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
-            std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func);
+            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
 
     void registerErrorPage(const std::string& host, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)> func);
@@ -53,7 +53,7 @@ private:
     // This is a map of maps, the first key is the host, the second key is the path for that given host
     std::unordered_map<std::string, std::unordered_map<std::string, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
-            std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>> routes;
+            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>> routes;
     std::mutex routesMutex;
 
     std::unordered_map<std::string, std::function<http::Response(
@@ -63,7 +63,7 @@ private:
     std::map<unsigned int, sock::IPv4Dir> clients;
     std::mutex clientsMutex;
 
-    unsigned int closeCallID = 0;
+    uint32_t closeCallID = 0;
     std::map<unsigned int, std::function<void()>> closeCalls;
     std::mutex closeCallsMutex;
 

@@ -167,8 +167,8 @@ void HTTP_Server::serverThread() {
             queueLock.unlock();
 
             std::function<http::Response( std::shared_ptr<Logger::Logger>, http::Request,
-                    sock::IPv4Dir, bool&, bool&, std::function<unsigned int(std::function<void()>)>,
-                    std::function<void(unsigned int)>)> handler = nullptr;
+                    sock::IPv4Dir, bool&, bool&, std::function<uint32_t(std::function<void()>)>,
+                    std::function<void(uint32_t)>)> handler = nullptr;
 
             std::unique_lock routesLock(routesMutex);
             if (request.second.hasHeader("host") && routes.find(request.second.getHeader("host")[0]) != routes.end()
@@ -191,7 +191,7 @@ void HTTP_Server::serverThread() {
                     bool shouldClose = false;
                     auto response = handler(logger, request.second, clientDir, shouldStop, shouldClose,
                                             [this] (std::function<void()> func) { return registerCloseCall(std::move(func)); },
-                                            [this] (unsigned int id) { return unregisterCloseCall(id); });
+                                            [this] (uint32_t id) { return unregisterCloseCall(id); });
 
                     // The handler may take a long time to execute, so we need to check if the socket is still open
                     if (!socketMgr->isClosed(request.first)) {
@@ -272,26 +272,26 @@ void HTTP_Server::stop() {
     mainSocket = nullptr;
 }
 
-unsigned int HTTP_Server::registerCloseCall(std::function<void()> closeFunc) {
+uint32_t HTTP_Server::registerCloseCall(std::function<void()> closeFunc) {
     std::unique_lock lock(closeCallsMutex);
-    unsigned int id = closeCallID++;
+    uint32_t id = closeCallID++;
     closeCalls[id] = std::move(closeFunc);
     return id;
 }
 
-void HTTP_Server::unregisterCloseCall(unsigned int id) {
+void HTTP_Server::unregisterCloseCall(uint32_t id) {
     std::unique_lock lock(closeCallsMutex);
     closeCalls.erase(id);
 }
 
 void HTTP_Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
         std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
-        std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)> func) {
+        std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
         routes[host] = std::unordered_map<std::string, std::function<http::Response(
                 std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
-                std::function<unsigned int(std::function<void()>)>, std::function<void(unsigned int)>)>>();
+                std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>();
     }
 
     routes[host][path] = std::move(func);
