@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <thread>
+#include <functional>
 
 #include "socket.hpp"
 #include "../logger.hpp"

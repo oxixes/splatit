@@ -1,6 +1,7 @@
 #ifndef SPLATOON_SERVER_DATABASE_HPP
 #define SPLATOON_SERVER_DATABASE_HPP
 
+#include <utility>
 #include <vector>
 #include <any>
 #include <queue>

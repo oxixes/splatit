@@ -57,7 +57,7 @@ const std::vector<uint8_t>& Request::getBody() const {
 }
 
 void Request::setBody(std::vector<uint8_t>& newBody) {
-    body = std::move(newBody);
+    body = newBody;
 }
 
 Request Request::parse(const std::vector<uint8_t>& data, size_t& length) {
@@ -79,7 +79,7 @@ Request Request::parse(const std::vector<uint8_t>& data, size_t& length) {
 
     length += contentLength;
 
-    return std::move(request);
+    return request;
 }
 
 bool Request::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
@@ -262,7 +262,7 @@ std::vector<uint8_t> Request::serialize() const {
 
     data.insert(data.end(), body.begin(), body.end());
 
-    return std::move(data);
+    return data;
 }
 
 } // namespace http

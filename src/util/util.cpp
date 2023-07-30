@@ -47,7 +47,7 @@ std::string ipv4ToString(sock::IPv4Dir dir) {
 }
 
 std::string getDateHeader() {
-    return std::move(getDateHeader(time(nullptr)));
+    return getDateHeader(time(nullptr));
 }
 
 std::string getDateHeader(time_t time) {
@@ -81,6 +81,22 @@ void getu32Big(uint32_t& v) {
     v = ((v & 0xFF000000) >> 24) | ((v & 0x00FF0000) >> 8) | ((v & 0x0000FF00) << 8) | ((v & 0x000000FF) << 24);
 }
 
+void getu16Little(uint16_t& v) {
+    if (std::endian::native == std::endian::little) {
+        return;
+    }
+
+    v = ((v & 0xFF00) >> 8) | ((v & 0x00FF) << 8);
+}
+
+void getu16Big(uint16_t& v) {
+    if (std::endian::native == std::endian::big) {
+        return;
+    }
+
+    v = ((v & 0xFF00) >> 8) | ((v & 0x00FF) << 8);
+}
+
 std::vector<std::string> split(const std::string& str, const std::string& delim) {
     std::vector<std::string> tokens;
     size_t prev = 0, pos = 0;
@@ -94,7 +110,7 @@ std::vector<std::string> split(const std::string& str, const std::string& delim)
         prev = pos + delim.length();
     } while (pos < str.length() && prev < str.length());
 
-    return std::move(tokens);
+    return tokens;
 }
 
 } // namespace util

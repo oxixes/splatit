@@ -18,7 +18,7 @@ http::Response v1_api_admin_time(const http::Request& req, bool& shouldClose) {
 
     shouldClose = true;
 
-    return std::move(prepareResponse(req.getVersion()));
+    return prepareResponse(req.getVersion());
 }
 
 /*
@@ -40,7 +40,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
     if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
-        return std::move(res);
+        return res;
     }
 
     if (!req.hasQuery("input_type") || !req.hasQuery("output_type") || !req.hasQuery("input")) {
@@ -108,7 +108,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
 
     shouldClose = true;
 
-    return std::move(prepareResponse(req.getVersion(), doc));
+    return prepareResponse(req.getVersion(), doc);
 }
 
 /*
@@ -129,7 +129,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
     if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
-        return std::move(res);
+        return res;
     }
 
     if (!req.hasHeader("content-type") || req.getHeader("content-type")[0] != "application/x-www-form-urlencoded") {
@@ -239,7 +239,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
 
     shouldClose = true;
 
-    return std::move(prepareResponse(req.getVersion(), doc));
+    return prepareResponse(req.getVersion(), doc);
 }
 
 /*
@@ -261,7 +261,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
     if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
-        return std::move(res);
+        return res;
     }
 
     if (!req.hasQuery("game_server_id")) {
@@ -335,7 +335,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     shouldClose = true;
 
-    return std::move(prepareResponse(req.getVersion(), doc));
+    return prepareResponse(req.getVersion(), doc);
 }
 
 http::Response createError(http::Version version, int code, const std::string& message, const std::string& cause,
@@ -360,7 +360,7 @@ http::Response createError(http::Version version, int code, const std::string& m
 
     shouldClose = true;
 
-    return std::move(res);
+    return res;
 }
 
 http::Response errorHandler(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req, sock::IPv4Dir client,
@@ -383,7 +383,7 @@ http::Response prepareResponse(http::Version version) {
     res.setHeader("Server", "Nintendo 3DS (http)");
     if (version == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
 
-    return std::move(res);
+    return res;
 }
 
 http::Response prepareResponse(http::Version version, pugi::xml_document& doc) {
@@ -403,7 +403,7 @@ http::Response prepareResponse(http::Version version, pugi::xml_document& doc) {
     res.setHeader("Content-Type", "text/xml");
     res.setBody(bodyVec);
 
-    return std::move(res);
+    return res;
 }
 
 bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey) {

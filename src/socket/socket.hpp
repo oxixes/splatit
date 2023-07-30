@@ -15,6 +15,7 @@
 #endif
 
 #include <stdexcept>
+#include <cstdint>
 
 namespace sock {
 

@@ -1,6 +1,7 @@
 #include "common.hpp"
 
 #include <sstream>
+#include <algorithm>
 
 namespace http {
 
@@ -270,7 +271,7 @@ std::string percentDecode(const std::string& str) {
         }
     }
 
-    return std::move(result);
+    return result;
 }
 
 std::string percentEncode(const std::string& str, bool allowSlash) {
@@ -296,7 +297,7 @@ std::string percentEncode(const std::string& str, bool allowSlash) {
         }
     }
 
-    return std::move(result);
+    return result;
 }
 
 } // namespace http

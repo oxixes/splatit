@@ -88,10 +88,42 @@ std::vector<uint8_t> base64UrlDecode(const std::string& data) {
 std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
     std::vector<uint8_t> result(EVP_MAX_MD_SIZE);
     unsigned int length = 0;
-    HMAC(EVP_sha256(), key.data(), (int) key.size(), data.data(), (int) data.size(), result.data(), &length);
+    if (HMAC(EVP_sha256(), key.data(), (int) key.size(), data.data(), (int) data.size(), result.data(), &length) == nullptr)
+        throw std::runtime_error("Failed to calculate HMAC: " + util::getOpenSSLError());
     result.resize(length);
 
-    return std::move(result);
+    return result;
+}
+
+std::vector<uint8_t> HMAC_MD5(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> result(EVP_MAX_MD_SIZE);
+    unsigned int length = 0;
+    if (HMAC(EVP_md5(), key.data(), (int) key.size(), data.data(), (int) data.size(), result.data(), &length) == nullptr)
+        throw std::runtime_error("Failed to calculate HMAC: " + util::getOpenSSLError());
+    result.resize(length);
+
+    return result;
+}
+
+std::vector<uint8_t> MD5(const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> result(EVP_MAX_MD_SIZE);
+    EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+
+    if (!mdctx)
+        throw std::runtime_error("Failed to create EVP_MD_CTX: " + util::getOpenSSLError());
+
+    unsigned int length = 0;
+    EVP_DigestInit_ex(mdctx, EVP_md5(), nullptr);
+    EVP_DigestUpdate(mdctx, data.data(), data.size());
+    if (EVP_DigestFinal_ex(mdctx, result.data(), &length) != 1) {
+        EVP_MD_CTX_free(mdctx);
+        throw std::runtime_error("Failed to calculate MD5: " + util::getOpenSSLError());
+    }
+
+    EVP_MD_CTX_free(mdctx);
+    result.resize(length);
+
+    return result;
 }
 
 std::string signJWT(const std::string& base64Key, const json& payload) {
@@ -120,7 +152,7 @@ std::string signJWT(const std::string& base64Key, const json& payload) {
     jwt.insert(jwt.end(), signatureStr.begin(), signatureStr.end());
 
     std::string jwtStr(jwt.begin(), jwt.end());
-    return std::move(jwtStr);
+    return jwtStr;
 }
 
 bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
@@ -146,7 +178,7 @@ std::vector<uint8_t> genSHA256Key() {
         throw std::runtime_error("Failed to generate SHA256 key: " + util::getOpenSSLError());
     }
 
-    return std::move(key);
+    return key;
 }
 
 std::string genNintendoPasswordHash(uint32_t pid, const std::string& password) {

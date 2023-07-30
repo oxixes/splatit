@@ -62,7 +62,7 @@ bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<S
 http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                              const std::string& titleId, const std::string& tasksheetId,
                              const std::shared_ptr<SettingsManager>& settingsMgr) {
-    if (req.getMethod() != http::Method::M_GET) return std::move(getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion()));
+    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
 
     json tasksheetManifest = bossManifest[titleId]["tasksheets"][tasksheetId];
 
@@ -84,7 +84,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
             logger->log(Logger::level::WARN, Logger::group::BOSS,
                         "The BOSS file " + file.value()["path"].get<std::string>() + " does not exist or is not a file.");
 
-            return std::move(getError(HTTP_STATUS_NOT_FOUND, req.getVersion()));
+            return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
         }
 
         pugi::xml_node fileNode = files.append_child("File");
@@ -129,7 +129,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
     res.setBody(bodyVec);
 
-    return std::move(res);
+    return res;
 }
 
 /*
@@ -139,12 +139,12 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
  */
 http::Response p01_data(const http::Request& req, const std::string& titleId, const std::string& tasksheetId,
                         const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr) {
-    if (req.getMethod() != http::Method::M_GET) return std::move(getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion()));
+    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
 
     fs::path filePath = settingsMgr->getBOSSPath() / bossManifest[titleId]["tasksheets"][tasksheetId]["files"][fileHash]["path"];
 
     if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
-        return std::move(getError(HTTP_STATUS_NOT_FOUND, req.getVersion()));
+        return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
     }
 
     std::ifstream file(filePath, std::ios::binary);
@@ -171,7 +171,7 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
 
     res.setBody(body);
 
-    return std::move(res);
+    return res;
 }
 
 http::Response getError(int status, http::Version version) {
@@ -186,7 +186,7 @@ http::Response getError(int status, http::Version version) {
 
     res.setBody(body);
 
-    return std::move(res);
+    return res;
 }
 
 void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {

@@ -16,28 +16,28 @@ std::unique_ptr<Command> Database::craftVoidCommand(const std::string& command) 
         std::vector<std::any>{std::any(command), std::any(std::vector<dbDataType>{}),
         std::any(std::vector<std::shared_ptr<DBData>>{}), std::any(std::vector<dbDataType>{})});
 
-    return std::move(dbCommand);
+    return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetUserByPIDCommand(int pid) {
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_PID,
         std::vector<std::any>{std::any(pid)});
 
-    return std::move(dbCommand);
+    return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::string& username) {
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_USERNAME,
         std::vector<std::any>{std::any(username)});
 
-    return std::move(dbCommand);
+    return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(int pid, const std::string& serverId) {
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,
         std::vector<std::any>{std::any(pid), std::any(serverId)});
 
-    return std::move(dbCommand);
+    return dbCommand;
 }
 
 std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
@@ -53,13 +53,13 @@ std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
     auto resultPtr = std::move(*result);
     results.erase(result);
 
-    return std::move(resultPtr);
+    return resultPtr;
 }
 
 std::shared_ptr<Database> Database::createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(std::move(logger), config["path"].get<std::string>());
-        return std::move(std::shared_ptr<Database>((Database*) db));
+        return std::shared_ptr<Database>((Database*) db);
     } else {
         logger->log(Logger::level::FAILURE, Logger::group::DB, "Database type " +
                                                                config["type"].get<std::string>() + " is not supported.");

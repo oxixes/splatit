@@ -14,6 +14,11 @@ void Logger::log(level level, group group, const std::string& msg) {
             << "[" << getLevelName(level) << "] "
             << "[" << getGroupName(group) << "] "
             << msg << "\n";
+
+#ifndef NDEBUG
+    // Flush the stream to ensure the message is written immediately
+    std::cout.flush();
+#endif
 }
 
 void Logger::setMinLevel(level minLevel) {

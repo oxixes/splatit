@@ -63,7 +63,7 @@ Response Response::parse(const std::vector<uint8_t>& data, size_t& length, bool 
 
     length += contentLength;
 
-    return std::move(response);
+    return response;
 }
 
 bool Response::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
@@ -167,7 +167,7 @@ std::vector<uint8_t> Response::serialize() const {
 
     data.insert(data.end(), body.begin(), body.end());
 
-    return std::move(data);
+    return data;
 }
 
 } // namespace http

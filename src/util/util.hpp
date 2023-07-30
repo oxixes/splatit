@@ -3,6 +3,7 @@
 
 #include <string>
 #include <filesystem>
+#include <vector>
 
 #include <openssl/err.h>
 #include "../socket/socket.hpp"
@@ -27,6 +28,8 @@ namespace util {
 
     void getu32Little(uint32_t& v);
     void getu32Big(uint32_t& v);
+    void getu16Little(uint16_t& v);
+    void getu16Big(uint16_t& v);
 
     std::vector<std::string> split(const std::string& str, const std::string& delim);
 } // namespace util

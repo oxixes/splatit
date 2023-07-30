@@ -17,6 +17,8 @@ std::vector<uint8_t> base64Decode(const std::string& data);
 std::vector<uint8_t> base64UrlDecode(const std::string& data);
 
 std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
+std::vector<uint8_t> HMAC_MD5(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
+std::vector<uint8_t> MD5(const std::vector<uint8_t>& data);
 std::string signJWT(const std::string& base64Key, const json& payload);
 bool verifyJWT(const std::string& base64Key, const std::string& jwt);
 

@@ -82,63 +82,68 @@ void HTTP_Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
 
     buffer.insert(buffer.end(), data.begin(), data.end());
 
-    try {
-        size_t length = 0;
-        auto request = http::Request::parse(buffer, length);
+    bool finish = false;
+    while (!buffer.empty() && !finish) {
+        finish = true;
+        try {
+            size_t length = 0;
+            auto request = http::Request::parse(buffer, length);
 
-        std::unique_lock clientsLock(clientsMutex);
-        sock::IPv4Dir dir = clients.find(sockId)->second;
-        clientsLock.unlock();
+            std::unique_lock clientsLock(clientsMutex);
+            sock::IPv4Dir dir = clients.find(sockId)->second;
+            clientsLock.unlock();
 
-        std::string ipAndPort = std::to_string(dir.a) + "." + std::to_string(dir.b) + "."
-                                + std::to_string(dir.c) + "." + std::to_string(dir.d) + ":" + std::to_string(dir.port);
+            std::string ipAndPort = std::to_string(dir.a) + "." + std::to_string(dir.b) + "."
+                                    + std::to_string(dir.c) + "." + std::to_string(dir.d) + ":" + std::to_string(dir.port);
 
-        std::string method;
-        switch(request.getMethod()) {
-            case http::Method::M_GET:
-                method = "GET";
-                break;
-            case http::Method::M_HEAD:
-                method = "HEAD";
-                break;
-            case http::Method::M_POST:
-                method = "POST";
-                break;
-            case http::Method::M_PUT:
-                method = "PUT";
-                break;
-            case http::Method::M_DELETE:
-                method = "DELETE";
-                break;
+            std::string method;
+            switch(request.getMethod()) {
+                case http::Method::M_GET:
+                    method = "GET";
+                    break;
+                case http::Method::M_HEAD:
+                    method = "HEAD";
+                    break;
+                case http::Method::M_POST:
+                    method = "POST";
+                    break;
+                case http::Method::M_PUT:
+                    method = "PUT";
+                    break;
+                case http::Method::M_DELETE:
+                    method = "DELETE";
+                    break;
+            }
+
+            logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Received request from " +
+                                                                      ipAndPort + " " + method + " " + request.getPath());
+
+            std::unique_lock lock(requestsQueueMutex);
+            requestsQueue.emplace(sockId, std::move(request));
+            lock.unlock();
+            workerCV.notify_one();
+
+            buffer.erase(buffer.begin(), buffer.begin() + (long long) length);
+            finish = false;
+        } catch (http::NotCompleteException& e) {
+            // Do nothing, wait for more data
+        } catch (http::LengthUnknownException& e) {
+            logger->log(Logger::level::WARN, Logger::group::NETWORK,
+                        "Received request with unknown length from " + std::to_string(sockId) + ", closing connection");
+            sendError(sockId, HTTP_STATUS_BAD_REQUEST);
+        } catch (http::VersionNotSupportedException& e) {
+            logger->log(Logger::level::WARN, Logger::group::NETWORK,
+                        "Received request with unsupported HTTP version from " + std::to_string(sockId) + ", closing connection");
+            sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
+        } catch (http::MethodNotSupportedException& e) {
+            logger->log(Logger::level::WARN, Logger::group::NETWORK,
+                        "Received request with unsupported method from " + std::to_string(sockId) + ", closing connection");
+            sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        } catch (http::MalformedException& e) {
+            logger->log(Logger::level::WARN, Logger::group::NETWORK,
+                        "Received malformed request from " + std::to_string(sockId) + ", closing connection");
+            sendError(sockId, HTTP_STATUS_BAD_REQUEST);
         }
-
-        logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Received request from " +
-                    ipAndPort + " " + method + " " + request.getPath());
-
-        std::unique_lock lock(requestsQueueMutex);
-        requestsQueue.emplace(sockId, std::move(request));
-        lock.unlock();
-        workerCV.notify_one();
-
-        buffer.erase(buffer.begin(), buffer.begin() + (long long) length);
-    } catch (http::NotCompleteException& e) {
-        // Do nothing, wait for more data
-    } catch (http::LengthUnknownException& e) {
-        logger->log(Logger::level::WARN, Logger::group::NETWORK,
-                    "Received request with unknown length from " + std::to_string(sockId) + ", closing connection");
-        sendError(sockId, HTTP_STATUS_BAD_REQUEST);
-    } catch (http::VersionNotSupportedException& e) {
-        logger->log(Logger::level::WARN, Logger::group::NETWORK,
-                    "Received request with unsupported HTTP version from " + std::to_string(sockId) + ", closing connection");
-        sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
-    } catch (http::MethodNotSupportedException& e) {
-        logger->log(Logger::level::WARN, Logger::group::NETWORK,
-                    "Received request with unsupported method from " + std::to_string(sockId) + ", closing connection");
-        sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED);
-    } catch (http::MalformedException& e) {
-        logger->log(Logger::level::WARN, Logger::group::NETWORK,
-                    "Received malformed request from " + std::to_string(sockId) + ", closing connection");
-        sendError(sockId, HTTP_STATUS_BAD_REQUEST);
     }
 }
 
@@ -220,7 +225,7 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
     response.setBody(bodyVec);
 
-    return std::move(response);
+    return response;
 }
 
 void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Dir client) {
