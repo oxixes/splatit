@@ -12,33 +12,19 @@ uint32_t SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
                                          std::function<void(uint32_t)> connCloseCallback, int keepAliveTimeout) {
     uint32_t socketId = nextSocketId++;
 
-    std::unique_lock acceptCallbackLock(acceptCallbacksMutex);
-    if (acceptCallback != nullptr) {
-        acceptCallbacks.insert(std::make_pair(socketId, std::move(acceptCallback)));
-    }
-    acceptCallbackLock.unlock();
-
-    std::unique_lock closeCallbackLock(closeCallbacksMutex);
-    if (closeCallback != nullptr && connCloseCallback != nullptr) {
-        closeCallbacks.insert(std::make_pair(socketId, std::make_pair(std::move(closeCallback),
-                                                                      std::move(connCloseCallback))));
-    }
-    closeCallbackLock.unlock();
-
-    std::unique_lock recvCallbackLock(tcpRecvCallbacksMutex);
-    if (connRecvCallback != nullptr) {
-        tcpRecvCallbacks.insert(std::make_pair(socketId, std::move(connRecvCallback)));
-    }
-    recvCallbackLock.unlock();
-
-    std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
-    if (keepAliveTimeout > 0) {
-        keepAliveTimeouts.insert(std::make_pair(socketId, keepAliveTimeout));
-    }
-    keepAliveTimeoutsLock.unlock();
-
     std::unique_lock socketsLock(socketsMutex);
-    sockets.insert(std::make_pair(socketId, std::make_pair(SocketType::TCP, std::move(socket))));
+    sockets.insert(std::make_pair(socketId, SocketInfo(
+        std::move(socket),
+        SocketType::TCP,
+        std::move(acceptCallback),
+        nullptr,
+        std::move(connRecvCallback),
+        nullptr,
+        std::make_pair(std::move(closeCallback), std::move(connCloseCallback)),
+        keepAliveTimeout,
+        -1
+    )));
+
     return socketId;
 }
 
@@ -48,37 +34,25 @@ uint32_t SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket
                                              std::function<void(uint32_t)> closeCallback, int keepAliveTimeout) {
     uint32_t socketId = nextSocketId++;
 
-    std::unique_lock connectCallbackLock(connectCallbacksMutex);
-    if (connectCallback != nullptr) {
-        connectCallbacks.insert(std::make_pair(socketId, std::move(connectCallback)));
-    }
-    connectCallbackLock.unlock();
-
-    std::unique_lock recvCallbackLock(tcpRecvCallbacksMutex);
-    if (recvCallback != nullptr) {
-        tcpRecvCallbacks.insert(std::make_pair(socketId, std::move(recvCallback)));
-    }
-    recvCallbackLock.unlock();
-
-    std::unique_lock closeCallbackLock(closeCallbacksMutex);
-    if (closeCallback != nullptr) {
-        closeCallbacks.insert(std::make_pair(socketId, std::make_pair(std::move(closeCallback), nullptr)));
-    }
-    closeCallbackLock.unlock();
-
-    std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
+    int64_t keepAlive = -1;
     if (keepAliveTimeout > 0) {
-        keepAliveTimeouts.insert(std::make_pair(socketId, std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count() + (keepAliveTimeout * 1000)));
+        keepAlive = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count() + (keepAliveTimeout * 1000);
     }
-    keepAliveTimeoutsLock.unlock();
 
     std::unique_lock socketsLock(socketsMutex);
-    std::unique_lock sendBuffersLock(tcpSendBuffersMutex);
+    sockets.insert(std::make_pair(socketId, SocketInfo(
+        std::move(socket),
+        SocketType::TCP_CONN,
+        nullptr,
+        std::move(connectCallback),
+        std::move(recvCallback),
+        nullptr,
+        std::make_pair(std::move(closeCallback), nullptr),
+        keepAlive,
+        -1
+    )));
 
-    tcpSendBuffers.insert(std::make_pair(socketId, std::vector<uint8_t>()));
-
-    sockets.insert(std::make_pair(socketId, std::make_pair(SocketType::TCP_CONN, std::move(socket))));
     return socketId;
 }
 
@@ -87,24 +61,19 @@ uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
                           std::function<void(uint32_t)> closeCallback) {
     uint32_t socketId = nextSocketId++;
 
-    std::unique_lock recvCallbackLock(udpRecvCallbacksMutex);
-    if (recvCallback != nullptr) {
-        udpRecvCallbacks.insert(std::make_pair(socketId, std::move(recvCallback)));
-    }
-    recvCallbackLock.unlock();
-
-    std::unique_lock closeCallbackLock(closeCallbacksMutex);
-    if (closeCallback != nullptr) {
-        closeCallbacks.insert(std::make_pair(socketId, std::make_pair(std::move(closeCallback), nullptr)));
-    }
-    closeCallbackLock.unlock();
-
     std::unique_lock socketsLock(socketsMutex);
-    std::unique_lock sendBuffersLock(udpSendBuffersMutex);
+    sockets.insert(std::make_pair(socketId, SocketInfo(
+        std::move(socket),
+        SocketType::UDP,
+        nullptr,
+        nullptr,
+        nullptr,
+        std::move(recvCallback),
+        std::make_pair(std::move(closeCallback), nullptr),
+        -1,
+        -1
+    )));
 
-    udpSendBuffers.insert(std::make_pair(socketId, std::vector<std::pair<sock::IPv4Dir, std::vector<uint8_t>>>()));
-
-    sockets.insert(std::make_pair(socketId, std::make_pair(SocketType::UDP, std::move(socket))));
     return socketId;
 }
 
@@ -117,15 +86,15 @@ void SocketManager::process() {
 
     for (auto& socket : sockets) {
         short events = POLLIN;
-        if (socket.second.first == SocketType::TCP_CONN || socket.second.first == SocketType::UDP) {
+        if (socket.second.type == SocketType::TCP_CONN || socket.second.type == SocketType::UDP) {
             // If the type is TCP_CONN or UDP, it is guaranteed to be in the sendBuffers map
-            if (socket.second.second->getLastResult() == sock::ResultType::NEEDS_WRITE) {
+            if (socket.second.socket->getLastResult() == sock::ResultType::NEEDS_WRITE) {
                 events |= POLLOUT;
             }
         }
 
         socketIndexToId.push_back(socket.first);
-        fds.push_back({socket.second.second->getSocket(), events, 0});
+        fds.push_back({socket.second.socket->getSocket(), events, 0});
     }
     socketsLock.unlock();
 
@@ -149,6 +118,14 @@ void SocketManager::process() {
     if (ret > 0) {
         int i = 0;
         for (auto fd : fds) {
+            auto socketInfoIt = sockets.find(socketIndexToId[i]);
+            if (socketInfoIt == sockets.end()) {
+                i++;
+                continue;
+            }
+
+            auto socketInfo = &socketInfoIt->second;
+
             if (fd.revents & POLLHUP || fd.revents & POLLERR) {
                 logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                             "Socket with ID " + std::to_string(socketIndexToId[i]) + " has been closed (socket error or disconnection)");
@@ -159,18 +136,17 @@ void SocketManager::process() {
 
             if (fd.revents & POLLOUT) {
                 socketsLock.lock();
-                if (sockets[socketIndexToId[i]].first == SocketType::TCP_CONN) {
-                    sock::SocketStatus status = sockets[socketIndexToId[i]].second->getStatus();
+
+                if (sockets[socketIndexToId[i]].type == SocketType::TCP_CONN) {
+                    sock::SocketStatus status = sockets[socketIndexToId[i]].socket->getStatus();
                     if (status == sock::SocketStatus::CONNECTING) {
-                        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketIndexToId[i]].second);
+                        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketIndexToId[i]].socket);
                         try {
                             socket->connect();
                             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                                         "Socket with ID " + std::to_string(socketIndexToId[i]) + " has connected");
 
-                            std::unique_lock connectCallbacksLock(connectCallbacksMutex);
-                            auto callback = connectCallbacks.find(socketIndexToId[i]);
-                            if (callback != connectCallbacks.end()) callback->second(socketIndexToId[i]);
+                            if (socketInfo->connectCallback != nullptr) socketInfo->connectCallback(socketIndexToId[i]);
                         } catch (const sock::RetryableException &e) {
                             i++;
                             socketsLock.unlock();
@@ -190,7 +166,7 @@ void SocketManager::process() {
                     } else if (status == sock::SocketStatus::CLOSING) {
                         close(socketIndexToId[i]);
                     }
-                } else if (sockets[socketIndexToId[i]].first == SocketType::UDP) {
+                } else if (socketInfo->type == SocketType::UDP) {
                     sendto(socketIndexToId[i]);
                 }
                 socketsLock.unlock();
@@ -198,21 +174,19 @@ void SocketManager::process() {
 
             if (fd.revents & POLLIN) {
                 socketsLock.lock();
-                SocketType type = sockets[socketIndexToId[i]].first;
+                SocketType type = socketInfo->type;
                 if (type == SocketType::TCP) {
                     accept(socketIndexToId[i]);
                 } else if (type == SocketType::TCP_CONN) {
-                    sock::SocketStatus status = sockets[socketIndexToId[i]].second->getStatus();
+                    sock::SocketStatus status = socketInfo->socket->getStatus();
                     if (status == sock::SocketStatus::CONNECTING) {
-                        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketIndexToId[i]].second);
+                        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
                         try {
                             socket->connect();
                             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                                         "Socket with ID " + std::to_string(socketIndexToId[i]) + " has connected");
 
-                            std::unique_lock connectCallbacksLock(connectCallbacksMutex);
-                            auto callback = connectCallbacks.find(socketIndexToId[i]);
-                            if (callback != connectCallbacks.end()) callback->second(socketIndexToId[i]);
+                            if (socketInfo->connectCallback != nullptr) socketInfo->connectCallback(socketIndexToId[i]);
                         } catch (const sock::RetryableException &e) {
                             i++;
 
@@ -248,25 +222,20 @@ void SocketManager::process() {
             std::chrono::system_clock::now().time_since_epoch()).count();
 
     socketsLock.lock();
-    std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
-    for (auto& timeout : keepAliveTimeouts) {
-        if (timeout.second < now) {
-            if (sockets[timeout.first].first == SocketType::TCP_CONN) {
+    for (auto& socket : sockets) {
+        // Check for keep alive timeouts
+        if (socket.second.keepAliveTimeout > 0 && socket.second.keepAliveTimeout < now) {
+            if (socket.second.type == SocketType::TCP_CONN) {
                 logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
-                            "Socket with ID " + std::to_string(timeout.first) + " has exceeded its keep alive timeout, will be closed");
-                close(timeout.first);
+                            "Socket with ID " + std::to_string(socket.first) + " has exceeded its keep alive timeout, will be closed");
+                close(socket.first);
             }
         }
     }
-    keepAliveTimeoutsLock.unlock();
-    socketsLock.unlock();
 
     // Check for previously not closed sockets because of data in the send buffer and sockets that haven't been closed
     // because we were waiting for a response to the close request
     std::unique_lock closeQueueLock(closeQueueMutex);
-    std::unique_lock tcpSendBuffersLock(tcpSendBuffersMutex);
-    std::unique_lock udpSendBuffersLock(udpSendBuffersMutex);
-    std::unique_lock closeTimeoutsLock(closeTimeoutsMutex);
 
     for (auto socketId = closeQueue.begin(); socketId != closeQueue.end(); ) {
         if (sockets.find(*socketId) == sockets.end()) {
@@ -274,22 +243,22 @@ void SocketManager::process() {
             continue;
         }
 
-        auto socket = sockets[*socketId];
-        if (socket.first == SocketType::TCP_CONN || socket.first == SocketType::UDP) {
+        auto socketInfo = &sockets[*socketId];
+        if (socketInfo->type == SocketType::TCP_CONN || socketInfo->type == SocketType::UDP) {
             bool hasData = false;
-            if (socket.first == SocketType::TCP_CONN) {
-                hasData = !tcpSendBuffers[*socketId].empty();
-            } else if (socket.first == SocketType::UDP) {
-                hasData = !udpSendBuffers[*socketId].empty();
+            if (socketInfo->type == SocketType::TCP_CONN) {
+                hasData = !socketInfo->tcpSendBuffer.empty();
+            } else if (socketInfo->type == SocketType::UDP) {
+                hasData = !socketInfo->udpSendBuffer.empty();
             }
 
-            if (!hasData && closeTimeouts.find(*socketId) == closeTimeouts.end()) {
+            if (!hasData && socketInfo->closeTimeout <= 0) {
                 if (close(*socketId)) {
                     socketId = closeQueue.erase(socketId);
                     continue;
                 }
-            } else if (closeTimeouts.find(*socketId) != closeTimeouts.end()) {
-                if (closeTimeouts[*socketId] < now) {
+            } else if (socketInfo->closeTimeout > 0) {
+                if (socketInfo->closeTimeout < now) {
                     if (close(*socketId, true)) {
                         socketId = closeQueue.erase(socketId);
                         continue;
@@ -306,9 +275,10 @@ void SocketManager::connect(uint32_t socketId, sock::IPv4Dir address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::TCP_CONN) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::TCP_CONN) return;
 
-    auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketId].second);
+    auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
     try {
         struct sockaddr_in addr = util::ipv4ToSockAddr(address);
         socket->connect((struct sockaddr*) &addr, sizeof(addr));
@@ -326,18 +296,18 @@ bool SocketManager::send(uint32_t socketId, std::vector<uint8_t> data) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
-    if (sockets[socketId].first != SocketType::TCP_CONN) return false;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::TCP_CONN) return false;
 
     size_t total = 0;
     while (total < data.size()) {
-        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketId].second);
+        auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
         size_t sent;
         try {
             sent = socket->send(data.data() + total, data.size() - total, 0);
         } catch (const sock::RetryableException& e) {
-            std::unique_lock sendBuffersLock(tcpSendBuffersMutex);
-            auto it = tcpSendBuffers.find(socketId);
-            it->second.insert(it->second.end(), data.begin() + (unsigned int) total, data.end());
+            socketInfo->tcpSendBuffer.insert(socketInfo->tcpSendBuffer.end(),
+                                             data.begin() + (unsigned int) total, data.end());
             break;
         } catch (const sock::FatalException& e) {
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK, std::string(e.what()));
@@ -353,19 +323,18 @@ bool SocketManager::send(uint32_t socketId, std::vector<uint8_t> data) {
 
 void SocketManager::send(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
-    std::unique_lock sendBuffersLock(tcpSendBuffersMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::TCP_CONN) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::TCP_CONN) return;
 
-    auto it = tcpSendBuffers.find(socketId);
-    if (it == tcpSendBuffers.end()) return;
-    if (it->second.empty()) return;
+    if (socketInfo->tcpSendBuffer.empty()) return;
 
-    size_t oldSize = it->second.size();
+    size_t oldSize = socketInfo->tcpSendBuffer.size();
 
-    if (!send(socketId, it->second)) {
-        it->second.erase(it->second.begin(), it->second.begin() + (long long) oldSize);
+    if (!send(socketId, socketInfo->tcpSendBuffer)) {
+        socketInfo->tcpSendBuffer.erase(socketInfo->tcpSendBuffer.begin(),
+                                        socketInfo->tcpSendBuffer.begin() + (long long) oldSize);
     }
 }
 
@@ -373,18 +342,17 @@ bool SocketManager::sendto(uint32_t socketId, std::vector<uint8_t> data, sock::I
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
-    if (sockets[socketId].first != SocketType::UDP) return false;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::UDP) return false;
 
-    auto socket = std::dynamic_pointer_cast<sock::UDPSocket>(sockets[socketId].second);
+    auto socket = std::dynamic_pointer_cast<sock::UDPSocket>(socketInfo->socket);
 
     struct sockaddr_in addr = util::ipv4ToSockAddr(address);
 
     try {
         socket->sendto(data.data(), data.size(), 0, (struct sockaddr*) &addr, sizeof(addr));
     } catch (const sock::RetryableException& e) {
-        std::unique_lock sendBuffersLock(udpSendBuffersMutex);
-        auto it = udpSendBuffers.find(socketId);
-        it->second.emplace_back(address, std::move(data));
+        socketInfo->udpSendBuffer.emplace_back(address, std::move(data));
         return true;
     } catch (const sock::FatalException& e) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK, std::string(e.what()));
@@ -397,17 +365,14 @@ bool SocketManager::sendto(uint32_t socketId, std::vector<uint8_t> data, sock::I
 
 void SocketManager::sendto(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
-    std::unique_lock sendBuffersLock(udpSendBuffersMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::UDP) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::UDP) return;
 
-    auto it = udpSendBuffers.find(socketId);
-    if (it == udpSendBuffers.end()) return;
-
-    for (auto it_packets = it->second.begin(); it_packets != it->second.end(); it_packets++) {
+    for (auto it_packets = socketInfo->udpSendBuffer.begin(); it_packets != socketInfo->udpSendBuffer.end(); it_packets++) {
         if (!sendto(socketId, it_packets->second, it_packets->first)) break;
-        it_packets = it->second.erase(it_packets);
+        it_packets = socketInfo->udpSendBuffer.erase(it_packets);
     }
 }
 
@@ -415,11 +380,12 @@ void SocketManager::recv(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::TCP_CONN) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::TCP_CONN) return;
 
     std::vector<uint8_t> recvBuf;
     recvBuf.resize(1024 * 16); // 16k should be enough for most (if not all) packets
-    auto tcpSocket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketId].second);
+    auto tcpSocket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
     try {
         int recvBytes = tcpSocket->recv(recvBuf.data(), recvBuf.capacity(), 0);
         if (recvBytes == 0) {
@@ -436,10 +402,7 @@ void SocketManager::recv(uint32_t socketId) {
 
         recvBuf.resize(recvBytes);
 
-        std::unique_lock recvCallbacksLock(tcpRecvCallbacksMutex);
-        if (tcpRecvCallbacks.find(socketId) != tcpRecvCallbacks.end()) {
-            tcpRecvCallbacks[socketId](socketId, std::move(recvBuf));
-        }
+        if (socketInfo->tcpRecvCallback != nullptr) socketInfo->tcpRecvCallback(socketId, std::move(recvBuf));
     } catch (const sock::RetryableException& e) {
         // Actually, this could happen, it will be already handled by the poll call
 //        logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
@@ -458,7 +421,8 @@ void SocketManager::recvfrom(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::UDP) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::UDP) return;
 
     std::vector<uint8_t> recvBuf;
     recvBuf.resize(65535); // A UDP won't receive more than 65535 bytes (it's actually 65507, but we'll use 65535)
@@ -466,7 +430,7 @@ void SocketManager::recvfrom(uint32_t socketId) {
     struct sockaddr_in addr{};
     int addrLen = sizeof(addr);
 
-    auto udpSocket = std::dynamic_pointer_cast<sock::UDPSocket>(sockets[socketId].second);
+    auto udpSocket = std::dynamic_pointer_cast<sock::UDPSocket>(socketInfo->socket);
     try {
         int recvBytes = udpSocket->recvfrom(recvBuf.data(), recvBuf.capacity(), 0, (sockaddr*) &addr, &addrLen);
         if (std::find(closeQueue.begin(), closeQueue.end(), socketId) != closeQueue.end()) {
@@ -483,10 +447,7 @@ void SocketManager::recvfrom(uint32_t socketId) {
         auto* ipv4addr = (uint8_t*) &addr.sin_addr.S_un.S_un_b;
         sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
 
-        std::unique_lock recvCallbacksLock(udpRecvCallbacksMutex);
-        if (udpRecvCallbacks.find(socketId) != udpRecvCallbacks.end()) {
-            udpRecvCallbacks[socketId](socketId, std::move(recvBuf), dir);
-        }
+        if (socketInfo->udpRecvCallback != nullptr) socketInfo->udpRecvCallback(socketId, std::move(recvBuf), dir);
     } catch (const sock::RetryableException& e) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                     "Socket with ID " + std::to_string(socketId) + " threw a retryable exception,"
@@ -503,47 +464,31 @@ void SocketManager::accept(uint32_t socketId) {
     //bool socketsLocked = true;
 
     if (sockets.find(socketId) == sockets.end()) return;
-    if (sockets[socketId].first != SocketType::TCP) return;
+    auto socketInfo = &sockets[socketId];
+    if (socketInfo->type != SocketType::TCP) return;
 
-    auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(sockets[socketId].second);
+    auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
     try {
         struct sockaddr addr{};
         int addrLen = sizeof(addr);
         auto newSocket = socket->accept(&addr, &addrLen);
 
-        int keepAliveTimeout = 0;
-
-        std::unique_lock keepAliveTimeoutsLock(keepAliveTimeoutsMutex);
-        if (keepAliveTimeouts.find(socketId) != keepAliveTimeouts.end()) {
-            keepAliveTimeout = (int) keepAliveTimeouts[socketId];
-        }
-        keepAliveTimeoutsLock.unlock();
+        int keepAliveTimeout = (int) socketInfo->keepAliveTimeout;
 
         auto *addrIn = (struct sockaddr_in *) &addr;
         auto *ipv4addr = (uint8_t *) &addrIn->sin_addr.S_un.S_un_b;
         sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], addrIn->sin_port};
 
-        std::unique_lock acceptCallbacksLock(acceptCallbacksMutex);
-        std::unique_lock recvCallbacksLock(tcpRecvCallbacksMutex);
-        std::unique_lock closeCallbacksLock(closeCallbacksMutex);
-
-        auto acceptCallback = acceptCallbacks.find(socketId);
-        auto recvCallback = tcpRecvCallbacks.find(socketId);
-        auto closeCallback = closeCallbacks.find(socketId);
-
         std::function<void(uint32_t)> connectCallback;
-        if (acceptCallback != acceptCallbacks.end()) {
-            connectCallback = [acceptCallback, socketId, dir](uint32_t newSocketId) {
-                acceptCallback->second(socketId, newSocketId, dir);
+        if (socketInfo->acceptCallback != nullptr) {
+            connectCallback = [socketInfo, socketId, dir](uint32_t newSocketId) {
+                socketInfo->acceptCallback(socketId, newSocketId, dir);
             };
         }
 
         uint32_t newSocketId = addTCPSocketConn(std::shared_ptr<sock::TCPSocket>(newSocket),
-                                                    std::move(connectCallback),
-                                                    (recvCallback == tcpRecvCallbacks.end()) ? nullptr
-                                                                                             : recvCallback->second,
-                                                    (closeCallback == closeCallbacks.end()) ? nullptr
-                                                                                            : closeCallback->second.second,
+                                                    std::move(connectCallback),socketInfo->tcpRecvCallback,
+                                                    socketInfo->closeCallback.second,
                                                     keepAliveTimeout);
 
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
@@ -563,67 +508,40 @@ bool SocketManager::close(uint32_t socketId, bool force) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
+    auto socketInfo = &sockets[socketId];
 
-    std::unique_lock tcpSendBuffersLock(tcpSendBuffersMutex);
-    std::unique_lock udpSendBuffersLock(udpSendBuffersMutex);
     std::unique_lock closeQueueLock(closeQueueMutex);
 
     bool hasData = false;
-    if (sockets[socketId].first == SocketType::TCP_CONN) {
-        hasData = !tcpSendBuffers[socketId].empty();
-    } else if (sockets[socketId].first == SocketType::UDP) {
-        hasData = !udpSendBuffers[socketId].empty();
+    if (socketInfo->type == SocketType::TCP_CONN) {
+        hasData = !socketInfo->tcpSendBuffer.empty();
+    } else if (socketInfo->type == SocketType::UDP) {
+        hasData = !socketInfo->udpSendBuffer.empty();
     }
 
     if (!force && hasData && std::find(closeQueue.begin(), closeQueue.end(), socketId) == closeQueue.end()) {
         closeQueue.push_back(socketId);
     } else {
         try {
-            sockets.find(socketId)->second.second->close(force);
+            socketInfo->socket->close(force);
         } catch (const sock::RetryableException& e) {
-            std::unique_lock closeTimeoutsLock(closeTimeoutsMutex);
-            if (closeTimeouts.find(socketId) == closeTimeouts.end()) {
+            if (socketInfo->closeTimeout < 0) {
                 auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::system_clock::now().time_since_epoch()).count();
-                closeTimeouts.insert(std::make_pair(socketId, now + CLOSE_TIMEOUT));
+                socketInfo->closeTimeout = now + CLOSE_TIMEOUT;
             }
             return false;
         } catch (const sock::FatalException& e) {
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK, std::string(e.what()));
         }
 
-        std::unique_lock closeCallbacksLock(closeCallbacksMutex);
-        auto closeCallback = closeCallbacks.find(socketId);
+        if (socketInfo->closeCallback.first != nullptr) socketInfo->closeCallback.first(socketId);
 
-        if (closeCallback != closeCallbacks.end() && closeCallback->second.first != nullptr) {
-            closeCallback->second.first(socketId);
-        }
-
-        removeSocket(socketId);
+        sockets.erase(socketId);
         return true;
     }
 
     return false;
-}
-
-void SocketManager::removeSocket(uint32_t socketId) {
-    std::scoped_lock lock(socketsMutex, tcpSendBuffersMutex, udpSendBuffersMutex, acceptCallbacksMutex,
-                          connectCallbacksMutex, tcpRecvCallbacksMutex, udpRecvCallbacksMutex,
-                          closeCallbacksMutex,keepAliveTimeoutsMutex, closeTimeoutsMutex);
-
-    sockets.erase(socketId);
-    acceptCallbacks.erase(socketId);
-    connectCallbacks.erase(socketId);
-    tcpRecvCallbacks.erase(socketId);
-    udpRecvCallbacks.erase(socketId);
-    closeCallbacks.erase(socketId);
-    tcpSendBuffers.erase(socketId);
-    udpSendBuffers.erase(socketId);
-    keepAliveTimeouts.erase(socketId);
-    closeTimeouts.erase(socketId);
-
-//    auto it = std::find(closeQueue.begin(), closeQueue.end(), socketId);
-//    if (it != closeQueue.end()) closeQueue.erase(it);
 }
 
 bool SocketManager::isClosed(uint32_t socketId) {
@@ -632,11 +550,12 @@ bool SocketManager::isClosed(uint32_t socketId) {
 }
 
 void SocketManager::cleanup() {
-    std::scoped_lock lock(socketsMutex, tcpSendBuffersMutex, udpSendBuffersMutex, acceptCallbacksMutex,
-                          connectCallbacksMutex, tcpRecvCallbacksMutex, udpRecvCallbacksMutex,
-                          closeCallbacksMutex,keepAliveTimeoutsMutex, closeTimeoutsMutex);
+    std::unique_lock socketsLock(socketsMutex);
 
     for (auto& socket : sockets) {
         close(socket.first, true);
     }
+
+    std::unique_lock closeQueueLock(closeQueueMutex);
+    closeQueue.clear();
 }
