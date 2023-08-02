@@ -40,7 +40,7 @@ public:
     explicit SSLException(const char* what_arg) : std::runtime_error(what_arg) {};
 };
 
-struct IPv4Dir {
+struct IPv4Addr {
     uint8_t a;
     uint8_t b;
     uint8_t c;

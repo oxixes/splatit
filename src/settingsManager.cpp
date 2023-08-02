@@ -271,7 +271,7 @@ fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["path"];
 }
 
-sock::IPv4Dir SettingsManager::getHTTPListenAddress() const {
+sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
     std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
 
     auto a = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
@@ -283,7 +283,7 @@ sock::IPv4Dir SettingsManager::getHTTPListenAddress() const {
     auto d = (uint8_t) std::stoi(addressStr);
 
 
-    sock::IPv4Dir address{a, b, c, d, 443};
+    sock::IPv4Addr address{a, b, c, d, 443};
     return address;
 }
 

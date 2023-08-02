@@ -201,7 +201,7 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::share
 
             server->registerRoute("npts.app." + domain, path,
                                   [titleId, tasksheetId, settingsMgr](const std::shared_ptr<Logger::Logger>& logger,
-                                                                      const http::Request& req, sock::IPv4Dir client,
+                                                                      const http::Request& req, sock::IPv4Addr client,
                                                                       bool& shouldStop, bool& shouldClose,
                                                                       const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                                                       const std::function<void(unsigned int)>& unregisterCloseCall) {
@@ -216,7 +216,7 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::share
 
                 server->registerRoute("npdi.cdn." + domain, path,
                                       [titleId, tasksheetId, fileHash, settingsMgr](const std::shared_ptr<Logger::Logger>& logger,
-                                                                                      const http::Request& req, sock::IPv4Dir client,
+                                                                                      const http::Request& req, sock::IPv4Addr client,
                                                                                       bool& shouldStop, bool& shouldClose,
                                                                                       const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                                                                       const std::function<void(unsigned int)>& unregisterCloseCall) {
@@ -228,7 +228,7 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::share
     }
 
     std::function errorHandler = [](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                                    sock::IPv4Dir client, int httpStatus) {
+                                    sock::IPv4Addr client, int httpStatus) {
         return getError(httpStatus, req.getVersion());
     };
 

@@ -18,21 +18,21 @@ namespace acc {
 
 http::Response v1_api_admin_time(const http::Request& req, bool& shouldClose);
 http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                       const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                       const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                        const std::function<void(unsigned int)>& unregisterCloseCall,
                                        const std::shared_ptr<SettingsManager>& settingsManager,
                                        const std::shared_ptr<CertManager>& certManager);
 
 http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                       const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                       const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                        const std::function<void(unsigned int)>& unregisterCloseCall,
                                        const std::shared_ptr<SettingsManager>& settingsManager,
                                        const std::shared_ptr<CertManager>& certManager);
 
 http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                         const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                         const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                          const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                          const std::function<void(unsigned int)>& unregisterCloseCall,
                                          const std::shared_ptr<SettingsManager>& settingsManager,
@@ -41,7 +41,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 http::Response createError(http::Version version, int code, const std::string& message, const std::string& cause,
                            bool& shouldClose);
 
-http::Response errorHandler(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req, sock::IPv4Dir client,
+http::Response errorHandler(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req, sock::IPv4Addr client,
                             int httpStatus);
 
 http::Response prepareResponse(http::Version version);

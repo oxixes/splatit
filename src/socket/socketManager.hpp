@@ -25,14 +25,13 @@ enum class SocketType {
     UDP
 };
 
-class SocketInfo {
-public:
+struct SocketInfo {
     std::shared_ptr<sock::Socket> socket;
     SocketType type;
-    std::function<void(uint32_t, uint32_t, sock::IPv4Dir)> acceptCallback;
+    std::function<void(uint32_t, uint32_t, sock::IPv4Addr)> acceptCallback;
     std::function<void(uint32_t)> connectCallback;
     std::function<void(uint32_t, std::vector<uint8_t>)> tcpRecvCallback;
-    std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Dir)> udpRecvCallback;
+    std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> udpRecvCallback;
     // The first callback in the pair is the socket close callback, and the second is the close callback for
     // any connections accepted by the socket (only if type is TCP, and not TCP_CONN).
     std::pair<std::function<void(uint32_t)>, std::function<void(uint32_t)>> closeCallback;
@@ -41,7 +40,7 @@ public:
     int64_t closeTimeout;
 
     std::vector<uint8_t> tcpSendBuffer;
-    std::vector<std::pair<sock::IPv4Dir, std::vector<uint8_t>>> udpSendBuffer;
+    std::vector<std::pair<sock::IPv4Addr, std::vector<uint8_t>>> udpSendBuffer;
 };
 
 class SocketManager {
@@ -50,7 +49,7 @@ public:
     ~SocketManager() = default;
 
     uint32_t addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
-                     std::function<void(uint32_t, uint32_t, sock::IPv4Dir)> acceptCallback,
+                     std::function<void(uint32_t, uint32_t, sock::IPv4Addr)> acceptCallback,
                      std::function<void(uint32_t)> closeCallback,
                      std::function<void(uint32_t, std::vector<uint8_t>)> connRecvCallback,
                      std::function<void(uint32_t)> connCloseCallback, int keepAliveTimeout = 0);
@@ -59,14 +58,14 @@ public:
                      std::function<void(uint32_t, std::vector<uint8_t>)> recvCallback,
                      std::function<void(uint32_t)> closeCallback, int keepAliveTimeout = 0);
     uint32_t addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
-                     std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
+                     std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> recvCallback,
                      std::function<void(uint32_t)> closeCallback);
 
     void process();
 
-    void connect(uint32_t socketId, sock::IPv4Dir address);
+    void connect(uint32_t socketId, sock::IPv4Addr address);
     bool send(uint32_t socketId, std::vector<uint8_t> data);
-    bool sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Dir address);
+    bool sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Addr address);
     bool close(uint32_t socketId, bool force = false);
 
     bool isClosed(uint32_t socketId);

@@ -43,7 +43,7 @@ public:
 
     [[nodiscard]] json getDBSettings() const;
 
-    [[nodiscard]] sock::IPv4Dir getHTTPListenAddress() const;
+    [[nodiscard]] sock::IPv4Addr getHTTPListenAddress() const;
     [[nodiscard]] int getHTTPWorkerCount() const;
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
 

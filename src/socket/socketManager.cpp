@@ -6,7 +6,7 @@
 SocketManager::SocketManager(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {}
 
 uint32_t SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
-                                         std::function<void(uint32_t, uint32_t, sock::IPv4Dir)> acceptCallback,
+                                         std::function<void(uint32_t, uint32_t, sock::IPv4Addr)> acceptCallback,
                                          std::function<void(uint32_t)> closeCallback,
                                          std::function<void(uint32_t, std::vector<uint8_t>)> connRecvCallback,
                                          std::function<void(uint32_t)> connCloseCallback, int keepAliveTimeout) {
@@ -57,7 +57,7 @@ uint32_t SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket
 }
 
 uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
-                          std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Dir)> recvCallback,
+                          std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> recvCallback,
                           std::function<void(uint32_t)> closeCallback) {
     uint32_t socketId = nextSocketId++;
 
@@ -271,7 +271,7 @@ void SocketManager::process() {
     }
 }
 
-void SocketManager::connect(uint32_t socketId, sock::IPv4Dir address) {
+void SocketManager::connect(uint32_t socketId, sock::IPv4Addr address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return;
@@ -338,7 +338,7 @@ void SocketManager::send(uint32_t socketId) {
     }
 }
 
-bool SocketManager::sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Dir address) {
+bool SocketManager::sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Addr address) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -445,7 +445,7 @@ void SocketManager::recvfrom(uint32_t socketId) {
         recvBuf.resize(recvBytes);
 
         auto* ipv4addr = (uint8_t*) &addr.sin_addr.S_un.S_un_b;
-        sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
+        sock::IPv4Addr dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
 
         if (socketInfo->udpRecvCallback != nullptr) socketInfo->udpRecvCallback(socketId, std::move(recvBuf), dir);
     } catch (const sock::RetryableException& e) {
@@ -477,7 +477,7 @@ void SocketManager::accept(uint32_t socketId) {
 
         auto *addrIn = (struct sockaddr_in *) &addr;
         auto *ipv4addr = (uint8_t *) &addrIn->sin_addr.S_un.S_un_b;
-        sock::IPv4Dir dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], addrIn->sin_port};
+        sock::IPv4Addr dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], addrIn->sin_port};
 
         std::function<void(uint32_t)> connectCallback;
         if (socketInfo->acceptCallback != nullptr) {

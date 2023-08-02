@@ -3,7 +3,7 @@
 #include <utility>
 
 HTTP_Server::HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-                         sock::IPv4Dir listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
+                         sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
     this->logger = std::move(logger);
     this->socketMgr = std::move(socketMgr);
     this->keepAliveTimeout = keepAliveTimeout;
@@ -46,7 +46,7 @@ void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc
     }
 
     mainSocketID = this->socketMgr->addTCPSocket(mainSocket,
-                                                 [this] (uint32_t id, uint32_t newSockId, sock::IPv4Dir dir)
+                                                 [this] (uint32_t id, uint32_t newSockId, sock::IPv4Addr dir)
                                                  { onAccept(newSockId, dir); },
                                                  closeCallback,
                                                  [this] (uint32_t id, std::vector<uint8_t> data)
@@ -55,7 +55,7 @@ void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc
                                                  keepAliveTimeout);
 }
 
-void HTTP_Server::onAccept(uint32_t newSockId, sock::IPv4Dir dir) {
+void HTTP_Server::onAccept(uint32_t newSockId, sock::IPv4Addr dir) {
     buffers[newSockId] = std::vector<uint8_t>();
 
     std::unique_lock clientsLock(clientsMutex);
@@ -90,7 +90,7 @@ void HTTP_Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
             auto request = http::Request::parse(buffer, length);
 
             std::unique_lock clientsLock(clientsMutex);
-            sock::IPv4Dir dir = clients.find(sockId)->second;
+            sock::IPv4Addr dir = clients.find(sockId)->second;
             clientsLock.unlock();
 
             std::string ipAndPort = std::to_string(dir.a) + "." + std::to_string(dir.b) + "."
@@ -171,9 +171,9 @@ void HTTP_Server::serverThread() {
             shouldContinue = !requestsQueue.empty();
             queueLock.unlock();
 
-            std::function<http::Response( std::shared_ptr<Logger::Logger>, http::Request,
-                    sock::IPv4Dir, bool&, bool&, std::function<uint32_t(std::function<void()>)>,
-                    std::function<void(uint32_t)>)> handler = nullptr;
+            std::function<http::Response(std::shared_ptr<Logger::Logger>, http::Request,
+                                         sock::IPv4Addr, bool&, bool&, std::function<uint32_t(std::function<void()>)>,
+                                         std::function<void(uint32_t)>)> handler = nullptr;
 
             std::unique_lock routesLock(routesMutex);
             if (request.second.hasHeader("host") && routes.find(request.second.getHeader("host")[0]) != routes.end()
@@ -184,7 +184,7 @@ void HTTP_Server::serverThread() {
             routesLock.unlock();
 
             std::unique_lock clientsLock(clientsMutex);
-            sock::IPv4Dir clientDir = clients[request.first];
+            sock::IPv4Addr clientDir = clients[request.first];
             clientsLock.unlock();
 
             if (handler == nullptr) {
@@ -228,7 +228,7 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
     return response;
 }
 
-void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Dir client) {
+void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client) {
     std::unique_lock lock(errorPagesMutex);
     auto response = (!request.hasHeader("host")
             || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
@@ -239,7 +239,7 @@ void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& re
 
 void HTTP_Server::sendError(uint32_t sockId, int status) {
     http::Request req("", http::Method::M_GET, http::Version::HTTP_1_1);
-    sock::IPv4Dir client{};
+    sock::IPv4Addr client{};
     sendError(sockId, status, req, client);
 }
 
@@ -290,12 +290,12 @@ void HTTP_Server::unregisterCloseCall(uint32_t id) {
 }
 
 void HTTP_Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
         std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
         routes[host] = std::unordered_map<std::string, std::function<http::Response(
-                std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+                std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
                 std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>();
     }
 
@@ -303,7 +303,7 @@ void HTTP_Server::registerRoute(const std::string& host, const std::string& path
 }
 
 void HTTP_Server::registerErrorPage(const std::string &host, std::function<http::Response(
-        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)> func) {
+        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func) {
     std::unique_lock lock(errorPagesMutex);
     errorPages[host] = std::move(func);
 }

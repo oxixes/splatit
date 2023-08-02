@@ -1,5 +1,5 @@
-#ifndef SPLATOON_SERVER_SERVER_HPP
-#define SPLATOON_SERVER_SERVER_HPP
+#ifndef SPLATOON_SERVER_HTTP_SERVER_HPP
+#define SPLATOON_SERVER_HTTP_SERVER_HPP
 
 #include <openssl/ssl.h>
 #include <queue>
@@ -17,7 +17,7 @@
 class HTTP_Server {
 public:
     HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-                sock::IPv4Dir listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
+                sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
     ~HTTP_Server();
 
     void listen(int workerCount, const std::function<void()>& closeFunc);
@@ -27,11 +27,11 @@ public:
     void unregisterCloseCall(uint32_t id);
 
     void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
             std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
 
     void registerErrorPage(const std::string& host, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)> func);
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func);
 
 private:
     std::shared_ptr<Logger::Logger> logger;
@@ -52,15 +52,15 @@ private:
 
     // This is a map of maps, the first key is the host, the second key is the path for that given host
     std::unordered_map<std::string, std::unordered_map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, bool&, bool&,
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
             std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>> routes;
     std::mutex routesMutex;
 
     std::unordered_map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Dir, int)>> errorPages;
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)>> errorPages;
     std::mutex errorPagesMutex;
 
-    std::map<uint32_t, sock::IPv4Dir> clients;
+    std::map<uint32_t, sock::IPv4Addr> clients;
     std::mutex clientsMutex;
 
     uint32_t closeCallID = 0;
@@ -70,14 +70,14 @@ private:
     bool shouldStop = false;
 
     void serverThread();
-    void onAccept(uint32_t newSockId, sock::IPv4Dir dir);
+    void onAccept(uint32_t newSockId, sock::IPv4Addr dir);
     void onClose(uint32_t sockId);
     void onDataReceived(uint32_t sockId, std::vector<uint8_t> data);
 
     static http::Response getError(http::Version version, int status);
-    void sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Dir client);
+    void sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client);
     // Sent when a request is not available, as it couldn't be parsed
     void sendError(uint32_t sockId, int status);
 };
 
-#endif // SPLATOON_SERVER_SERVER_HPP
+#endif // SPLATOON_SERVER_HTTP_SERVER_HPP

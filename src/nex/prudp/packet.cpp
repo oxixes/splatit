@@ -90,7 +90,7 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
     type = static_cast<Type>(flagsAndType & 0xF);
     sessionId = data[4];
 
-    std::vector<uint8_t> signature(data.begin() + 5, data.begin() + 9);
+    signature = std::vector<uint8_t>(data.begin() + 5, data.begin() + 9);
 
     seqId = data[9] | (data[10] << 8);
 
@@ -133,12 +133,12 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
     if (checksum != calculateChecksum(dataCopy, accessKey))
         throw MalformedException("Invalid checksum");
 
-    // Check the signature
-    std::vector<uint8_t> calculatedSignature = calculateSignature(connectionSignature);
-    if (calculatedSignature != signature)
-        throw MalformedException("Invalid signature");
-
     return offset + 1;
+}
+
+bool PacketV0::checkSignature() {
+    std::vector<uint8_t> calculatedSignature = calculateSignature(connectionSignature);
+    return calculatedSignature == signature;
 }
 
 std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& senderSignature) {
@@ -298,11 +298,10 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
     encryptedData = std::vector<uint8_t>(data.begin() + 30 + packetSpecificDataLength,
                                          data.begin() + 30 + packetSpecificDataLength + payloadSize);
 
-    // Check the signature
-    std::vector<uint8_t> signature(data.begin() + 14, data.begin() + 30);
-    std::vector<uint8_t> packetSpecificData(data.begin() + 30, data.begin() + 30 + packetSpecificDataLength);
-    std::vector<uint8_t> calculatedSignature = calculateSignature(data, connectionSignature, packetSpecificData);
-    if (signature != calculatedSignature) throw MalformedException("Invalid signature");
+    // Add the data needed to check the signature
+    signature = std::vector<uint8_t>(data.begin() + 14, data.begin() + 30);
+    packetSpecificData = std::vector<uint8_t>(data.begin() + 30, data.begin() + 30 + packetSpecificDataLength);
+    header = std::vector<uint8_t>(data.begin(), data.begin() + 14);
 
     // Analyze the packet-specific data
     size_t offset = 0;
@@ -366,8 +365,13 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
     return 30 + packetSpecificDataLength + payloadSize;
 }
 
+bool PacketV1::checkSignature() {
+    std::vector<uint8_t> calculatedSignature = calculateSignature(header, connectionSignature, packetSpecificData);
+    return signature == calculatedSignature;
+}
+
 std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& packet, const std::vector<uint8_t>& senderSignature,
-                             const std::vector<uint8_t>& packetSpecificData) {
+                             const std::vector<uint8_t>& pSpecificData) {
     std::vector<uint8_t> data(packet.begin() + 6, packet.begin() + 14);
     if (!sessionKey.empty())
         data.insert(data.end(), sessionKey.begin(), sessionKey.end());
@@ -380,7 +384,7 @@ std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& pa
     if (!senderSignature.empty())
         data.insert(data.end(), senderSignature.begin(), senderSignature.end());
 
-    data.insert(data.end(), packetSpecificData.begin(), packetSpecificData.end());
+    data.insert(data.end(), pSpecificData.begin(), pSpecificData.end());
     data.insert(data.end(), encryptedData.begin(), encryptedData.end());
 
     std::vector<uint8_t> keyHash = crypto::MD5(accessKey);

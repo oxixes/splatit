@@ -28,7 +28,7 @@ http::Response v1_api_admin_time(const http::Request& req, bool& shouldClose) {
  * Requires a device certificate.
  */
 http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                       const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                       const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                        const std::function<void(unsigned int)>& unregisterCloseCall,
                                        const std::shared_ptr<SettingsManager>& settingsManager,
@@ -117,7 +117,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
  * Requires a device certificate. The password can be given directly or as a hash.
  */
 http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                       const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                       const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                        const std::function<void(unsigned int)>& unregisterCloseCall,
                                        const std::shared_ptr<SettingsManager>& settingsManager,
@@ -249,7 +249,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
  * access token generated at /v1/api/oauth20/access_token/generate.
  */
 http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
-                                         const http::Request& req, sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                                         const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                                          const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                          const std::function<void(unsigned int)>& unregisterCloseCall,
                                          const std::shared_ptr<SettingsManager>& settingsManager,
@@ -363,7 +363,7 @@ http::Response createError(http::Version version, int code, const std::string& m
     return res;
 }
 
-http::Response errorHandler(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req, sock::IPv4Dir client,
+http::Response errorHandler(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req, sock::IPv4Addr client,
                             int httpStatus) {
     bool shouldClose = false;
     switch (httpStatus) {
@@ -453,13 +453,13 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<
     std::string domain = settingsMgr->getTopDomain();
 
     server->registerRoute("account." + domain, "/v1/api/admin/time", [](
-            const std::shared_ptr<Logger::Logger>&, const http::Request& req, sock::IPv4Dir, bool& shouldStop,
+            const std::shared_ptr<Logger::Logger>&, const http::Request& req, sock::IPv4Addr, bool& shouldStop,
             bool& shouldClose, const std::function<unsigned int(std::function<void()>)>&,
             const std::function<void(unsigned int)>&) -> http::Response { return v1_api_admin_time(req, shouldClose); });
 
     server->registerRoute("account." + domain, "/v1/api/admin/mapped_ids",
                           [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                              sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                              sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
                               return v1_api_admin_mapped_ids(logger, db, req, client, shouldStop, shouldClose,
@@ -469,9 +469,9 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<
 
     server->registerRoute("account." + domain, "/v1/api/oauth20/access_token/generate",
                           [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                             sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
-                             const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                             const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
+                              sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                              const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                              const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
                              return v1_api_access_token_gen(logger, db, req, client, shouldStop, shouldClose,
                                                              registerCloseCall, unregisterCloseCall, settingsMgr,
                                                              certMgr);
@@ -479,7 +479,7 @@ void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<
 
     server->registerRoute("account." + domain, "/v1/api/provider/nex_token/@me",
                           [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                              sock::IPv4Dir client, bool& shouldStop, bool& shouldClose,
+                              sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
                               return v1_api_provider_nex_token(logger, db, req, client, shouldStop, shouldClose,

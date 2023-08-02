@@ -66,9 +66,11 @@ public:
     virtual std::vector<uint8_t> encode() = 0;
     virtual size_t decode(const std::vector<uint8_t>& data) = 0;
     void decryptData();
+    virtual bool checkSignature() = 0;
 
 protected:
     std::vector<uint8_t> encryptedData;
+    std::vector<uint8_t> signature;
 
     void encryptData();
 };
@@ -79,6 +81,7 @@ public:
 
     std::vector<uint8_t> encode() override;
     size_t decode(const std::vector<uint8_t>& data) override;
+    bool checkSignature() override;
 
 private:
     std::vector<uint8_t> calculateSignature(const std::vector<uint8_t>& senderSignature);
@@ -95,11 +98,15 @@ public:
 
     std::vector<uint8_t> encode() override;
     size_t decode(const std::vector<uint8_t>& data) override;
+    bool checkSignature() override;
 
 private:
+    std::vector<uint8_t> packetSpecificData;
+    std::vector<uint8_t> header;
+
     std::vector<uint8_t> calculateSignature(const std::vector<uint8_t>& packet,
                                             const std::vector<uint8_t>& senderSignature,
-                                            const std::vector<uint8_t>& packetSpecificData);
+                                            const std::vector<uint8_t>& pSpecificData);
 };
 
 } // namespace prudp
