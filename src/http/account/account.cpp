@@ -447,7 +447,7 @@ bool checkRequestParams(const http::Request& req, const std::shared_ptr<Settings
     return true;
 }
 
-void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
+void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db) {
 
     std::string domain = settingsMgr->getTopDomain();

@@ -2,8 +2,10 @@
 
 #include <utility>
 
-HTTP_Server::HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-                         sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
+namespace http {
+
+Server::Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
+               sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
     this->logger = std::move(logger);
     this->socketMgr = std::move(socketMgr);
     this->keepAliveTimeout = keepAliveTimeout;
@@ -15,27 +17,23 @@ HTTP_Server::HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr
     int opt = 1;
     sslSocket->setsockopt(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    struct sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = listenDir.d << 24 | listenDir.c << 16 | listenDir.b << 8 | listenDir.a;
-    address.sin_port = htons(listenDir.port);
-
+    struct sockaddr_in address = util::ipv4ToSockAddr(listenDir);
     sslSocket->bind((struct sockaddr*)&address, sizeof(address));
 
     mainSocket = sslSocket;
 }
 
-HTTP_Server::~HTTP_Server() {
+Server::~Server() {
     stop();
 }
 
-void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc) {
+void Server::listen(int workerCount, const std::function<void()>& closeFunc) {
     logger->log(Logger::level::INFO, Logger::group::NETWORK,
                 "Starting HTTP server with " + std::to_string(workerCount) + " workers");
 
     shouldStop = false;
     for (int i = 0; i < workerCount; i++) {
-        threads.emplace_back(&HTTP_Server::serverThread, this);
+        threads.emplace_back(&Server::serverThread, this);
     }
 
     mainSocket->listen();
@@ -55,21 +53,21 @@ void HTTP_Server::listen(int workerCount, const std::function<void()>& closeFunc
                                                  keepAliveTimeout);
 }
 
-void HTTP_Server::onAccept(uint32_t newSockId, sock::IPv4Addr dir) {
+void Server::onAccept(uint32_t newSockId, sock::IPv4Addr dir) {
     buffers[newSockId] = std::vector<uint8_t>();
 
     std::unique_lock clientsLock(clientsMutex);
     clients[newSockId] = dir;
 }
 
-void HTTP_Server::onClose(uint32_t sockId) {
+void Server::onClose(uint32_t sockId) {
     buffers.erase(sockId);
 
     std::unique_lock clientsLock(clientsMutex);
     clients.erase(sockId);
 }
 
-void HTTP_Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
+void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
     if (data.empty()) return;
 
     auto& buffer = buffers.find(sockId)->second;
@@ -147,7 +145,7 @@ void HTTP_Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
     }
 }
 
-void HTTP_Server::serverThread() {
+void Server::serverThread() {
     while (true) {
         std::unique_lock lock(workerMutex);
         workerCV.wait(lock, [this] { return !requestsQueue.empty() || shouldStop; });
@@ -212,7 +210,7 @@ void HTTP_Server::serverThread() {
     }
 }
 
-http::Response HTTP_Server::getError(http::Version version, int status) {
+http::Response Server::getError(http::Version version, int status) {
     http::Response response(version, status);
 
     response.setHeader("Content-Type", "text/html");
@@ -228,7 +226,7 @@ http::Response HTTP_Server::getError(http::Version version, int status) {
     return response;
 }
 
-void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client) {
+void Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client) {
     std::unique_lock lock(errorPagesMutex);
     auto response = (!request.hasHeader("host")
             || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
@@ -237,13 +235,13 @@ void HTTP_Server::sendError(uint32_t sockId, int status, const http::Request& re
     socketMgr->close(sockId);
 }
 
-void HTTP_Server::sendError(uint32_t sockId, int status) {
+void Server::sendError(uint32_t sockId, int status) {
     http::Request req("", http::Method::M_GET, http::Version::HTTP_1_1);
     sock::IPv4Addr client{};
     sendError(sockId, status, req, client);
 }
 
-void HTTP_Server::stop() {
+void Server::stop() {
     if (shouldStop) return;
 
     logger->log(Logger::level::INFO, Logger::group::NETWORK, "Stopping HTTP server");
@@ -277,19 +275,19 @@ void HTTP_Server::stop() {
     mainSocket = nullptr;
 }
 
-uint32_t HTTP_Server::registerCloseCall(std::function<void()> closeFunc) {
+uint32_t Server::registerCloseCall(std::function<void()> closeFunc) {
     std::unique_lock lock(closeCallsMutex);
     uint32_t id = closeCallID++;
     closeCalls[id] = std::move(closeFunc);
     return id;
 }
 
-void HTTP_Server::unregisterCloseCall(uint32_t id) {
+void Server::unregisterCloseCall(uint32_t id) {
     std::unique_lock lock(closeCallsMutex);
     closeCalls.erase(id);
 }
 
-void HTTP_Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
+void Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
         std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
         std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
     std::unique_lock lock(routesMutex);
@@ -302,8 +300,10 @@ void HTTP_Server::registerRoute(const std::string& host, const std::string& path
     routes[host][path] = std::move(func);
 }
 
-void HTTP_Server::registerErrorPage(const std::string &host, std::function<http::Response(
+void Server::registerErrorPage(const std::string &host, std::function<http::Response(
         std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func) {
     std::unique_lock lock(errorPagesMutex);
     errorPages[host] = std::move(func);
 }
+
+} // namespace http

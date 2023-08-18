@@ -16,6 +16,7 @@
 
 #include <stdexcept>
 #include <cstdint>
+#include <functional>
 
 namespace sock {
 
@@ -46,6 +47,10 @@ struct IPv4Addr {
     uint8_t c;
     uint8_t d;
     uint16_t port;
+
+    bool operator ==(const IPv4Addr& other) const {
+        return a == other.a && b == other.b && c == other.c && d == other.d && port == other.port;
+    }
 };
 
 enum class SocketStatus {
@@ -147,5 +152,25 @@ protected:
 };
 
 } // namespace sock
+
+// Define hash function for IPv4Addr
+namespace std {
+    template<>
+    struct hash<sock::IPv4Addr> {
+        size_t operator()(const sock::IPv4Addr& addr) const {
+            size_t ha = hash<uint8_t>()(addr.a);
+            size_t hb = hash<uint8_t>()(addr.b);
+            size_t hc = hash<uint8_t>()(addr.c);
+            size_t hd = hash<uint8_t>()(addr.d);
+            size_t hport = hash<uint16_t>()(addr.port);
+
+            // Combine hashes (This is the way Boost combines hashes)
+            return ha ^ (hb + 0x9e3779b9 + (ha << 6) + (ha >> 2))
+                   ^ (hc + 0x9e3779b9 + (hb << 6) + (hb >> 2))
+                   ^ (hd + 0x9e3779b9 + (hc << 6) + (hc >> 2))
+                   ^ (hport + 0x9e3779b9 + (hd << 6) + (hd >> 2));
+        }
+    };
+} // namespace std
 
 #endif //SPLATOON_SERVER_SOCKET_HPP

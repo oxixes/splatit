@@ -552,9 +552,9 @@ bool SocketManager::isClosed(uint32_t socketId) {
 void SocketManager::cleanup() {
     std::unique_lock socketsLock(socketsMutex);
 
-    for (auto& socket : sockets) {
-        close(socket.first, true);
-    }
+    std::vector<uint32_t> socketIds(sockets.size());
+    for (auto& socket : sockets) socketIds.push_back(socket.first);
+    for (auto socketId : socketIds) close(socketId, true);
 
     std::unique_lock closeQueueLock(closeQueueMutex);
     closeQueue.clear();

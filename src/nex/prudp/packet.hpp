@@ -45,6 +45,8 @@ private:
 
 class Packet {
 public:
+    virtual ~Packet() = default;
+
     Type type;
     uint8_t srcStreamType = 0xA; // The stream type is always 0xA (RVSecure) for NEX
     uint8_t srcPort;
@@ -56,7 +58,7 @@ public:
     uint8_t fragmentId;
     std::vector<uint8_t> sessionKey;
     std::vector<uint8_t> connectionSignature;
-    std::vector<uint8_t> senderSignature;
+    std::vector<uint8_t> remoteSignature;
     std::vector<uint8_t> accessKey;
 
     std::shared_ptr<Encoder> encoder = nullptr;
@@ -65,7 +67,7 @@ public:
 
     virtual std::vector<uint8_t> encode() = 0;
     virtual size_t decode(const std::vector<uint8_t>& data) = 0;
-    void decryptData();
+    void decryptData(bool force = false);
     virtual bool checkSignature() = 0;
 
 protected:
@@ -84,7 +86,7 @@ public:
     bool checkSignature() override;
 
 private:
-    std::vector<uint8_t> calculateSignature(const std::vector<uint8_t>& senderSignature);
+    std::vector<uint8_t> calculateSignature(const std::vector<uint8_t>& remoteSignature);
     static uint8_t calculateChecksum(const std::vector<uint8_t>& data, const std::vector<uint8_t>& accessKey);
 };
 
@@ -105,7 +107,7 @@ private:
     std::vector<uint8_t> header;
 
     std::vector<uint8_t> calculateSignature(const std::vector<uint8_t>& packet,
-                                            const std::vector<uint8_t>& senderSignature,
+                                            const std::vector<uint8_t>& remoteSignature,
                                             const std::vector<uint8_t>& pSpecificData);
 };
 

@@ -52,7 +52,7 @@ bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey);
 bool checkRequestParams(const http::Request& req, const std::shared_ptr<SettingsManager>& settingsManager,
                         const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose);
 
-void registerRoutes(const std::shared_ptr<HTTP_Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
+void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db);
 
 } // namespace acc

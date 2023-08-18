@@ -21,9 +21,15 @@ void Packet::encryptData() {
     encryptedData = encoder->encode(data);
 }
 
-void Packet::decryptData() {
-    if (encoder == nullptr)
+void Packet::decryptData(bool force) {
+    if (encoder == nullptr && !force)
         throw std::runtime_error("Encoder is null");
+
+    if (encoder == nullptr) {
+        // If the encoder is null, we'll just copy the data
+        encryptedData = data;
+        return;
+    }
 
     data = encoder->decode(encryptedData);
 }
@@ -43,7 +49,8 @@ std::vector<uint8_t> PacketV0::encode() {
     if (!data.empty()) encryptData(); // Encrypt the data (needed for the signature)
 
     // Add the sender signature
-    std::vector<uint8_t> signature = calculateSignature(senderSignature);
+    std::vector<uint8_t> signature = calculateSignature((!remoteSignature.empty()) ? remoteSignature :
+            std::vector<uint8_t>(4, 0));
 
     result.insert(result.end(), signature.begin(), signature.end());
 
@@ -99,7 +106,7 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
     if (type == Type::SYN || type == Type::CONNECT) {
         if (data.size() < 15)
             throw MalformedException("Packet is too small (invalid size)");
-        senderSignature = std::vector<uint8_t>(data.begin() + 11, data.begin() + 15);
+        remoteSignature = std::vector<uint8_t>(data.begin() + 11, data.begin() + 15);
         offset = 15;
     } else if (type == Type::DATA) {
         if (data.size() < 13)
@@ -137,11 +144,12 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
 }
 
 bool PacketV0::checkSignature() {
-    std::vector<uint8_t> calculatedSignature = calculateSignature(connectionSignature);
+    std::vector<uint8_t> calculatedSignature = calculateSignature((!connectionSignature.empty()) ?
+            connectionSignature : std::vector<uint8_t>(4, 0));
     return calculatedSignature == signature;
 }
 
-std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& senderSignature) {
+std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& remoteSignature) {
     std::vector<uint8_t> signature;
 
     if (friends) {
@@ -155,7 +163,7 @@ std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& se
             std::vector<uint8_t> hmac = crypto::HMAC_MD5(keyHash, encryptedData);
             signature = {hmac[0], hmac[1], hmac[2], hmac[3]};
         } else {
-            signature = senderSignature;
+            signature = remoteSignature;
         }
     } else {
         // This signature is used in games using V0 packets
@@ -172,7 +180,7 @@ std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& se
             std::vector<uint8_t> hmac = crypto::HMAC_MD5(keyHash, data);
             signature = {hmac[0], hmac[1], hmac[2], hmac[3]};
         } else {
-            signature = senderSignature;
+            signature = remoteSignature;
         }
     }
 
@@ -199,7 +207,7 @@ std::vector<uint8_t> PacketV1::encode() {
     std::vector<uint8_t> result {0xEA, 0xD0}; // Magic number
 
     // Craft the packet-specific data
-    std::vector<uint8_t> packetSpecificData;
+    packetSpecificData = std::vector<uint8_t>();
     if (type == Type::SYN || type == Type::CONNECT) {
         uint32_t supportedFunctionsField = (supportedFunctions << 8) | minorVersion;
         util::getu32Little(supportedFunctionsField);
@@ -219,8 +227,6 @@ std::vector<uint8_t> PacketV1::encode() {
             packetSpecificData.push_back(connectionSignature.size()); // Option length
             packetSpecificData.insert(packetSpecificData.end(), connectionSignature.begin(), connectionSignature.end());
         }
-        packetSpecificData.push_back(connectionSignature.size()); // Option length
-        packetSpecificData.insert(packetSpecificData.end(), connectionSignature.begin(), connectionSignature.end());
 
         if (type == Type::CONNECT) {
             packetSpecificData.push_back(3); // Option ID
@@ -258,7 +264,7 @@ std::vector<uint8_t> PacketV1::encode() {
     result.push_back((seqId >> 8) & 0xFF);
 
     // Add the signature
-    std::vector<uint8_t> signature = calculateSignature(result, senderSignature, packetSpecificData);
+    std::vector<uint8_t> signature = calculateSignature(result, remoteSignature, packetSpecificData);
     result.insert(result.end(), signature.begin(), signature.end());
 
     // Add the packet-specific data
@@ -329,7 +335,7 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
                 if (type != Type::SYN && type != Type::CONNECT)
                     throw MalformedException("Invalid option ID (" + std::to_string(optionId)
                                     + ") for this packet type (" + std::to_string(static_cast<int>(type)) + ")");
-                senderSignature = std::vector<uint8_t>(packetSpecificData.begin() + (long long) offset,
+                remoteSignature = std::vector<uint8_t>(packetSpecificData.begin() + (long long) offset,
                                                            packetSpecificData.begin() + (long long) offset + optionLength);
                 break;
             }
@@ -370,7 +376,7 @@ bool PacketV1::checkSignature() {
     return signature == calculatedSignature;
 }
 
-std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& packet, const std::vector<uint8_t>& senderSignature,
+std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& packet, const std::vector<uint8_t>& remoteSignature,
                              const std::vector<uint8_t>& pSpecificData) {
     std::vector<uint8_t> data(packet.begin() + 6, packet.begin() + 14);
     if (!sessionKey.empty())
@@ -381,8 +387,8 @@ std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& pa
     util::getu32Little(accessKeySum);
     data.insert(data.end(), (uint8_t*)&accessKeySum, (uint8_t*)&accessKeySum + 4);
 
-    if (!senderSignature.empty())
-        data.insert(data.end(), senderSignature.begin(), senderSignature.end());
+    if (!remoteSignature.empty())
+        data.insert(data.end(), remoteSignature.begin(), remoteSignature.end());
 
     data.insert(data.end(), pSpecificData.begin(), pSpecificData.end());
     data.insert(data.end(), encryptedData.begin(), encryptedData.end());

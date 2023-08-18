@@ -29,7 +29,7 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
 
 http::Response getError(int status, http::Version version);
 
-void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
+void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
 
 } // namespace boss
 

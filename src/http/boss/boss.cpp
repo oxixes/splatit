@@ -189,7 +189,7 @@ http::Response getError(int status, http::Version version) {
     return res;
 }
 
-void registerRoutes(const std::shared_ptr<HTTP_Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {
+void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {
     std::string domain = settingsMgr->getTopDomain();
 
     for (auto& title : bossManifest.items()) {

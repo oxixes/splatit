@@ -1,6 +1,7 @@
 #include <memory>
 #include <csignal>
 
+#include "constants.hpp"
 #include "argParser.hpp"
 #include "settingsManager.hpp"
 #include "crypto/certManager.hpp"
@@ -11,6 +12,7 @@
 #include "http/server.hpp"
 #include "http/account/account.hpp"
 #include "http/boss/boss.hpp"
+#include "nex/prudp/server.hpp"
 
 bool shouldStop = false;
 
@@ -67,7 +69,7 @@ int main(int argc, char** argv) {
 
     std::shared_ptr<SocketManager> socketManager(new SocketManager(logger));
     std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
-    std::shared_ptr<HTTP_Server> httpServer = nullptr;
+    std::shared_ptr<http::Server> httpServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
         if (!certManager->init() || (settingsMgr->isAccountEnabled() && !boss::init(logger, settingsMgr))) {
@@ -79,10 +81,10 @@ int main(int argc, char** argv) {
         }
 
         try {
-            httpServer = std::make_shared<HTTP_Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
-                                                       settingsMgr->getHTTPKeepAliveTimeout(),
-                                                       certManager->getSSLKey(),
-                                                       certManager->getSSLCert());
+            httpServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
+                                                        settingsMgr->getHTTPKeepAliveTimeout(),
+                                                        certManager->getSSLKey(),
+                                                        certManager->getSSLCert());
         } catch (const std::exception& e) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         std::string("An error occurred while initializing the HTTP server: ") + e.what());
@@ -102,6 +104,21 @@ int main(int argc, char** argv) {
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }
+
+    // FIXME: This is just for testing purposes
+    std::shared_ptr<prudp::Server> friendsAuthSrv = nullptr;
+    sock::IPv4Addr addr {0, 0, 0, 0, 1201};
+    friendsAuthSrv = std::make_shared<prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, addr,
+                                                     0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY, true, 1,
+                                                     (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY, true);
+    friendsAuthSrv->listen(nullptr);
+
+    std::shared_ptr<prudp::Server> splatoonAuthSrv = nullptr;
+    addr = {0, 0, 0, 0, 1203};
+    splatoonAuthSrv = std::make_shared<prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, addr,
+                                                      1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY, true, 1,
+                                                      (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY, false);
+    splatoonAuthSrv->listen(nullptr);
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);

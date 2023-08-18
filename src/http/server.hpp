@@ -14,11 +14,13 @@
 
 #define MAX_PAYLOAD_SIZE 0x6400000 // 100 MiB
 
-class HTTP_Server {
+namespace http {
+
+class Server {
 public:
-    HTTP_Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-                sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
-    ~HTTP_Server();
+    Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
+           sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
+    ~Server();
 
     void listen(int workerCount, const std::function<void()>& closeFunc);
     void stop();
@@ -79,5 +81,7 @@ private:
     // Sent when a request is not available, as it couldn't be parsed
     void sendError(uint32_t sockId, int status);
 };
+
+} // namespace http
 
 #endif // SPLATOON_SERVER_HTTP_SERVER_HPP
