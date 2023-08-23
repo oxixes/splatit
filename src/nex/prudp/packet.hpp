@@ -33,6 +33,7 @@ enum class Type {
 class Encoder {
 public:
     explicit Encoder(const std::vector<uint8_t>& key);
+    Encoder(const Encoder&) = default;
     ~Encoder() = default;
 
     std::vector<uint8_t> encode(const std::vector<uint8_t>& data);
@@ -79,6 +80,10 @@ protected:
 
 class PacketV0 : public Packet {
 public:
+    PacketV0() = default;
+    PacketV0(const PacketV0& packet) = default;
+    ~PacketV0() override = default;
+
     bool friends = true;
 
     std::vector<uint8_t> encode() override;
@@ -92,6 +97,10 @@ private:
 
 class PacketV1 : public Packet {
 public:
+    PacketV1() = default;
+    PacketV1(const PacketV1& packet) = default;
+    ~PacketV1() override = default;
+
     uint8_t substreamId = 0;
     uint8_t minorVersion = 4; // https://github.com/kinnay/NintendoClients/wiki/PRUDP-Protocol#supported-functions
     uint32_t supportedFunctions = 0;

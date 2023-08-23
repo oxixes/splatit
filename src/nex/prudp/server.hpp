@@ -4,11 +4,34 @@
 #include <memory>
 #include <set>
 #include <unordered_map>
+#include <map>
 
 #include "../../socket/socket.hpp"
 #include "../../logger.hpp"
 #include "../../socket/socketManager.hpp"
 #include "packet.hpp"
+
+// Defines the amount of time between the last message received and the next ping.
+#define PING_INTERVAL 10000
+
+// Defines the maximum amount of packets in the packet queue.
+#define MAX_PACKET_QUEUE_SIZE 100
+
+// Defines the maximum amount of times a packet can be sent before the connection is closed.
+#define MAX_RETRIES 3
+
+// Defines the time a packet is delayed before being sent again.
+#define RETRY_INTERVAL 1000
+
+// Defines the maximum size of a packet (in bytes).
+#define MAX_PACKET_SIZE 962
+
+// Exception thrown when a fragment from a packet is missing
+class InvalidLengthException : public std::runtime_error {
+public:
+    explicit InvalidLengthException(const std::string& what_arg) : std::runtime_error(what_arg) {};
+    explicit InvalidLengthException(const char* what_arg) : std::runtime_error(what_arg) {};
+};
 
 namespace prudp {
 
@@ -18,9 +41,12 @@ namespace prudp {
         uint8_t streamType; // This will be used to differentiate clients (ignored otherwise),
                             // although in practice it will always be 0xA. I don't know the differences
                             // between other stream types, as they've not been documented.
+        uint8_t srcVPort;
+        uint8_t srcStreamType;
 
         bool operator ==(const PRUDPAddress& other) const {
-            return address == other.address && vPort == other.vPort && streamType == other.streamType;
+            return address == other.address && vPort == other.vPort && streamType == other.streamType &&
+                    srcVPort == other.srcVPort && srcStreamType == other.srcStreamType;
         }
     };
 
@@ -34,18 +60,28 @@ namespace std {
             size_t h1 = hash<sock::IPv4Addr>()(addr.address);
             size_t h2 = hash<uint8_t>()(addr.vPort);
             size_t h3 = hash<uint8_t>()(addr.streamType);
+            size_t h4 = hash<uint8_t>()(addr.srcVPort);
+            size_t h5 = hash<uint8_t>()(addr.srcStreamType);
 
             // Combine hashes (This is the way Boost combines hashes)
-            return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2))
-                   ^ (h3 + 0x9e3779b9 + (h2 << 6) + (h2 >> 2));
+            size_t seed = 0;
+            seed ^= h1 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h4 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h5 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+
+            return seed;
         }
     };
 } // namespace std
 
 namespace prudp {
 
-bool packetCmpFunc(const std::unique_ptr<Packet>& lhs, const std::unique_ptr<Packet>&& rhs);
+bool packetCmpFunc(const std::shared_ptr<Packet>& lhs, const std::shared_ptr<Packet>& rhs);
 using packetCmp = std::integral_constant<decltype(&packetCmpFunc), &packetCmpFunc>;
+
+typedef std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds> timePoint;
 
 class PayloadEncoder {
 public:
@@ -53,7 +89,9 @@ public:
     ~PayloadEncoder() = default;
 
     std::shared_ptr<Encoder> getReliableEncoder(uint8_t substreamId);
-    std::shared_ptr<Encoder> getUnreliableEncoder(const std::unique_ptr<Packet>& packet);
+    std::shared_ptr<Encoder> getUnreliableEncoder(const std::shared_ptr<Packet>& packet);
+
+    void setReliableEncoder(uint8_t substreamId, std::shared_ptr<Encoder> encoder);
 private:
     std::vector<std::shared_ptr<Encoder>> encoders;
     std::vector<uint8_t> sessionKey;
@@ -62,9 +100,10 @@ private:
 };
 
 struct Substream {
-    uint16_t seqId;
+    uint16_t seqId = 1;
     uint16_t recvSeqId;
-    std::set<std::unique_ptr<Packet>, packetCmp> packetQueue;
+    std::set<std::shared_ptr<Packet>, packetCmp> packetQueue;
+    std::map<uint16_t, timePoint> nonAckedPackets;
 };
 
 struct ClientInfo {
@@ -73,9 +112,16 @@ struct ClientInfo {
     uint32_t supportedFunctions;
     uint16_t unreliableSeqId;
     std::vector<uint8_t> remoteSignature;
-    std::vector<uint8_t> connectionSignature;
+    uint8_t sessionId;
     std::vector<uint8_t> sessionKey;
     std::vector<Substream> substreams;
+    timePoint nextPing;
+};
+
+struct DelayedPacket {
+    PRUDPAddress addr;
+    uint32_t numRetries;
+    std::shared_ptr<Packet> packet;
 };
 
 class Server {
@@ -89,7 +135,10 @@ public:
     bool listen(const std::function<void()>& closeFunc);
     void stop();
 
-    void process();
+    void sendDataPacket(PRUDPAddress addr, std::vector<uint8_t> data, uint8_t substreamId = 0);
+
+    // Returns the milliseconds until the next delayed packet should be sent.
+    uint64_t process();
 
 private:
     int majorVersion;
@@ -113,14 +162,31 @@ private:
     uint32_t mainSocketID = 0;
 
     std::unordered_map<PRUDPAddress, ClientInfo> clients;
+    uint8_t nextSessionId = 0;
+
+    std::multimap<timePoint, DelayedPacket> delayedPackets;
 
     void onData(sock::IPv4Addr addr, std::vector<uint8_t> data);
-    void processPacket(sock::IPv4Addr addr, std::unique_ptr<Packet> packet);
+    void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet);
+    void processPacketQueue(PRUDPAddress prudpAddr, uint8_t substreamId);
+    bool handlePacket(PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet, bool aggregateAck = false);
     [[nodiscard]] std::vector<uint8_t> calculateConnSignature(sock::IPv4Addr addr) const;
 
-    std::unique_ptr<Packet> craftSynAck(PRUDPAddress addr, std::unique_ptr<Packet> req);
+    void closeClientConnection(PRUDPAddress addr);
 
-    void logPacket(const std::unique_ptr<Packet>& packet, bool incoming, PRUDPAddress addr);
+    std::shared_ptr<Packet> craftAck(PRUDPAddress addr, const std::shared_ptr<Packet>& req, uint8_t sessionId = 0,
+                                     std::vector<uint8_t> remoteSignature = {}, std::vector<uint8_t> sessionKey = {});
+    std::shared_ptr<Packet> craftPing(PRUDPAddress addr, uint8_t sessionId, std::vector<uint8_t> remoteSignature,
+                                      std::vector<uint8_t> sessionKey);
+    std::shared_ptr<Packet> craftAggregateAck(PRUDPAddress addr, uint8_t clientMinor, uint8_t sessionId, uint8_t substreamId,
+                                              std::vector<uint16_t> seqIds, std::vector<uint8_t> remoteSignature,
+                                              std::vector<uint8_t> sessionKey);
+
+    void sendPacket(PRUDPAddress addr, const std::shared_ptr<Packet>& packet);
+    void resetPingTask(PRUDPAddress addr);
+    void deleteNonAckedPacket(PRUDPAddress addr, uint16_t seqId, uint8_t substreamId);
+
+    void logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRUDPAddress addr);
 };
 
 } // namespace prudp

@@ -168,8 +168,8 @@ void Request::parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLengt
     if (headers.find("transfer-encoding") != headers.end() && finalTransferEncoding == "chunked") {
         parseChunked(data, headers, length, headerLength, body);
     } else if (headers.find("content-length") != headers.end() && headers.find("transfer-encoding") == headers.end()) {
-        body.insert(body.end(), data.begin() + (long long) headerLength, data.begin()
-                        + (long long) headerLength + (long long) length);
+        body.insert(body.end(), data.begin() + (ssize_t) headerLength, data.begin()
+                        + (ssize_t) headerLength + (ssize_t) length);
     }
 }
 

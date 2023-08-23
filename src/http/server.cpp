@@ -121,7 +121,7 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
             lock.unlock();
             workerCV.notify_one();
 
-            buffer.erase(buffer.begin(), buffer.begin() + (long long) length);
+            buffer.erase(buffer.begin(), buffer.begin() + (ssize_t) length);
             finish = false;
         } catch (http::NotCompleteException& e) {
             // Do nothing, wait for more data

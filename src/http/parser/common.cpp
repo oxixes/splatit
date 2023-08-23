@@ -115,19 +115,19 @@ void parseChunked(const std::vector<uint8_t>& data, std::unordered_map<std::stri
                   size_t length, size_t headerLength, std::vector<uint8_t>& body) {
     size_t pos = headerLength;
     while (pos < headerLength + length) {
-        auto end = data.begin() + (long long) headerLength + (long long) length;
+        auto end = data.begin() + (ssize_t) headerLength + (ssize_t) length;
 
         std::string delimiterStr = "\r\n";
-        auto chunkHeaderEnd = std::search(data.begin() + (long long) pos, end,
+        auto chunkHeaderEnd = std::search(data.begin() + (ssize_t) pos, end,
                                           delimiterStr.begin(), delimiterStr.end());
 
         if (chunkHeaderEnd == end) throw MalformedException("Chunk header not found");
 
         std::string chunkExtraDataDelimiterStr = ";";
-        auto chunkLength = std::search(data.begin() + (long long) pos, chunkHeaderEnd,
+        auto chunkLength = std::search(data.begin() + (ssize_t) pos, chunkHeaderEnd,
                                        chunkExtraDataDelimiterStr.begin(), chunkExtraDataDelimiterStr.end());
         std::string chunkSizeStr(reinterpret_cast<const char*>(data.data() + pos),
-                                 chunkLength - (data.begin() + (long long) pos));
+                                 chunkLength - (data.begin() + (ssize_t) pos));
 
         if (!std::all_of(chunkSizeStr.begin(), chunkSizeStr.end(), [](char c) { return std::isxdigit(c) != 0; })) {
             throw MalformedException("Chunk length is not a number");
@@ -169,16 +169,16 @@ void parseChunked(const std::vector<uint8_t>& data, std::unordered_map<std::stri
 
             break;
         } else {
-            auto chunkEnd = std::search(chunkHeaderEnd + 2 + (long long) chunkSize, end,
+            auto chunkEnd = std::search(chunkHeaderEnd + 2 + (ssize_t) chunkSize, end,
                                         delimiterStr.begin(), delimiterStr.end());
 
             if (chunkEnd == end) throw MalformedException("Chunk end not found");
-            if (chunkEnd != chunkHeaderEnd + 2 + (long long) chunkSize) throw MalformedException("Chunk size mismatch");
+            if (chunkEnd != chunkHeaderEnd + 2 + (ssize_t) chunkSize) throw MalformedException("Chunk size mismatch");
 
             body.insert(body.end(), chunkHeaderEnd + 2, chunkEnd);
         }
 
-        pos += chunkHeaderEnd - (data.begin() + (long long) pos) + 2 + chunkSize + 2;
+        pos += chunkHeaderEnd - (data.begin() + (ssize_t) pos) + 2 + chunkSize + 2;
     }
 }
 

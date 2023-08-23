@@ -123,8 +123,14 @@ int main(int argc, char** argv) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
+    uint64_t timeToWait = UINT64_MAX;
     while (!shouldStop) {
-        socketManager->process();
+        socketManager->process(timeToWait);
+        uint64_t a = friendsAuthSrv->process();
+        uint64_t b = splatoonAuthSrv->process();
+
+        if (a < timeToWait) timeToWait = a;
+        if (b < timeToWait) timeToWait = b;
     }
 
     if (httpServer != nullptr) httpServer->stop();

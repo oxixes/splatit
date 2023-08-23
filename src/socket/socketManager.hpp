@@ -61,7 +61,7 @@ public:
                      std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> recvCallback,
                      std::function<void(uint32_t)> closeCallback);
 
-    void process();
+    void process(uint64_t ms);
 
     void connect(uint32_t socketId, sock::IPv4Addr address);
     bool send(uint32_t socketId, std::vector<uint8_t> data);

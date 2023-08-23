@@ -163,8 +163,8 @@ bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
         return false;
     }
 
-    std::vector<uint8_t> signedData(jwt.begin(), jwt.begin() + (long long) jwt.find_last_of('.'));
-    std::vector<uint8_t> signature = base64UrlDecode(jwt.substr((long long) jwt.find_last_of('.') + 1));
+    std::vector<uint8_t> signedData(jwt.begin(), jwt.begin() + (ssize_t) jwt.find_last_of('.'));
+    std::vector<uint8_t> signature = base64UrlDecode(jwt.substr((ssize_t) jwt.find_last_of('.') + 1));
 
     std::vector<uint8_t> expectedSignature = HMAC_SHA256(base64Decode(base64Key), signedData);
 

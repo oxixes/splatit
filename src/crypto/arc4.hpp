@@ -7,6 +7,7 @@
 class ARC4 {
 public:
     explicit ARC4(const std::vector<uint8_t>& key);
+    ARC4(const ARC4& other) = default;
     ~ARC4() = default;
 
     std::vector<uint8_t> encrypt(const std::vector<uint8_t>& data);

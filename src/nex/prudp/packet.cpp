@@ -15,13 +15,15 @@ std::vector<uint8_t> Encoder::decode(const std::vector<uint8_t>& data) {
 }
 
 void Packet::encryptData() {
-    if (encoder == nullptr)
-        throw std::runtime_error("Encoder is null");
+    if (!encryptedData.empty()) return;
 
-    encryptedData = encoder->encode(data);
+    if (encoder == nullptr) encryptedData = data;
+    else encryptedData = encoder->encode(data);
 }
 
 void Packet::decryptData(bool force) {
+    if (!data.empty()) return;
+
     if (encoder == nullptr && !force)
         throw std::runtime_error("Encoder is null");
 
@@ -126,16 +128,16 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
         if (data.size() - offset - 1 != size)
             throw MalformedException("Specified size does not match the actual size of the data");
 
-        if (size > 0) encryptedData = std::vector<uint8_t>(data.begin() + (long long) offset,
-                                             data.begin() + (long long) offset + size);
+        if (size > 0) encryptedData = std::vector<uint8_t>(data.begin() + (ssize_t) offset,
+                                             data.begin() + (ssize_t) offset + size);
         offset += size;
     } else if (data.size() - 1 > offset) {
-        encryptedData = std::vector<uint8_t>(data.begin() + (long long) offset, data.end() - 1);
+        encryptedData = std::vector<uint8_t>(data.begin() + (ssize_t) offset, data.end() - 1);
         offset += encryptedData.size();
     }
 
     // Check the checksum
-    std::vector<uint8_t> dataCopy(data.begin(), data.begin() + (long long) offset); // Remove checksum
+    std::vector<uint8_t> dataCopy(data.begin(), data.begin() + (ssize_t) offset); // Remove checksum
     uint8_t checksum = data.back();
     if (checksum != calculateChecksum(dataCopy, accessKey))
         throw MalformedException("Invalid checksum");
@@ -335,8 +337,8 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
                 if (type != Type::SYN && type != Type::CONNECT)
                     throw MalformedException("Invalid option ID (" + std::to_string(optionId)
                                     + ") for this packet type (" + std::to_string(static_cast<int>(type)) + ")");
-                remoteSignature = std::vector<uint8_t>(packetSpecificData.begin() + (long long) offset,
-                                                           packetSpecificData.begin() + (long long) offset + optionLength);
+                remoteSignature = std::vector<uint8_t>(packetSpecificData.begin() + (ssize_t) offset,
+                                                           packetSpecificData.begin() + (ssize_t) offset + optionLength);
                 break;
             }
             case 2: {
@@ -373,6 +375,9 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
 
 bool PacketV1::checkSignature() {
     std::vector<uint8_t> calculatedSignature = calculateSignature(header, connectionSignature, packetSpecificData);
+    printf("Calculated signature: ");
+    for (auto byte : calculatedSignature) printf("%02X", byte);
+    printf("\n");
     return signature == calculatedSignature;
 }
 

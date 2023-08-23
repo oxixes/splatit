@@ -77,7 +77,7 @@ uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
     return socketId;
 }
 
-void SocketManager::process() {
+void SocketManager::process(uint64_t ms) {
     std::unique_lock socketsLock(socketsMutex);
     if (sockets.empty()) return;
 
@@ -98,10 +98,11 @@ void SocketManager::process() {
     }
     socketsLock.unlock();
 
+    uint64_t timeToWait = (ms > POLL_TIMEOUT) ? POLL_TIMEOUT : ms;
 #ifdef _WIN32
-    int ret = WSAPoll(fds.data(), fds.size(), POLL_TIMEOUT);
+    int ret = WSAPoll(fds.data(), fds.size(), (int) timeToWait);
 #else
-    int ret = poll(fds.data(), fds.size(), POLL_TIMEOUT);
+    int ret = poll(fds.data(), fds.size(), (int) timeToWait);
 #endif
 
 #ifdef _WIN32
@@ -334,7 +335,7 @@ void SocketManager::send(uint32_t socketId) {
 
     if (!send(socketId, socketInfo->tcpSendBuffer)) {
         socketInfo->tcpSendBuffer.erase(socketInfo->tcpSendBuffer.begin(),
-                                        socketInfo->tcpSendBuffer.begin() + (long long) oldSize);
+                                        socketInfo->tcpSendBuffer.begin() + (ssize_t) oldSize);
     }
 }
 
