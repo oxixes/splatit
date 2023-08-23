@@ -6,8 +6,6 @@
 #include "../../util/util.hpp"
 #include "./kerberos.hpp"
 
-// TODO Add mutex to clients and delayed packets to allow multithreading
-
 namespace prudp {
 
 bool packetCmpFunc(const std::shared_ptr<Packet>& lhs, const std::shared_ptr<Packet>& rhs) {
@@ -117,6 +115,9 @@ bool Server::listen(const std::function<void()>& closeFunc) {
 }
 
 uint64_t Server::process() {
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
     // We have to process all delayed packets, and then return the milliseconds
     // until the next delayed packet should be sent.
     timePoint now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
@@ -160,6 +161,8 @@ uint64_t Server::process() {
 }
 
 void Server::sendDataPacket(prudp::PRUDPAddress addr, std::vector<uint8_t> data, uint8_t substreamId) {
+    std::unique_lock clientsLock(clientsMutex);
+
     auto it = clients.find(addr);
     if (it == clients.end()) return;
 
@@ -216,13 +219,16 @@ void Server::sendPacket(prudp::PRUDPAddress addr, const std::shared_ptr<Packet>&
     timePoint sendPoint = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
     sendPoint += std::chrono::milliseconds(RETRY_INTERVAL);
 
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
+    auto it = clients.find(addr);
     for (auto& fragment : fragments) {
         if (fragment->flags & FLAG_NEED_ACK) {
             if (!(fragment->flags & FLAG_RELIABLE)) {
                 logger->log(Logger::level::WARN, logGroup,
                             "[UNIMPLEMENTED] Sending unreliable packet with FLAG_NEED_ACK. Will not resend if ACK is not received.");
             } else {
-                auto it = clients.find(addr);
                 if (it != clients.end()) {
                     auto reqv1 = (majorVersion == 1) ? std::dynamic_pointer_cast<PacketV1>(fragment) : nullptr;
                     uint8_t substreamId = (reqv1 == nullptr) ? 0 : reqv1->substreamId;
@@ -284,6 +290,8 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
 
     if (packet->type != Type::SYN) packet->connectionSignature = calculateConnSignature(prudpAddr.address);
 
+    std::unique_lock clientsLock(clientsMutex);
+
     auto it = clients.find(prudpAddr);
     if (packet->type != Type::SYN && packet->type != Type::CONNECT && it != clients.end()) {
         packet->remoteSignature = it->second.remoteSignature;
@@ -327,8 +335,10 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
                 return;
             }
 
-            packet->encoder = it->second.encoder.getUnreliableEncoder(packet);
-            packet->decryptData();
+            bool isMultiAck = packet->flags & FLAG_MULTI_ACK;
+
+            if (!isMultiAck) packet->encoder = it->second.encoder.getUnreliableEncoder(packet);
+            packet->decryptData(isMultiAck);
 
             handlePacket(prudpAddr, packet);
             resetPingTask(prudpAddr);
@@ -371,6 +381,8 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
 }
 
 void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substreamId) {
+    std::unique_lock clientsLock(clientsMutex);
+
     auto it = clients.find(prudpAddr);
     if (it == clients.end()) return;
 
@@ -507,6 +519,8 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 }
 
 bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet, bool aggregateAck) {
+    std::unique_lock clientsLock(clientsMutex);
+
     auto it = clients.find(prudpAddr);
 
     if (packet->flags & FLAG_ACK || packet->flags & FLAG_MULTI_ACK) {
@@ -649,6 +663,8 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
         auto pingPacket = craftPing(prudpAddr, nextSessionId, packet->remoteSignature,
                                     (auth) ? std::vector<uint8_t>() : key);
 
+        std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
         delayedPackets.insert({nextPing, {
                 prudpAddr,
                 0,
@@ -710,6 +726,9 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
 }
 
 void Server::closeClientConnection(prudp::PRUDPAddress addr) {
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
     auto it = clients.find(addr);
     if (it == clients.end()) return;
 
@@ -842,6 +861,9 @@ std::shared_ptr<Packet> Server::craftAggregateAck(PRUDPAddress addr, uint8_t cli
 }
 
 void Server::resetPingTask(prudp::PRUDPAddress addr) {
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
     auto it = clients.find(addr);
     if (it == clients.end()) return;
 
@@ -861,7 +883,7 @@ void Server::resetPingTask(prudp::PRUDPAddress addr) {
         }
     }
 
-    pingTask.packet->seqId++;
+    if (pingTask.numRetries > 0) pingTask.packet->seqId++;
 
     auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
     it->second.nextPing = now + std::chrono::milliseconds(PING_INTERVAL);
@@ -871,6 +893,9 @@ void Server::resetPingTask(prudp::PRUDPAddress addr) {
 }
 
 void Server::deleteNonAckedPacket(prudp::PRUDPAddress addr, uint16_t seqId, uint8_t substreamId) {
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
     auto it = clients.find(addr);
     if (it == clients.end()) return;
 
@@ -959,7 +984,7 @@ void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRU
     std::string sessionIdStr = "Session: " + std::to_string(packet->sessionId);
     sessionIdStr.resize(12, ' ');
 
-    std::string sizeStr = "Size: " + std::to_string(packet->data.size());
+    std::string sizeStr = "Size: " + std::to_string(packet->size());
 
     std::string output = "[PRUDP] [" + util::ipv4ToString(addr.address) + ":" + std::to_string(addr.address.port) + "] ";
     output += (incoming) ? "<- " : "-> ";

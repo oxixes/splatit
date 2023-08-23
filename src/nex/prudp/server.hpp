@@ -162,9 +162,11 @@ private:
     uint32_t mainSocketID = 0;
 
     std::unordered_map<PRUDPAddress, ClientInfo> clients;
+    std::recursive_mutex clientsMutex;
     uint8_t nextSessionId = 0;
 
     std::multimap<timePoint, DelayedPacket> delayedPackets;
+    std::recursive_mutex delayedPacketsMutex;
 
     void onData(sock::IPv4Addr addr, std::vector<uint8_t> data);
     void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet);

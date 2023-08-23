@@ -36,6 +36,11 @@ void Packet::decryptData(bool force) {
     data = encoder->decode(encryptedData);
 }
 
+size_t Packet::size() const {
+    if (!data.empty()) return data.size();
+    else return encryptedData.size();
+}
+
 std::vector<uint8_t> PacketV0::encode() {
     std::vector<uint8_t> result;
 
