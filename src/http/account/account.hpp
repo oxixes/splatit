@@ -50,7 +50,8 @@ http::Response prepareResponse(http::Version version, pugi::xml_document& doc);
 bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey);
 
 bool checkRequestParams(const http::Request& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                        const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose);
+                        const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose,
+                        bool checkDevice = true);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db);

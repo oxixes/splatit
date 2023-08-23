@@ -82,7 +82,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
             cmd = db->craftGetUserByUsernameCommand(id);
         }
 
-        int cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
+        uint32_t cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
 
         std::unique_ptr<db::Result> results = db->getResult(cmdId);
         if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
@@ -155,7 +155,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
         std::string userId = bodyMap["user_id"];
 
         std::unique_ptr<db::Command> cmd = db->craftGetUserByUsernameCommand(userId);
-        int cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
+        uint32_t cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
 
         std::unique_ptr<db::Result> results = db->getResult(cmdId);
         if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
@@ -260,7 +260,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
     }
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose, false)) {
         return res;
     }
 
@@ -299,7 +299,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     int pid = tokenPayload["sub"].get<int>();
     std::unique_ptr<db::Command> cmd = db->craftGetGameServerAccessCommand(pid, req.getQuery("game_server_id"));
-    int cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
+    uint32_t cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
 
     std::unique_ptr<db::Result> results = db->getResult(cmdId);
     if (results->data.empty()) {
@@ -424,23 +424,26 @@ bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey) {
 }
 
 bool checkRequestParams(const http::Request& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                        const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose) {
-    if (!req.hasHeader("x-nintendo-device-cert")) {
-        *resOut = createError(req.getVersion(), 110, "Unlinked device", "", shouldClose);
-        return false;
-    }
+                        const std::shared_ptr<CertManager>& certManager, http::Response* resOut, bool& shouldClose,
+                        bool checkDevice) {
+    if (checkDevice) {
+        if (!req.hasHeader("x-nintendo-device-cert")) {
+            *resOut = createError(req.getVersion(), 110, "Unlinked device", "", shouldClose);
+            return false;
+        }
 
-    std::string deviceCert = req.getHeader("x-nintendo-device-cert")[0];
-    EVP_PKEY* realWiiUKey = crypto::loadPublicKey(WII_U_PUB_KEY);
-    EVP_PKEY* genWiiUKey = certManager->getDeviceKey();
-    if (!(settingsManager->allowRealWiiU() && checkDeviceCert(deviceCert, realWiiUKey))
-        && !(settingsManager->allowGeneratedWiiU() && checkDeviceCert(deviceCert, genWiiUKey))) {
+        std::string deviceCert = req.getHeader("x-nintendo-device-cert")[0];
+        EVP_PKEY* realWiiUKey = crypto::loadPublicKey(WII_U_PUB_KEY);
+        EVP_PKEY* genWiiUKey = certManager->getDeviceKey();
+        if (!(settingsManager->allowRealWiiU() && checkDeviceCert(deviceCert, realWiiUKey))
+            && !(settingsManager->allowGeneratedWiiU() && checkDeviceCert(deviceCert, genWiiUKey))) {
+            EVP_PKEY_free(realWiiUKey);
+            *resOut = createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
+            return false;
+        }
+
         EVP_PKEY_free(realWiiUKey);
-        *resOut = createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
-        return false;
     }
-
-    EVP_PKEY_free(realWiiUKey);
 
     // TODO Maybe check more headers?
 
