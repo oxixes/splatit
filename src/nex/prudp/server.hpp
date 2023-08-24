@@ -133,7 +133,7 @@ public:
     ~Server() = default;
 
     bool listen(const std::function<void()>& closeFunc);
-    void stop();
+    void cleanup();
 
     void sendDataPacket(PRUDPAddress addr, std::vector<uint8_t> data, uint8_t substreamId = 0);
 

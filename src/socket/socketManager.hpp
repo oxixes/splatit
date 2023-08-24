@@ -14,7 +14,7 @@
 // Defines the amount of time to wait for a socket to be ready for any operation.
 // It is not infinity because we need to check if enough time has passed to close
 // keep alive sockets.
-#define POLL_TIMEOUT 200
+#define POLL_TIMEOUT 1000
 // Defines the amount of time to wait after a close notification has been sent to
 // a socket before force closing it if a response hasn't been received.
 #define CLOSE_TIMEOUT 3000
@@ -61,7 +61,7 @@ public:
                      std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> recvCallback,
                      std::function<void(uint32_t)> closeCallback);
 
-    void process(uint64_t ms);
+    uint64_t process(uint64_t ms);
 
     void connect(uint32_t socketId, sock::IPv4Addr address);
     bool send(uint32_t socketId, std::vector<uint8_t> data);

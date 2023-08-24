@@ -77,9 +77,9 @@ uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
     return socketId;
 }
 
-void SocketManager::process(uint64_t ms) {
+uint64_t SocketManager::process(uint64_t ms) {
     std::unique_lock socketsLock(socketsMutex);
-    if (sockets.empty()) return;
+    if (sockets.empty()) return UINT64_MAX;
 
     std::vector<pollfd> fds;
     std::vector<uint32_t> socketIndexToId;
@@ -98,11 +98,11 @@ void SocketManager::process(uint64_t ms) {
     }
     socketsLock.unlock();
 
-    uint64_t timeToWait = (ms > POLL_TIMEOUT) ? POLL_TIMEOUT : ms;
+    int timeToWait = (ms == UINT64_MAX) ? -1 : (int) ms;
 #ifdef _WIN32
-    int ret = WSAPoll(fds.data(), fds.size(), (int) timeToWait);
+    int ret = WSAPoll(fds.data(), fds.size(), timeToWait);
 #else
-    int ret = poll(fds.data(), fds.size(), (int) timeToWait);
+    int ret = poll(fds.data(), fds.size(), timeToWait);
 #endif
 
 #ifdef _WIN32
@@ -218,6 +218,8 @@ void SocketManager::process(uint64_t ms) {
         }
     }
 
+    uint64_t nextTimeout = UINT64_MAX;
+
     // Check for keep alive timeouts
     auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
@@ -231,6 +233,8 @@ void SocketManager::process(uint64_t ms) {
                             "Socket with ID " + std::to_string(socket.first) + " has exceeded its keep alive timeout, will be closed");
                 close(socket.first);
             }
+        } else if (socket.second.keepAliveTimeout > 0 && socket.second.keepAliveTimeout - now < nextTimeout) {
+            nextTimeout = socket.second.keepAliveTimeout - now;
         }
     }
 
@@ -264,12 +268,16 @@ void SocketManager::process(uint64_t ms) {
                         socketId = closeQueue.erase(socketId);
                         continue;
                     }
+                } else if (socketInfo->closeTimeout - now < nextTimeout) {
+                    nextTimeout = socketInfo->closeTimeout - now;
                 }
             }
         }
 
         socketId++;
     }
+
+    return nextTimeout;
 }
 
 void SocketManager::connect(uint32_t socketId, sock::IPv4Addr address) {

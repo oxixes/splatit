@@ -71,7 +71,7 @@ public:
     void decryptData(bool force = false);
     virtual bool checkSignature() = 0;
 
-    size_t size() const;
+    [[nodiscard]] size_t size() const;
 
 protected:
     std::vector<uint8_t> encryptedData;

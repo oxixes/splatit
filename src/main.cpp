@@ -13,6 +13,7 @@
 #include "http/account/account.hpp"
 #include "http/boss/boss.hpp"
 #include "nex/prudp/server.hpp"
+#include "util/tasksManager.hpp"
 
 bool shouldStop = false;
 
@@ -123,14 +124,12 @@ int main(int argc, char** argv) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    uint64_t timeToWait = UINT64_MAX;
-    while (!shouldStop) {
-        socketManager->process(timeToWait);
-        uint64_t a = friendsAuthSrv->process();
-        uint64_t b = splatoonAuthSrv->process();
+    TasksManager tasksMgr(POLL_TIMEOUT);
 
-        if (a < timeToWait) timeToWait = a;
-        if (b < timeToWait) timeToWait = b;
+    while (!shouldStop) {
+        tasksMgr.push(socketManager->process(tasksMgr.get()));
+        tasksMgr.push(friendsAuthSrv->process());
+        tasksMgr.push(splatoonAuthSrv->process());
     }
 
     if (httpServer != nullptr) httpServer->stop();

@@ -128,7 +128,7 @@ uint64_t Server::process() {
         if (packetInfo.numRetries >= MAX_RETRIES) {
             logger->log(Logger::level::DEBUG, logGroup, "Packet to " +
                                                         util::ipv4ToString(packetInfo.addr.address) + ":" +
-                                                        std::to_string(packetInfo.addr.vPort) + " timed out");
+                                                        std::to_string(packetInfo.addr.address.port) + " timed out");
             closeClientConnection(packetInfo.addr);
             continue;
         }
@@ -932,9 +932,17 @@ std::vector<uint8_t> Server::calculateConnSignature(sock::IPv4Addr addr) const {
     return signature;
 }
 
-void Server::stop() {
+void Server::cleanup() {
+    logger->log(Logger::level::INFO, logGroup, "Stopping PRUDP server");
+
     socketMgr->close(mainSocketID, true);
     socket = nullptr;
+
+    std::unique_lock clientsLock(clientsMutex);
+    std::unique_lock delayedPacketsLock(delayedPacketsMutex);
+
+    clients.clear();
+    delayedPackets.clear();
 }
 
 void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRUDPAddress addr) {
