@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "../../util/util.hpp"
 
 namespace nex::rmc {
 
@@ -86,6 +87,7 @@ protected:
         auto requestData = msg.encode(data.size());
         requestData.insert(requestData.end(), data.begin(), data.end());
 
+        logMsg(msg, client.address, false);
         sendData(client.address, std::move(requestData), client.substreamId);
     }
 
@@ -135,6 +137,40 @@ private:
     void stop();
 
     void onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t substreamId, std::vector<uint8_t> data);
+
+    template <typename Msg> requires (std::is_base_of_v<Msg, Request> || std::is_base_of_v<Msg, Response>)
+    void logMsg(const Msg& msg, prudp::PRUDPAddress addr, bool incoming) {
+        std::string type = (std::is_base_of_v<Msg, Request>) ? "REQ" : "RES";
+        std::string protoId = "Proto: " + std::to_string(msg.protocolId);
+        protoId.resize(10, ' ');
+
+        std::string exProtoId = "ExtProto: " + std::to_string(msg.extendedProtocolId);
+        exProtoId.resize(15, ' ');
+
+        std::string methodId = "Method: " + std::to_string(msg.methodId);
+        methodId.resize(11, ' ');
+
+        std::string callId = "Call: " + std::to_string(msg.callId);
+
+        std::string extra;
+        if (std::is_base_of_v<Msg, Response>) {
+            auto& res = (const Response&) msg;
+            if (res.success) {
+                extra = " | Success";
+            } else {
+                std::stringstream ss;
+                ss << " | Error: " << std::setw(sizeof(uint32_t) * 2)
+                     << std::setfill('0') << std::hex << static_cast<uint32_t>(res.error);
+                extra = ss.str();
+            }
+        }
+
+        std::string output = "[ RMC ] [" + util::ipv4ToString(addr.address) + ":" + std::to_string(addr.address.port) + "] ";
+        output += (incoming) ? "<- " : "-> ";
+        output += type + " | " + protoId + " | " + exProtoId + " | " + methodId + " | " + callId + extra;
+
+        logger->log(Logger::level::DEBUG, logGroup, output);
+    }
 
     std::function<void(prudp::PRUDPAddress, std::vector<uint8_t>, uint8_t)> sendData;
 

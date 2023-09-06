@@ -1006,7 +1006,7 @@ void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRU
     // (of a possible different type) at once
     if (packet->type == Type::DATA && packet->flags & FLAG_MULTI_ACK) typeStr = "MULTI ACK";
 
-    // Pad the string to 10 characters
+    // Pad the string to 14 characters
     typeStr.resize(14, ' ');
 
     std::string flagsStr;

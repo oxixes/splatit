@@ -5,8 +5,6 @@
 #include "../../exceptions.hpp"
 #include "../../util/util.hpp"
 
-// TODO Create a logger for requests / responses
-
 namespace nex::rmc {
 
 Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {
@@ -70,6 +68,8 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
                                                     std::string(e.what()));
         return;
     }
+
+    logMsg(request, addr, true);
 
     auto call = calls.find(std::tuple(request.protocolId, request.extendedProtocolId, request.methodId));
     if (call == calls.end()) {
