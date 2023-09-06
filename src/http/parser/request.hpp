@@ -1,5 +1,5 @@
-#ifndef SPLATOON_SERVER_REQUEST_HPP
-#define SPLATOON_SERVER_REQUEST_HPP
+#ifndef SPLATOON_SERVER_HTTP_REQUEST_HPP
+#define SPLATOON_SERVER_HTTP_REQUEST_HPP
 
 #include <string>
 #include <vector>
@@ -16,12 +16,6 @@ enum class Method {
     M_PUT,
     M_DELETE,
     M_HEAD
-};
-
-class MethodNotSupportedException : public std::runtime_error {
-    public:
-        explicit MethodNotSupportedException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-        explicit MethodNotSupportedException(const char* what_arg) : std::runtime_error(what_arg) {};
 };
 
 class Request {
@@ -65,4 +59,4 @@ private:
 
 } // namespace http
 
-#endif //SPLATOON_SERVER_REQUEST_HPP
+#endif //SPLATOON_SERVER_HTTP_REQUEST_HPP

@@ -2,7 +2,7 @@
 #include "../../crypto/tools.hpp"
 #include "../../crypto/arc4.hpp"
 
-namespace prudp::kerberos {
+namespace nex::prudp::kerberos {
 
 std::vector<uint8_t> generateUserKey(const std::vector<uint8_t>& password, uint32_t pid) {
     std::vector<uint8_t> key = password;
@@ -73,4 +73,4 @@ void decryptConnectRequest(const std::vector<uint8_t>& ticket, const std::vector
                             decryptedRequestData[7] << 24;
 }
 
-} // namespace prudp::kerberos
+} // namespace nex::prudp::kerberos

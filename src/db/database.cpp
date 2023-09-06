@@ -68,16 +68,21 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, std::shar
 }
 
 uint32_t Database::runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
-                const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                const std::function<void(unsigned int)>& unregisterCloseCall,
+                const std::function<uint32_t(std::function<void()>)>& registerCloseCall,
+                const std::function<void(uint32_t)>& unregisterCloseCall,
                 bool& shouldStop) {
 
     uint32_t cmdId = db->queueCommand(std::move(command), true);
     unsigned int closeCallId;
     if (registerCloseCall != nullptr)
         closeCallId = registerCloseCall([cmdId, &db]() { db->notifyCommand(cmdId); });
-    db->processQueue();
-    db->waitForCommand(cmdId, std::make_shared<bool>(shouldStop));
+    // The server may be set to stop while the closeCall is being registered, which may cause it not to be called,
+    // so we check if it should stop here.
+    if (!shouldStop) {
+        db->processQueue();
+        db->waitForCommand(cmdId, std::make_shared<bool>(shouldStop));
+    }
+
     if (shouldStop) throw std::runtime_error("Server is stopping");
     db->clearCommandMutex(cmdId);
     if (unregisterCloseCall != nullptr && registerCloseCall != nullptr)

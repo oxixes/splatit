@@ -1,8 +1,9 @@
 #include "packet.hpp"
+#include "../../exceptions.hpp"
 #include "../../util/util.hpp"
 #include "../../crypto/tools.hpp"
 
-namespace prudp {
+namespace nex::prudp {
 
 Encoder::Encoder(const std::vector<uint8_t>& key) : encCtx(key), decCtx(key) {}
 
@@ -164,7 +165,7 @@ std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& re
         // used in the friends server, which is the only
         // one where V0 packets are used in the Wii U
         if (type == Type::DATA && encryptedData.empty()) {
-            signature = {0x12, 0x34, 0x56, 0x78};
+            signature = {0x78, 0x56, 0x34, 0x12};
         } else if (type == Type::DATA) {
             std::vector<uint8_t> keyHash = crypto::MD5(accessKey);
             std::vector<uint8_t> hmac = crypto::HMAC_MD5(keyHash, encryptedData);
@@ -407,4 +408,4 @@ std::vector<uint8_t> PacketV1::calculateSignature(const std::vector<uint8_t>& pa
     return crypto::HMAC_MD5(keyHash, data);
 }
 
-} // namespace prudp
+} // namespace nex::prudp

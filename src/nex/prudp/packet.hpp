@@ -8,13 +8,7 @@
 
 #include "../../crypto/arc4.hpp"
 
-namespace prudp {
-
-class MalformedException : public std::runtime_error {
-public:
-    explicit MalformedException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-    explicit MalformedException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
+namespace nex::prudp {
 
 enum class Type {
     SYN = 0,
@@ -122,6 +116,6 @@ private:
                                             const std::vector<uint8_t>& pSpecificData);
 };
 
-} // namespace prudp
+} // namespace nex::prudp
 
 #endif //SPLATOON_SERVER_PACKET_HPP

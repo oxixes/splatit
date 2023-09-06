@@ -14,6 +14,8 @@
 #include "http/boss/boss.hpp"
 #include "nex/prudp/server.hpp"
 #include "util/tasksManager.hpp"
+#include "nex/rmc/server.hpp"
+#include "nex/auth/friends_auth.hpp"
 
 bool shouldStop = false;
 
@@ -107,19 +109,23 @@ int main(int argc, char** argv) {
     }
 
     // FIXME: This is just for testing purposes
-    std::shared_ptr<prudp::Server> friendsAuthSrv = nullptr;
+    std::shared_ptr<nex::prudp::Server> friendsAuthSrv = nullptr;
     sock::IPv4Addr addr {0, 0, 0, 0, 1201};
-    friendsAuthSrv = std::make_shared<prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, addr,
+    friendsAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, addr,
                                                      0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY, true, 1,
                                                      (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY, true);
+
+    auto friendsAuthRMC = std::make_shared<nex::rmc::FriendsAuthRMC>(logger);
+    friendsAuthRMC->registerPRUDPServer(friendsAuthSrv, 1, 3);
+
     friendsAuthSrv->listen(nullptr);
 
-    std::shared_ptr<prudp::Server> splatoonAuthSrv = nullptr;
-    addr = {0, 0, 0, 0, 1203};
-    splatoonAuthSrv = std::make_shared<prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, addr,
-                                                      1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY, true, 1,
-                                                      (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY, false);
-    splatoonAuthSrv->listen(nullptr);
+//    std::shared_ptr<nex::prudp::Server> splatoonAuthSrv = nullptr;
+//    addr = {0, 0, 0, 0, 1203};
+//    splatoonAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, addr,
+//                                                      1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY, true, 1,
+//                                                      (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY, false);
+//    splatoonAuthSrv->listen(nullptr);
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
@@ -129,8 +135,10 @@ int main(int argc, char** argv) {
     while (!shouldStop) {
         tasksMgr.push(socketManager->process(tasksMgr.get()));
         tasksMgr.push(friendsAuthSrv->process());
-        tasksMgr.push(splatoonAuthSrv->process());
+//        tasksMgr.push(splatoonAuthSrv->process());
     }
+
+    friendsAuthSrv->stop();
 
     if (httpServer != nullptr) httpServer->stop();
     socketManager->cleanup();

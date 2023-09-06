@@ -26,14 +26,7 @@
 // Defines the maximum size of a packet (in bytes).
 #define MAX_PACKET_SIZE 962
 
-// Exception thrown when a fragment from a packet is missing
-class InvalidLengthException : public std::runtime_error {
-public:
-    explicit InvalidLengthException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-    explicit InvalidLengthException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-namespace prudp {
+namespace nex::prudp {
 
     struct PRUDPAddress {
         sock::IPv4Addr address;
@@ -50,13 +43,13 @@ namespace prudp {
         }
     };
 
-} // namespace prudp
+} // namespace nex::prudp
 
 // Create a hash function for PRUDPAddress, so we can use it as a key in an unordered_map.
 namespace std {
     template<>
-    struct hash<prudp::PRUDPAddress> {
-        std::size_t operator()(const prudp::PRUDPAddress& addr) const {
+    struct hash<nex::prudp::PRUDPAddress> {
+        std::size_t operator()(const nex::prudp::PRUDPAddress& addr) const {
             size_t h1 = hash<sock::IPv4Addr>()(addr.address);
             size_t h2 = hash<uint8_t>()(addr.vPort);
             size_t h3 = hash<uint8_t>()(addr.streamType);
@@ -76,7 +69,7 @@ namespace std {
     };
 } // namespace std
 
-namespace prudp {
+namespace nex::prudp {
 
 bool packetCmpFunc(const std::shared_ptr<Packet>& lhs, const std::shared_ptr<Packet>& rhs);
 using packetCmp = std::integral_constant<decltype(&packetCmpFunc), &packetCmpFunc>;
@@ -124,6 +117,14 @@ struct DelayedPacket {
     std::shared_ptr<Packet> packet;
 };
 
+struct RMCServerInfo {
+    std::function<void()> startFunc;
+    std::function<void()> stopFunc;
+    std::function<void(PRUDPAddress, uint32_t)> connectFunc;
+    std::function<void(PRUDPAddress)> disconnectFunc;
+    std::function<void(PRUDPAddress, uint8_t, uint8_t, std::vector<uint8_t>)> dataFunc;
+};
+
 class Server {
 public:
     Server(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<SocketManager> socketMgr,
@@ -133,12 +134,16 @@ public:
     ~Server() = default;
 
     bool listen(const std::function<void()>& closeFunc);
-    void cleanup();
-
-    void sendDataPacket(PRUDPAddress addr, std::vector<uint8_t> data, uint8_t substreamId = 0);
+    void stop();
 
     // Returns the milliseconds until the next delayed packet should be sent.
     uint64_t process();
+
+    void registerRMCServer(uint8_t listenPort, std::function<void()> startFunc, std::function<void()> stopFunc,
+                           std::function<void(PRUDPAddress, uint32_t)> connectFunc, std::function<void(PRUDPAddress)> disconnectFunc,
+                           std::function<void(PRUDPAddress, uint8_t, uint8_t, std::vector<uint8_t>)> dataFunc);
+
+    void sendDataPacket(PRUDPAddress addr, std::vector<uint8_t> data, uint8_t substreamId = 0);
 
 private:
     int majorVersion;
@@ -168,6 +173,8 @@ private:
     std::multimap<timePoint, DelayedPacket> delayedPackets;
     std::recursive_mutex delayedPacketsMutex;
 
+    std::map<uint8_t, RMCServerInfo> registeredServers;
+
     void onData(sock::IPv4Addr addr, std::vector<uint8_t> data);
     void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet);
     void processPacketQueue(PRUDPAddress prudpAddr, uint8_t substreamId);
@@ -191,6 +198,6 @@ private:
     void logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRUDPAddress addr);
 };
 
-} // namespace prudp
+} // namespace nex::prudp
 
 #endif //SPLATOON_SERVER_PRUDP_SERVER_HPP

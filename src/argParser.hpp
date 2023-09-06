@@ -14,7 +14,7 @@ namespace argParser {
         Logger::level minLogLevel = Logger::level::INFO;
     };
 
-    bool parseArgs(int argc, char** argv, options& serverOptions, const std::shared_ptr<Logger::Logger> &logger);
+    bool parseArgs(int argc, char** argv, options& serverOptions, const std::shared_ptr<Logger::Logger>& logger);
 
     void printHelp(const char* argv0);
 

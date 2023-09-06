@@ -13,4 +13,5 @@ target_sources(splatoon_server PRIVATE
         argParser.hpp
         logger.cpp
         logger.hpp
-        constants.hpp)
+        constants.hpp
+        exceptions.hpp)

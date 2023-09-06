@@ -13,30 +13,6 @@ enum class Version {
     HTTP_1_1
 };
 
-class NotCompleteException : public std::runtime_error {
-    public:
-        explicit NotCompleteException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-        explicit NotCompleteException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-class LengthUnknownException : public std::runtime_error {
-    public:
-        explicit LengthUnknownException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-        explicit LengthUnknownException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-class MalformedException : public std::runtime_error {
-    public:
-        explicit MalformedException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-        explicit MalformedException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-class VersionNotSupportedException : public std::runtime_error {
-    public:
-        explicit VersionNotSupportedException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-        explicit VersionNotSupportedException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
 bool isHTTPHeaderComplete(const std::vector<uint8_t>& data, size_t& length);
 
 void parseQuery(std::string_view queryStr, std::unordered_map<std::string, std::string>& queries);

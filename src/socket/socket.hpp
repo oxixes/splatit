@@ -23,24 +23,6 @@ namespace sock {
 bool initialize();
 void cleanup();
 
-class RetryableException : public std::runtime_error {
-public:
-    explicit RetryableException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-    explicit RetryableException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-class FatalException : public std::runtime_error {
-public:
-    explicit FatalException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-    explicit FatalException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
-class SSLException : public std::runtime_error {
-public:
-    explicit SSLException(const std::string& what_arg) : std::runtime_error(what_arg) {};
-    explicit SSLException(const char* what_arg) : std::runtime_error(what_arg) {};
-};
-
 struct IPv4Addr {
     uint8_t a;
     uint8_t b;

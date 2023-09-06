@@ -1,5 +1,6 @@
 #include "socket.hpp"
 
+#include "../exceptions.hpp"
 #include "../util/util.hpp"
 
 namespace sock {

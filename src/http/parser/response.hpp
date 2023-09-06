@@ -1,5 +1,5 @@
-#ifndef SPLATOON_SERVER_RESPONSE_HPP
-#define SPLATOON_SERVER_RESPONSE_HPP
+#ifndef SPLATOON_SERVER_HTTP_RESPONSE_HPP
+#define SPLATOON_SERVER_HTTP_RESPONSE_HPP
 
 #include <map>
 #include <vector>
@@ -46,4 +46,4 @@ private:
 
 } // namespace http
 
-#endif //SPLATOON_SERVER_RESPONSE_HPP
+#endif //SPLATOON_SERVER_HTTP_RESPONSE_HPP

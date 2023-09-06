@@ -1,5 +1,6 @@
-#include <iostream>
 #include "response.hpp"
+
+#include "../../exceptions.hpp"
 
 namespace http {
 

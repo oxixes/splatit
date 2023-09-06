@@ -1,5 +1,6 @@
-#include <stdexcept>
 #include "sslSocket.hpp"
+
+#include "../exceptions.hpp"
 
 // TODO Allow for client / server certificates checking
 

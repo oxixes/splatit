@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "../exceptions.hpp"
+
 namespace http {
 
 Server::Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
@@ -85,7 +87,7 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
         finish = true;
         try {
             size_t length = 0;
-            auto request = http::Request::parse(buffer, length);
+            auto request = Request::parse(buffer, length);
 
             std::unique_lock clientsLock(clientsMutex);
             sock::IPv4Addr dir = clients.find(sockId)->second;
@@ -96,19 +98,19 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
 
             std::string method;
             switch(request.getMethod()) {
-                case http::Method::M_GET:
+                case Method::M_GET:
                     method = "GET";
                     break;
-                case http::Method::M_HEAD:
+                case Method::M_HEAD:
                     method = "HEAD";
                     break;
-                case http::Method::M_POST:
+                case Method::M_POST:
                     method = "POST";
                     break;
-                case http::Method::M_PUT:
+                case Method::M_PUT:
                     method = "PUT";
                     break;
-                case http::Method::M_DELETE:
+                case Method::M_DELETE:
                     method = "DELETE";
                     break;
             }
@@ -123,21 +125,21 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
 
             buffer.erase(buffer.begin(), buffer.begin() + (ssize_t) length);
             finish = false;
-        } catch (http::NotCompleteException& e) {
+        } catch (NotCompleteException& e) {
             // Do nothing, wait for more data
-        } catch (http::LengthUnknownException& e) {
+        } catch (LengthUnknownException& e) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unknown length from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_BAD_REQUEST);
-        } catch (http::VersionNotSupportedException& e) {
+        } catch (VersionNotSupportedException& e) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unsupported HTTP version from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
-        } catch (http::MethodNotSupportedException& e) {
+        } catch (MethodNotSupportedException& e) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unsupported method from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED);
-        } catch (http::MalformedException& e) {
+        } catch (MalformedException& e) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received malformed request from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_BAD_REQUEST);
@@ -155,7 +157,7 @@ void Server::serverThread() {
 
         bool shouldContinue = true;
 
-        while (shouldContinue) {
+        while (shouldContinue && !shouldStop) {
             std::unique_lock queueLock(requestsQueueMutex);
 
             if (requestsQueue.empty()) {
@@ -169,7 +171,7 @@ void Server::serverThread() {
             shouldContinue = !requestsQueue.empty();
             queueLock.unlock();
 
-            std::function<http::Response(std::shared_ptr<Logger::Logger>, http::Request,
+            std::function<Response(std::shared_ptr<Logger::Logger>, Request,
                                          sock::IPv4Addr, bool&, bool&, std::function<uint32_t(std::function<void()>)>,
                                          std::function<void(uint32_t)>)> handler = nullptr;
 
@@ -210,13 +212,13 @@ void Server::serverThread() {
     }
 }
 
-http::Response Server::getError(http::Version version, int status) {
-    http::Response response(version, status);
+Response Server::getError(Version version, int status) {
+    Response response(version, status);
 
     response.setHeader("Content-Type", "text/html");
     response.setHeader("Connection", "close");
 
-    std::string statusString = std::to_string(status) + " " + http::STATUS_CODE_MSG.at(status);
+    std::string statusString = std::to_string(status) + " " + STATUS_CODE_MSG.at(status);
 
     std::string body = "<!DOCTYPE html><html><head><title>" + statusString +
                        "</title></head><body><h1>" + statusString + "</h1></body></html>";
@@ -226,7 +228,7 @@ http::Response Server::getError(http::Version version, int status) {
     return response;
 }
 
-void Server::sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client) {
+void Server::sendError(uint32_t sockId, int status, const Request& request, sock::IPv4Addr client) {
     std::unique_lock lock(errorPagesMutex);
     auto response = (!request.hasHeader("host")
             || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
@@ -236,7 +238,7 @@ void Server::sendError(uint32_t sockId, int status, const http::Request& request
 }
 
 void Server::sendError(uint32_t sockId, int status) {
-    http::Request req("", http::Method::M_GET, http::Version::HTTP_1_1);
+    Request req("", Method::M_GET, Version::HTTP_1_1);
     sock::IPv4Addr client{};
     sendError(sockId, status, req, client);
 }
@@ -255,6 +257,7 @@ void Server::stop() {
         call.second();
     }
     closeCalls.clear();
+    closeCallsLock.unlock();
 
     workerCV.notify_all();
     for (auto& thread : threads) {
@@ -276,6 +279,7 @@ void Server::stop() {
 }
 
 uint32_t Server::registerCloseCall(std::function<void()> closeFunc) {
+    if (shouldStop) return 0;
     std::unique_lock lock(closeCallsMutex);
     uint32_t id = closeCallID++;
     closeCalls[id] = std::move(closeFunc);
@@ -287,21 +291,21 @@ void Server::unregisterCloseCall(uint32_t id) {
     closeCalls.erase(id);
 }
 
-void Server::registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
+void Server::registerRoute(const std::string& host, const std::string& path, std::function<Response(
+        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
         std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
-        routes[host] = std::unordered_map<std::string, std::function<http::Response(
-                std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
+        routes[host] = std::unordered_map<std::string, std::function<Response(
+                std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
                 std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>();
     }
 
     routes[host][path] = std::move(func);
 }
 
-void Server::registerErrorPage(const std::string &host, std::function<http::Response(
-        std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func) {
+void Server::registerErrorPage(const std::string &host, std::function<Response(
+        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, int)> func) {
     std::unique_lock lock(errorPagesMutex);
     errorPages[host] = std::move(func);
 }

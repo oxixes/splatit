@@ -3,6 +3,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include "../../exceptions.hpp"
+
 namespace http {
 
 bool isHTTPHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {

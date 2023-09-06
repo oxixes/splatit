@@ -2,11 +2,12 @@
 
 #include <utility>
 
+#include "../../exceptions.hpp"
 #include "../../crypto/tools.hpp"
 #include "../../util/util.hpp"
 #include "./kerberos.hpp"
 
-namespace prudp {
+namespace nex::prudp {
 
 bool packetCmpFunc(const std::shared_ptr<Packet>& lhs, const std::shared_ptr<Packet>& rhs) {
     if (lhs->seqId != rhs->seqId) return lhs->seqId < rhs->seqId;
@@ -97,12 +98,24 @@ Server::Server(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, s
     socket->bind((struct sockaddr*)&address, sizeof(address));
 }
 
+void Server::registerRMCServer(uint8_t listenPort, std::function<void()> startFunc, std::function<void()> stopFunc,
+                               std::function<void(PRUDPAddress, uint32_t)> connectFunc, std::function<void(PRUDPAddress)> disconnectFunc,
+                               std::function<void(PRUDPAddress, uint8_t, uint8_t, std::vector<uint8_t>)> dataFunc) {
+    registeredServers.insert({listenPort, RMCServerInfo{std::move(startFunc), std::move(stopFunc),
+                                                        std::move(connectFunc), std::move(disconnectFunc),
+                                                        std::move(dataFunc)}});
+}
+
 bool Server::listen(const std::function<void()>& closeFunc) {
     logger->log(Logger::level::INFO, logGroup, "Starting PRUDP server");
 
     std::function<void(uint32_t)> closeCallback = nullptr;
     if (closeFunc != nullptr) {
         closeCallback = [closeFunc] (uint32_t) { closeFunc(); };
+    }
+
+    for (auto& server : registeredServers) {
+        server.second.startFunc();
     }
 
     mainSocketID = socketMgr->addUDPSocket(socket,
@@ -479,7 +492,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
             }
             if (!handlePacket(prudpAddr, lastFragment)) break;
             ackedSeqIds.push_back(lastFragment->seqId);
-        } catch (const InvalidLengthException& e) {
+        } catch (const NotCompleteException& e) {
             // If the packet is not complete, we restore the encoder,
             // but we don't remove the packet from the queue, as it
             // may be complete later
@@ -657,6 +670,11 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                 nextPing
         }});
 
+        auto rmcIt = registeredServers.find(packet->dstPort);
+        if (rmcIt != registeredServers.end()) {
+            rmcIt->second.connectFunc(prudpAddr, userPid);
+        }
+
         // The connect packet is the one with seqId 1
         clients.find(prudpAddr)->second.substreams[(reqv1 != nullptr) ? reqv1->substreamId : 0].recvSeqId = 1;
 
@@ -688,6 +706,11 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                                                 + ":" + std::to_string(prudpAddr.address.port) + " connected");
         return true;
     } else if (packet->type == Type::DISCONNECT) {
+        auto rmcIt = registeredServers.find(packet->dstPort);
+        if (rmcIt != registeredServers.end()) {
+            rmcIt->second.disconnectFunc(prudpAddr);
+        }
+
         // If the packet is reliable, we send 3 ACK, so that the client
         // receives at least one of them, if it's not reliable, we just
         // close the connection.
@@ -713,7 +736,14 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
         // otherwise the packet may be incomplete, and we would have already
         // sent the ACK, so the client would not send the packet again.
 
-        // TODO Handle DATA packets
+        auto rmcInfo = registeredServers.find(packet->dstPort);
+        if (rmcInfo == registeredServers.end()) {
+            logger->log(Logger::level::DEBUG, logGroup, "Received DATA packet from " +
+                                                        util::ipv4ToString(prudpAddr.address) + " with invalid port");
+        } else {
+            uint8_t substreamId = (majorVersion == 0) ? 0 : std::dynamic_pointer_cast<PacketV1>(packet)->substreamId;
+            rmcInfo->second.dataFunc(prudpAddr, it->second.minorVersion, substreamId, packet->data);
+        }
 
         if (packet->flags & FLAG_NEED_ACK && !aggregateAck) {
             auto res = craftAck(prudpAddr, packet, it->second.sessionId, it->second.remoteSignature,
@@ -793,7 +823,7 @@ std::shared_ptr<Packet> Server::craftAck(prudp::PRUDPAddress addr, const std::sh
     res->srcStreamType = req->dstStreamType;
     res->dstPort = req->srcPort;
     res->dstStreamType = req->srcStreamType;
-    res->flags = FLAG_ACK | FLAG_HAS_SIZE;
+    res->flags = FLAG_ACK | ((minorVersion == 1) ? FLAG_HAS_SIZE : 0);
     res->sessionId = (req->type == Type::SYN) ? 0 : sessionId;
     if (req->type != Type::SYN && req->type != Type::CONNECT) res->sessionKey = std::move(sessionKey);
     res->seqId = req->seqId;
@@ -932,7 +962,11 @@ std::vector<uint8_t> Server::calculateConnSignature(sock::IPv4Addr addr) const {
     return signature;
 }
 
-void Server::cleanup() {
+void Server::stop() {
+    for (auto& server : registeredServers) {
+        server.second.stopFunc();
+    }
+
     logger->log(Logger::level::INFO, logGroup, "Stopping PRUDP server");
 
     socketMgr->close(mainSocketID, true);
@@ -1001,4 +1035,4 @@ void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRU
     logger->log(Logger::level::DEBUG, logGroup, output);
 }
 
-} // namespace prudp
+} // namespace nex::prudp

@@ -1,6 +1,8 @@
 #include "socketManager.hpp"
 
 #include <chrono>
+
+#include "../exceptions.hpp"
 #include "../util/util.hpp"
 
 SocketManager::SocketManager(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {}

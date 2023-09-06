@@ -1,5 +1,7 @@
 #include "request.hpp"
 
+#include "../../exceptions.hpp"
+
 namespace http {
 
 Request::Request(const std::string& path, http::Method method, http::Version version) {
