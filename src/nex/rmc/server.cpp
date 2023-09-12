@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "../../exceptions.hpp"
-#include "../../util/util.hpp"
 
 namespace nex::rmc {
 
@@ -107,7 +106,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
     }
 
     requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, pid},
-                                   request, params});
+                                   std::move(request), std::move(params)});
     lock.unlock();
 
     workerCV.notify_one();
@@ -150,7 +149,6 @@ void Server::serverThread() {
                                                               std::to_string(reqInfo.request.methodId) + "): " +
                                                               std::string(e.what()));
             }
-
         }
     }
 }

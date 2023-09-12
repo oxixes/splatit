@@ -26,6 +26,7 @@ namespace util {
     std::string getDateHeader(time_t time);
     std::string getXNintendoDateHeader();
 
+    void getu64Little(uint64_t& v);
     void getu32Little(uint32_t& v);
     void getu32Big(uint32_t& v);
     void getu16Little(uint16_t& v);

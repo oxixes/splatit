@@ -66,11 +66,11 @@ public:
 protected:
     explicit Server(std::shared_ptr<Logger::Logger> logger);
 
-    template<typename F>
-    void registerCall(F callback, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
+    template<typename T, typename F>
+    void registerCall(T* self, F callback, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
         constexpr auto size = function_traits<F>::arity;
 
-        registerCall(callback, std::make_index_sequence<size - 2>{}, protoId, methodId, extProtoId);
+        registerCall(self, callback, std::make_index_sequence<size - 2>{}, protoId, methodId, extProtoId);
     }
 
     // Requests are always sent without expecting an answer, and in this case will be notifications
@@ -105,26 +105,25 @@ protected:
 private:
     // These are functions used to call the callback function with the correct parameters.
     // They expand the parameter vector into the parameters of the callback function.
-    template<typename Func, typename... Types, std::size_t... I> requires (std::is_base_of_v<Type, Types> && ...)
-    auto call_callback(Func func, ClientInfo client, uint32_t callId, const std::vector<T_ptr>& arr, std::index_sequence<I...>) {
-        return (this->*func)(client, callId, std::dynamic_pointer_cast<Types>(arr.at(I))...);
+    template<typename T, typename Func, typename... Types, std::size_t... I> requires (std::is_base_of_v<Type, Types> && ...)
+    auto call_callback(T* self, Func func, ClientInfo client, uint32_t callId, const std::vector<T_ptr>& arr, std::index_sequence<I...>) {
+        return (self->*func)(client, callId, std::move(*std::dynamic_pointer_cast<Types>(arr.at(I)))...);
     }
 
-    template<typename F, std::size_t ... I>
-    void registerCall(F callback, std::index_sequence<I ...> sequence, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
-        auto func = [this, callback, sequence](ClientInfo client, uint32_t callId,
+    template<typename T, typename F, std::size_t ... I>
+    void registerCall(T* self, F callback, std::index_sequence<I ...> sequence, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
+        auto func = [this, self, callback, sequence](ClientInfo client, uint32_t callId,
                 const std::vector<T_ptr>& params) {
-            call_callback<F,
-            typename shared_ptr_t<
+            call_callback<T, F,
                     typename function_traits<
-                            typename std::decay<F>::type>::template arg<I + 2>::type>::type...
-            >(callback, callId, client, params, sequence);
+                            typename std::decay<F>::type>::template arg<I + 2>::type...
+            >(self, callback, client, callId, params, sequence);
         };
 
         auto parser = [](uint8_t minorVersion, std::vector<uint8_t> data) {
-            return ParamParser<typename shared_ptr_t<
+            return ParamParser<
                     typename function_traits<
-                            typename std::decay<F>::type>::template arg<I + 2>::type>::type...
+                            typename std::decay<F>::type>::template arg<I + 2>::type...
             >::decode(minorVersion, std::move(data));
         };
 

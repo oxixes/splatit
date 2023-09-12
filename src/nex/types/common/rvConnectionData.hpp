@@ -1,0 +1,61 @@
+#ifndef SPLATOON_SERVER_RVCONNECTIONDATA_HPP
+#define SPLATOON_SERVER_RVCONNECTIONDATA_HPP
+
+#include "structure.hpp"
+#include "stationURL.hpp"
+#include "buffer.hpp"
+
+namespace nex::rmc {
+
+    class RVConnectionData : public Structure {
+    public:
+        explicit RVConnectionData(uint8_t minorVersion) : Structure(minorVersion),
+                                                          urlRegularProtocols(minorVersion),
+                                                          lstSpecialProtocols(minorVersion),
+                                                          urlSpecialProtocols(minorVersion) {};
+        ~RVConnectionData() override = default;
+
+        [[nodiscard]] std::vector<uint8_t> encode() const override {
+            std::vector<uint8_t> data(sizeof(uint8_t) + sizeof(uint32_t));
+
+            auto regularProtocols = urlRegularProtocols.encode();
+            auto bufSpecialProtocols = lstSpecialProtocols.encode();
+            auto specialProtocols = urlSpecialProtocols.encode();
+
+            size_t length = regularProtocols.size() + bufSpecialProtocols.size() + specialProtocols.size();
+
+            data.insert(data.end(), regularProtocols.begin(), regularProtocols.end());
+            data.insert(data.end(), bufSpecialProtocols.begin(), bufSpecialProtocols.end());
+            data.insert(data.end(), specialProtocols.begin(), specialProtocols.end());
+
+            auto header = encodeHeader(RV_CONNECTION_DATA_VERSION, length);
+            memcpy(&data[0], &header[0], header.size()); // We had already allocated the correct amount
+                                                                       // of space, so we can just copy the header over
+
+            return data;
+        }
+
+        size_t decode(std::span<const uint8_t> data) override {
+            size_t headerSize = decodeHeader(data, RV_CONNECTION_DATA_VERSION);
+            data = data.subspan(headerSize);
+
+            size_t regularProtocolsSize = urlRegularProtocols.decode(data);
+            data = data.subspan(regularProtocolsSize);
+            size_t bufSpecialProtocolsSize = lstSpecialProtocols.decode(data);
+            data = data.subspan(bufSpecialProtocolsSize);
+            size_t specialProtocolsSize = urlSpecialProtocols.decode(data);
+
+            return headerSize + regularProtocolsSize + bufSpecialProtocolsSize + specialProtocolsSize;
+        }
+
+        StationURL urlRegularProtocols;
+        Buffer lstSpecialProtocols;
+        StationURL urlSpecialProtocols;
+
+    private:
+        constexpr static uint8_t RV_CONNECTION_DATA_VERSION = 0;
+    };
+
+} // namespace nex::rmc
+
+#endif //SPLATOON_SERVER_RVCONNECTIONDATA_HPP

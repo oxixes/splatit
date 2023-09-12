@@ -63,6 +63,15 @@ std::string getXNintendoDateHeader() {
     return std::to_string(duration);
 }
 
+void getu64Little(uint64_t& v) {
+    if (std::endian::native == std::endian::little) {
+        return;
+    }
+
+    v = ((v & 0xFF00000000000000) >> 56) | ((v & 0x00FF000000000000) >> 40) | ((v & 0x0000FF0000000000) >> 24) | ((v & 0x000000FF00000000) >> 8) |
+        ((v & 0x00000000FF000000) << 8) | ((v & 0x0000000000FF0000) << 24) | ((v & 0x000000000000FF00) << 40) | ((v & 0x00000000000000FF) << 56);
+}
+
 void getu32Little(uint32_t& v) {
     // If the host is little endian, return the value as-is
     if (std::endian::native == std::endian::little) {

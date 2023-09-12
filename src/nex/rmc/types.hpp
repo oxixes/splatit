@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <span>
 
 namespace nex::rmc {
 
@@ -14,14 +15,14 @@ public:
     virtual ~Type() = default;
 
     [[nodiscard]] virtual std::vector<uint8_t> encode() const = 0;
-    virtual size_t decode(const std::vector<uint8_t>& data) = 0;
+    virtual size_t decode(std::span<const uint8_t> data) = 0;
 
 protected:
     uint8_t minorVersion = 0;
 };
 
 typedef std::shared_ptr<Type> T_ptr;
-template <typename A> requires std::derived_from<A, Type> using T = std::shared_ptr<A>;
+//template <typename A> requires std::derived_from<A, Type> using T = std::shared_ptr<A>;
 
 // We define a class that, given the types that we expect to receive, will parse the data
 // and return a vector of the types that we expect.
