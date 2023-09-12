@@ -34,14 +34,6 @@ struct RequestInfo {
 
 // These are traits and functions used to get the types of the parameters of the callback function
 // without having to specify them manually.
-template<class T>
-struct shared_ptr_t;
-
-template<class T>
-struct shared_ptr_t<std::shared_ptr<T>> {
-    typedef T type;
-};
-
 template<typename T>
 struct function_traits;
 
