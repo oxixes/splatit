@@ -1,5 +1,6 @@
 #include "settingsManager.hpp"
 #include "crypto/tools.hpp"
+#include "util/util.hpp"
 
 #include <utility>
 
@@ -32,6 +33,22 @@ bool SettingsManager::init(const argParser::options& serverOptions) {
         domains.bossNPTS = "npts.app." + std::string(settings["domain"]);
         domains.bossNPPL = "nppl.app." + std::string(settings["domain"]);
         domains.bossNPDI = "npdi.cdn." + std::string(settings["domain"]);
+    }
+
+    if (settings.contains("friendsAuth") && settings["friendsAuth"]["enabled"]) {
+        enabledServers.friendsAuth = true;
+    }
+
+    if (settings.contains("friendsSecure") && settings["friendsSecure"]["enabled"]) {
+        enabledServers.friendsSecure = true;
+    }
+
+    if (settings.contains("splatoonAuth") && settings["splatoonAuth"]["enabled"]) {
+        enabledServers.splatoonAuth = true;
+    }
+
+    if (settings.contains("splatoonSecure") && settings["splatoonSecure"]["enabled"]) {
+        enabledServers.splatoonSecure = true;
     }
 
     return true;
@@ -146,13 +163,13 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
     std::string nexTokenKeyString;
 
     try {
-        std::vector<unsigned char> tokenKey = crypto::genSHA256Key();
+        std::vector<unsigned char> tokenKey = crypto::genKey();
         tokenKeyString = crypto::base64Encode(tokenKey);
 
-        std::vector<unsigned char> refreshTokenKey = crypto::genSHA256Key();
+        std::vector<unsigned char> refreshTokenKey = crypto::genKey();
         refreshTokenKeyString = crypto::base64Encode(refreshTokenKey);
 
-        std::vector<unsigned char> nexTokenKey = crypto::genSHA256Key();
+        std::vector<unsigned char> nexTokenKey = crypto::genKey();
         nexTokenKeyString = crypto::base64Encode(refreshTokenKey);
     } catch (const std::exception& ex) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
@@ -193,9 +210,41 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"workerCount", 3}, // TODO Make this dynamic depending on the machine CPU thread count
                     {"keepAliveTimeout", 10}
             }},
-            {"nex", {
-                    {"tokenKey", nexTokenKeyString}
-            }}
+            {"friendsAuth", {
+                    {"enabled", true},
+                    {"listenAddress", "0.0.0.0"},
+                    {"port", 1201},
+                    {"workerCount", 3},
+                    {"secure", {
+                        {"listenAddress", "127.0.0.1"},
+                        {"port", 1202}
+                    }}
+            }},
+            {"splatoonAuth", {
+                    {"enabled", true},
+                    {"listenAddress", "0.0.0.0"},
+                    {"port", 1203},
+                    {"workerCount", 3},
+                    {"secure", {
+                       {"listenAddress", "127.0.0.1"},
+                       {"port", 1204}
+                   }}
+            }},
+            {"friendsSecure", {
+                    {"enabled", true},
+                    {"listenAddress", "0.0.0.0"},
+                    {"port", 1202},
+                    {"workerCount", 3}
+            }},
+            {"splatoonSecure", {
+                   {"enabled", true},
+                   {"listenAddress", "0.0.0.0"},
+                   {"port", 1204},
+                   {"workerCount", 3}
+           }},
+           {"nex", {
+                   {"tokenKey", nexTokenKeyString}
+           }}
     };
 
     try {
@@ -274,16 +323,9 @@ fs::path SettingsManager::getBOSSPath() const {
 sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
     std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
 
-    auto a = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
-    addressStr = addressStr.substr(addressStr.find('.') + 1);
-    auto b = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
-    addressStr = addressStr.substr(addressStr.find('.') + 1);
-    auto c = (uint8_t) std::stoi(addressStr.substr(0, addressStr.find('.')));
-    addressStr = addressStr.substr(addressStr.find('.') + 1);
-    auto d = (uint8_t) std::stoi(addressStr);
+    sock::IPv4Addr address = util::stringToIPv4(addressStr);
+    address.port = 443;
 
-
-    sock::IPv4Addr address{a, b, c, d, 443};
     return address;
 }
 
@@ -293,6 +335,64 @@ int SettingsManager::getHTTPWorkerCount() const {
 
 int SettingsManager::getHTTPKeepAliveTimeout() const {
     return settings["http"]["keepAliveTimeout"];
+}
+
+sock::IPv4Addr SettingsManager::getFriendsAuthListenAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["friendsAuth"]["listenAddress"].get<std::string>());
+    address.port = settings["friendsAuth"]["port"];
+
+    return address;
+}
+
+int SettingsManager::getFriendsAuthWorkerCount() const {
+    return settings["friendsAuth"]["workerCount"];
+}
+
+sock::IPv4Addr SettingsManager::getFriendsSecureServerAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["friendsAuth"]["secure"]["address"].get<std::string>());
+    address.port = settings["friendsAuth"]["secure"]["port"];
+
+    return address;
+}
+
+sock::IPv4Addr SettingsManager::getFriendsSecureListenAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["friendsSecure"]["listenAddress"].get<std::string>());
+    address.port = settings["friendsSecure"]["port"];
+
+    return address;
+}
+
+int SettingsManager::getFriendsSecureWorkerCount() const {
+    return settings["friendsSecure"]["workerCount"];
+}
+
+sock::IPv4Addr SettingsManager::getSplatoonAuthListenAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["splatoonAuth"]["listenAddress"].get<std::string>());
+    address.port = settings["splatoonAuth"]["port"];
+
+    return address;
+}
+
+int SettingsManager::getSplatoonAuthWorkerCount() const {
+    return settings["splatoonAuth"]["workerCount"];
+}
+
+sock::IPv4Addr SettingsManager::getSplatoonSecureServerAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["splatoonAuth"]["secure"]["address"].get<std::string>());
+    address.port = settings["splatoonAuth"]["secure"]["port"];
+
+    return address;
+}
+
+sock::IPv4Addr SettingsManager::getSplatoonSecureListenAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["splatoonSecure"]["listenAddress"].get<std::string>());
+    address.port = settings["splatoonSecure"]["port"];
+
+    return address;
+}
+
+int SettingsManager::getSplatoonSecureWorkerCount() const {
+    return settings["splatoonSecure"]["workerCount"];
 }
 
 json SettingsManager::getDBSettings() const {

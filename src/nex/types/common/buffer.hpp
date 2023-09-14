@@ -16,7 +16,7 @@ namespace nex::rmc {
             std::vector<uint8_t> encoded;
             encoded.reserve(sizeof(LengthT) + data.size());
 
-            auto length = Int<LengthT>((LengthT) data.size()).encode();
+            auto length = Int<LengthT>(0, (LengthT) data.size()).encode();
             encoded.insert(encoded.end(), length.begin(), length.end());
             encoded.insert(encoded.end(), data.begin(), data.end());
 

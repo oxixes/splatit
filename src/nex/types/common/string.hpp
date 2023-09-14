@@ -22,8 +22,8 @@ namespace nex::rmc {
             std::vector<uint8_t> data(value.size() + 3);
 
             auto length = (uint16_t) (value.size() + 1);
-            data[0] = (uint8_t) length | 0xFF;
-            data[1] = (uint8_t) (length >> 8) | 0xFF;
+            data[0] = (uint8_t) length & 0xFF;
+            data[1] = (uint8_t) (length >> 8) & 0xFF;
             for (int i = 0; i < value.size(); i++) data[i + 2] = (uint8_t) value.at(i);
             data[value.size() + 2] = 0x00;
 
@@ -49,6 +49,9 @@ namespace nex::rmc {
         String operator+(const std::string& other) const { return String(value + other); }
         String& operator+=(const std::string& other) { value += other; return *this; }
         std::ostream &operator<<(std::ostream &os) const { os << value; return os; }
+
+        std::string::iterator begin() { return value.begin(); }
+        std::string::iterator end() { return value.end(); }
 
     private:
         std::string value;

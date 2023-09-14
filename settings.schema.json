@@ -109,6 +109,178 @@
       },
       "required": ["tokenKey"]
     },
+    "friendsAuth": {
+      "description": "Settings for the friends authentication server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the friends authentication server",
+          "type": "boolean"
+        },
+        "listenAddress": {
+          "description": "IP address to listen to",
+          "type": "string",
+          "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+        },
+        "port": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "workerCount": {
+          "description": "Number of worker threads to use",
+          "type": "integer",
+          "minimum": 1
+        },
+        "secure": {
+          "description": "Information about the secure server",
+          "type": "object",
+          "properties": {
+            "address": {
+              "description": "IP address to listen to",
+              "type": "string",
+              "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+            },
+            "port": {
+              "description": "Port to listen to",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
+          "required": ["address", "port"]
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["listenAddress", "port", "workerCount", "secure"]
+      },
+      "required": ["enabled"]
+    },
+    "splatoonAuth": {
+      "description": "Settings for the Splatoon authentication server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the friends authentication server",
+          "type": "boolean"
+        },
+        "listenAddress": {
+          "description": "IP address to listen to",
+          "type": "string",
+          "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+        },
+        "port": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "workerCount": {
+          "description": "Number of worker threads to use",
+          "type": "integer",
+          "minimum": 1
+        },
+        "secure": {
+          "description": "Information about the secure server",
+          "type": "object",
+          "properties": {
+            "address": {
+              "description": "IP address to listen to",
+              "type": "string",
+              "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+            },
+            "port": {
+              "description": "Port to listen to",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
+          "required": ["address", "port"]
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["listenAddress", "port", "workerCount", "secure"]
+      },
+      "required": ["enabled"]
+    },
+    "friendsSecure": {
+      "description": "Settings for the friends secure server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the friends secure server",
+          "type": "boolean"
+        },
+        "listenAddress": {
+          "description": "IP address to listen to",
+          "type": "string",
+          "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+        },
+        "port": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "workerCount": {
+          "description": "Number of worker threads to use",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["listenAddress", "port", "workerCount"]
+      },
+      "required": ["enabled"]
+    },
+    "splatoonSecure": {
+      "description": "Settings for the Splatoon secure server",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the friends secure server",
+          "type": "boolean"
+        },
+        "listenAddress": {
+          "description": "IP address to listen to",
+          "type": "string",
+          "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+        },
+        "port": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "workerCount": {
+          "description": "Number of worker threads to use",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["listenAddress", "port", "workerCount"]
+      },
+      "required": ["enabled"]
+    },
     "accounts": {
       "description": "Configuration of the accounts server",
       "properties": {
@@ -148,8 +320,15 @@
             "type": "boolean"
         }
       },
-      "required": ["enabled", "tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU",
-                  "hosts"]
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts"]
+      },
+      "required": ["enabled"]
     },
     "boss": {
       "description": "Configuration of the BOSS server",
@@ -190,6 +369,54 @@
           }
         }
       }
+    },
+    {
+      "required": ["friendsAuth"],
+      "properties": {
+        "friendsAuth": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["splatoonAuth"],
+      "properties": {
+        "splatoonAuth": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["friendsSecure"],
+      "properties": {
+        "friendsSecure": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["splatoonSecure"],
+      "properties": {
+        "splatoonSecure": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
     }
   ],
   "allOf": [
@@ -221,6 +448,36 @@
       },
       "then": {
         "required": ["domain", "ssl", "http"]
+      }
+    },
+    {
+      "if": {
+        "required": ["friendsSecure"],
+        "properties": {
+          "friendsSecure": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["nex"]
+      }
+    },
+    {
+      "if": {
+        "required": ["splatoonAuth"],
+        "properties": {
+          "splatoonAuth": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["nex"]
       }
     }
   ]

@@ -171,11 +171,11 @@ bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
     return signature == expectedSignature;
 }
 
-std::vector<uint8_t> genSHA256Key() {
-    std::vector<uint8_t> key(32);
+std::vector<uint8_t> genKey(size_t size) {
+    std::vector<uint8_t> key(size);
     int result = RAND_priv_bytes(key.data(), (int) key.size());
     if (result != 1) {
-        throw std::runtime_error("Failed to generate SHA256 key: " + util::getOpenSSLError());
+        throw std::runtime_error("Failed to generate key: " + util::getOpenSSLError());
     }
 
     return key;

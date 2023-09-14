@@ -302,6 +302,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
     uint32_t cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
 
     std::unique_ptr<db::Result> results = db->getResult(cmdId);
+    if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
     if (results->data.empty()) {
         return createError(req.getVersion(), 1016, "NEX account not found", "", shouldClose);
     }

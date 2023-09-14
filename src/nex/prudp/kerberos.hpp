@@ -12,6 +12,9 @@ void decryptConnectRequest(const std::vector<uint8_t>& ticket, const std::vector
                            std::vector<uint8_t>& outSessionKey, uint32_t& outPid, uint32_t& outConnectionId,
                            uint32_t& outResponseCheckValue);
 
+std::vector<uint8_t> generateTicket(uint32_t user_pid, const std::vector<uint8_t>& user_passwd, uint32_t target_pid,
+                                    const std::vector<uint8_t>& target_passwd, bool friends);
+
 } // namespace nex::prudp::kerberos
 
 #endif //SPLATOON_SERVER_KERBEROS_HPP

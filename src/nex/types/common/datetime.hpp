@@ -37,7 +37,7 @@ namespace nex::rmc {
             // Bits 5-0 are the second
             datetime |= (uint64_t) ((unsigned int) hhmmss.seconds().count());
 
-            std::vector<uint8_t> data(sizeof(uint64_t));
+            std::vector<uint8_t> data;
             util::getu64Little(datetime);
             data.insert(data.end(), (uint8_t*) &datetime, (uint8_t*) &datetime + sizeof(uint64_t));
 
@@ -52,14 +52,16 @@ namespace nex::rmc {
             util::getu64Little(datetime);
 
             auto year = (int) (datetime >> 26);
-            auto month = (int) ((datetime >> 22) & 0b1111);
-            auto day = (int) ((datetime >> 17) & 0b11111);
+            auto month = (unsigned int) ((datetime >> 22) & 0b1111);
+            auto day = (unsigned int) ((datetime >> 17) & 0b11111);
             auto hour = (int) ((datetime >> 12) & 0b11111);
             auto minute = (int) ((datetime >> 6) & 0b111111);
             auto second = (int) (datetime & 0b111111);
 
-            value = std::chrono::system_clock::from_time_t(std::mktime(
-                    new std::tm{second, minute, hour, day, month, year}));
+            // Create a time_point with the decoded time in UTC
+            std::chrono::year_month_day date{std::chrono::year{year}, std::chrono::month{month}, std::chrono::day{day}};
+            auto time = std::chrono::hours{hour} + std::chrono::minutes{minute} + std::chrono::seconds{second};
+            value = std::chrono::sys_days{date} + time;
 
             return sizeof(uint64_t);
         }

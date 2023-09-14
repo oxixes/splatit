@@ -22,7 +22,7 @@ std::vector<uint8_t> MD5(const std::vector<uint8_t>& data);
 std::string signJWT(const std::string& base64Key, const json& payload);
 bool verifyJWT(const std::string& base64Key, const std::string& jwt);
 
-std::vector<uint8_t> genSHA256Key();
+std::vector<uint8_t> genKey(size_t size = 32);
 
 std::string genNintendoPasswordHash(uint32_t pid, const std::string& password);
 std::string hashPassword(const std::string& password, const std::string& salt = "");

@@ -4,14 +4,24 @@
 #include "../rmc/server.hpp"
 #include "../types/common/ints.hpp"
 #include "../types/common/string.hpp"
+#include "../../db/database.hpp"
 
 namespace nex::rmc {
 
 class FriendsAuthRMC : public Server {
 public:
-    explicit FriendsAuthRMC(std::shared_ptr<Logger::Logger> logger);
+    explicit FriendsAuthRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
+                            sock::IPv4Addr secureAddr);
+private:
+    void login(ClientInfo client, Request req, String username);
+    void requestTicket(ClientInfo client, Request req, PID idSource, PID idTarget);
 
-    void login(ClientInfo client, uint32_t callId, String test);
+    std::string getUserAccessPassword(uint32_t pid);
+
+    const inline static std::string BUILD = "branch:origin/feature/45925_FixAutoReconnect build:3_10_11_2006_0";
+
+    std::shared_ptr<db::Database> db;
+    sock::IPv4Addr secureAddr;
 };
 
 } // namespace nex::rmc

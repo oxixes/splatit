@@ -47,6 +47,20 @@ public:
     [[nodiscard]] int getHTTPWorkerCount() const;
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
 
+    [[nodiscard]] sock::IPv4Addr getFriendsAuthListenAddress() const;
+    [[nodiscard]] int getFriendsAuthWorkerCount() const;
+    [[nodiscard]] sock::IPv4Addr getFriendsSecureServerAddress() const;
+
+    [[nodiscard]] sock::IPv4Addr getFriendsSecureListenAddress() const;
+    [[nodiscard]] int getFriendsSecureWorkerCount() const;
+
+    [[nodiscard]] sock::IPv4Addr getSplatoonAuthListenAddress() const;
+    [[nodiscard]] int getSplatoonAuthWorkerCount() const;
+    [[nodiscard]] sock::IPv4Addr getSplatoonSecureServerAddress() const;
+
+    [[nodiscard]] sock::IPv4Addr getSplatoonSecureListenAddress() const;
+    [[nodiscard]] int getSplatoonSecureWorkerCount() const;
+
     [[nodiscard]] std::vector<std::string> getDomains() const;
 
     // These functions return the base64 encoded key

@@ -22,7 +22,7 @@ struct ClientInfo {
 };
 
 struct CallInfo {
-    std::function<void(ClientInfo, uint32_t, const std::vector<T_ptr>&)> callback;
+    std::function<void(ClientInfo, Request, const std::vector<T_ptr>&)> callback;
     std::function<std::vector<T_ptr>(uint8_t minorVersion, std::vector<uint8_t> data)> parser;
 };
 
@@ -73,6 +73,13 @@ protected:
 
         for (auto& param : params) {
             auto paramData = param->encode();
+            // Log the data
+//            std::cout << "Param: ";
+//            for (auto& byte : paramData) {
+//                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int) byte;
+//            }
+//            std::cout << std::endl;
+
             data.insert(data.end(), paramData.begin(), paramData.end());
         }
 
@@ -94,22 +101,24 @@ protected:
     std::function<uint32_t(std::function<void()>)> registerCloseCall;
     std::function<void(uint32_t)> unregisterCloseCall;
 
+    bool shouldStop = false;
+
 private:
     // These are functions used to call the callback function with the correct parameters.
     // They expand the parameter vector into the parameters of the callback function.
     template<typename T, typename Func, typename... Types, std::size_t... I> requires (std::is_base_of_v<Type, Types> && ...)
-    auto call_callback(T* self, Func func, ClientInfo client, uint32_t callId, const std::vector<T_ptr>& arr, std::index_sequence<I...>) {
-        return (self->*func)(client, callId, std::move(*std::dynamic_pointer_cast<Types>(arr.at(I)))...);
+    auto call_callback(T* self, Func func, ClientInfo client, Request req, const std::vector<T_ptr>& arr, std::index_sequence<I...>) {
+        return (self->*func)(client, req, std::move(*std::dynamic_pointer_cast<Types>(arr.at(I)))...);
     }
 
     template<typename T, typename F, std::size_t ... I>
     void registerCall(T* self, F callback, std::index_sequence<I ...> sequence, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
-        auto func = [this, self, callback, sequence](ClientInfo client, uint32_t callId,
+        auto func = [this, self, callback, sequence](ClientInfo client, Request req,
                 const std::vector<T_ptr>& params) {
             call_callback<T, F,
                     typename function_traits<
                             typename std::decay<F>::type>::template arg<I + 2>::type...
-            >(self, callback, client, callId, params, sequence);
+            >(self, callback, client, req, params, sequence);
         };
 
         auto parser = [](uint8_t minorVersion, std::vector<uint8_t> data) {
@@ -181,8 +190,6 @@ private:
     uint32_t closeCallID = 0;
     std::map<uint32_t, std::function<void()>> closeCalls;
     std::mutex closeCallsMutex;
-
-    bool shouldStop = false;
 };
 
 

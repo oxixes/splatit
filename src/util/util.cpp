@@ -46,6 +46,20 @@ std::string ipv4ToString(sock::IPv4Addr dir) {
     return std::to_string(dir.a) + "." + std::to_string(dir.b) + "." + std::to_string(dir.c) + "." + std::to_string(dir.d);
 }
 
+sock::IPv4Addr stringToIPv4(const std::string& str) {
+    sock::IPv4Addr addr{};
+    std::vector<std::string> parts = split(str, ".");
+    if (parts.size() != 4) {
+        return addr;
+    }
+
+    addr.a = std::stoi(parts[0]);
+    addr.b = std::stoi(parts[1]);
+    addr.c = std::stoi(parts[2]);
+    addr.d = std::stoi(parts[3]);
+    return addr;
+}
+
 std::string getDateHeader() {
     return getDateHeader(time(nullptr));
 }

@@ -30,7 +30,7 @@ void Packet::decryptData(bool force) {
 
     if (encoder == nullptr) {
         // If the encoder is null, we'll just copy the data
-        encryptedData = data;
+        data = encryptedData;
         return;
     }
 

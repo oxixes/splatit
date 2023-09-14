@@ -17,7 +17,7 @@ namespace nex::rmc {
             uint32_t value = static_cast<uint32_t>(code) | (success ? 0 : 0x80000000);
             util::getu32Little(value);
 
-            data.insert(data.end(), (uint8_t*) &value, (uint8_t*) &value + sizeof(uint32_t));
+            memcpy(data.data(), &value, sizeof(uint32_t));
             return data;
         }
 

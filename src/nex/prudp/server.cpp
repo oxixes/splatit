@@ -193,7 +193,7 @@ void Server::sendDataPacket(prudp::PRUDPAddress addr, std::vector<uint8_t> data,
     packet->srcStreamType = addr.srcStreamType;
     packet->dstPort = addr.vPort;
     packet->dstStreamType = addr.streamType;
-    packet->flags = FLAG_RELIABLE | FLAG_NEED_ACK | FLAG_HAS_SIZE;
+    packet->flags = FLAG_RELIABLE | FLAG_NEED_ACK | ((majorVersion == 1) ? FLAG_HAS_SIZE : 0);
     packet->sessionId = it->second.sessionId;
     packet->sessionKey = it->second.sessionKey;
     packet->seqId = it->second.substreams[substreamId].seqId++;

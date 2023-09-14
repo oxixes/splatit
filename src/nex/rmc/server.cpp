@@ -106,7 +106,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
     }
 
     requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, pid},
-                                   std::move(request), std::move(params)});
+                                   request, std::move(params)});
     lock.unlock();
 
     workerCV.notify_one();
@@ -140,7 +140,7 @@ void Server::serverThread() {
             if (call == calls.end()) continue;
 
             try {
-                call->second.callback(reqInfo.client, reqInfo.request.callId, reqInfo.params);
+                call->second.callback(reqInfo.client, reqInfo.request, reqInfo.params);
             } catch (const std::exception& e) {
                 logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request"
                                                               "(protocol id: " +

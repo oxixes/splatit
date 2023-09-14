@@ -16,7 +16,7 @@ namespace nex::rmc {
         ~RVConnectionData() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
-            std::vector<uint8_t> data(sizeof(uint8_t) + sizeof(uint32_t));
+            std::vector<uint8_t> data;
 
             auto regularProtocols = urlRegularProtocols.encode();
             auto bufSpecialProtocols = lstSpecialProtocols.encode();
@@ -29,8 +29,7 @@ namespace nex::rmc {
             data.insert(data.end(), specialProtocols.begin(), specialProtocols.end());
 
             auto header = encodeHeader(RV_CONNECTION_DATA_VERSION, length);
-            memcpy(&data[0], &header[0], header.size()); // We had already allocated the correct amount
-                                                                       // of space, so we can just copy the header over
+            data.insert(data.begin(), header.begin(), header.end());
 
             return data;
         }
