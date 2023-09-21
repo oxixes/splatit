@@ -15,7 +15,8 @@
 #include "nex/prudp/server.hpp"
 #include "util/tasksManager.hpp"
 #include "nex/rmc/server.hpp"
-#include "nex/auth/friends_auth.hpp"
+#include "nex/auth/friendsAuth.hpp"
+#include "nex/friends/friendsSecure.hpp"
 
 bool shouldStop = false;
 
@@ -125,6 +126,7 @@ int main(int argc, char** argv) {
     }
 
     std::shared_ptr<nex::prudp::Server> friendsSecureSrv = nullptr;
+    std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsSecureRMC;
     if (settingsMgr->isFriendsSecureEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getFriendsSecureListenAddress();
         friendsSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_SECURE, socketManager, addr,
@@ -132,7 +134,8 @@ int main(int argc, char** argv) {
                                                                 false, 2, (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY,
                                                                 true);
 
-        // TODO Create RMC server for friends secure
+        friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, db, settingsMgr->getNEXTokenKey());
+        friendsSecureRMC->registerPRUDPServer(friendsSecureSrv, 1, settingsMgr->getFriendsSecureWorkerCount());
 
         friendsSecureSrv->listen(stop);
     }

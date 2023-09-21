@@ -1,4 +1,4 @@
-#include "friends_auth.hpp"
+#include "friendsAuth.hpp"
 
 #include "../../constants.hpp"
 #include "../prudp/kerberos.hpp"
@@ -18,7 +18,7 @@ FriendsAuthRMC::FriendsAuthRMC(std::shared_ptr<Logger::Logger> logger, std::shar
     registerCall(this, &FriendsAuthRMC::requestTicket, 10, 3);
 }
 
-void FriendsAuthRMC::login(nex::rmc::ClientInfo client, Request req, String username) {
+void FriendsAuthRMC::login(ClientInfo client, Request req, String username) {
     // Check if username is a number
     bool validUsername = std::all_of(username.begin(), username.end(), ::isdigit);
 
@@ -86,6 +86,7 @@ void FriendsAuthRMC::login(nex::rmc::ClientInfo client, Request req, String user
     StationURL secureUrl;
     secureUrl.proto = Protocol::PRUDPS;
     secureUrl.ip = secureAddr;
+    secureUrl.port = secureAddr.port;
     secureUrl.stream = 0xA;
     secureUrl.sid = 1;
     secureUrl.CID = 1;
@@ -96,8 +97,8 @@ void FriendsAuthRMC::login(nex::rmc::ClientInfo client, Request req, String user
     emptyUrl.empty = true;
 
     RVConnectionData connectionData(client.minorVersion);
-    connectionData.urlRegularProtocols = std::move(secureUrl);
-    connectionData.urlSpecialProtocols = std::move(emptyUrl);
+    connectionData.urlRegularProtocols = secureUrl;
+    connectionData.urlSpecialProtocols = emptyUrl;
 
     params[3] = std::make_shared<RVConnectionData>(connectionData);
     params[4] = std::make_shared<String>(BUILD);

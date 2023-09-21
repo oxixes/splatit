@@ -7,6 +7,8 @@
 #include <iostream>
 #include <span>
 
+#include <iomanip>
+
 namespace nex::rmc {
 
 class Type {

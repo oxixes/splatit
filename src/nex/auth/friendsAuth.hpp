@@ -1,5 +1,5 @@
-#ifndef SPLATOON_SERVER_FRIENDS_AUTH_HPP
-#define SPLATOON_SERVER_FRIENDS_AUTH_HPP
+#ifndef SPLATOON_SERVER_FRIENDSAUTH_HPP
+#define SPLATOON_SERVER_FRIENDSAUTH_HPP
 
 #include "../rmc/server.hpp"
 #include "../types/common/ints.hpp"
@@ -12,6 +12,8 @@ class FriendsAuthRMC : public Server {
 public:
     explicit FriendsAuthRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
                             sock::IPv4Addr secureAddr);
+    ~FriendsAuthRMC() override = default;
+
 private:
     void login(ClientInfo client, Request req, String username);
     void requestTicket(ClientInfo client, Request req, PID idSource, PID idTarget);
@@ -26,4 +28,4 @@ private:
 
 } // namespace nex::rmc
 
-#endif //SPLATOON_SERVER_FRIENDS_AUTH_HPP
+#endif //SPLATOON_SERVER_FRIENDSAUTH_HPP

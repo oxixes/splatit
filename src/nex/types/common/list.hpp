@@ -19,7 +19,7 @@ namespace nex::rmc {
             auto length = Int<uint32_t>((uint32_t) data.size()).encode();
             encoded.insert(encoded.end(), length.begin(), length.end());
             for (const auto& item : data) {
-                auto encodedItem = item->encode();
+                auto encodedItem = item.encode();
                 encoded.insert(encoded.end(), encodedItem.begin(), encodedItem.end());
             }
 
@@ -31,6 +31,7 @@ namespace nex::rmc {
 
             auto length = Int<uint32_t>();
             length.decode(listData);
+            listData = listData.subspan(sizeof(uint32_t));
 
             size_t dataSize = 0;
 
@@ -46,6 +47,11 @@ namespace nex::rmc {
 
             return sizeof(uint32_t) + dataSize;
         }
+
+        explicit operator std::vector<T>() const { return data; }
+        explicit operator std::vector<T>&() { return data; }
+        explicit operator const std::vector<T>&() const { return data; }
+        T& operator [](size_t index) { return data[index]; }
 
     private:
         std::vector<T> data;

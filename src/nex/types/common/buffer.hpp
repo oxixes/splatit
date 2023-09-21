@@ -27,12 +27,12 @@ namespace nex::rmc {
             if (bufData.size() < sizeof(LengthT)) throw MalformedException("Not enough data to decode Buffer");
 
             auto length = Int<LengthT>();
-            length.decode(data);
+            length.decode(bufData);
 
-            if (data.size() < sizeof(LengthT) + length) throw MalformedException("Invalid Buffer data length");
+            if (bufData.size() < sizeof(LengthT) + length) throw MalformedException("Invalid Buffer data length");
 
-            this->data.resize(length);
-            data.insert(data.end(), bufData.begin() + sizeof(LengthT), bufData.begin() + sizeof(LengthT) + length);
+            data.resize(length);
+            std::copy(bufData.begin() + sizeof(LengthT), bufData.begin() + sizeof(LengthT) + length, data.begin());
 
             return sizeof(LengthT) + length;
         }

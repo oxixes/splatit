@@ -490,7 +490,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
                                              it->second.sessionKey);
                 sendPacket(prudpAddr, res);
             }
-            if (!handlePacket(prudpAddr, lastFragment)) break;
+            if (!handlePacket(prudpAddr, lastFragment, supportsAggregateAck)) break;
             ackedSeqIds.push_back(lastFragment->seqId);
         } catch (const NotCompleteException& e) {
             // If the packet is not complete, we restore the encoder,

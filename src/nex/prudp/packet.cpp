@@ -381,9 +381,6 @@ size_t PacketV1::decode(const std::vector<uint8_t>& data) {
 
 bool PacketV1::checkSignature() {
     std::vector<uint8_t> calculatedSignature = calculateSignature(header, connectionSignature, packetSpecificData);
-    printf("Calculated signature: ");
-    for (auto byte : calculatedSignature) printf("%02X", byte);
-    printf("\n");
     return signature == calculatedSignature;
 }
 

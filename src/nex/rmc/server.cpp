@@ -87,29 +87,35 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
     std::vector<T_ptr> params;
     try {
         params = call->second.parser(minor_version, data);
+
+        std::unique_lock lock(queueMutex);
+
+        uint32_t pid = 0;
+        auto pidIt = pidMap.find(addr);
+        if (pidIt != pidMap.end()) {
+            pid = pidIt->second;
+        }
+
+        requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, pid},
+                                       request, std::move(params)});
+        lock.unlock();
+
+        workerCV.notify_one();
     } catch (const MalformedException& e) {
         logger->log(Logger::level::WARN, logGroup, "Received a malformed parameter data from " +
                                                     util::ipv4ToString(addr.address) + ": " +
                                                     std::string(e.what()));
+
+        sendMsg(ClientInfo{addr, minor_version, substreamId, 0},
+                createError(request, Error::CORE__INVALID_ARGUMENT), {});
     } catch (const std::exception& e) {
         logger->log(Logger::level::WARN, logGroup, "An exception occurred while parsing the parameters of a request from " +
                                                     util::ipv4ToString(addr.address) + ": " +
                                                     std::string(e.what()));
+
+        sendMsg(ClientInfo{addr, minor_version, substreamId, 0},
+                createError(request, Error::CORE__EXCEPTION), {});
     }
-
-    std::unique_lock lock(queueMutex);
-
-    uint32_t pid = 0;
-    auto pidIt = pidMap.find(addr);
-    if (pidIt != pidMap.end()) {
-        pid = pidIt->second;
-    }
-
-    requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, pid},
-                                   request, std::move(params)});
-    lock.unlock();
-
-    workerCV.notify_one();
 }
 
 void Server::serverThread() {
@@ -142,12 +148,14 @@ void Server::serverThread() {
             try {
                 call->second.callback(reqInfo.client, reqInfo.request, reqInfo.params);
             } catch (const std::exception& e) {
-                logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request"
+                logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
                                                               "(protocol id: " +
                                                               std::to_string(reqInfo.request.protocolId) + ", extended protocol id: " +
                                                               std::to_string(reqInfo.request.extendedProtocolId) + ", method id: " +
                                                               std::to_string(reqInfo.request.methodId) + "): " +
                                                               std::string(e.what()));
+
+                sendMsg(reqInfo.client, createError(reqInfo.request, Error::CORE__EXCEPTION), {});
             }
         }
     }

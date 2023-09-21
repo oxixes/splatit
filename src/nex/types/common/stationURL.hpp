@@ -35,9 +35,8 @@ namespace nex::rmc {
                     url = "prudps:/";
                 }
 
-                url += "address=" + util::ipv4ToString(ip) + ";";
-                url += "port=" + std::to_string(ip.port) + ";";
-
+                if (ip.has_value()) url += "address=" + util::ipv4ToString(ip.value()) + ";";
+                if (port.has_value()) url += "port=" + std::to_string(port.value()) + ";";
                 if (Pl.has_value()) url += "Pl=" + std::to_string(Pl.value()) + ";";
                 if (stream.has_value()) url += "stream=" + std::to_string(stream.value()) + ";";
                 if (sid.has_value()) url += "sid=" + std::to_string(sid.value()) + ";";
@@ -83,14 +82,12 @@ namespace nex::rmc {
 
             std::string_view urlView(url);
 
-            bool hasAddress = false;
-            bool hasPort = false;
             while (!urlView.empty()) {
-                auto pos = urlView.find(';');
-                if (pos == std::string::npos) pos = urlView.size();
+                auto pos = urlView.find(';'); // It may return npos, which is fine
 
                 auto param = urlView.substr(0, pos);
-                urlView = urlView.substr(pos + 1);
+                if (pos != std::string::npos) urlView = urlView.substr(pos + 1);
+                else urlView = "";
 
                 auto eqPos = param.find('=');
                 if (eqPos == std::string::npos) throw MalformedException("Invalid parameter");
@@ -98,53 +95,57 @@ namespace nex::rmc {
                 auto key = param.substr(0, eqPos);
                 auto value = param.substr(eqPos + 1);
 
-                if (key == "address") {
-                    struct sockaddr_in addr{};
-                    inet_pton(AF_INET, std::string(value).c_str(), &addr.sin_addr);
+                try {
+                    if (key == "address") {
+                        if (!ip.has_value()) ip = sock::IPv4Addr();
+                        struct sockaddr_in addr{};
+                        if (inet_pton(AF_INET, std::string(value).c_str(), &addr.sin_addr) != 1)
+                            throw MalformedException("Invalid address in StationURL");
 
-                    ip.a = addr.sin_addr.S_un.S_un_b.s_b1;
-                    ip.b = addr.sin_addr.S_un.S_un_b.s_b2;
-                    ip.c = addr.sin_addr.S_un.S_un_b.s_b3;
-                    ip.d = addr.sin_addr.S_un.S_un_b.s_b4;
-
-                    hasAddress = true;
-                } else if (key == "port") {
-                    ip.port = std::stoi(std::string(value));
-                    hasPort = true;
-                } else if (key == "stream") {
-                    stream = std::stoi(std::string(value));
-                } else if (key == "sid") {
-                    sid = std::stoi(std::string(value));
-                } else if (key == "CID") {
-                    CID = std::stoi(std::string(value));
-                } else if (key == "PID") {
-                    PID = std::stoi(std::string(value));
-                } else if (key == "type") {
-                    type = std::stoi(std::string(value));
-                } else if (key == "RVCID") {
-                    RVCID = std::stoi(std::string(value));
-                } else if (key == "natm") {
-                    natm = std::stoi(std::string(value));
-                } else if (key == "natf") {
-                    natf = std::stoi(std::string(value));
-                } else if (key == "upnp") {
-                    upnp = std::stoi(std::string(value));
-                } else if (key == "pmp") {
-                    pmp = std::stoi(std::string(value));
-                } else if (key == "Pl") {
-                    Pl = std::stoi(std::string(value));
-                } else {
-                    throw MalformedException("Invalid parameter in StationURL: " + std::string(key));
+                        ip->a = addr.sin_addr.S_un.S_un_b.s_b1;
+                        ip->b = addr.sin_addr.S_un.S_un_b.s_b2;
+                        ip->c = addr.sin_addr.S_un.S_un_b.s_b3;
+                        ip->d = addr.sin_addr.S_un.S_un_b.s_b4;
+                    } else if (key == "port") {
+                        port = std::stoi(std::string(value));
+                    } else if (key == "stream") {
+                        stream = std::stoi(std::string(value));
+                    } else if (key == "sid") {
+                        sid = std::stoi(std::string(value));
+                    } else if (key == "CID") {
+                        CID = std::stoi(std::string(value));
+                    } else if (key == "PID") {
+                        PID = std::stoi(std::string(value));
+                    } else if (key == "type") {
+                        type = std::stoi(std::string(value));
+                    } else if (key == "RVCID") {
+                        RVCID = std::stoi(std::string(value));
+                    } else if (key == "natm") {
+                        natm = std::stoi(std::string(value));
+                    } else if (key == "natf") {
+                        natf = std::stoi(std::string(value));
+                    } else if (key == "upnp") {
+                        upnp = std::stoi(std::string(value));
+                    } else if (key == "pmp") {
+                        pmp = std::stoi(std::string(value));
+                    } else if (key == "Pl") {
+                        Pl = std::stoi(std::string(value));
+                    } else {
+                        throw MalformedException("Invalid parameter in StationURL: " + std::string(key));
+                    }
+                } catch (std::invalid_argument& e) {
+                    throw MalformedException("Invalid parameter value in StationURL: " + std::string(key));
+                } catch (std::out_of_range& e) {
+                    throw MalformedException("Parameter value out of range in StationURL: " + std::string(key));
                 }
             }
-
-            if (!hasAddress || !hasPort) throw MalformedException("Missing address or port in StationURL");
 
             return size;
         }
 
         Protocol proto = Protocol::PRUDP;
-        sock::IPv4Addr ip{};
+        std::optional<sock::IPv4Addr> ip;
+        std::optional<uint16_t> port;
         std::optional<uint8_t> stream;
         std::optional<uint8_t> sid;
         std::optional<uint32_t> CID;
