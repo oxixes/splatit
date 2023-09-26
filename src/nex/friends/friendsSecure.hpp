@@ -22,8 +22,6 @@ private:
     void registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data);
     void updateAndGetAllInformation(ClientInfo client, Request req, NNAInfo nnaInfo);
 
-    bool checkJWT(const std::string& jwtToken, ClientInfo& client);
-
     std::shared_ptr<db::Database> db;
     std::string base64JWTKey;
 

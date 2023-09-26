@@ -1,3 +1,4 @@
+#include <iostream>
 #include "packet.hpp"
 #include "../../exceptions.hpp"
 #include "../../util/util.hpp"
@@ -121,6 +122,8 @@ size_t PacketV0::decode(const std::vector<uint8_t>& data) {
             throw MalformedException("Packet is too small (invalid size)");
         fragmentId = data[11];
         offset = 12;
+    } else {
+        offset = 11;
     }
 
     if (flags & FLAG_HAS_SIZE) {

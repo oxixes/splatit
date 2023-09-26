@@ -15,8 +15,9 @@
 #include "nex/prudp/server.hpp"
 #include "util/tasksManager.hpp"
 #include "nex/rmc/server.hpp"
-#include "nex/auth/friendsAuth.hpp"
+#include "nex/auth/auth.hpp"
 #include "nex/friends/friendsSecure.hpp"
+#include "nex/splatoon/splatoonSecure.hpp"
 
 bool shouldStop = false;
 
@@ -110,7 +111,7 @@ int main(int argc, char** argv) {
     }
 
     std::shared_ptr<nex::prudp::Server> friendsAuthSrv = nullptr;
-    std::shared_ptr<nex::rmc::FriendsAuthRMC> friendsAuthRMC;
+    std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
     if (settingsMgr->isFriendsAuthEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getFriendsAuthListenAddress();
 
@@ -119,7 +120,10 @@ int main(int argc, char** argv) {
                                                               true, 1, std::vector<uint8_t>(), true);
 
         sock::IPv4Addr secureAddr = settingsMgr->getFriendsSecureServerAddress();
-        friendsAuthRMC = std::make_shared<nex::rmc::FriendsAuthRMC>(logger, db, secureAddr);
+        friendsAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::FRIENDS_AUTH, db,
+                                                             secureAddr, FRIENDS_SERVER_ID,
+                                                             (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY,
+                                                             FRIENDS_SERVER_BUILD, "", true);
         friendsAuthRMC->registerPRUDPServer(friendsAuthSrv, 1, settingsMgr->getFriendsAuthWorkerCount());
 
         friendsAuthSrv->listen(stop);
@@ -141,6 +145,7 @@ int main(int argc, char** argv) {
     }
 
     std::shared_ptr<nex::prudp::Server> splatoonAuthSrv = nullptr;
+    std::shared_ptr<nex::rmc::AuthRMC> splatoonAuthRMC;
     if (settingsMgr->isSplatoonAuthEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getSplatoonAuthListenAddress();
         splatoonAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, addr,
@@ -148,12 +153,18 @@ int main(int argc, char** argv) {
                                                                 true, 1, std::vector<uint8_t>(),
                                                                 false);
 
-        // TODO Create RMC server for splatoon auth
+        sock::IPv4Addr secureAddr = settingsMgr->getSplatoonSecureServerAddress();
+        splatoonAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::SPLATOON_AUTH, db,
+                                                             secureAddr, SPLATOON_SERVER_ID,
+                                                             (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
+                                                             SPLATOON_SERVER_BUILD, settingsMgr->getNEXTokenKey(), false);
+        splatoonAuthRMC->registerPRUDPServer(splatoonAuthSrv, 1, settingsMgr->getSplatoonAuthWorkerCount());
 
         splatoonAuthSrv->listen(stop);
     }
 
     std::shared_ptr<nex::prudp::Server> splatoonSecureSrv = nullptr;
+    std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonSecureRMC;
     if (settingsMgr->isSplatoonSecureEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getSplatoonSecureListenAddress();
         splatoonSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_SECURE, socketManager, addr,
@@ -161,7 +172,8 @@ int main(int argc, char** argv) {
                                                                 false, 2, (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
                                                                 false);
 
-        // TODO Create RMC server for splatoon secure
+        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, db);
+        splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
         splatoonSecureSrv->listen(stop);
     }
@@ -180,7 +192,7 @@ int main(int argc, char** argv) {
     }
 
     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
-    if (splatoonAuthSrv != nullptr) splatoonSecureSrv->stop();
+    if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
     if (httpServer != nullptr) httpServer->stop();
