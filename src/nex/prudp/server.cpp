@@ -404,6 +404,8 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
     bool supportsAggregateAck = majorVersion == 1 && it->second.minorVersion >= 1;
     std::vector<uint16_t> ackedSeqIds;
 
+    bool disconnected = false;
+
     // We need to check if there are not any missing packets, in which case
     // we can process them.
     auto packetIt = packetQueue.begin();
@@ -483,12 +485,16 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
         try {
             if (lastFragment->type == Type::DISCONNECT && supportsAggregateAck) {
-                // Since the client is disconnecting, we will send all the
-                // remaining acks.
-                auto res = craftAggregateAck(prudpAddr, it->second.minorVersion, it->second.sessionId,
-                                             substreamId, ackedSeqIds, it->second.remoteSignature,
-                                             it->second.sessionKey);
-                sendPacket(prudpAddr, res);
+                disconnected = true;
+
+                if (!ackedSeqIds.empty()) {
+                    // Since the client is disconnecting, we will send all the
+                    // remaining acks.
+                    auto res = craftAggregateAck(prudpAddr, it->second.minorVersion, it->second.sessionId,
+                                                 substreamId, ackedSeqIds, it->second.remoteSignature,
+                                                 it->second.sessionKey);
+                    sendPacket(prudpAddr, res);
+                }
             }
             if (!handlePacket(prudpAddr, lastFragment, supportsAggregateAck)) break;
             ackedSeqIds.push_back(lastFragment->seqId);
@@ -523,7 +529,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
     // If the client supports aggregate acknowledgements, send one for
     // all the processed packets of the queue instead of one for each packet.
-    if (supportsAggregateAck) {
+    if (supportsAggregateAck && !disconnected) {
         auto res = craftAggregateAck(prudpAddr, it->second.minorVersion, it->second.sessionId,
                                      substreamId, ackedSeqIds, it->second.remoteSignature,
                                      it->second.sessionKey);

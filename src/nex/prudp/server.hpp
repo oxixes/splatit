@@ -12,7 +12,7 @@
 #include "packet.hpp"
 
 // Defines the amount of time between the last message received and the next ping.
-#define PING_INTERVAL 10000
+#define PING_INTERVAL 20000
 
 // Defines the maximum amount of packets in the packet queue.
 #define MAX_PACKET_QUEUE_SIZE 100

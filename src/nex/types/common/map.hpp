@@ -20,11 +20,11 @@ namespace nex::rmc {
 
             auto length = Int<uint32_t>((uint32_t) data.size()).encode();
             encoded.insert(encoded.end(), length.begin(), length.end());
-            for (const auto& [key, value] : data) {
-                auto encodedKey = key->encode();
+            for (auto it = data.begin(); it != data.end(); it++) {
+                auto encodedKey = it->first.encode();
                 encoded.insert(encoded.end(), encodedKey.begin(), encodedKey.end());
 
-                auto encodedValue = value->encode();
+                auto encodedValue = it->second.encode();
                 encoded.insert(encoded.end(), encodedValue.begin(), encodedValue.end());
             }
 
@@ -39,7 +39,6 @@ namespace nex::rmc {
 
             size_t dataSize = 0;
 
-            data.reserve(length);
             for (int i = 0; i < length; i++) {
                 auto key = K(minorVersion);
                 auto decodedKeyLength = key.decode(mapData);
@@ -55,6 +54,18 @@ namespace nex::rmc {
 
             return sizeof(uint32_t) + dataSize;
         }
+
+        auto begin() { return data.begin(); }
+        auto begin() const { return data.begin(); }
+        auto end() { return data.end(); }
+        auto end() const { return data.end(); }
+        auto find(const K& key) { return data.find(key); }
+        auto find(const K& key) const { return data.find(key); }
+        auto insert(const std::pair<K, T>& pair) { return data.insert(pair); }
+
+        explicit operator std::map<K, T>& () { return data; }
+        explicit operator const std::map<K, T>& () const { return data; }
+        T& operator[](const K& key) { return data[key]; }
 
     private:
         std::map<K, T> data;

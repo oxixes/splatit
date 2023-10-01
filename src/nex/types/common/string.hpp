@@ -48,7 +48,9 @@ namespace nex::rmc {
         String& operator=(const std::string& other) { value = other; return *this; }
         String operator+(const std::string& other) const { return String(value + other); }
         String& operator+=(const std::string& other) { value += other; return *this; }
+        bool operator==(const String& other) const { return value == other.value; }
         std::ostream& operator<<(std::ostream &os) const { os << value; return os; }
+        auto operator<=>(const String& other) const { return value <=> other.value; };
 
         std::string::iterator begin() { return value.begin(); }
         std::string::iterator end() { return value.end(); }

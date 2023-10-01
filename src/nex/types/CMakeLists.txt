@@ -1,3 +1,4 @@
 add_subdirectory(common)
 add_subdirectory(auth)
 add_subdirectory(friendsSecure)
+add_subdirectory(splatoonSecure)

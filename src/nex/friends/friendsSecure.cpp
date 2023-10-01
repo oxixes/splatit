@@ -25,6 +25,7 @@ FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::
 
     // Protocol 102 - Friends (Wii U)
     registerCall(this, &FriendsSecureRMC::updateAndGetAllInformation, 102, 1);
+    registerCall(this, &FriendsSecureRMC::updatePresence, 102, 13);
 }
 
 void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data) {
@@ -131,6 +132,19 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
     params[8] = std::make_shared<Bool>(0, unk2);
 
     sendMsg(client, res, params);
+}
+
+void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPresenceV2 presence) {
+    // FIXME This is a stub
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    sendMsg(client, res, {});
 }
 
 } // namespace nex::rmc

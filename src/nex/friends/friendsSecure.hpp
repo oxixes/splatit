@@ -21,6 +21,7 @@ public:
 private:
     void registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data);
     void updateAndGetAllInformation(ClientInfo client, Request req, NNAInfo nnaInfo);
+    void updatePresence(ClientInfo client, Request req, NintendoPresenceV2 presence);
 
     std::shared_ptr<db::Database> db;
     std::string base64JWTKey;

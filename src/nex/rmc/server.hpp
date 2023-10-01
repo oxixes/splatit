@@ -90,8 +90,8 @@ protected:
         sendData(client.address, std::move(requestData), client.substreamId);
     }
 
-    void onConnect(prudp::PRUDPAddress address, uint32_t pid);
-    void onDisconnect(prudp::PRUDPAddress address);
+    virtual void onConnect(prudp::PRUDPAddress address, uint32_t pid);
+    virtual void onDisconnect(prudp::PRUDPAddress address);
 
     static Response createError(const Request& req, Error error);
 
@@ -103,6 +103,7 @@ protected:
 
     bool shouldStop = false;
 
+    std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
 private:
     // These are functions used to call the callback function with the correct parameters.
     // They expand the parameter vector into the parameters of the callback function.
@@ -179,8 +180,6 @@ private:
 
     std::queue<RequestInfo> requestsQueue;
     std::mutex queueMutex;
-
-    std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
 
     std::mutex workerMutex;
     std::condition_variable workerCV;

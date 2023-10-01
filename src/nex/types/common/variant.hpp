@@ -119,7 +119,7 @@ namespace nex::rmc {
             return std::any_cast<T>(value);
         }
 
-        VariantType getType() {
+        VariantType getType() const {
             if (!value.has_value()) return VariantType::NONE;
             if (value.type() == typeid(Int64)) return VariantType::INT64;
             if (value.type() == typeid(Double)) return VariantType::DOUBLE;
@@ -128,6 +128,28 @@ namespace nex::rmc {
             if (value.type() == typeid(Datetime)) return VariantType::DATETIME;
             if (value.type() == typeid(UInt64)) return VariantType::UINT64;
             throw std::runtime_error("Invalid variant type");
+        }
+
+        bool operator== (const Variant& other) const {
+            if (getType() != other.getType()) return false;
+            switch (getType()) {
+                case VariantType::NONE:
+                    return true;
+                case VariantType::INT64:
+                    return std::any_cast<Int64>(value) == std::any_cast<Int64>(other.value);
+                case VariantType::DOUBLE:
+                    return std::any_cast<Double>(value) == std::any_cast<Double>(other.value);
+                case VariantType::BOOLEAN:
+                    return std::any_cast<Bool>(value) == std::any_cast<Bool>(other.value);
+                case VariantType::STRING:
+                    return std::any_cast<String>(value) == std::any_cast<String>(other.value);
+                case VariantType::DATETIME:
+                    return std::any_cast<Datetime>(value) == std::any_cast<Datetime>(other.value);
+                case VariantType::UINT64:
+                    return std::any_cast<UInt64>(value) == std::any_cast<UInt64>(other.value);
+                default:
+                    throw std::runtime_error("Invalid variant type");
+            }
         }
 
     private:

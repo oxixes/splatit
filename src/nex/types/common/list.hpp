@@ -10,13 +10,13 @@ namespace nex::rmc {
     class List : public Type {
     public:
         explicit List(uint8_t minorVersion = 0, const std::vector<T>& data = {}) : Type(minorVersion), data(data) {}
-        explicit List(const std::vector<T>& data = {}) : Type(0), data(data) {}
+        explicit List(const std::vector<T>& data) : Type(0), data(data) {}
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> encoded;
             encoded.reserve(sizeof(uint32_t));
 
-            auto length = Int<uint32_t>((uint32_t) data.size()).encode();
+            auto length = Int<uint32_t>(0, (uint32_t) data.size()).encode();
             encoded.insert(encoded.end(), length.begin(), length.end());
             for (const auto& item : data) {
                 auto encodedItem = item.encode();
@@ -48,10 +48,13 @@ namespace nex::rmc {
             return sizeof(uint32_t) + dataSize;
         }
 
+        size_t size() const { return data.size(); }
+
         explicit operator std::vector<T>() const { return data; }
         explicit operator std::vector<T>&() { return data; }
         explicit operator const std::vector<T>&() const { return data; }
         T& operator [](size_t index) { return data[index]; }
+        const T& operator [](size_t index) const { return data[index]; }
 
     private:
         std::vector<T> data;
