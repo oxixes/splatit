@@ -15,6 +15,8 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     logGroup = Logger::group::SPLATOON_SECURE;
 
     // Protocol 3 - NAT Traversal
+    registerCall(this, &SplatoonSecureRMC::requestProbeInitiationExt, 3, 3);
+    registerCall(this, &SplatoonSecureRMC::reportNatTraversalResult, 3, 4);
     registerCall(this, &SplatoonSecureRMC::reportNatProperties, 3, 5);
 
     // Protocol 11 - Secure connection
@@ -24,6 +26,8 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
 
     // Protocol 21 - Matchmaking
     registerCall(this, &SplatoonSecureRMC::unregisterGathering, 21, 2);
+    registerCall(this, &SplatoonSecureRMC::findBySingleId, 21, 21);
+    registerCall(this, &SplatoonSecureRMC::getSessionUrls, 21, 41);
 
     // Protocol 50 - Matchmaking (Extension)
     registerCall(this, &SplatoonSecureRMC::endParticipation, 50, 1);
@@ -33,6 +37,58 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     registerCall(this, &SplatoonSecureRMC::getPlayingSessions, 109, 16);
     registerCall(this, &SplatoonSecureRMC::updateProgressScore, 109, 34);
     registerCall(this, &SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
+}
+
+void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req, List<StationURL> targets, StationURL probe) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    for (auto& target : targets) {
+        if (!target.PID.has_value()) {
+            res.success = false;
+            res.error = Error::CORE__INVALID_ARGUMENT;
+            sendMsg(client, res, {});
+            return;
+        }
+
+        auto targetClientInfoIt = registeredClients.find(target.PID.value());
+        if (targetClientInfoIt == registeredClients.end()) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__INVALID_PID;
+            sendMsg(client, res, {});
+            return;
+        }
+
+        ClientInfo targetClientInfo = targetClientInfoIt->second.client;
+
+        Request probeReq;
+        probeReq.protocolId = 3;
+        probeReq.methodId = 2; // InitiateProbe
+        probeReq.extendedProtocolId = 0;
+        probeReq.callId = nextReqCallId++;
+
+        std::vector<T_ptr> probeParams(1);
+        probeParams[0] = std::make_shared<StationURL>(probe);
+
+        sendMsg(targetClientInfo, probeReq, probeParams);
+    }
+
+    sendMsg(client, res, {});
+}
+
+void SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req, UInt32 cid, Bool result, UInt32 rtt) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    sendMsg(client, res, {});
 }
 
 void SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req, UInt32 mapping, UInt32 filtering, UInt32 rtt) {
@@ -63,23 +119,49 @@ void SplatoonSecureRMC::secure_register(ClientInfo client, Request req, List<Sta
     res.extendedProtocolId = req.extendedProtocolId;
     res.callId = req.callId;
     res.success = true;
+    std::vector<T_ptr> params(3);
 
     Result retval;
     retval.success = true;
     retval.code = Error::CORE__UNKNOWN; // This means success
 
-    StationURL urlPublic = urls[0];
+    if (urls.size() != 1) {
+        retval.success = false;
+        retval.code = Error::CORE__INVALID_ARGUMENT;
+
+        params[0] = std::make_shared<Result>(retval);
+        params[1] = std::make_shared<UInt32>();
+        params[1] = std::make_shared<StationURL>();
+
+        sendMsg(client, res, params);
+        return;
+    }
+
+    StationURL urlPublic;
+    urlPublic.proto = Protocol::PRUDP;
     urlPublic.ip = client.address.address;
     urlPublic.port = client.address.address.port;
+    urlPublic.natf = 0;
+    urlPublic.natm = 0;
+    urlPublic.pmp = 0;
+    urlPublic.sid = 15;
+    urlPublic.type = 3;
+    urlPublic.upnp = 0;
 
-    std::vector<T_ptr> params(3);
     params[0] = std::make_shared<Result>(retval);
-    params[1] = std::make_shared<UInt32>(0, nextRVConnId++);
+    params[1] = std::make_shared<UInt32>(0, nextRVConnId);
     params[2] = std::make_shared<StationURL>(urlPublic);
+
+    urls[0].RVCID = nextRVConnId;
 
     auto clientInfo = RegisteredClientInfo();
     clientInfo.client = client;
     clientInfo.urls = (std::vector<StationURL>) std::move(urls);
+    clientInfo.publicUrl = urlPublic;
+    clientInfo.rvConnId = nextRVConnId;
+
+    nextRVConnId++;
+    if (nextRVConnId == 0) nextRVConnId++; // 0 is not a valid RVConnID
 
     registeredClients[client.pid] = clientInfo;
 
@@ -148,6 +230,78 @@ void SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req, UInt
     unregisterGathering_internal(gId, client.pid);
 
     params[0] = std::make_shared<Bool>(0, true);
+    sendMsg(client, res, params);
+}
+
+void SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req, UInt32 id) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+    std::vector<T_ptr> params(2);
+
+    AnyDataHolder data;
+
+    auto sessionIt = matchmakeSessions.find(id);
+    if (sessionIt == matchmakeSessions.end()) {
+        params[0] = std::make_shared<Bool>(0, false);
+
+        Gathering gathering(client.minorVersion);
+        data.set(gathering, "Gathering");
+        params[1] = std::make_shared<AnyDataHolder>(data);
+
+        sendMsg(client, res, params);
+        return;
+    }
+
+    params[0] = std::make_shared<Bool>(0, true);
+
+    Gathering gathering(client.minorVersion);
+    gathering = *sessionIt->second.session;
+
+    data.set(gathering, "Gathering");
+    params[1] = std::make_shared<AnyDataHolder>(data);
+
+    sendMsg(client, res, params);
+}
+
+void SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req, UInt32 gId) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+    std::vector<T_ptr> params(1);
+
+    auto sessionIt = matchmakeSessions.find(gId);
+    if (sessionIt == matchmakeSessions.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__INVALID_GID;
+        sendMsg(client, res, params);
+        return;
+    }
+
+    auto& sessionInfo = sessionIt->second;
+
+    List<StationURL> urls(client.minorVersion);
+
+    StationURL internalPublicUrl = registeredClients[sessionInfo.session->hostPid].urls[0];
+    StationURL hostPublicUrl = registeredClients[sessionInfo.session->hostPid].publicUrl;
+    uint32_t hostRVCID = registeredClients[sessionInfo.session->hostPid].rvConnId;
+
+    internalPublicUrl.RVCID = hostRVCID;
+    hostPublicUrl.RVCID = hostRVCID;
+    internalPublicUrl.PID = sessionInfo.session->hostPid;
+    hostPublicUrl.PID = sessionInfo.session->hostPid;
+
+    urls.push_back(internalPublicUrl);
+    urls.push_back(hostPublicUrl);
+
+    params[0] = std::make_shared<List<StationURL>>(urls);
+
     sendMsg(client, res, params);
 }
 
@@ -301,8 +455,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             if (std::stoi(criteria.matchmakeSystemType) != sessionInfo.session->matchmakeSystemType) valid = false;
             uint16_t vacantParticipants = criteria.vacantParticipants;
             if (vacantParticipants == 0) vacantParticipants = 1;
-            if (sessionInfo.session->participationCount >=
-                    (uint32_t) (sessionInfo.session->maxParticipants - vacantParticipants)) valid = false;
+            uint16_t maxAllowedExistingPlayers = sessionInfo.session->maxParticipants - vacantParticipants;
+            if (sessionInfo.session->participationCount > (uint32_t) maxAllowedExistingPlayers) valid = false;
             if (criteria.excludeLocked && !sessionInfo.session->openParticipation) valid = false;
             if (criteria.excludeUserPasswordSet && sessionInfo.session->userPasswordEnabled) valid = false;
             if (criteria.excludeSystemPasswordSet && sessionInfo.session->systemPasswordEnabled) valid = false;
@@ -360,27 +514,27 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
         session->openParticipation = true;
-        session->participationCount = 1;
+        session->participationCount = 0;
         session->sessionKey = Buffer(crypto::genKey());
         session->startedTime = std::chrono::system_clock::now();
 
-        MatchmakeParam mmParam(client.minorVersion);
-        Variant param1;
-        param1.set(Bool(0, true));
-        mmParam.params.insert({String("@SR"), param1});
-        Variant param2;
-        param2.set(Int64(0, 3));
-        mmParam.params.insert({String("@GIR"), param2});
-
-        session->matchmakeParam = mmParam;
+//        MatchmakeParam mmParam(client.minorVersion);
+//        Variant param1;
+//        param1.set(Bool(0, true));
+//        mmParam.params.insert({String("@SR"), param1});
+//        Variant param2;
+//        param2.set(Int64(0, 3));
+//        mmParam.params.insert({String("@GIR"), param2});
+//
+//        session->matchmakeParam = mmParam;
 
         matchmakeSessions.insert({session->id, {session, {client.pid}}});
         sessionInfo = matchmakeSessions[session->id];
         params[0] = session;
     } else {
-        sessionInfo = validSessions.top().second;
-        auto& session = matchmakeSessions[sessionInfo.session->id];
+        auto& session = matchmakeSessions[validSessions.top().second.session->id];
         session.players.insert(client.pid);
+        sessionInfo = session;
         params[0] = sessionInfo.session;
     }
 
@@ -405,11 +559,11 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 
 void SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     auto clientIt = registeredClients.find(pidMap[address]);
-    if (clientIt->second.joinedGathering != nullptr) {
+    if (clientIt != registeredClients.end() && clientIt->second.joinedGathering != nullptr) {
         removePlayerFromSession(clientIt->second.joinedGathering->id, pidMap[address], "", true);
     }
 
-    registeredClients.erase(pidMap[address]);
+    if (clientIt != registeredClients.end()) registeredClients.erase(pidMap[address]);
 
     Server::onDisconnect(address);
 }
@@ -434,7 +588,7 @@ void SplatoonSecureRMC::sendNotification(ClientInfo client, NotificationType typ
     notification.protocolId = 14;
     notification.methodId = 1;
     notification.extendedProtocolId = 0;
-    notification.callId = nextNotificationId++;
+    notification.callId = nextReqCallId++;
 
     std::vector<T_ptr> params(1);
     NotificationEvent event(client.minorVersion);
@@ -471,10 +625,14 @@ void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid
     auto sessionIt = matchmakeSessions.find(gId);
     if (sessionIt == matchmakeSessions.end()) return;
 
+    if (!disconnected) sendNotification(registeredClients[playerPid].client, NotificationType::PARTICIPATION_ENDED,
+                                        playerPid, sessionIt->second.session->id, playerPid, msg, 0);
+
     sessionIt->second.players.erase(playerPid);
     registeredClients[playerPid].joinedGathering = nullptr;
     if (sessionIt->second.players.empty()) {
         unregisterGathering_internal(gId, playerPid);
+        return;
     } else {
         for (auto& pid : sessionIt->second.players) {
             sendNotification(registeredClients[pid].client,

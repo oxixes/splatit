@@ -68,17 +68,17 @@ namespace nex::rmc {
         operator const T& () const { return value; }
         Int<T>& operator=(const T& other) { value = other; return *this; }
         Int<T>& operator++() { value++; return *this; }
-        Int<T> operator+(const T& other) const { return Int<T>(value + other); }
-        Int<T> operator-(const T& other) const { return Int<T>(value - other); }
-        Int<T> operator*(const T& other) const { return Int<T>(value * other); }
-        Int<T> operator/(const T& other) const { return Int<T>(value / other); }
-        Int<T> operator%(const T& other) const { return Int<T>(value % other); }
-        Int<T> operator|(const T& other) const { return Int<T>(value | other); }
-        Int<T> operator&(const T& other) const { return Int<T>(value & other); }
-        Int<T> operator<<(const T& other) const { return Int<T>(value << other); }
-        Int<T> operator>>(const T& other) const { return Int<T>(value >> other); }
-        Int<T> operator~() const { return Int<T>(~value); }
-        Int<T> operator-() const { return Int<T>(-value); }
+        Int<T> operator+(const T& other) const { return Int<T>(0, value + other); }
+        Int<T> operator-(const T& other) const { return Int<T>(0, value - other); }
+        Int<T> operator*(const T& other) const { return Int<T>(0, value * other); }
+        Int<T> operator/(const T& other) const { return Int<T>(0, value / other); }
+        Int<T> operator%(const T& other) const { return Int<T>(0, value % other); }
+        Int<T> operator|(const T& other) const { return Int<T>(0, value | other); }
+        Int<T> operator&(const T& other) const { return Int<T>(0, value & other); }
+        Int<T> operator<<(const T& other) const { return Int<T>(0, value << other); }
+        Int<T> operator>>(const T& other) const { return Int<T>(0, value >> other); }
+        Int<T> operator~() const { return Int<T>(0, ~value); }
+        Int<T> operator-() const { return Int<T>(0, -value); }
         bool operator==(const T& other) const { return value == other; }
         bool operator!=(const T& other) const { return value != other; }
         bool operator<(const T& other) const { return value < other; }

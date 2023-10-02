@@ -22,6 +22,8 @@ struct NATProperties {
 struct RegisteredClientInfo {
     ClientInfo client;
     std::vector<StationURL> urls;
+    StationURL publicUrl;
+    uint32_t rvConnId;
     std::shared_ptr<Gathering> joinedGathering = nullptr;
     NATProperties lastReportedNATProperties;
 };
@@ -37,11 +39,15 @@ public:
     ~SplatoonSecureRMC() override = default;
 
 private:
+    void requestProbeInitiationExt(ClientInfo client, Request req, List<StationURL> targets, StationURL probe);
+    void reportNatTraversalResult(ClientInfo client, Request req, UInt32 cid, Bool result, UInt32 rtt);
     void reportNatProperties(ClientInfo client, Request req, UInt32 mapping, UInt32 filtering, UInt32 rtt);
     void secure_register(ClientInfo client, Request req, List<StationURL> urls);
     void replaceUrl(ClientInfo client, Request req, StationURL oldUrl, StationURL newUrl);
     void sendReport(ClientInfo client, Request req, UInt32 id, qBuffer report);
     void unregisterGathering(ClientInfo client, Request req, UInt32 gId);
+    void findBySingleId(ClientInfo client, Request req, UInt32 id);
+    void getSessionUrls(ClientInfo client, Request req, UInt32 gId);
     void endParticipation(ClientInfo client, Request req, UInt32 gId, String msg);
     void closeParticipation(ClientInfo client, Request req, UInt32 gId);
     void getPlayingSessions(ClientInfo client, Request req, List<PID> pids);
@@ -58,8 +64,8 @@ private:
 
     std::shared_ptr<db::Database> db;
 
-    uint32_t nextRVConnId = 0;
-    uint32_t nextNotificationId = 0;
+    uint32_t nextRVConnId = 1;
+    uint32_t nextReqCallId = 0;
     std::unordered_map<uint32_t, RegisteredClientInfo> registeredClients;
     std::unordered_map<uint32_t, SessionInfo> matchmakeSessions;
 };

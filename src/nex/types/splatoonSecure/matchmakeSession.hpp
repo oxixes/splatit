@@ -57,6 +57,10 @@ namespace nex::rmc {
             return parentData;
         }
 
+        [[nodiscard]] std::vector<uint8_t> encodeGathering() const {
+            return Gathering::encode();
+        }
+
         size_t decode(std::span<const uint8_t> data) override {
             size_t size = 0;
 

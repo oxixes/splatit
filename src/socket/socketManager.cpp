@@ -140,6 +140,7 @@ uint64_t SocketManager::process(uint64_t ms) {
             if (fd.revents & POLLOUT) {
                 socketsLock.lock();
 
+                bool locked = true;
                 if (sockets[socketIndexToId[i]].type == SocketType::TCP_CONN) {
                     sock::SocketStatus status = sockets[socketIndexToId[i]].socket->getStatus();
                     if (status == sock::SocketStatus::CONNECTING) {
@@ -149,7 +150,13 @@ uint64_t SocketManager::process(uint64_t ms) {
                             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                                         "Socket with ID " + std::to_string(socketIndexToId[i]) + " has connected");
 
-                            if (socketInfo->connectCallback != nullptr) socketInfo->connectCallback(socketIndexToId[i]);
+                            if (socketInfo->connectCallback != nullptr) {
+                                auto connectCallback = socketInfo->connectCallback;
+                                socketsLock.unlock();
+                                locked = false;
+
+                                connectCallback(socketIndexToId[i]);
+                            }
                         } catch (const sock::RetryableException &e) {
                             i++;
                             socketsLock.unlock();
@@ -165,18 +172,30 @@ uint64_t SocketManager::process(uint64_t ms) {
                             continue;
                         }
                     } else if (status == sock::SocketStatus::CONNECTED) {
+                        socketsLock.unlock();
+                        locked = false;
+
                         send(socketIndexToId[i]);
                     } else if (status == sock::SocketStatus::CLOSING) {
+                        socketsLock.unlock();
+                        locked = false;
+
                         close(socketIndexToId[i]);
                     }
                 } else if (socketInfo->type == SocketType::UDP) {
+                    socketsLock.unlock();
+                    locked = false;
+
                     sendto(socketIndexToId[i]);
                 }
-                socketsLock.unlock();
+
+                if (locked) socketsLock.unlock();
             }
 
             if (fd.revents & POLLIN) {
                 socketsLock.lock();
+                bool locked = true;
+
                 SocketType type = socketInfo->type;
                 if (type == SocketType::TCP) {
                     accept(socketIndexToId[i]);
@@ -189,7 +208,13 @@ uint64_t SocketManager::process(uint64_t ms) {
                             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                                         "Socket with ID " + std::to_string(socketIndexToId[i]) + " has connected");
 
-                            if (socketInfo->connectCallback != nullptr) socketInfo->connectCallback(socketIndexToId[i]);
+                            if (socketInfo->connectCallback != nullptr) {
+                                auto connectCallback = socketInfo->connectCallback;
+                                socketsLock.unlock();
+                                locked = false;
+
+                                connectCallback(socketIndexToId[i]);
+                            }
                         } catch (const sock::RetryableException &e) {
                             i++;
 
@@ -206,14 +231,24 @@ uint64_t SocketManager::process(uint64_t ms) {
                             continue;
                         }
                     } else if (status == sock::SocketStatus::CONNECTED) {
+                        socketsLock.unlock();
+                        locked = false;
+
                         recv(socketIndexToId[i]);
                     } else if (status == sock::SocketStatus::CLOSING) {
+                        socketsLock.unlock();
+                        locked = false;
+
                         close(socketIndexToId[i]);
                     }
                 } else if (type == SocketType::UDP) {
+                    socketsLock.unlock();
+                    locked = false;
+
                     recvfrom(socketIndexToId[i]);
                 }
-                socketsLock.unlock();
+
+                if (locked) socketsLock.unlock();
             }
 
             i++;
@@ -413,7 +448,12 @@ void SocketManager::recv(uint32_t socketId) {
 
         recvBuf.resize(recvBytes);
 
-        if (socketInfo->tcpRecvCallback != nullptr) socketInfo->tcpRecvCallback(socketId, std::move(recvBuf));
+        if (socketInfo->tcpRecvCallback != nullptr) {
+            auto tcpRecvCallback = socketInfo->tcpRecvCallback;
+            socketsLock.unlock();
+
+            tcpRecvCallback(socketId, std::move(recvBuf));
+        }
     } catch (const sock::RetryableException& e) {
         // Actually, this could happen, it will be already handled by the poll call
 //        logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
@@ -458,7 +498,12 @@ void SocketManager::recvfrom(uint32_t socketId) {
         auto* ipv4addr = (uint8_t*) &addr.sin_addr.S_un.S_un_b;
         sock::IPv4Addr dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
 
-        if (socketInfo->udpRecvCallback != nullptr) socketInfo->udpRecvCallback(socketId, std::move(recvBuf), dir);
+        if (socketInfo->udpRecvCallback != nullptr) {
+            auto udpRecvCallback = socketInfo->udpRecvCallback;
+            socketsLock.unlock();
+
+            udpRecvCallback(socketId, std::move(recvBuf), dir);
+        }
     } catch (const sock::RetryableException& e) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                     "Socket with ID " + std::to_string(socketId) + " threw a retryable exception,"
@@ -546,9 +591,16 @@ bool SocketManager::close(uint32_t socketId, bool force) {
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK, std::string(e.what()));
         }
 
-        if (socketInfo->closeCallback.first != nullptr) socketInfo->closeCallback.first(socketId);
+        if (socketInfo->closeCallback.first != nullptr) {
+            auto closeCallback = socketInfo->closeCallback.first;
+            sockets.erase(socketId);
+            socketsLock.unlock();
 
-        sockets.erase(socketId);
+            socketInfo->closeCallback.first(socketId);
+        } else {
+            sockets.erase(socketId);
+        }
+
         return true;
     }
 

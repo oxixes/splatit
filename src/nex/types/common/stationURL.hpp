@@ -11,6 +11,7 @@
 namespace nex::rmc {
 
     enum class Protocol {
+        NONE,
         UDP,
         PRUDP,
         PRUDPS
@@ -33,7 +34,7 @@ namespace nex::rmc {
             std::string url = std::move(str);
 
             if (url.empty()) {
-                empty = true;
+                proto = Protocol::NONE;
                 return size;
             }
 
@@ -94,6 +95,8 @@ namespace nex::rmc {
                         natm = std::stoi(std::string(value));
                     } else if (key == "natf") {
                         natf = std::stoi(std::string(value));
+                    } else if (key == "probeinit") {
+                        probeinit = std::stoi(std::string(value));
                     } else if (key == "upnp") {
                         upnp = std::stoi(std::string(value));
                     } else if (key == "pmp") {
@@ -113,7 +116,7 @@ namespace nex::rmc {
             return size;
         }
 
-        Protocol proto = Protocol::PRUDP;
+        Protocol proto = Protocol::NONE;
         std::optional<sock::IPv4Addr> ip;
         std::optional<uint16_t> port;
         std::optional<uint8_t> stream;
@@ -126,9 +129,8 @@ namespace nex::rmc {
         std::optional<uint8_t> natf;
         std::optional<bool> upnp;
         std::optional<bool> pmp;
+        std::optional<bool> probeinit;
         std::optional<uint8_t> Pl;
-
-        bool empty = false;
 
         /* There are more parameters, but they haven't been seen, so I'm unsure if
          * they will ever appear on this game. */
@@ -139,7 +141,7 @@ namespace nex::rmc {
         std::string encodeString() const {
             std::string url;
 
-            if (empty) {
+            if (proto == Protocol::NONE) {
                 url = "";
             } else {
                 if (proto == Protocol::UDP) {
@@ -161,6 +163,7 @@ namespace nex::rmc {
                 if (RVCID.has_value()) url += "RVCID=" + std::to_string(RVCID.value()) + ";";
                 if (natm.has_value()) url += "natm=" + std::to_string(natm.value()) + ";";
                 if (natf.has_value()) url += "natf=" + std::to_string(natf.value()) + ";";
+                if (probeinit.has_value()) url += "probeinit=" + std::to_string(probeinit.value()) + ";";
                 if (upnp.has_value()) url += "upnp=" + std::to_string(upnp.value()) + ";";
                 if (pmp.has_value()) url += "pmp=" + std::to_string(pmp.value()) + ";";
 

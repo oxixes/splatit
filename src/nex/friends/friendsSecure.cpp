@@ -50,6 +50,18 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
 
     std::vector<T_ptr> params(3);
 
+    if (urls.size() != 1) {
+        retval.success = false;
+        retval.code = Error::CORE__INVALID_ARGUMENT;
+
+        params[0] = std::make_shared<Result>(retval);
+        params[1] = std::make_shared<UInt32>();
+        params[1] = std::make_shared<StationURL>();
+
+        sendMsg(client, res, params);
+        return;
+    }
+
     String jwtToken;
     try {
         jwtToken = data.get<String>();
@@ -65,7 +77,6 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
     if (!utils::checkJWT(jwtToken, base64JWTKey, FRIENDS_SERVER_ID, client, logger, logGroup)) {
         retval.code = Error::CORE__ACCESS_DENIED;
         retval.success = false;
-        clientPublicUrl.empty = true;
 
         params[0] = std::make_shared<Result>(retval);
         params[1] = std::make_shared<UInt32>(0, rvConnId);
@@ -81,9 +92,16 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
     retval.code = Error::CORE__UNKNOWN;
     retval.success = true;
     rvConnId = nextRVConnId++;
-    clientPublicUrl = urls[0];
+
+    clientPublicUrl.proto = Protocol::PRUDP;
     clientPublicUrl.ip = client.address.address;
     clientPublicUrl.port = client.address.address.port;
+    clientPublicUrl.natf = 0;
+    clientPublicUrl.natm = 0;
+    clientPublicUrl.pmp = 0;
+    clientPublicUrl.sid = 15;
+    clientPublicUrl.type = 3;
+    clientPublicUrl.upnp = 0;
 
     // TODO Save registered URL(s)
 

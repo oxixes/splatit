@@ -48,7 +48,21 @@ namespace nex::rmc {
             return sizeof(uint32_t) + dataSize;
         }
 
-        size_t size() const { return data.size(); }
+        [[nodiscard]] size_t size() const { return data.size(); }
+        [[nodiscard]] bool empty() const { return data.empty(); }
+        auto begin() { return data.begin(); }
+        auto end() { return data.end(); }
+        auto begin() const { return data.begin(); }
+        auto end() const { return data.end(); }
+        auto insert(auto pos, auto first, auto last) { return data.insert(pos, first, last); }
+        auto push_back(const T& value) { return data.push_back(value); }
+        auto emplace_back(auto&&... args) { return data.emplace_back(args...); }
+        auto erase(auto pos) { return data.erase(pos); }
+        auto erase(auto first, auto last) { return data.erase(first, last); }
+        void clear() { data.clear(); }
+        auto find(const T& value) { return data.find(value); }
+        auto find(const T& value) const { return data.find(value); }
+        auto contains(const T& value) const { return data.contains(value); }
 
         explicit operator std::vector<T>() const { return data; }
         explicit operator std::vector<T>&() { return data; }

@@ -60,14 +60,7 @@ void AuthRMC::login(ClientInfo client, Request req, String username) {
 
         params[1] = std::make_shared<PID>();
         params[2] = std::make_shared<Buffer>();
-
-        StationURL emptyUrl;
-        emptyUrl.empty = true;
-        RVConnectionData connectionData(client.minorVersion);
-        connectionData.urlRegularProtocols = emptyUrl;
-        connectionData.urlSpecialProtocols = emptyUrl;
-
-        params[3] = std::make_shared<RVConnectionData>(connectionData);
+        params[3] = std::make_shared<RVConnectionData>(client.minorVersion);
         params[4] = std::make_shared<String>();
 
         sendMsg(client, res, params);
@@ -101,12 +94,8 @@ void AuthRMC::login(ClientInfo client, Request req, String username) {
     secureUrl.type = 2;
     secureUrl.PID = 2;
 
-    StationURL emptyUrl;
-    emptyUrl.empty = true;
-
     RVConnectionData connectionData(client.minorVersion);
     connectionData.urlRegularProtocols = secureUrl;
-    connectionData.urlSpecialProtocols = emptyUrl;
 
     params[3] = std::make_shared<RVConnectionData>(connectionData);
     params[4] = std::make_shared<String>(build);
@@ -166,15 +155,7 @@ void AuthRMC::loginEx(ClientInfo client, Request req, String username, AnyDataHo
         params[0] = std::make_shared<Result>(retval);
         params[1] = std::make_shared<PID>();
         params[2] = std::make_shared<Buffer>();
-
-        StationURL emptyUrl;
-        emptyUrl.empty = true;
-
-        RVConnectionData connectionData(client.minorVersion);
-        connectionData.urlRegularProtocols = emptyUrl;
-        connectionData.urlSpecialProtocols = emptyUrl;
-
-        params[3] = std::make_shared<RVConnectionData>(connectionData);
+        params[3] = std::make_shared<RVConnectionData>(client.minorVersion);
         params[4] = std::make_shared<String>();
 
         sendMsg(client, res, params);

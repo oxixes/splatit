@@ -655,7 +655,8 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
             return false;
         }
 
-        if (it != clients.end()) closeClientConnection(prudpAddr);
+        if (it != clients.end() || (userPid != 0 && pidToAddr.contains(userPid)))
+            closeClientConnection((userPid != 0) ? pidToAddr.at(userPid) : prudpAddr);
 
         timePoint now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
         timePoint nextPing = now + std::chrono::milliseconds(PING_INTERVAL);
@@ -667,6 +668,7 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                 initSeqIdUnreliable,
                 packet->remoteSignature,
                 nextSessionId,
+                userPid,
                 (auth) ? std::vector<uint8_t>() : key,
                 std::vector<Substream>(maxSubstreamId + 1, {
                         1,
@@ -675,6 +677,8 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                 }),
                 nextPing
         }});
+
+        if (userPid != 0) pidToAddr.insert({userPid, prudpAddr});
 
         auto rmcIt = registeredServers.find(packet->dstPort);
         if (rmcIt != registeredServers.end()) {
@@ -712,11 +716,6 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                                                 + ":" + std::to_string(prudpAddr.address.port) + " connected");
         return true;
     } else if (packet->type == Type::DISCONNECT) {
-        auto rmcIt = registeredServers.find(packet->dstPort);
-        if (rmcIt != registeredServers.end()) {
-            rmcIt->second.disconnectFunc(prudpAddr);
-        }
-
         // If the packet is reliable, we send 3 ACK, so that the client
         // receives at least one of them, if it's not reliable, we just
         // close the connection.
@@ -767,6 +766,13 @@ void Server::closeClientConnection(prudp::PRUDPAddress addr) {
 
     auto it = clients.find(addr);
     if (it == clients.end()) return;
+
+    auto rmcIt = registeredServers.find(addr.srcVPort);
+    if (rmcIt != registeredServers.end()) {
+        rmcIt->second.disconnectFunc(addr);
+    }
+
+    if (it->second.pid != 0) pidToAddr.erase(it->second.pid);
 
     auto nextPing = it->second.nextPing;
 

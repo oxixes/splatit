@@ -106,6 +106,7 @@ struct ClientInfo {
     uint16_t unreliableSeqId;
     std::vector<uint8_t> remoteSignature;
     uint8_t sessionId;
+    uint32_t pid;
     std::vector<uint8_t> sessionKey;
     std::vector<Substream> substreams;
     timePoint nextPing;
@@ -167,6 +168,7 @@ private:
     uint32_t mainSocketID = 0;
 
     std::unordered_map<PRUDPAddress, ClientInfo> clients;
+    std::unordered_map<uint32_t, PRUDPAddress> pidToAddr;
     std::recursive_mutex clientsMutex;
     uint8_t nextSessionId = 0;
 
