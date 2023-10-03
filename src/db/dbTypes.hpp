@@ -29,7 +29,7 @@ protected:
 
 class DBInteger : public DBData {
 public:
-    explicit DBInteger(int data) : DBData(data, dbDataType::INTEGER) {}
+    explicit DBInteger(int64_t data) : DBData(data, dbDataType::INTEGER) {}
 };
 
 class DBString : public DBData {

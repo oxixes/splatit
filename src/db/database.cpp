@@ -19,7 +19,7 @@ std::unique_ptr<Command> Database::craftVoidCommand(const std::string& command) 
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetUserByPIDCommand(int pid) {
+std::unique_ptr<Command> Database::craftGetUserByPIDCommand(uint32_t pid) {
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_PID,
         std::vector<std::any>{std::any(pid)});
 
@@ -33,7 +33,7 @@ std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::stri
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(int pid, const std::string& serverId) {
+std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId) {
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,
         std::vector<std::any>{std::any(pid), std::any(serverId)});
 
@@ -116,7 +116,7 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::GET_USER_BY_PID:
             // Get user by PID commands need the PID of the user to get.
-            if (command->data.size() != 1 || command->data[0].type() != typeid(int)) {
+            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
                 return false;
             }
 
@@ -132,8 +132,16 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::GET_GAME_SERVER_ACCESS:
             // Get game server access commands need the PID of the user to get and the ID of the game server.
-            if (command->data.size() != 2 || command->data[0].type() != typeid(int) ||
+            if (command->data.size() != 2 || command->data[0].type() != typeid(uint32_t) ||
                 command->data[1].type() != typeid(std::string)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_USER_INFO:
+            // Get the user information.
+            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
                 return false;
             }
 

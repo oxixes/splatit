@@ -295,7 +295,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         dbDataType identifierType;
         if (command->type == DBCommandType::GET_USER_BY_PID) {
             identifierType = dbDataType::INTEGER;
-            identifier = std::make_shared<DBInteger>(std::any_cast<int>(command->data[0]));
+            identifier = std::make_shared<DBInteger>((int64_t) std::any_cast<uint32_t>(command->data[0]));
         } else {
             identifierType = dbDataType::STRING;
             identifier = std::make_shared<DBString>(std::any_cast<std::string>(command->data[0]));
@@ -324,7 +324,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             for (const auto& data : row) {
                 switch (data->type) {
                     case dbDataType::INTEGER:
-                        resultsData.emplace_back(std::any_cast<int>(data->data));
+                        resultsData.emplace_back((uint32_t) std::any_cast<int64_t>(data->data));
                         break;
                     case dbDataType::STRING:
                         resultsData.emplace_back(std::any_cast<std::string>(data->data));
@@ -342,7 +342,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
 
         if (!bindData(getGameServerAccessStatement, {dbDataType::INTEGER, dbDataType::STRING},
-                      {std::make_shared<DBInteger>(std::any_cast<int>(command->data[0])),
+                      {std::make_shared<DBInteger>((int64_t) std::any_cast<uint32_t>(command->data[0])),
                        std::make_shared<DBString>(std::any_cast<std::string>(command->data[1]))})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(getGameServerAccessStatement);
@@ -386,7 +386,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
         int result = 0;
         switch (dataTypes[i]) {
             case dbDataType::INTEGER:
-                result = sqlite3_bind_int(statement, i + 1, std::any_cast<int>(
+                result = sqlite3_bind_int64(statement, i + 1, std::any_cast<int64_t>(
                         std::dynamic_pointer_cast<DBInteger>(data[i])->data));
                 break;
             case dbDataType::STRING:
@@ -424,7 +424,7 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<db
             for (int i = 0; i < sqlite3_column_count(statement); i++) {
                 switch (dataTypes[i]) {
                     case dbDataType::INTEGER:
-                        returnedData->back().emplace_back(new DBInteger(sqlite3_column_int(statement, i)));
+                        returnedData->back().emplace_back(new DBInteger(sqlite3_column_int64(statement, i)));
                         break;
                     case dbDataType::STRING:
                         returnedData->back().emplace_back(new DBString(std::string(

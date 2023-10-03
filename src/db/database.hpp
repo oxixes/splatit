@@ -32,7 +32,10 @@ enum class DBCommandType {
     GENERIC,
     GET_USER_BY_PID,
     GET_USER_BY_USERNAME,
-    GET_GAME_SERVER_ACCESS
+    GET_GAME_SERVER_ACCESS,
+    GET_USER_INFO,
+    GET_FRIENDS_INFO,
+    UPDATE_USER_INFO
 };
 
 enum class DBResultStatus {
@@ -109,9 +112,9 @@ public:
     std::unique_ptr<Result> getResult(uint32_t commandID);
 
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
-    static std::unique_ptr<Command> craftGetUserByPIDCommand(int pid);
+    static std::unique_ptr<Command> craftGetUserByPIDCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
-    static std::unique_ptr<Command> craftGetGameServerAccessCommand(int pid, const std::string& serverId);
+    static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 

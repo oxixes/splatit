@@ -91,7 +91,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
         if (results->data.empty())
             return createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
 
-        auto userPid = std::to_string(std::any_cast<int>(results->data[0]));
+        auto userPid = std::to_string(std::any_cast<uint32_t>(results->data[0]));
         auto username = std::any_cast<std::string>(results->data[1]);
 
         pugi::xml_node mapped_id = mapped_ids.append_child("mapped_id");
@@ -164,7 +164,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
             return createError(req.getVersion(), 106, "Invalid account ID or password", "", shouldClose);
         }
 
-        uint32_t pid = std::any_cast<int>(results->data[0]);
+        uint32_t pid = std::any_cast<uint32_t>(results->data[0]);
 
         std::string nintendoPasswordHash;
         if (bodyMap.find("password_type") != bodyMap.end() && bodyMap["password_type"] == "hash") {

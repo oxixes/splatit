@@ -682,7 +682,9 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
 
         auto rmcIt = registeredServers.find(packet->dstPort);
         if (rmcIt != registeredServers.end()) {
+            clientsLock.unlock();
             rmcIt->second.connectFunc(prudpAddr, userPid);
+            clientsLock.lock();
         }
 
         // The connect packet is the one with seqId 1
@@ -741,18 +743,22 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
         // otherwise the packet may be incomplete, and we would have already
         // sent the ACK, so the client would not send the packet again.
 
+        auto res = craftAck(prudpAddr, packet, it->second.sessionId, it->second.remoteSignature,
+                            it->second.sessionKey);
+
         auto rmcInfo = registeredServers.find(packet->dstPort);
         if (rmcInfo == registeredServers.end()) {
             logger->log(Logger::level::DEBUG, logGroup, "Received DATA packet from " +
                                                         util::ipv4ToString(prudpAddr.address) + " with invalid port");
         } else {
             uint8_t substreamId = (majorVersion == 0) ? 0 : std::dynamic_pointer_cast<PacketV1>(packet)->substreamId;
-            rmcInfo->second.dataFunc(prudpAddr, it->second.minorVersion, substreamId, packet->data);
+            uint8_t packetMinorVersion = it->second.minorVersion;
+            clientsLock.unlock();
+
+            rmcInfo->second.dataFunc(prudpAddr, packetMinorVersion, substreamId, packet->data);
         }
 
         if (packet->flags & FLAG_NEED_ACK && !aggregateAck) {
-            auto res = craftAck(prudpAddr, packet, it->second.sessionId, it->second.remoteSignature,
-                                it->second.sessionKey);
             sendPacket(prudpAddr, res);
         }
     }
@@ -761,16 +767,16 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
 }
 
 void Server::closeClientConnection(prudp::PRUDPAddress addr) {
+    auto rmcIt = registeredServers.find(addr.srcVPort);
+    if (rmcIt != registeredServers.end()) {
+        rmcIt->second.disconnectFunc(addr);
+    }
+
     std::unique_lock clientsLock(clientsMutex);
     std::unique_lock delayedPacketsLock(delayedPacketsMutex);
 
     auto it = clients.find(addr);
     if (it == clients.end()) return;
-
-    auto rmcIt = registeredServers.find(addr.srcVPort);
-    if (rmcIt != registeredServers.end()) {
-        rmcIt->second.disconnectFunc(addr);
-    }
 
     if (it->second.pid != 0) pidToAddr.erase(it->second.pid);
 
