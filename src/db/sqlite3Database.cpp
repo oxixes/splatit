@@ -1,5 +1,8 @@
 #include <memory>
 #include <utility>
+#include <format>
+#include <chrono>
+
 #include "sqlite3Database.hpp"
 
 namespace db {
@@ -270,6 +273,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
                     case dbDataType::STRING:
                         rowData.emplace_back(std::dynamic_pointer_cast<DBString>(data));
                         break;
+                    case dbDataType::BLOB:
+                        rowData.emplace_back(std::dynamic_pointer_cast<DBBlob>(data));
+                        break;
+                    case dbDataType::DATETIME:
+                        rowData.emplace_back(std::dynamic_pointer_cast<DBDateTime>(data));
+                        break;
                 }
             }
 
@@ -329,6 +338,9 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
                     case dbDataType::STRING:
                         resultsData.emplace_back(std::any_cast<std::string>(data->data));
                         break;
+                    default:
+                        // Only integers and strings are returned, so this should never happen
+                        break;
                 }
             }
         }
@@ -362,6 +374,181 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         sqlite3_clear_bindings(getGameServerAccessStatement);
 
         if (!returnedData->empty()) resultsData.emplace_back(std::any_cast<std::string>((*returnedData)[0][2]->data));
+    } else if (command->type == DBCommandType::GET_USER_INFO) {
+        if (getUserInfoStatement == nullptr) {
+            if (!craftStatement("SELECT * FROM user_info WHERE pid = ?", &getUserInfoStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(getUserInfoStatement, {dbDataType::INTEGER},
+                      {std::make_shared<DBInteger>((int64_t) std::any_cast<uint32_t>(command->data[0]))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            goto push_results;
+        }
+
+        std::vector<dbDataType> returnedDataTypes {dbDataType::INTEGER, dbDataType::INTEGER, dbDataType::INTEGER,
+                                                   dbDataType::INTEGER, dbDataType::BLOB, dbDataType::BLOB,
+                                                   dbDataType::BLOB, dbDataType::DATETIME};
+
+        if (!runStatement(getUserInfoStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getUserInfoStatement);
+            sqlite3_clear_bindings(getUserInfoStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(getUserInfoStatement);
+        sqlite3_clear_bindings(getUserInfoStatement);
+
+        if (!returnedData->empty()) {
+            auto& row = (*returnedData)[0]; // There will only be one row returned, if any
+            resultsData.emplace_back((bool) std::any_cast<int64_t>(row[1]->data));
+            resultsData.emplace_back((bool) std::any_cast<int64_t>(row[2]->data));
+            resultsData.emplace_back((bool) std::any_cast<int64_t>(row[3]->data));
+            resultsData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[4]->data));
+            resultsData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[5]->data));
+            resultsData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[6]->data));
+            resultsData.emplace_back(std::any_cast<datetime_t>(row[7]->data));
+        }
+    } else if (command->type == DBCommandType::GET_FRIENDS_INFO) {
+        if (getFriendsInfoStatement == nullptr) {
+            std::string sqlCommand = "SELECT fuser.pid                  AS friend_pid,"
+                                            "fuser.username             AS friend_username,"
+                                            "finfo.show_presence        AS show_presence,"
+                                            "finfo.show_playing         AS show_game,"
+                                            "finfo.block_requests       AS block_requests,"
+                                            "finfo.nnaInfo              AS nna_info,"
+                                            "finfo.presence             AS presence,"
+                                            "finfo.comment              AS comment,"
+                                            "finfo.last_online          AS last_online,"
+                                            "friendships.became_friends AS became_friends "
+                                            "FROM users "
+                                            "JOIN friendships "
+                                            "ON users.pid = friendships.pid "
+                                            "OR users.pid = friendships.friend_pid "
+                                            "JOIN users AS fuser "
+                                            "ON (fuser.pid = friendships.pid and fuser.pid <> users.pid) "
+                                            "OR (fuser.pid = friendships.friend_pid and fuser.pid <> users.pid) "
+                                            "JOIN user_info AS finfo "
+                                            "ON fuser.pid = finfo.pid "
+                                            "WHERE users.pid = ? "
+                                            "ORDER BY fuser.pid;";
+
+            if (!craftStatement(sqlCommand, &getFriendsInfoStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(getFriendsInfoStatement, {dbDataType::INTEGER},
+                      {std::make_shared<DBInteger>((int64_t) std::any_cast<uint32_t>(command->data[0]))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            goto push_results;
+        }
+
+        std::vector<dbDataType> returnedDataTypes {dbDataType::INTEGER, dbDataType::STRING, dbDataType::INTEGER,
+                                                   dbDataType::INTEGER, dbDataType::INTEGER, dbDataType::BLOB,
+                                                   dbDataType::BLOB, dbDataType::BLOB, dbDataType::DATETIME,
+                                                   dbDataType::DATETIME};
+
+        if (!runStatement(getFriendsInfoStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getFriendsInfoStatement);
+            sqlite3_clear_bindings(getFriendsInfoStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(getFriendsInfoStatement);
+        sqlite3_clear_bindings(getFriendsInfoStatement);
+
+        for (const auto& row : *returnedData) {
+            std::vector<std::any> rowData;
+            rowData.emplace_back((uint32_t) std::any_cast<int64_t>(row[0]->data));
+            rowData.emplace_back(std::any_cast<std::string>(row[1]->data));
+            rowData.emplace_back((bool) std::any_cast<int64_t>(row[2]->data));
+            rowData.emplace_back((bool) std::any_cast<int64_t>(row[3]->data));
+            rowData.emplace_back((bool) std::any_cast<int64_t>(row[4]->data));
+            rowData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[5]->data));
+            rowData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[6]->data));
+            rowData.emplace_back(std::any_cast<std::vector<uint8_t>>(row[7]->data));
+            rowData.emplace_back(std::any_cast<datetime_t>(row[8]->data));
+            rowData.emplace_back(std::any_cast<datetime_t>(row[9]->data));
+
+            resultsData.emplace_back(std::move(rowData));
+        }
+    } else if (command->type == DBCommandType::UPDATE_USER_INFO) {
+        std::vector<dbDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        // Not all data needs to be updated, so we need to check which fields are being updated.
+        // These are given by optionals, so we can just check if they have a value.
+        std::string sqlCommand = "UPDATE user_info SET ";
+        auto& cmdData = command->data;
+        if (std::any_cast<std::optional<bool>>(cmdData[1]).has_value()) {
+            sqlCommand += "show_presence = ?, ";
+            dataTypes.push_back(dbDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>((int64_t) std::any_cast<std::optional<bool>>(cmdData[1]).value()));
+        }
+
+        if (std::any_cast<std::optional<bool>>(cmdData[2]).has_value()) {
+            sqlCommand += "show_playing = ?, ";
+            dataTypes.push_back(dbDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>((int64_t) std::any_cast<std::optional<bool>>(cmdData[2]).value()));
+        }
+
+        if (std::any_cast<std::optional<bool>>(cmdData[3]).has_value()) {
+            sqlCommand += "block_requests = ?, ";
+            dataTypes.push_back(dbDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>((int64_t) std::any_cast<std::optional<bool>>(cmdData[3]).value()));
+        }
+
+        if (!std::any_cast<std::vector<uint8_t>>(cmdData[4]).empty()) {
+            sqlCommand += "nnaInfo = ?, ";
+            dataTypes.push_back(dbDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(std::any_cast<std::vector<uint8_t>>(cmdData[4])));
+        }
+
+        if (!std::any_cast<std::vector<uint8_t>>(cmdData[5]).empty()) {
+            sqlCommand += "presence = ?, ";
+            dataTypes.push_back(dbDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(std::any_cast<std::vector<uint8_t>>(cmdData[5])));
+        }
+
+        if (!std::any_cast<std::vector<uint8_t>>(cmdData[6]).empty()) {
+            sqlCommand += "comment = ?, ";
+            dataTypes.push_back(dbDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(std::any_cast<std::vector<uint8_t>>(cmdData[6])));
+        }
+
+        if (std::any_cast<std::optional<datetime_t>>(cmdData[7]).has_value()) {
+            sqlCommand += "last_online = ?, ";
+            dataTypes.push_back(dbDataType::DATETIME);
+            data.emplace_back(std::make_shared<DBDateTime>(std::any_cast<std::optional<datetime_t>>(cmdData[7]).value()));
+        }
+
+        // Remove the last comma and space and add the WHERE clause
+        sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
+
+        if (!craftStatement(sqlCommand, &statement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(statement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        if (!runStatement(statement, dataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        sqlite3_finalize(statement);
     }
 
     push_results:
@@ -393,6 +580,19 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
                 result = sqlite3_bind_text(statement, i + 1, std::any_cast<std::string>(
                         std::dynamic_pointer_cast<DBString>(data[i])->data).c_str(), -1, SQLITE_TRANSIENT);
                 break;
+            case dbDataType::BLOB:
+                result = sqlite3_bind_blob64(statement, i + 1, std::any_cast<std::vector<uint8_t>>(
+                                                     std::dynamic_pointer_cast<DBBlob>(data[i])->data).data(),
+                                             std::any_cast<std::vector<uint8_t>>(std::dynamic_pointer_cast<DBBlob>(data[i])->data).size(),
+                                             SQLITE_TRANSIENT);
+                break;
+            case dbDataType::DATETIME: {
+                auto tp = std::any_cast<datetime_t>(std::dynamic_pointer_cast<DBDateTime>(data[i])->data);
+                std::string date = std::format("{:%Y-%m-%d %H:%M:%S}", tp);
+
+                result = sqlite3_bind_text(statement, i + 1, date.c_str(), -1, SQLITE_TRANSIENT);
+                break;
+            }
         }
 
         if (result != SQLITE_OK) {
@@ -430,6 +630,23 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<db
                         returnedData->back().emplace_back(new DBString(std::string(
                                 reinterpret_cast<const char *>(sqlite3_column_text(statement, i)))));
                         break;
+                    case dbDataType::BLOB: {
+                        auto blob = std::vector<uint8_t>();
+                        blob.resize(sqlite3_column_bytes(statement, i));
+                        memcpy(blob.data(), sqlite3_column_blob(statement, i), blob.size());
+                        returnedData->back().emplace_back(new DBBlob(blob));
+                        break;
+                    }
+                    case dbDataType::DATETIME: {
+                        std::tm tm{};
+                        std::istringstream ss(std::string(
+                                reinterpret_cast<const char *>(sqlite3_column_text(statement, i))));
+                        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+
+                        auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+                        datetime_t datetime = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+                        returnedData->back().emplace_back(new DBDateTime(datetime));
+                    }
                 }
             }
         } else {

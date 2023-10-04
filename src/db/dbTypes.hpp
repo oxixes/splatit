@@ -9,7 +9,9 @@ namespace db {
 
 enum class dbDataType {
     INTEGER,
-    STRING
+    STRING,
+    BLOB,
+    DATETIME
 };
 
 class DBData {
@@ -36,6 +38,19 @@ class DBString : public DBData {
 public:
     explicit DBString(const std::string& data) : DBData(data, dbDataType::STRING) {}
 };
+
+class DBBlob : public DBData {
+public:
+    explicit DBBlob(const std::vector<uint8_t>& data) : DBData(data, dbDataType::BLOB) {}
+};
+
+typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> datetime_t;
+
+class DBDateTime : public DBData {
+public:
+    explicit DBDateTime(datetime_t data) : DBData(data, dbDataType::DATETIME) {}
+};
+
 
 } // namespace db
 

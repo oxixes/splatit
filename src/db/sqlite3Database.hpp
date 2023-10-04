@@ -46,6 +46,8 @@ private:
     sqlite3_stmt* getUserByPIDStatement = nullptr;
     sqlite3_stmt* getUserByUsernameStatement = nullptr;
     sqlite3_stmt* getGameServerAccessStatement = nullptr;
+    sqlite3_stmt* getUserInfoStatement = nullptr;
+    sqlite3_stmt* getFriendsInfoStatement = nullptr;
 
     void dbThread();
 

@@ -146,6 +146,26 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
             }
 
             break;
+
+        case DBCommandType::GET_FRIENDS_INFO:
+            // Get the information of all friends of the specified PID.
+            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::UPDATE_USER_INFO:
+            // Update the user information. Not all fields need to be updated, so they are optionals.
+            if (command->data.size() != 8 || command->data[0].type() != typeid(uint32_t) ||
+                command->data[1].type() != typeid(std::optional<bool>) || command->data[2].type() != typeid(std::optional<bool>) ||
+                command->data[3].type() != typeid(std::optional<bool>) || command->data[4].type() != typeid(std::vector<uint8_t>) ||
+                command->data[5].type() != typeid(std::vector<uint8_t>) || command->data[6].type() != typeid(std::vector<uint8_t>) ||
+                command->data[7].type() != typeid(std::optional<datetime_t>)) {
+                return false;
+            }
+
+            break;
     }
 
     return true;
