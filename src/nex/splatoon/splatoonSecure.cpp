@@ -154,7 +154,7 @@ void SplatoonSecureRMC::secure_register(ClientInfo client, Request req, List<Sta
 
     urls[0].RVCID = nextRVConnId;
 
-    auto clientInfo = RegisteredClientInfo();
+    auto clientInfo = SplatoonRegisteredClientInfo();
     clientInfo.client = client;
     clientInfo.urls = (std::vector<StationURL>) std::move(urls);
     clientInfo.publicUrl = urlPublic;

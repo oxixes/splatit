@@ -19,7 +19,7 @@ struct NATProperties {
     uint32_t rtt;
 };
 
-struct RegisteredClientInfo {
+struct SplatoonRegisteredClientInfo {
     ClientInfo client;
     std::vector<StationURL> urls;
     StationURL publicUrl;
@@ -66,7 +66,7 @@ private:
 
     uint32_t nextRVConnId = 1;
     uint32_t nextReqCallId = 0;
-    std::unordered_map<uint32_t, RegisteredClientInfo> registeredClients;
+    std::unordered_map<uint32_t, SplatoonRegisteredClientInfo> registeredClients;
     std::unordered_map<uint32_t, SessionInfo> matchmakeSessions;
 };
 

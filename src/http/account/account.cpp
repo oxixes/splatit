@@ -164,7 +164,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
             return createError(req.getVersion(), 106, "Invalid account ID or password", "", shouldClose);
         }
 
-        uint32_t pid = std::any_cast<uint32_t>(results->data[0]);
+        auto pid = std::any_cast<uint32_t>(results->data[0]);
 
         std::string nintendoPasswordHash;
         if (bodyMap.find("password_type") != bodyMap.end() && bodyMap["password_type"] == "hash") {

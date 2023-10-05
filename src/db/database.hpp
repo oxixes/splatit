@@ -115,6 +115,15 @@ public:
     static std::unique_ptr<Command> craftGetUserByPIDCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
     static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId);
+    static std::unique_ptr<Command> craftGetUserInfoCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
+                                                               std::optional<bool> showPlaying,
+                                                               std::optional<bool> blockRequests,
+                                                               std::vector<uint8_t> nnaInfo,
+                                                               std::vector<uint8_t> presence,
+                                                               std::vector<uint8_t> comment,
+                                                               std::optional<datetime_t> lastOnline);
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 

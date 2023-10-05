@@ -10,4 +10,6 @@ target_sources(splatoon_server PRIVATE
         friendRequestMsg.hpp
         friendRequest.hpp
         blacklistedPrincipal.hpp
-        persistentNotification.hpp)
+        persistentNotification.hpp
+        nintendoNotificationEvent.hpp
+        nintendoNotificationEventGeneral.hpp)

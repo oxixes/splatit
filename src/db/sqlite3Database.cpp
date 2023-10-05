@@ -414,23 +414,23 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
     } else if (command->type == DBCommandType::GET_FRIENDS_INFO) {
         if (getFriendsInfoStatement == nullptr) {
-            std::string sqlCommand = "SELECT fuser.pid                  AS friend_pid,"
-                                            "fuser.username             AS friend_username,"
-                                            "finfo.show_presence        AS show_presence,"
-                                            "finfo.show_playing         AS show_game,"
-                                            "finfo.block_requests       AS block_requests,"
-                                            "finfo.nnaInfo              AS nna_info,"
-                                            "finfo.presence             AS presence,"
-                                            "finfo.comment              AS comment,"
-                                            "finfo.last_online          AS last_online,"
+            std::string sqlCommand = "SELECT fuser.pid "               "AS friend_pid, "
+                                            "fuser.username "          "AS friend_username, "
+                                            "finfo.show_presence "     "AS show_presence, "
+                                            "finfo.show_playing "      "AS show_game, "
+                                            "finfo.block_requests "    "AS block_requests, "
+                                            "finfo.nna_info "          "AS nna_info, "
+                                            "finfo.presence "          "AS presence, "
+                                            "finfo.comment "           "AS comment, "
+                                            "finfo.last_online "       "AS last_online,"
                                             "friendships.became_friends AS became_friends "
                                             "FROM users "
                                             "JOIN friendships "
                                             "ON users.pid = friendships.pid "
                                             "OR users.pid = friendships.friend_pid "
                                             "JOIN users AS fuser "
-                                            "ON (fuser.pid = friendships.pid and fuser.pid <> users.pid) "
-                                            "OR (fuser.pid = friendships.friend_pid and fuser.pid <> users.pid) "
+                                            "ON (fuser.pid = friendships.pid AND fuser.pid <> users.pid) "
+                                            "OR (fuser.pid = friendships.friend_pid AND fuser.pid <> users.pid) "
                                             "JOIN user_info AS finfo "
                                             "ON fuser.pid = finfo.pid "
                                             "WHERE users.pid = ? "
@@ -505,7 +505,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
 
         if (!std::any_cast<std::vector<uint8_t>>(cmdData[4]).empty()) {
-            sqlCommand += "nnaInfo = ?, ";
+            sqlCommand += "nna_info = ?, ";
             dataTypes.push_back(dbDataType::BLOB);
             data.emplace_back(std::make_shared<DBBlob>(std::any_cast<std::vector<uint8_t>>(cmdData[4])));
         }
@@ -530,6 +530,9 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
         // Remove the last comma and space and add the WHERE clause
         sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
+
+        dataTypes.push_back(dbDataType::INTEGER);
+        data.emplace_back(std::make_shared<DBInteger>((int64_t) std::any_cast<uint32_t>(cmdData[0])));
 
         if (!craftStatement(sqlCommand, &statement)) {
             resultStatus = DBResultStatus::FAILURE_STMT;

@@ -596,7 +596,7 @@ bool SocketManager::close(uint32_t socketId, bool force) {
             sockets.erase(socketId);
             socketsLock.unlock();
 
-            socketInfo->closeCallback.first(socketId);
+            closeCallback(socketId);
         } else {
             sockets.erase(socketId);
         }

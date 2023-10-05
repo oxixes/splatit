@@ -40,6 +40,36 @@ std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid,
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_INFO,
+        std::vector<std::any>{std::any(pid)});
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_FRIENDS_INFO,
+        std::vector<std::any>{std::any(pid)});
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
+                                                              std::optional<bool> showPlaying,
+                                                              std::optional<bool> blockRequests,
+                                                              std::vector<uint8_t> nnaInfo,
+                                                              std::vector<uint8_t> presence,
+                                                              std::vector<uint8_t> comment,
+                                                              std::optional<datetime_t> lastOnline) {
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::UPDATE_USER_INFO,
+        std::vector<std::any>{std::any(pid), std::any(showOnline), std::any(showPlaying),
+                              std::any(blockRequests), std::any(std::move(nnaInfo)),
+                              std::any(std::move(presence)), std::any(std::move(comment)),
+                              std::any(lastOnline)});
+
+    return dbCommand;
+}
+
 std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
     std::unique_lock<std::mutex> lock(resultsMutex);
 

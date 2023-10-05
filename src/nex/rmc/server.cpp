@@ -52,6 +52,23 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
 
     auto request = Request();
     try {
+        if (data.size() >= 5) {
+            uint8_t protocolId = data[4];
+            if (!(protocolId & 0x80)) {
+                // This is a response, so we ignore it
+                try {
+                    auto res = Response();
+                    res.decode(data);
+
+                    logMsg(res, addr, true);
+                } catch (const std::exception& e) {
+                    // Ignore, it is a response, so we don't care
+                }
+
+                return;
+            }
+        }
+
         data = request.decode(data);
     } catch (const NotCompleteException& e) {
         // The request is not complete, we rethrow the exception to notify the underlying PRUDP server
