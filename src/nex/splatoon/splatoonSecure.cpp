@@ -28,14 +28,18 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     registerCall(this, &SplatoonSecureRMC::unregisterGathering, 21, 2);
     registerCall(this, &SplatoonSecureRMC::findBySingleId, 21, 21);
     registerCall(this, &SplatoonSecureRMC::getSessionUrls, 21, 41);
+    registerCall(this, &SplatoonSecureRMC::updateSessionHost, 21, 42);
 
     // Protocol 50 - Matchmaking (Extension)
     registerCall(this, &SplatoonSecureRMC::endParticipation, 50, 1);
 
     // Protocol 109 - Matchmake Extension
     registerCall(this, &SplatoonSecureRMC::closeParticipation, 109, 1);
+    registerCall(this, &SplatoonSecureRMC::openParticipation, 109, 2);
     registerCall(this, &SplatoonSecureRMC::getPlayingSessions, 109, 16);
     registerCall(this, &SplatoonSecureRMC::updateProgressScore, 109, 34);
+    registerCall(this, &SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
+    registerCall(this, &SplatoonSecureRMC::joinMatchmakeSessionWithParam, 109, 39);
     registerCall(this, &SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
 }
 
@@ -58,7 +62,7 @@ void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req
         auto targetClientInfoIt = registeredClients.find(target.PID.value());
         if (targetClientInfoIt == registeredClients.end()) {
             res.success = false;
-            res.error = Error::RENDEZ_VOUS__INVALID_PID;
+            res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
             return;
         }
@@ -305,6 +309,53 @@ void SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req, UInt32 gI
     sendMsg(client, res, params);
 }
 
+void SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req, UInt32 gId, Bool migrateOwner) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    auto sessionIt = matchmakeSessions.find(gId);
+    if (sessionIt == matchmakeSessions.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__INVALID_GID;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    auto& sessionInfo = sessionIt->second;
+
+    if (!sessionInfo.players.contains(client.pid)) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    sessionInfo.session->hostPid = client.pid;
+    if (migrateOwner) sessionInfo.session->ownerPid = client.pid;
+
+    sendMsg(client, res, {});
+
+    for (auto& pid : sessionInfo.players) {
+        auto playerInfoIt = registeredClients.find(pid);
+        if (playerInfoIt == registeredClients.end()) continue;
+
+        sendNotification(playerInfoIt->second.client, NotificationType::HOST_CHANGED,
+                         client.pid, sessionInfo.session->id, client.pid, "", 0);
+
+        if (migrateOwner) {
+            uint64_t msNow = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+            sendNotification(playerInfoIt->second.client, NotificationType::OWNERSHIP_CHANGED,
+                             client.pid, sessionInfo.session->id, client.pid,
+                             std::to_string(msNow), 0);
+        }
+    }
+}
+
 void SplatoonSecureRMC::endParticipation(ClientInfo client, Request req, UInt32 gId, String msg) {
     Response res;
     res.protocolId = req.protocolId;
@@ -342,14 +393,42 @@ void SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req, UInt3
         return;
     }
 
-    if (!sessionIt->second.players.contains(client.pid)) {
+    if (sessionIt->second.session->ownerPid != client.pid) {
         res.success = false;
-        res.error = Error::RENDEZ_VOUS__NOT_PARTICIPATED_GATHERING;
+        res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         return;
     }
 
-    removePlayerFromSession(gId, client.pid);
+    sessionIt->second.session->openParticipation = false;
+
+    sendMsg(client, res, {});
+}
+
+void SplatoonSecureRMC::openParticipation(ClientInfo client, Request req, UInt32 gId) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    auto sessionIt = matchmakeSessions.find(gId);
+    if (sessionIt == matchmakeSessions.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__INVALID_GID;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if (sessionIt->second.session->ownerPid != client.pid) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    sessionIt->second.session->openParticipation = true;
 
     sendMsg(client, res, {});
 }
@@ -409,6 +488,198 @@ void SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req, UInt
     sendMsg(client, res, {});
 }
 
+void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Request req, CreateMatchmakeSessionParam param) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    auto clientInfoIt = registeredClients.find(client.pid);
+    if (clientInfoIt == registeredClients.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    auto& clientInfo = clientInfoIt->second;
+    if (clientInfo.joinedGathering != nullptr) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__ALREADY_PARTICIPATED_GATHERING; // Guess, probably not what the real server sends
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if ((uint32_t) param.srcMatchmakeSession.maxParticipants < param.additionalParticipants.size() + 1) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__SESSION_FULL; // Guess, probably not what the real server sends
+        sendMsg(client, res, {});
+        return;
+    }
+
+    MatchmakeSession session = param.srcMatchmakeSession;
+    session.id = getNewGatheringId();
+    session.ownerPid = client.pid;
+    session.hostPid = client.pid;
+    session.participationCount = (uint32_t) param.additionalParticipants.size() + 1;
+    session.openParticipation = true;
+    session.sessionKey = Buffer(crypto::genKey());
+    session.startedTime = std::chrono::system_clock::now();
+
+    std::vector<uint32_t> playerPids;
+    playerPids.push_back(client.pid);
+    for (auto& pid : param.additionalParticipants) {
+        auto playerInfoIt = registeredClients.find(pid);
+        if (playerInfoIt == registeredClients.end()) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
+            sendMsg(client, res, {});
+            return;
+        } else if (playerInfoIt->second.joinedGathering != nullptr) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__ALREADY_PARTICIPATED_GATHERING;
+            sendMsg(client, res, {});
+            return;
+        }
+
+        playerPids.push_back(pid);
+    }
+
+    if (!session.userPassword.empty()) session.userPasswordEnabled = true; // Why is this not set by the client?
+
+    // All checks passed, add players to session and send success
+    matchmakeSessions[session.id] = {std::make_shared<MatchmakeSession>(session), std::set<uint32_t>(playerPids.begin(), playerPids.end())};
+
+    std::vector<T_ptr> params(1);
+    params[0] = std::make_shared<MatchmakeSession>(session);
+
+    sendMsg(client, res, params);
+
+    auto sessionPtr = matchmakeSessions[session.id].session;
+    // Send notifications to all players
+    for (auto& pid : playerPids) {
+        auto playerInfoIt = registeredClients.find(pid);
+        if (playerInfoIt == registeredClients.end()) continue;
+
+        playerInfoIt->second.joinedGathering = sessionPtr;
+
+        for (auto& playerPid : playerPids) {
+            sendNotification(playerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
+                             client.pid, session.id, playerPid, param.joinMessage, 1);
+        }
+    }
+}
+
+void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request req, JoinMatchmakeSessionParam param) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    auto clientInfoIt = registeredClients.find(client.pid);
+    if (clientInfoIt == registeredClients.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    auto& clientInfo = clientInfoIt->second;
+    if (clientInfo.joinedGathering != nullptr) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__ALREADY_PARTICIPATED_GATHERING; // Guess, probably not what the real server sends
+        sendMsg(client, res, {});
+        return;
+    }
+
+    auto sessionIt = matchmakeSessions.find(param.gid);
+    if (sessionIt == matchmakeSessions.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__INVALID_GID;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    auto& sessionInfo = sessionIt->second;
+    if ((uint32_t) sessionInfo.session->participationCount + param.additionalParticipants.size() >
+        (uint16_t) sessionInfo.session->maxParticipants) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__SESSION_FULL;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if (!sessionInfo.session->openParticipation) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__SESSION_CLOSED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if (sessionInfo.session->userPasswordEnabled && param.userPassword != sessionInfo.session->userPassword) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__MATCHMAKE_SESSION_USER_PASSWORD_UNMATCH;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    std::vector<uint32_t> playerPids;
+    playerPids.push_back(client.pid);
+    for (auto& pid : param.additionalParticipants) {
+        auto playerInfoIt = registeredClients.find(pid);
+        if (playerInfoIt == registeredClients.end()) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
+            sendMsg(client, res, {});
+            return;
+        } else if (playerInfoIt->second.joinedGathering != nullptr) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__ALREADY_PARTICIPATED_GATHERING;
+            sendMsg(client, res, {});
+            return;
+        }
+
+        playerPids.push_back(pid);
+    }
+
+    // All checks passed, add players to session and send success
+    sessionIt->second.session->participationCount += (uint32_t) playerPids.size();
+
+    std::vector<T_ptr> params(1);
+    params[0] = sessionIt->second.session;
+
+    sendMsg(client, res, params);
+
+    for (auto& pid : playerPids) {
+        auto playerInfoIt = registeredClients.find(pid);
+        playerInfoIt->second.joinedGathering = sessionInfo.session;
+
+        for (auto& existingPlayerPid : sessionIt->second.players) {
+            auto existingPlayerInfoIt = registeredClients.find(existingPlayerPid);
+            if (existingPlayerInfoIt == registeredClients.end()) continue;
+
+            sendNotification(existingPlayerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
+                             client.pid, sessionIt->first, pid, param.joinMessage, 1);
+        }
+    }
+
+    sessionIt->second.players.insert(playerPids.begin(), playerPids.end());
+
+    for (auto& pid : playerPids) {
+        auto playerInfoIt = registeredClients.find(pid);
+        if (playerInfoIt == registeredClients.end()) continue;
+
+        for (auto& existingPlayerPid : sessionIt->second.players) {
+            sendNotification(playerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
+                             client.pid, sessionIt->first, existingPlayerPid, param.joinMessage, 1);
+        }
+    }
+}
+
 void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param) {
     Response res;
     res.protocolId = req.protocolId;
@@ -426,19 +697,44 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
     }
 
     auto& clientInfo = clientInfoIt->second;
-    if (clientInfo.joinedGathering != nullptr) {
-        res.success = false;
-        res.error = Error::RENDEZ_VOUS__ALREADY_PARTICIPATED_GATHERING; // Guess, probably not what the real server sends
-        sendMsg(client, res, {});
-        return;
+    for (auto& additionalPlayer : param.additionalParticipants) {
+        auto playerInfoIt = registeredClients.find(additionalPlayer);
+        if (playerInfoIt == registeredClients.end()) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
+            sendMsg(client, res, {});
+            return;
+        } else if (playerInfoIt->second.joinedGathering != nullptr &&
+                     (clientInfo.joinedGathering == nullptr ||
+                     playerInfoIt->second.joinedGathering->id != clientInfo.joinedGathering->id ||
+                     playerInfoIt->second.joinedGathering->ownerPid != client.pid)) {
+            res.success = false;
+            res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
+            sendMsg(client, res, {});
+            return;
+        }
     }
 
     auto filter = [&](const SessionInfo& sessionInfo) -> bool {
         bool valid = true;
+
+        // Filter out sessions that are not open for participation or don't have enough space
+        if (clientInfo.joinedGathering != nullptr && clientInfo.joinedGathering->id == sessionInfo.session->id) valid = false;
+        if (!sessionInfo.session->openParticipation) valid = false;
+        uint32_t vacantParticipants = param.additionalParticipants.size() + 1;
+        uint32_t maxAllowedExistingPlayers = (uint32_t) sessionInfo.session->maxParticipants - vacantParticipants;
+        if (sessionInfo.session->participationCount > (uint32_t) maxAllowedExistingPlayers) valid = false;
+
+        if (!valid) return false;
+
+        bool sessionValid = false;
         for (int i = 0; i < param.searchCriteria.size() && valid; i++) {
+            if (sessionValid) break;
+
+            sessionValid = true;
             auto& criteria = param.searchCriteria[i];
             if (criteria.attributes.size() != sessionInfo.session->attributes.size()) {
-                valid = false;
+                sessionValid = false;
                 continue;
             }
 
@@ -446,37 +742,48 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
                 auto& attribute = criteria.attributes[j];
                 uint32_t attrValue = std::stoi(attribute);
                 if (j == 1) continue; // j == 1 is the player exp (not the one shown in game), so it can differ.
-                if (attrValue != sessionInfo.session->attributes[j]) valid = false;
+                if (attrValue != sessionInfo.session->attributes[j]) sessionValid = false;
             }
 
-            if (std::stoi(criteria.gameMode) != sessionInfo.session->gameMode) valid = false;
-            if (std::stoi(criteria.minParticipants) != sessionInfo.session->minParticipants) valid = false;
-            if (std::stoi(criteria.maxParticipants) != sessionInfo.session->maxParticipants) valid = false;
-            if (std::stoi(criteria.matchmakeSystemType) != sessionInfo.session->matchmakeSystemType) valid = false;
-            uint16_t vacantParticipants = criteria.vacantParticipants;
-            if (vacantParticipants == 0) vacantParticipants = 1;
-            uint16_t maxAllowedExistingPlayers = sessionInfo.session->maxParticipants - vacantParticipants;
-            if (sessionInfo.session->participationCount > (uint32_t) maxAllowedExistingPlayers) valid = false;
-            if (criteria.excludeLocked && !sessionInfo.session->openParticipation) valid = false;
-            if (criteria.excludeUserPasswordSet && sessionInfo.session->userPasswordEnabled) valid = false;
-            if (criteria.excludeSystemPasswordSet && sessionInfo.session->systemPasswordEnabled) valid = false;
-            if (criteria.referGid != sessionInfo.session->referGid) valid = false;
+            if (std::stoi(criteria.gameMode) != sessionInfo.session->gameMode) sessionValid = false;
+
+            auto minParticipants = (std::string) criteria.minParticipants;
+            if (minParticipants.find(',') == std::string::npos) {
+                throw std::logic_error("minParticipants does not contain a comma");
+            }
+            uint16_t min_minParticipants = std::stoi(minParticipants.substr(0, minParticipants.find(',')));
+            uint16_t max_minParticipants = std::stoi(minParticipants.substr(minParticipants.find(',') + 1));
+
+            auto maxParticipants = (std::string) criteria.maxParticipants;
+            if (maxParticipants.find(',') == std::string::npos) {
+                throw std::logic_error("maxParticipants does not contain a comma");
+            }
+            uint16_t min_maxParticipants = std::stoi(maxParticipants.substr(0, maxParticipants.find(',')));
+            uint16_t max_maxParticipants = std::stoi(maxParticipants.substr(maxParticipants.find(',') + 1));
+
+            if (sessionInfo.session->minParticipants < min_minParticipants || sessionInfo.session->minParticipants > max_minParticipants) sessionValid = false;
+            if (sessionInfo.session->maxParticipants < min_maxParticipants || sessionInfo.session->maxParticipants > max_maxParticipants) sessionValid = false;
+
+            if (std::stoi(criteria.matchmakeSystemType) != sessionInfo.session->matchmakeSystemType) sessionValid = false;
+            if (criteria.excludeUserPasswordSet && sessionInfo.session->userPasswordEnabled) sessionValid = false;
+            if (criteria.excludeSystemPasswordSet && sessionInfo.session->systemPasswordEnabled) sessionValid = false;
+            if (criteria.referGid != sessionInfo.session->referGid) sessionValid = false;
 
             for (auto& mmParam : criteria.matchmakeParam.params) {
                 auto sessionIt = sessionInfo.session->matchmakeParam.params.find(mmParam.first);
                 if (sessionIt == sessionInfo.session->matchmakeParam.params.end()) {
-                    valid = false;
+                    sessionValid = false;
                     break;
                 }
 
                 if (mmParam.second != sessionIt->second) {
-                    valid = false;
+                    sessionValid = false;
                     break;
                 }
             }
         }
 
-        return valid;
+        return sessionValid;
     };
 
     auto cmp = [&](const std::pair<uint32_t, SessionInfo>& a, const std::pair<uint32_t, SessionInfo>& b) {
@@ -518,42 +825,69 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->sessionKey = Buffer(crypto::genKey());
         session->startedTime = std::chrono::system_clock::now();
 
-//        MatchmakeParam mmParam(client.minorVersion);
-//        Variant param1;
-//        param1.set(Bool(0, true));
-//        mmParam.params.insert({String("@SR"), param1});
-//        Variant param2;
-//        param2.set(Int64(0, 3));
-//        mmParam.params.insert({String("@GIR"), param2});
-//
-//        session->matchmakeParam = mmParam;
+        std::set<uint32_t> players;
+        players.insert(client.pid);
+        for (auto& pid : param.additionalParticipants) players.insert(pid);
 
-        matchmakeSessions.insert({session->id, {session, {client.pid}}});
+        matchmakeSessions.insert({session->id, {session, players}});
         sessionInfo = matchmakeSessions[session->id];
         params[0] = session;
     } else {
         auto& session = matchmakeSessions[validSessions.top().second.session->id];
         session.players.insert(client.pid);
+        for (auto& pid : param.additionalParticipants) session.players.insert(pid);
         sessionInfo = session;
         params[0] = sessionInfo.session;
     }
 
-    sessionInfo.session->participationCount++;
-    clientInfo.joinedGathering = sessionInfo.session;
+    sessionInfo.session->participationCount += (uint32_t) param.additionalParticipants.size() + 1;
 
     sendMsg(client, res, params);
 
-    // We notify other players of the new participant
+    std::set<uint32_t> newPlayers;
+    newPlayers.insert(client.pid);
+    for (auto& pid : param.additionalParticipants) newPlayers.insert(pid);
+
+    uint32_t originalGatheringId = 0;
+    if (clientInfo.joinedGathering != nullptr) {
+        originalGatheringId = clientInfo.joinedGathering->id;
+    }
+
+    // Switch the players to the new gathering
+    std::set<uint32_t> switchedPlayers;
+    for (auto& playerPid : newPlayers) {
+        auto playerInfoIt = registeredClients.find(playerPid);
+        // We don't need to check if the player is online, because it has been checked before
+
+        if (playerInfoIt->second.joinedGathering != nullptr && playerInfoIt->second.joinedGathering->id != sessionInfo.session->id) {
+            switchedPlayers.insert(playerPid);
+
+            matchmakeSessions[originalGatheringId].players.erase(playerPid);
+        }
+
+        playerInfoIt->second.joinedGathering = sessionInfo.session;
+    }
+
+    // If the original gathering were to still have players, we would need to send notifications to them
+    if (originalGatheringId != 0) {
+        for (auto& pid : switchedPlayers) {
+            removePlayerFromSession(originalGatheringId, pid, "", false, true);
+        }
+    }
+
+    // We notify other players of the new participant(s)
     for (auto& pid : sessionInfo.players) {
-        if (pid == client.pid) continue;
+        if (newPlayers.contains(pid)) continue;
         sendNotification(registeredClients[pid].client, NotificationType::NEW_PARTICIPANT, client.pid,
                          sessionInfo.session->id, client.pid, "", 1);
     }
 
-    // And we also send notifications to the new participant, one for each player already in the session (including himself)
+    // And we also send notifications to the new participant(s), one for each player already in the session (including themselves)
     for (auto& pid : sessionInfo.players) {
-        sendNotification(client, NotificationType::NEW_PARTICIPANT, client.pid, sessionInfo.session->id,
-                         pid, "", 1);
+        for (auto& newPlayerPid : newPlayers) {
+            sendNotification(registeredClients[newPlayerPid].client, NotificationType::NEW_PARTICIPANT, client.pid,
+                             sessionInfo.session->id, pid, "", 1);
+        }
     }
 }
 
@@ -621,15 +955,16 @@ void SplatoonSecureRMC::unregisterGathering_internal(uint32_t gId, uint32_t srcP
     matchmakeSessions.erase(sessionIt);
 }
 
-void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg, bool disconnected) {
+void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg, bool disconnected, bool switching) {
     auto sessionIt = matchmakeSessions.find(gId);
     if (sessionIt == matchmakeSessions.end()) return;
 
-    if (!disconnected) sendNotification(registeredClients[playerPid].client, NotificationType::PARTICIPATION_ENDED,
+    if (!disconnected && !switching) sendNotification(registeredClients[playerPid].client, NotificationType::PARTICIPATION_ENDED,
                                         playerPid, sessionIt->second.session->id, playerPid, msg, 0);
 
     sessionIt->second.players.erase(playerPid);
-    registeredClients[playerPid].joinedGathering = nullptr;
+
+    if (!switching) registeredClients[playerPid].joinedGathering = nullptr;
     if (sessionIt->second.players.empty()) {
         unregisterGathering_internal(gId, playerPid);
         return;
@@ -645,7 +980,7 @@ void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid
         // TODO Choose the best player as the new owner
         sessionIt->second.session->ownerPid = *sessionIt->second.players.begin();
         for (auto& pid : sessionIt->second.players) {
-            uint64_t msNow = std::chrono::duration_cast<std::chrono::milliseconds>(
+            uint64_t msNow = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::system_clock::now().time_since_epoch()).count();
             sendNotification(registeredClients[pid].client, NotificationType::OWNERSHIP_CHANGED, playerPid,
                              sessionIt->second.session->id, sessionIt->second.session->ownerPid,

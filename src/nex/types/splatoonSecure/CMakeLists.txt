@@ -5,4 +5,7 @@ target_sources(splatoon_server PRIVATE
         matchmakeSession.hpp
         matchmakeSessionSearchCriteria.hpp
         autoMatchmakeParam.hpp
-        notificationEvent.hpp)
+        notificationEvent.hpp
+        matchmakeBlockListParam.hpp
+        joinMatchmakeSessionParam.hpp
+        createMatchmakeSessionParam.hpp)

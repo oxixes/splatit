@@ -83,11 +83,11 @@ protected:
             data.insert(data.end(), paramData.begin(), paramData.end());
         }
 
-        auto requestData = msg.encode(data.size());
-        requestData.insert(requestData.end(), data.begin(), data.end());
+        auto messageData = msg.encode(data.size());
+        messageData.insert(messageData.end(), data.begin(), data.end());
 
         logMsg(msg, client.address, false);
-        sendData(client.address, std::move(requestData), client.substreamId);
+        sendData(client.address, std::move(messageData), client.substreamId);
     }
 
     virtual void onConnect(prudp::PRUDPAddress address, uint32_t pid);

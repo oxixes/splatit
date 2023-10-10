@@ -26,6 +26,7 @@ std::vector<uint8_t> Response::encode(size_t paramLength) const {
         data.insert(data.end(), (uint8_t*)&temp, (uint8_t*)&temp + 4);
     } else {
         auto temp = (uint32_t) error;
+        temp |= 0x80000000;
         util::getu32Little(temp);
         data.insert(data.end(), (uint8_t*)&temp, (uint8_t*)&temp + 4);
 

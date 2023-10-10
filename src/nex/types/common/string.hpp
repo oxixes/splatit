@@ -54,6 +54,7 @@ namespace nex::rmc {
 
         std::string::iterator begin() { return value.begin(); }
         std::string::iterator end() { return value.end(); }
+        bool empty() const { return value.empty(); }
 
     private:
         std::string value;

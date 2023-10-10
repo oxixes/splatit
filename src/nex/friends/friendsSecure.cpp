@@ -4,8 +4,6 @@
 #include "../../constants.hpp"
 #include "../types/common/result.hpp"
 #include "../types/friendsSecure/principalPreference.hpp"
-#include "../types/friendsSecure/comment.hpp"
-#include "../types/friendsSecure/friendInfo.hpp"
 #include "../types/friendsSecure/friendRequest.hpp"
 #include "../types/friendsSecure/blacklistedPrincipal.hpp"
 #include "../types/friendsSecure/persistentNotification.hpp"
