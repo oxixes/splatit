@@ -42,14 +42,6 @@ namespace nex::rmc {
         size_t decode(std::span<const uint8_t> data) override {
             size_t size = 0;
 
-            // Print the data
-            std::cout << "AutoMatchmakeParam::decode(): data = ";
-            for (int i = 0; i < data.size(); i++) {
-                printf("%02X", data[i]);
-            }
-
-            printf("\n");
-
             size += decodeHeader(data.subspan(size), AUTO_MATCHMAKE_PARAM_VERSION);
             size += srcMatchmakeSession.decode(data.subspan(size));
             size += additionalParticipants.decode(data.subspan(size));

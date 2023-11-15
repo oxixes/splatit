@@ -18,6 +18,7 @@
 #include "nex/auth/auth.hpp"
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
+#include "boss/byaml/byaml.hpp"
 
 bool shouldStop = false;
 

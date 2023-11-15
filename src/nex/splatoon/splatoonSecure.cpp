@@ -728,9 +728,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         if (!valid) return false;
 
         bool sessionValid = false;
-        for (int i = 0; i < param.searchCriteria.size() && valid; i++) {
-            if (sessionValid) break;
-
+        for (int i = 0; i < param.searchCriteria.size() && !sessionValid; i++) {
             sessionValid = true;
             auto& criteria = param.searchCriteria[i];
             if (criteria.attributes.size() != sessionInfo.session->attributes.size()) {
@@ -820,7 +818,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->id = getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
-        session->openParticipation = true;
+//        session->openParticipation = true;
         session->participationCount = 0;
         session->sessionKey = Buffer(crypto::genKey());
         session->startedTime = std::chrono::system_clock::now();
