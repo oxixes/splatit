@@ -33,6 +33,8 @@ namespace util {
     void getu16Big(uint16_t& v);
 
     std::vector<std::string> split(const std::string& str, const std::string& delim);
+
+    std::string formatTime(std::chrono::system_clock::time_point time);
 } // namespace util
 
 #endif //SPLATOON_SERVER_UTIL_HPP

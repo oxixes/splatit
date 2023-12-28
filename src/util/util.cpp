@@ -136,4 +136,11 @@ std::vector<std::string> split(const std::string& str, const std::string& delim)
     return tokens;
 }
 
+std::string formatTime(std::chrono::system_clock::time_point time) {
+    auto time_t = std::chrono::system_clock::to_time_t(time);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%S+00:00");
+    return ss.str();
+}
+
 } // namespace util
