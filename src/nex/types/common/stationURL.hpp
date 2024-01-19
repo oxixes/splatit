@@ -24,6 +24,7 @@ namespace nex::rmc {
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             String str(minorVersion, encodeString());
+            std::cout << "Encoded StationURL: " << encodeString() << std::endl;
             return str.encode();
         }
 
@@ -32,6 +33,7 @@ namespace nex::rmc {
             size_t size = str.decode(data);
 
             std::string url = std::move(str);
+            std::cout << "Decoded StationURL: " << url << std::endl;
 
             if (url.empty()) {
                 proto = Protocol::NONE;

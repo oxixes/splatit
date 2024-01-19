@@ -34,6 +34,8 @@ namespace boss {
                 return "cIdolLeft";
             case festival::Speaker::IDOL_RIGHT:
                 return "cIdolRight";
+            case festival::Speaker::IDOL_ALL:
+                return "cIdolAll";
         }
 
         return "";
@@ -62,6 +64,8 @@ namespace boss {
                 return "cSurprised";
             case festival::Emotion::BORED:
                 return "cBored";
+            case festival::Emotion::FEED:
+                return "cFeed";
         }
 
         return "";
@@ -84,26 +88,9 @@ namespace boss {
 
     std::string getColorString(const festival::Color& color) {
         // The color follows the RGBA format, having values from 0 to 1, with 2 or 1 decimal places, separated by a comma.
-        std::stringstream r;
-        r << std::fixed << std::setprecision(2) << (float) color.r / 255;
-        std::string rStr = r.str();
-        std::stringstream g;
-        g << std::fixed << std::setprecision(2) << (float) color.g / 255;
-        std::string gStr = g.str();
-        std::stringstream b;
-        b << std::fixed << std::setprecision(2) << (float) color.b / 255;
-        std::string bStr = b.str();
-        std::stringstream a;
-        a << std::fixed << std::setprecision(2) << (float) color.a / 255;
-        std::string aStr = a.str();
-
-        if (rStr.back() == '0') rStr.pop_back();
-        if (gStr.back() == '0') gStr.pop_back();
-        if (bStr.back() == '0') bStr.pop_back();
-        if (aStr.back() == '0') aStr.pop_back();
-
         std::stringstream ss;
-        ss << rStr << "," << gStr << "," << bStr << "," << aStr;
+        ss << std::fixed << std::setprecision(2) << (float) color.r / 255 << "," << (float) color.g / 255 << "," << (float) color.b / 255 << ","
+            << std::setprecision(1) << (float) color.a / 255;
         return ss.str();
     }
 

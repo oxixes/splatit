@@ -547,6 +547,10 @@ void SocketManager::accept(uint32_t socketId) {
                                                     socketInfo->closeCallback.second,
                                                     keepAliveTimeout);
 
+        if (socketInfo->acceptCallback != nullptr && socket->getLastResult() == sock::ResultType::SUCCESS) {
+            socketInfo->acceptCallback(socketId, newSocketId, dir);
+        }
+
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                     "Socket with ID " + std::to_string(socketId) + " has accepted a new connection with ID " +
                     std::to_string(newSocketId));

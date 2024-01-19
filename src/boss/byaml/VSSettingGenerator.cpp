@@ -6,11 +6,10 @@
 
 namespace boss {
 
-byaml::Byaml generateVSSettingByaml() {
+byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterFesBonusStartTime) {
     std::shared_ptr<byaml::IntegerNode> addFirstMatchingTime = std::make_shared<byaml::IntegerNode>(ADD_FIRST_MATCHING_TIME);
     std::shared_ptr<byaml::IntegerNode> addMatchingTime = std::make_shared<byaml::IntegerNode>(ADD_MATCHING_TIME);
-    // TODO AfterFesBonusStart
-    std::shared_ptr<byaml::StringNode> afterFesBonusStart = std::make_shared<byaml::StringNode>("2016-07-24T19:00:00+09:00");
+    std::shared_ptr<byaml::StringNode> afterFesBonusStart = std::make_shared<byaml::StringNode>(util::formatTime(afterFesBonusStartTime));
     std::shared_ptr<byaml::IntegerNode> bottleneckThresholdTime = std::make_shared<byaml::IntegerNode>(BOTTLENECK_THRESHOLD_TIME);
 
     // Get current time

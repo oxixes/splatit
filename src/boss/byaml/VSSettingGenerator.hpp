@@ -1,6 +1,7 @@
 #ifndef SPLATOON_SERVER_VSSETTINGGENERATOR_HPP
 #define SPLATOON_SERVER_VSSETTINGGENERATOR_HPP
 
+#include <chrono>
 #include "byaml.hpp"
 
 // Maybe we could make some of these configurable?
@@ -30,7 +31,7 @@
 #define PHASE_DURATION 4
 
 namespace boss {
-    byaml::Byaml generateVSSettingByaml();
+    byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterFesBonusStartTime);
 }
 
 #endif //SPLATOON_SERVER_VSSETTINGGENERATOR_HPP

@@ -39,8 +39,9 @@ namespace boss {
         };
 
         enum class Speaker {
-            IDOL_LEFT, // Callie
-            IDOL_RIGHT // Marie
+            IDOL_LEFT,  // Callie
+            IDOL_RIGHT, // Marie
+            IDOL_ALL
         };
 
         enum class Command {
@@ -53,7 +54,8 @@ namespace boss {
             HAPPY,
             ANGRY,
             SURPRISED,
-            BORED
+            BORED,
+            FEED
         };
 
         enum class Gamemode {

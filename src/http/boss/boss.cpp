@@ -94,7 +94,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
 
         std::string url = "https://npdi.cdn.";
         url.append(settingsMgr->getTopDomain()).append("/p01/data/1/").append(titleId).append("/")
-                          .append(tasksheetId).append("/").append(file.key());
+                          .append(std::to_string(file.value()["id"].get<int>())).append("/").append(file.key());
 
         fileNode.append_child("Url").text().set(url.c_str());
 
@@ -133,7 +133,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
 }
 
 /*
- * Handler for GET https://npdi.cdn.<domain>/p01/data/1/<titleId>/<tasksheetId>/<fileHash>
+ * Handler for GET https://npdi.cdn.<domain>/p01/data/1/<titleId>/<dataId>/<fileHash>
  * Returns the requested file. These URLs are obtained from the tasksheets returned by
  * p01_tasksheet.
  */
@@ -211,8 +211,10 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 
             for (auto& file : tasksheet.value()["files"].items()) {
                 const std::string& fileHash = file.key();
+                const std::string fileId = std::to_string(file.value()["id"].get<int>());
                 path = "/p01/data/1/";
-                path.append(titleId).append("/").append(tasksheetId).append("/").append(fileHash);
+                path.append(titleId).append("/").append(fileId).append("/").append(fileHash);
+
 
                 server->registerRoute("npdi.cdn." + domain, path,
                                       [titleId, tasksheetId, fileHash, settingsMgr](const std::shared_ptr<Logger::Logger>& logger,
@@ -220,7 +222,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
                                                                                       bool& shouldStop, bool& shouldClose,
                                                                                       const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                                                                                       const std::function<void(unsigned int)>& unregisterCloseCall) {
-                    shouldClose = true;
+                    shouldClose = false;
                     return p01_data(req, titleId, tasksheetId, fileHash, settingsMgr);
                 });
             }

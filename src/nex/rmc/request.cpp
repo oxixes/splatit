@@ -56,6 +56,15 @@ std::vector<uint8_t> Request::decode(std::vector<uint8_t> data) {
 
     data.erase(data.begin(), data.begin() + 8);
 
+    if (protocolId == 3 && methodId == 3) {
+        // Print the data in hex bytes
+        printf("Data: ");
+        for (int i = 0; i < data.size(); i++) {
+            printf("%02X", data[i]);
+        }
+        printf("\n");
+    }
+
     return data;
 }
 
