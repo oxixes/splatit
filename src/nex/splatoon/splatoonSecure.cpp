@@ -36,6 +36,7 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     // Protocol 109 - Matchmake Extension
     registerCall(this, &SplatoonSecureRMC::closeParticipation, 109, 1);
     registerCall(this, &SplatoonSecureRMC::openParticipation, 109, 2);
+    registerCall(this, &SplatoonSecureRMC::modifyCurrentGameAttribute, 109, 8);
     registerCall(this, &SplatoonSecureRMC::getPlayingSessions, 109, 16);
     registerCall(this, &SplatoonSecureRMC::updateProgressScore, 109, 34);
     registerCall(this, &SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
@@ -91,6 +92,8 @@ void SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req,
     res.extendedProtocolId = req.extendedProtocolId;
     res.callId = req.callId;
     res.success = true;
+
+    logger->log(Logger::level::DEBUG, logGroup, "Received NAT traversal result from " + std::to_string(client.pid) + ", success: " + std::to_string(result) + ".");
 
     sendMsg(client, res, {});
 }
@@ -433,6 +436,37 @@ void SplatoonSecureRMC::openParticipation(ClientInfo client, Request req, UInt32
     sendMsg(client, res, {});
 }
 
+void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request req, UInt32 gId, UInt32 attribIndex, UInt32 newValue) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    auto sessionIt = matchmakeSessions.find(gId);
+    if (sessionIt == matchmakeSessions.end()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__INVALID_GID;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if (sessionIt->second.session->ownerPid != client.pid) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
+        sendMsg(client, res, {});
+        return;
+    }
+
+    if (attribIndex < (uint32_t) sessionIt->second.session->attributes.size()) {
+        logger->log(Logger::level::DEBUG, logGroup, "Modifying attribute " + std::to_string(attribIndex) + " to " + std::to_string(newValue) + " in session " + std::to_string(gId) + " owned by " + std::to_string(client.pid) + ".");
+        sessionIt->second.session->attributes[attribIndex] = newValue;
+    }
+
+    sendMsg(client, res, {});
+}
+
 void SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req, List<PID> pids) {
     Response res;
     res.protocolId = req.protocolId;
@@ -736,7 +770,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
                 continue;
             }
 
-            for (int j = 0; j < criteria.attributes.size() && valid; j++) {
+            for (int j = 0; j < criteria.attributes.size() && sessionValid; j++) {
                 auto& attribute = criteria.attributes[j];
                 uint32_t attrValue = std::stoi(attribute);
                 if (j == 1) continue; // j == 1 is the player exp (not the one shown in game), so it can differ.
@@ -818,6 +852,9 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->id = getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
+        if (session->gameMode == (uint32_t) 12) {
+            session->openParticipation = true;
+        }
 //        session->openParticipation = true;
         session->participationCount = 0;
         session->sessionKey = Buffer(crypto::genKey());

@@ -54,6 +54,7 @@ private:
     void endParticipation(ClientInfo client, Request req, UInt32 gId, String msg);
     void closeParticipation(ClientInfo client, Request req, UInt32 gId);
     void openParticipation(ClientInfo client, Request req, UInt32 gId);
+    void modifyCurrentGameAttribute(ClientInfo client, Request req, UInt32 gId, UInt32 attribIndex, UInt32 newValue);
     void getPlayingSessions(ClientInfo client, Request req, List<PID> pids);
     void updateProgressScore(ClientInfo client, Request req, UInt32 gId, UInt8 score);
     void createMatchmakeSessionWithParam(ClientInfo client, Request req, CreateMatchmakeSessionParam param);
