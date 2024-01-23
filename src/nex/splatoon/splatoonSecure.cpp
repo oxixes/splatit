@@ -461,7 +461,7 @@ void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request re
 
     if (attribIndex < (uint32_t) sessionIt->second.session->attributes.size()) {
         logger->log(Logger::level::DEBUG, logGroup, "Modifying attribute " + std::to_string(attribIndex) + " to " + std::to_string(newValue) + " in session " + std::to_string(gId) + " owned by " + std::to_string(client.pid) + ".");
-        sessionIt->second.session->attributes[attribIndex] = newValue;
+        // sessionIt->second.session->attributes[attribIndex] = newValue;
     }
 
     sendMsg(client, res, {});
@@ -852,7 +852,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->id = getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
-        if (session->gameMode == (uint32_t) 12) {
+        if (session->gameMode == (uint32_t) 12) { // TODO Check this
             session->openParticipation = true;
         }
 //        session->openParticipation = true;
@@ -898,6 +898,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             switchedPlayers.insert(playerPid);
 
             matchmakeSessions[originalGatheringId].players.erase(playerPid);
+            sendNotification(playerInfoIt->second.client, NotificationType::SWITCH_GATHERING,
+                             client.pid, sessionInfo.session->id, playerPid, "", 1);
         }
 
         playerInfoIt->second.joinedGathering = sessionInfo.session;
@@ -912,18 +914,19 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 
     // We notify other players of the new participant(s)
     for (auto& pid : sessionInfo.players) {
-        if (newPlayers.contains(pid)) continue;
+//        if (newPlayers.contains(pid)) continue;
+        if (sessionInfo.session->ownerPid != pid && client.pid != pid) continue;
         sendNotification(registeredClients[pid].client, NotificationType::NEW_PARTICIPANT, client.pid,
                          sessionInfo.session->id, client.pid, "", 1);
     }
 
     // And we also send notifications to the new participant(s), one for each player already in the session (including themselves)
-    for (auto& pid : sessionInfo.players) {
-        for (auto& newPlayerPid : newPlayers) {
-            sendNotification(registeredClients[newPlayerPid].client, NotificationType::NEW_PARTICIPANT, client.pid,
-                             sessionInfo.session->id, pid, "", 1);
-        }
-    }
+//    for (auto& pid : sessionInfo.players) {
+//        for (auto& newPlayerPid : newPlayers) {
+//            sendNotification(registeredClients[newPlayerPid].client, NotificationType::NEW_PARTICIPANT, client.pid,
+//                             sessionInfo.session->id, pid, "", 1);
+//        }
+//    }
 }
 
 void SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
