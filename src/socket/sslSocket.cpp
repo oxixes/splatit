@@ -24,7 +24,7 @@ SSLSocket::SSLSocket(bool server, EVP_PKEY* key, X509* cert) : TCPSocket() {
 #ifdef _WIN32
 SSLSocket::SSLSocket(SOCKET socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
 #else
-TLSSocket::TLSSocket(int socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
+SSLSocket::SSLSocket(int socket, SSL_CTX* ctx, SSL* ssl) : TCPSocket(socket), ctx(ctx), ssl(ssl) {}
 #endif
 
 SSLSocket::~SSLSocket() {

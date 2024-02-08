@@ -5,6 +5,10 @@
 #include "../exceptions.hpp"
 #include "../util/util.hpp"
 
+#ifndef _WIN32
+#include <poll.h>
+#endif
+
 SocketManager::SocketManager(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {}
 
 uint32_t SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
@@ -114,7 +118,7 @@ uint64_t SocketManager::process(uint64_t ms) {
     }
 #else
     if (ret == -1) {
-        logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Error polling sockets: " + std::to_string(strerror(errno)));
+        logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Error polling sockets: " + std::string(strerror(errno)));
     }
 #endif
 
@@ -479,7 +483,7 @@ void SocketManager::recvfrom(uint32_t socketId) {
     recvBuf.resize(65535); // A UDP won't receive more than 65535 bytes (it's actually 65507, but we'll use 65535)
 
     struct sockaddr_in addr{};
-    int addrLen = sizeof(addr);
+    socklen_t addrLen = sizeof(addr);
 
     auto udpSocket = std::dynamic_pointer_cast<sock::UDPSocket>(socketInfo->socket);
     try {
@@ -495,7 +499,11 @@ void SocketManager::recvfrom(uint32_t socketId) {
 
         recvBuf.resize(recvBytes);
 
+#ifdef _WIN32
         auto* ipv4addr = (uint8_t*) &addr.sin_addr.S_un.S_un_b;
+#else
+        auto* ipv4addr = (uint8_t*) &addr.sin_addr.s_addr;
+#endif
         sock::IPv4Addr dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], ntohs(addr.sin_port)};
 
         if (socketInfo->udpRecvCallback != nullptr) {
@@ -526,13 +534,17 @@ void SocketManager::accept(uint32_t socketId) {
     auto socket = std::dynamic_pointer_cast<sock::TCPSocket>(socketInfo->socket);
     try {
         struct sockaddr addr{};
-        int addrLen = sizeof(addr);
+        socklen_t addrLen = sizeof(addr);
         auto newSocket = socket->accept(&addr, &addrLen);
 
         int keepAliveTimeout = (int) socketInfo->keepAliveTimeout;
 
         auto *addrIn = (struct sockaddr_in *) &addr;
+#ifdef _WIN32
         auto *ipv4addr = (uint8_t *) &addrIn->sin_addr.S_un.S_un_b;
+#else
+        auto *ipv4addr = (uint8_t *) &addrIn->sin_addr.s_addr;
+#endif
         sock::IPv4Addr dir{ipv4addr[0], ipv4addr[1], ipv4addr[2], ipv4addr[3], addrIn->sin_port};
 
         std::function<void(uint32_t)> connectCallback;

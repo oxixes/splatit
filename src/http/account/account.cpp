@@ -462,7 +462,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
             const std::function<void(unsigned int)>&) -> http::Response { return v1_api_admin_time(req, shouldClose); });
 
     server->registerRoute("account." + domain, "/v1/api/admin/mapped_ids",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                               sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
@@ -472,7 +472,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                           });
 
     server->registerRoute("account." + domain, "/v1/api/oauth20/access_token/generate",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                               sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
@@ -482,7 +482,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                           });
 
     server->registerRoute("account." + domain, "/v1/api/provider/nex_token/@me",
-                          [&](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                               sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
                               const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
                               const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {

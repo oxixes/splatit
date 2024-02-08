@@ -1,6 +1,10 @@
 #include "util.hpp"
 
+#ifdef _WIN32
 #include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 #include <bit>
 #include <chrono>
 
@@ -35,10 +39,14 @@ sockaddr_in ipv4ToSockAddr(sock::IPv4Addr dir) {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(dir.port);
+#ifdef _WIN32
     addr.sin_addr.S_un.S_un_b.s_b1 = dir.a;
     addr.sin_addr.S_un.S_un_b.s_b2 = dir.b;
     addr.sin_addr.S_un.S_un_b.s_b3 = dir.c;
     addr.sin_addr.S_un.S_un_b.s_b4 = dir.d;
+#else
+    addr.sin_addr.s_addr = htonl((dir.a << 24) | (dir.b << 16) | (dir.c << 8) | dir.d);
+#endif
     return addr;
 }
 

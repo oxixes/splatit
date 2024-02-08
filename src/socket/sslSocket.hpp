@@ -24,7 +24,7 @@ private:
 #ifdef _WIN32
     explicit SSLSocket(SOCKET socket, SSL_CTX* ctx, SSL* ssl);
 #else
-    explicit TLSSocket(int socket, SSL_CTX* ctx, SSL* ssl);
+    explicit SSLSocket(int socket, SSL_CTX* ctx, SSL* ssl);
 #endif
 
     SSL_CTX* ctx;

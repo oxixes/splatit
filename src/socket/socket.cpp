@@ -125,7 +125,11 @@ void Socket::setBlocking(bool blocking) {
 void Socket::close(bool force) {
     // Try to shut down the socket gracefully, but don't care if it fails
     // as we're closing it anyway
+#ifdef _WIN32
     ::shutdown(socket, SD_BOTH);
+#else
+    ::shutdown(socket, SHUT_RDWR);
+#endif
 
     int result;
 #ifdef _WIN32
@@ -168,7 +172,7 @@ ResultType Socket::getLastResult() const {
 #ifdef _WIN32
 SOCKET TCPSocket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) {
 #else
-int Socket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) const {
+int TCPSocket::acceptAux(struct sockaddr* addr, socklen_t* addrlen) {
 #endif
 #ifdef _WIN32
     SOCKET newSocket = ::accept(socket, addr, addrlen);

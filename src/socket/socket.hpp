@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
 #endif
 
 #include <stdexcept>
@@ -78,8 +79,7 @@ protected:
 
     SOCKET socket;
 #else
-    explicit TCPSocket(int socket);
-    int SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen) const;
+    explicit Socket(int socket);
 
     int socket;
 #endif
@@ -110,6 +110,8 @@ protected:
     SOCKET acceptAux(struct sockaddr* addr, socklen_t* addrlen);
 #else
     explicit TCPSocket(int socket) : Socket(socket) {};
+
+    int acceptAux(struct sockaddr* addr, socklen_t* addrlen);
 #endif
 };
 

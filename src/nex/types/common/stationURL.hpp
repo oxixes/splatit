@@ -73,10 +73,17 @@ namespace nex::rmc {
                         if (inet_pton(AF_INET, std::string(value).c_str(), &addr.sin_addr) != 1)
                             throw MalformedException("Invalid address in StationURL");
 
+#ifdef _WIN32
                         ip->a = addr.sin_addr.S_un.S_un_b.s_b1;
                         ip->b = addr.sin_addr.S_un.S_un_b.s_b2;
                         ip->c = addr.sin_addr.S_un.S_un_b.s_b3;
                         ip->d = addr.sin_addr.S_un.S_un_b.s_b4;
+#else
+                        ip->a = addr.sin_addr.s_addr & 0xFF;
+                        ip->b = (addr.sin_addr.s_addr >> 8) & 0xFF;
+                        ip->c = (addr.sin_addr.s_addr >> 16) & 0xFF;
+                        ip->d = (addr.sin_addr.s_addr >> 24) & 0xFF;
+#endif
                     } else if (key == "port") {
                         port = std::stoi(std::string(value));
                     } else if (key == "stream") {

@@ -1,6 +1,5 @@
 #include <memory>
 #include <utility>
-#include <format>
 #include <chrono>
 
 #include "sqlite3Database.hpp"
@@ -591,7 +590,11 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<dbData
                 break;
             case dbDataType::DATETIME: {
                 auto tp = std::any_cast<datetime_t>(std::dynamic_pointer_cast<DBDateTime>(data[i])->data);
-                std::string date = std::format("{:%Y-%m-%d %H:%M:%S}", tp);
+                std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+                std::tm tm = *std::localtime(&tt);
+                std::stringstream ss;
+                ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+                std::string date = ss.str();
 
                 result = sqlite3_bind_text(statement, i + 1, date.c_str(), -1, SQLITE_TRANSIENT);
                 break;
