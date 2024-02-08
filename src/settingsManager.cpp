@@ -216,7 +216,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"port", 1201},
                     {"workerCount", 3},
                     {"secure", {
-                        {"listenAddress", "127.0.0.1"},
+                        {"address", "127.0.0.1"},
                         {"port", 1202}
                     }}
             }},
@@ -226,7 +226,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"port", 1203},
                     {"workerCount", 3},
                     {"secure", {
-                       {"listenAddress", "127.0.0.1"},
+                       {"address", "127.0.0.1"},
                        {"port", 1204}
                    }}
             }},
