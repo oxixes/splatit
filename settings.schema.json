@@ -89,6 +89,12 @@
         "type": "string",
         "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
       },
+      "listenPort": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+      },
       "workerCount": {
         "description": "Number of worker threads to use",
         "type": "integer",

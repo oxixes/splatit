@@ -207,6 +207,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
             }},
             {"http", {
                     {"listenAddress", "0.0.0.0"},
+                    {"listenPort", 443},
                     {"workerCount", 3}, // TODO Make this dynamic depending on the machine CPU thread count
                     {"keepAliveTimeout", 10}
             }},
@@ -324,7 +325,8 @@ sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
     std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
 
     sock::IPv4Addr address = util::stringToIPv4(addressStr);
-    address.port = 443;
+    if (settings["http"].contains("listenPort")) address.port = settings["http"]["listenPort"].get<uint16_t>();
+    else address.port = 443;
 
     return address;
 }
