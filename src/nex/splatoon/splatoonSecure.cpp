@@ -714,6 +714,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
     }
 }
 
+// FIXME: Check if players can be in multiple sessions at the same time
 void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param) {
     Response res;
     res.protocolId = req.protocolId;
@@ -852,10 +853,9 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->id = getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
-        if (session->gameMode == (uint32_t) 12) { // TODO Check this
+        if (session->gameMode == (uint32_t) 12) { // Festival, I don't know why it is set to not open by default
             session->openParticipation = true;
         }
-//        session->openParticipation = true;
         session->participationCount = 0;
         session->sessionKey = Buffer(crypto::genKey());
         session->startedTime = std::chrono::system_clock::now();

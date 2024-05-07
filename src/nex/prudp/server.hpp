@@ -5,6 +5,7 @@
 #include <set>
 #include <unordered_map>
 #include <map>
+#include <span>
 
 #include "../../socket/socket.hpp"
 #include "../../logger.hpp"
@@ -178,7 +179,7 @@ private:
     std::map<uint8_t, RMCServerInfo> registeredServers;
 
     void onData(sock::IPv4Addr addr, std::vector<uint8_t> data);
-    void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet);
+    void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet, std::span<uint8_t> data);
     void processPacketQueue(PRUDPAddress prudpAddr, uint8_t substreamId);
     bool handlePacket(PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet, bool aggregateAck = false);
     [[nodiscard]] std::vector<uint8_t> calculateConnSignature(sock::IPv4Addr addr) const;

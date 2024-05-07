@@ -277,7 +277,7 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
                 size_t size = packet->decode(data);
                 data.erase(data.begin(), data.begin() + (ssize_t) size);
 
-                processPacket(addr, std::move(packet));
+                processPacket(addr, std::move(packet), data);
             } else {
                 auto packet = std::make_shared<PacketV1>();
                 packet->accessKey = accessKey;
@@ -285,7 +285,7 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
                 size_t size = packet->decode(data);
                 data.erase(data.begin(), data.begin() + (ssize_t) size);
 
-                processPacket(addr, std::move(packet));
+                processPacket(addr, std::move(packet), data);
             }
         }
     } catch (const MalformedException& e) {
@@ -297,7 +297,7 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
     }
 }
 
-void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet) {
+void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet, std::span<uint8_t> data) {
     PRUDPAddress prudpAddr{addr, packet->srcPort, packet->srcStreamType,
                            packet->dstPort, packet->dstStreamType};
 
@@ -314,6 +314,14 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
     if (!packet->checkSignature()) {
         logger->log(Logger::level::DEBUG, logGroup, "Received packet from " +
                                                     util::ipv4ToString(prudpAddr.address) + " with invalid signature");
+
+        // We log the data in hex for debugging purposes
+        std::stringstream ss;
+        ss << std::hex << std::setfill('0');
+        for (uint8_t byte : data) {
+            ss << std::setw(2) << (int) byte;
+        }
+        logger->log(Logger::level::DEBUG, logGroup, "Data: " + ss.str());
         return;
     }
 
