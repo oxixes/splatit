@@ -128,6 +128,17 @@ void getu16Big(uint16_t& v) {
     v = ((v & 0xFF00) >> 8) | ((v & 0x00FF) << 8);
 }
 
+uint32_t getNextPowerOfTwo(uint32_t v) {
+    if (v > 0x7FFFFFFF) return 0x80000000;
+    int res = 1;
+    while (res < v) res <<= 1;
+    return res;
+}
+
+uint32_t pow2Align(uint32_t v, uint32_t align) {
+    return (v + align - 1) & ~(align - 1);
+}
+
 std::vector<std::string> split(const std::string& str, const std::string& delim) {
     std::vector<std::string> tokens;
     size_t prev = 0, pos = 0;
@@ -142,6 +153,18 @@ std::vector<std::string> split(const std::string& str, const std::string& delim)
     } while (pos < str.length() && prev < str.length());
 
     return tokens;
+}
+
+std::string bin2hex(const std::vector<uint8_t>& data) {
+    constexpr char alphabet[] = "0123456789abcdef";
+
+    std::string hex;
+    hex.reserve(data.size() * 2);
+    for (uint8_t byte : data) {
+        hex.push_back(alphabet[byte >> 4]);
+        hex.push_back(alphabet[byte & 0xF]);
+    }
+    return hex;
 }
 
 std::string formatTime(std::chrono::system_clock::time_point time) {

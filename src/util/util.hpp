@@ -32,7 +32,11 @@ namespace util {
     void getu16Little(uint16_t& v);
     void getu16Big(uint16_t& v);
 
+    uint32_t getNextPowerOfTwo(uint32_t v);
+    uint32_t pow2Align(uint32_t v, uint32_t align);
+
     std::vector<std::string> split(const std::string& str, const std::string& delim);
+    std::string bin2hex(const std::vector<uint8_t>& data);
 
     std::string formatTime(std::chrono::system_clock::time_point time);
 } // namespace util

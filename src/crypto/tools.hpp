@@ -19,6 +19,7 @@ std::vector<uint8_t> base64UrlDecode(const std::string& data);
 std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 std::vector<uint8_t> HMAC_MD5(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 std::vector<uint8_t> MD5(const std::vector<uint8_t>& data);
+std::vector<uint8_t> AES_128_CTR(const std::vector<uint8_t>& key, const std::vector<uint8_t>& iv, const std::vector<uint8_t>& data);
 std::string signJWT(const std::string& base64Key, const json& payload);
 bool verifyJWT(const std::string& base64Key, const std::string& jwt);
 
@@ -30,6 +31,8 @@ bool verifyPassword(const std::string& password, const std::string& hash);
 
 bool verifyECDSASignature(const std::vector<uint8_t>& signature, const std::vector<uint8_t>& message, EVP_PKEY* publicKey);
 EVP_PKEY* loadPublicKey(const std::string& publicKey);
+
+std::vector<uint8_t> encryptBOSS(const std::vector<uint8_t>& data);
 
 } // namespace crypto
 

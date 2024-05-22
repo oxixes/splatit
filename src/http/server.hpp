@@ -32,6 +32,8 @@ public:
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
             std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
 
+    void unregisterHost(const std::string& host);
+
     void registerErrorPage(const std::string& host, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func);
 

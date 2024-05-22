@@ -41,6 +41,20 @@ struct SocketInfo {
 
     std::vector<uint8_t> tcpSendBuffer;
     std::vector<std::pair<sock::IPv4Addr, std::vector<uint8_t>>> udpSendBuffer;
+
+    SocketInfo(std::shared_ptr<sock::Socket> socket, SocketType type,
+               std::function<void(uint32_t, uint32_t, sock::IPv4Addr)> acceptCallback,
+               std::function<void(uint32_t)> connectCallback,
+               std::function<void(uint32_t, std::vector<uint8_t>)> tcpRecvCallback,
+               std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> udpRecvCallback,
+               std::pair<std::function<void(uint32_t)>, std::function<void(uint32_t)>> closeCallback,
+               int64_t keepAliveTimeout, int64_t closeTimeout) : socket(std::move(socket)),
+                   type(type), acceptCallback(std::move(acceptCallback)), connectCallback(std::move(connectCallback)),
+                   tcpRecvCallback(std::move(tcpRecvCallback)), udpRecvCallback(std::move(udpRecvCallback)),
+                   closeCallback(std::move(closeCallback)), keepAliveTimeout(keepAliveTimeout),
+                   closeTimeout(closeTimeout) {}
+
+    SocketInfo() = default;
 };
 
 class SocketManager {

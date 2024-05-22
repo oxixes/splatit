@@ -166,6 +166,10 @@ namespace boss {
     }
 
     byaml::Byaml generateFestivalByaml(const festival::FestivalInfo& festivalInfo) {
+        if (festivalInfo.id < 1000) {
+            throw std::runtime_error("The festival ID must be greater than 1000.");
+        }
+
         std::vector<std::shared_ptr<byaml::Node>> stages;
         for (const auto& stage : festivalInfo.stages) {
             std::map<std::string, std::shared_ptr<byaml::Node>> stageMap = {

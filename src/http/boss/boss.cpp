@@ -4,56 +4,6 @@
 
 namespace boss {
 
-json bossManifest;
-
-bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsMgr) {
-    fs::path bossManifestPath = settingsMgr->getBOSSPath() / "manifest.json";
-
-    if (!fs::exists(bossManifestPath) || !fs::is_regular_file(bossManifestPath)) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "The BOSS manifest file does not exist or is not a file.");
-        return false;
-    }
-
-    try {
-        std::ifstream bossManifestFile(bossManifestPath);
-        bossManifest = json::parse(bossManifestFile);
-    } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "An error occurred while parsing the BOSS manifest file: " + std::string(e.what()));
-        return false;
-    }
-
-    fs::path schemaFilePath = fs::path("boss.schema.json");
-    if (!fs::exists(schemaFilePath) || !fs::is_regular_file(schemaFilePath)) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "The BOSS manifest schema file does not exist or is not a file, cannot validate BOSS manifest.");
-        return false;
-    }
-
-    json schema;
-    json_validator validator;
-    try {
-        std::ifstream schemaFile(schemaFilePath);
-        schema = json::parse(schemaFile);
-        validator.set_root_schema(schema);
-    } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "An error occurred while parsing the BOSS manifest schema file: " + std::string(e.what()));
-        return false;
-    }
-
-    try {
-        validator.validate(bossManifest);
-    } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "The BOSS manifest file is invalid: " + std::string(e.what()));
-        return false;
-    }
-
-    return true;
-}
-
 /*
  * Handler for GET https://npts.app.<domain>/p01/tasksheet/1/<titleId>/<tasksheetId>
  * Returns the appropiate tasksheet requested, based on the title id (which game)
@@ -116,8 +66,10 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
     res.setHeader("X-Download-Options", "noopen");
 
-    std::chrono::time_point lastModified = fs::last_write_time(settingsMgr->getBOSSPath() / "manifest.json");
-    time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::file_clock::to_sys(lastModified));
+    std::filesystem::file_time_type lastModified = fs::last_write_time(settingsMgr->getBOSSPath() / "manifest.json");
+    time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<
+            std::chrono::system_clock::duration>(lastModified - std::filesystem::file_time_type::clock::now() +
+            std::chrono::system_clock::now()));
 
     res.setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
     if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
@@ -163,8 +115,10 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
     res.setHeader("Content-Disposition", "attachment");
     res.setHeader("Content-Tranfer-Encoding", "binary");
 
-    std::chrono::time_point lastModified = fs::last_write_time(filePath);
-    time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::file_clock::to_sys(lastModified));
+    std::filesystem::file_time_type lastModified = fs::last_write_time(filePath);
+    time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<
+            std::chrono::system_clock::duration>(lastModified - std::filesystem::file_time_type::clock::now() +
+                                                 std::chrono::system_clock::now()));
 
     res.setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
     if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
@@ -236,6 +190,12 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 
     server->registerErrorPage("npts.app." + domain, errorHandler);
     server->registerErrorPage("npdi.cdn." + domain, errorHandler);
+}
+
+void unregisterRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {
+    std::string domain = settingsMgr->getTopDomain();
+    server->unregisterHost("npts.app." + domain);
+    server->unregisterHost("npdi.cdn." + domain);
 }
 
 } // namespace boss

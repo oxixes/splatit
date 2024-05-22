@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 
 namespace boss {
 
-bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsMgr);
+extern json bossManifest; // Defined in /boss/utils.cpp
 
 http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                              const std::string& titleId, const std::string& tasksheetId,
@@ -30,6 +30,7 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
 http::Response getError(int status, http::Version version);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
+void unregisterRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
 
 } // namespace boss
 

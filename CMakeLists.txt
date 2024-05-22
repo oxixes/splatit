@@ -36,6 +36,9 @@ target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 add_subdirectory(lib/json-schema-validator)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)
 
+# Add STB image library
+target_include_directories(splatoon_server PRIVATE lib/stb)
+
 add_subdirectory(src)
 
 if (WIN32)

@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -8,6 +10,7 @@
 
 #include "tools.hpp"
 #include "../util/util.hpp"
+#include "../constants.hpp"
 
 namespace crypto {
 
@@ -122,6 +125,36 @@ std::vector<uint8_t> MD5(const std::vector<uint8_t>& data) {
 
     EVP_MD_CTX_free(mdctx);
     result.resize(length);
+
+    return result;
+}
+
+std::vector<uint8_t> AES_128_CTR(const std::vector<uint8_t>& key, const std::vector<uint8_t>& iv, const std::vector<uint8_t>& data) {
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_CIPHER_CTX: " + util::getOpenSSLError());
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), nullptr, key.data(), iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize AES-128-CTR: " + util::getOpenSSLError());
+    }
+
+    std::vector<uint8_t> result(data.size() + 16);
+    int length = 0;
+    if (EVP_EncryptUpdate(ctx, result.data(), &length, data.data(), (int) data.size()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to encrypt data with AES-128-CTR: " + util::getOpenSSLError());
+    }
+
+    int finalLength = 0;
+    if (EVP_EncryptFinal_ex(ctx, result.data() + length, &finalLength) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize encryption with AES-128-CTR: " + util::getOpenSSLError());
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+    result.resize(length + finalLength);
 
     return result;
 }
@@ -358,6 +391,31 @@ EVP_PKEY* loadPublicKey(const std::string& publicKey) {
     }
 
     return pkey;
+}
+
+std::vector<uint8_t> encryptBOSS(const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> hmacKey = BOSS_HMAC_KEY;
+    std::vector<uint8_t> decrypted = HMAC_SHA256(hmacKey, data);
+
+    decrypted.insert(decrypted.end(), data.begin(), data.end());
+
+    // IV is 12 bytes followed by 0x00, 0x00, 0x00, 0x01
+    std::vector<uint8_t> iv = genKey(12);
+    iv.push_back(0x00);
+    iv.push_back(0x00);
+    iv.push_back(0x00);
+    iv.push_back(0x01);
+
+    std::vector<uint8_t> key = BOSS_AES_KEY;
+    std::vector<uint8_t> encrypted = AES_128_CTR(key, iv, decrypted);
+
+    std::vector<uint8_t> header = {0x62, 0x6f, 0x73, 0x73, 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02};
+    header.insert(header.end(), iv.begin(), iv.end() - 4);
+    header.resize(0x20, 0);
+
+    header.insert(header.end(), encrypted.begin(), encrypted.end());
+
+    return header;
 }
 
 } // namespace crypto

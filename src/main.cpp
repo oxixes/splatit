@@ -18,10 +18,7 @@
 #include "nex/auth/auth.hpp"
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
-
-#include "boss/byaml/FestivalGenerator.hpp"
-#include "boss/byaml/byaml.hpp"
-#include "boss/byaml/VSSettingGenerator.hpp"
+#include "boss/utils.hpp"
 
 bool shouldStop = false;
 
@@ -42,125 +39,6 @@ void signalHandler(int signal) {
 
 int main(int argc, char** argv) {
     std::shared_ptr<Logger::Logger> logger(new Logger::Logger());
-
-    // TESTING
-    std::chrono::system_clock::time_point announce = std::chrono::system_clock::from_time_t(1703790061);
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-    std::chrono::system_clock::time_point end = std::chrono::system_clock::from_time_t(1735689600);
-    std::chrono::system_clock::time_point result = std::chrono::system_clock::from_time_t(1735693200);
-    std::chrono::system_clock::time_point afterFesBonusStart = std::chrono::system_clock::from_time_t(1735696800);
-
-//    boss::festival::FestivalInfo festivalInfo{
-//            1035,
-//            1,
-//            true,
-//            false,
-//            {
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, {
-//                                    {
-//                                            boss::festival::Command::SPEAK_RAW_TEXT,
-//                                            boss::festival::Emotion::HAPPY,
-//                                            boss::festival::Speaker::IDOL_LEFT,
-//                                            "Hola, mundo!",
-//                                            true
-//                                    }
-//                            }}
-//                    }
-//            },
-//            {
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, {
-//                                    {
-//                                            boss::festival::Command::SPEAK_RAW_TEXT,
-//                                            boss::festival::Emotion::NORMAL_TALK,
-//                                            boss::festival::Speaker::IDOL_LEFT,
-//                                            "Bienvenidos al festival de prueba!",
-//                                            true
-//                                    }
-//                            }}
-//                    }
-//            },
-//            {
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, {
-//                                    {
-//                                            boss::festival::Command::SPEAK_RAW_TEXT,
-//                                            boss::festival::Emotion::HAPPY,
-//                                            boss::festival::Speaker::IDOL_LEFT,
-//                                            "Gana A",
-//                                            true
-//                                    }
-//                            }}
-//                    }
-//            },
-//            {
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, {
-//                                    {
-//                                            boss::festival::Command::SPEAK_RAW_TEXT,
-//                                            boss::festival::Emotion::HAPPY,
-//                                            boss::festival::Speaker::IDOL_LEFT,
-//                                            "Gana B",
-//                                            true
-//                                    }
-//                            }}
-//                    }
-//            },
-//            boss::festival::Gamemode::SPLAT_ZONES,
-//            {
-//                boss::festival::Stage::AROWANA_MALL,
-//                boss::festival::Stage::FLOUNDER_HEIGHTS,
-//                boss::festival::Stage::MAHIMAHI_RESORT
-//            },
-//            {
-//                    {
-//                        12, 24, 48, 255
-//                    },
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, "Equipo A"},
-//                    },
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, "Equipo A"}
-//                    }
-//            },
-//            {
-//                    {
-//                            48, 24, 12, 255
-//                    },
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, "Equipo B"},
-//                    },
-//                    {
-//                            {boss::festival::Language::EUROPEAN_SPANISH, "Equipo B"}
-//                    }
-//            },
-//            {
-//                100, 100, 100, 255
-//            },
-//            announce,
-//            now,
-//            end,
-//            result,
-//            afterFesBonusStart,
-//            boss::festival::Language::EUROPEAN_SPANISH
-//    };
-//
-//    boss::byaml::Byaml festivalByaml = boss::generateFestivalByaml(festivalInfo);
-//    std::vector<uint8_t> festivalData = festivalByaml.serialize();
-//    // Write the Festival to a file
-//    std::ofstream festivalFile("festival.byaml", std::ios::binary);
-//    festivalFile.write((char*) festivalData.data(), festivalData.size());
-//    festivalFile.close();
-//
-//    boss::byaml::Byaml vsSettingByaml = boss::generateVSSettingByaml(festivalInfo.afterFesBonusStart);
-//    std::vector<uint8_t> vsSettingData = vsSettingByaml.serialize();
-//    // Write the VS setting to a file
-//    std::ofstream vsSettingFile("vsSetting.byaml", std::ios::binary);
-//    vsSettingFile.write((char*) vsSettingData.data(), vsSettingData.size());
-//    vsSettingFile.close();
-//
-//    return 0;
 
     // Initialize sockets (only needed on Windows)
     if(!sock::initialize()) {
@@ -200,7 +78,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<http::Server> httpServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
-        if (!certManager->init() || (settingsMgr->isAccountEnabled() && !boss::init(logger, settingsMgr))) {
+        if (!certManager->init() || (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr))) {
             socketManager->cleanup();
             certManager->cleanup();
             db->close();
@@ -222,7 +100,6 @@ int main(int argc, char** argv) {
             sock::cleanup();
             return 1;
         }
-
 
         if (settingsMgr->isAccountEnabled())
             acc::registerRoutes(httpServer, settingsMgr, certManager, db);

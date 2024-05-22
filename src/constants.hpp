@@ -16,6 +16,14 @@
 #define FRIENDS_SERVER_ID "00003200"
 #define SPLATOON_SERVER_ID "10162B00"
 
+#define EU_BOSS_APP_ID "zvGSM4kOrXpkKnpT"
+#define US_BOSS_APP_ID "rjVlM7hUXPxmYQJh"
+#define JP_BOSS_APP_ID "bb6tOEckvgZ50ciH"
+
+#define EU_TITLE_ID "0005000010176a00"
+#define US_TITLE_ID "0005000010176900"
+#define JP_TITLE_ID "0005000010162b00"
+
 #define FRIENDS_SERVER_BUILD "branch:origin/feature/45925_FixAutoReconnect build:3_10_11_2006_0"
 #define SPLATOON_SERVER_BUILD "branch:origin/project/wup-agmj build:3_8_15_2004_0"
 

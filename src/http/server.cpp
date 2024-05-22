@@ -304,6 +304,11 @@ void Server::registerRoute(const std::string& host, const std::string& path, std
     routes[host][path] = std::move(func);
 }
 
+void Server::unregisterHost(const std::string& host) {
+    std::unique_lock lock(routesMutex);
+    routes.erase(host);
+}
+
 void Server::registerErrorPage(const std::string &host, std::function<Response(
         std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, int)> func) {
     std::unique_lock lock(errorPagesMutex);
