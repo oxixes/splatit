@@ -7,22 +7,27 @@
 namespace http {
 
 Server::Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-               sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key, X509* cert) {
+               sock::IPv4Addr listenDir, int keepAliveTimeout, bool ssl, EVP_PKEY* key, X509* cert) {
     this->logger = std::move(logger);
     this->socketMgr = std::move(socketMgr);
     this->keepAliveTimeout = keepAliveTimeout;
     this->mainSocketID = 0;
 
-    auto sslSocket = std::make_shared<sock::SSLSocket>(true, key, cert);
-    sslSocket->setBlocking(false);
+    std::shared_ptr<sock::TCPSocket> socket;
+    if (ssl) {
+        socket = std::make_shared<sock::SSLSocket>(true, key, cert);
+    } else {
+        socket = std::make_shared<sock::TCPSocket>();
+    }
+    socket->setBlocking(false);
 
     int opt = 1;
-    sslSocket->setsockopt(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    socket->setsockopt(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     struct sockaddr_in address = util::ipv4ToSockAddr(listenDir);
-    sslSocket->bind((struct sockaddr*)&address, sizeof(address));
+    socket->bind((struct sockaddr*)&address, sizeof(address));
 
-    mainSocket = sslSocket;
+    mainSocket = socket;
 }
 
 Server::~Server() {

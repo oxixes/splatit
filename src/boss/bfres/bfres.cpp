@@ -2,6 +2,7 @@
 #include "../../util/util.hpp"
 
 #include <utility>
+#include <cstring>
 
 namespace boss::bfres {
 

@@ -19,7 +19,7 @@ namespace http {
 class Server {
 public:
     Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
-           sock::IPv4Addr listenDir, int keepAliveTimeout, EVP_PKEY* key = nullptr, X509* cert = nullptr);
+           sock::IPv4Addr listenDir, int keepAliveTimeout, bool ssl, EVP_PKEY* key = nullptr, X509* cert = nullptr);
     ~Server();
 
     void listen(int workerCount, const std::function<void()>& closeFunc);
@@ -43,7 +43,7 @@ private:
 
     int keepAliveTimeout;
     uint32_t mainSocketID;
-    std::shared_ptr<sock::SSLSocket> mainSocket;
+    std::shared_ptr<sock::TCPSocket> mainSocket;
 
     std::unordered_map<uint32_t, std::vector<uint8_t>> buffers;
     std::vector<std::thread> threads;

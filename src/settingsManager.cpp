@@ -209,7 +209,8 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"listenAddress", "0.0.0.0"},
                     {"listenPort", 443},
                     {"workerCount", 3}, // TODO Make this dynamic depending on the machine CPU thread count
-                    {"keepAliveTimeout", 10}
+                    {"keepAliveTimeout", 10},
+                    {"ssl", true}
             }},
             {"friendsAuth", {
                     {"enabled", true},
@@ -323,12 +324,17 @@ fs::path SettingsManager::getBOSSPath() const {
 
 sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
     std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
+    bool sslEnabled = settings["http"]["ssl"];
 
     sock::IPv4Addr address = util::stringToIPv4(addressStr);
     if (settings["http"].contains("listenPort")) address.port = settings["http"]["listenPort"].get<uint16_t>();
-    else address.port = 443;
+    else address.port = sslEnabled ? 443 : 80;
 
     return address;
+}
+
+bool SettingsManager::isHTTP_SSL_Enabled() const {
+    return settings["http"]["ssl"];
 }
 
 int SettingsManager::getHTTPWorkerCount() const {

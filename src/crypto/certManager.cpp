@@ -18,67 +18,69 @@ CertManager::~CertManager() {
 }
 
 bool CertManager::init() {
-    if (!util::checkParentDirectory(settingsManager->getSSLCAKeyPath())) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
-        return false;
-    }
+    if ((settingsManager->isAccountEnabled() || settingsManager->isBOSSEnabled()) && settingsManager->isHTTP_SSL_Enabled()) {
+        if (!util::checkParentDirectory(settingsManager->getSSLCAKeyPath())) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+            return false;
+        }
 
-    if (fs::exists(settingsManager->getSSLCAKeyPath())) {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA key...");
-        if (!loadKey(settingsManager->getSSLCAKeyPath(), &CAkey)) return false;
-        if (!validateRSAKey(CAkey)) return false;
-    } else {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "CA key not found!");
-        if (!genRSAKey(&CAkey)) return false;
-    }
+        if (fs::exists(settingsManager->getSSLCAKeyPath())) {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA key...");
+            if (!loadKey(settingsManager->getSSLCAKeyPath(), &CAkey)) return false;
+            if (!validateRSAKey(CAkey)) return false;
+        } else {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "CA key not found!");
+            if (!genRSAKey(&CAkey)) return false;
+        }
 
-    if (!util::checkParentDirectory(settingsManager->getSSLCACertPath())) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
-        return false;
-    }
+        if (!util::checkParentDirectory(settingsManager->getSSLCACertPath())) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+            return false;
+        }
 
-    if (fs::exists(settingsManager->getSSLCACertPath())) {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA cert...");
-        if (!loadCert(settingsManager->getSSLCACertPath(), &CAcert)) return false;
-        if (!validateCA(CAcert, CAkey)) return false;
-    } else {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "CA cert not found!");
-        if (!createCA(settingsManager->getSSLCACertPath(),settingsManager->getSSLCAKeyPath(),
-                      CAkey, &CAcert)) return false;
-    }
+        if (fs::exists(settingsManager->getSSLCACertPath())) {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading CA cert...");
+            if (!loadCert(settingsManager->getSSLCACertPath(), &CAcert)) return false;
+            if (!validateCA(CAcert, CAkey)) return false;
+        } else {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "CA cert not found!");
+            if (!createCA(settingsManager->getSSLCACertPath(),settingsManager->getSSLCAKeyPath(),
+                          CAkey, &CAcert)) return false;
+        }
 
-    if (!util::checkParentDirectory(settingsManager->getSSLKeyPath())) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
-        return false;
-    }
+        if (!util::checkParentDirectory(settingsManager->getSSLKeyPath())) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+            return false;
+        }
 
-    if (fs::exists(settingsManager->getSSLKeyPath())) {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading key...");
-        if (!loadKey(settingsManager->getSSLKeyPath(), &key)) return false;
-        if (!validateRSAKey(CAkey)) return false;
-    } else {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Key not found!");
-        if (!genRSAKey(&key)) return false;
-    }
+        if (fs::exists(settingsManager->getSSLKeyPath())) {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading key...");
+            if (!loadKey(settingsManager->getSSLKeyPath(), &key)) return false;
+            if (!validateRSAKey(CAkey)) return false;
+        } else {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Key not found!");
+            if (!genRSAKey(&key)) return false;
+        }
 
-    if (!util::checkParentDirectory(settingsManager->getSSLCertPath())) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
-        return false;
-    }
+        if (!util::checkParentDirectory(settingsManager->getSSLCertPath())) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        settingsManager->getSSLCAKeyPath().parent_path().string() + " is not a directory!");
+            return false;
+        }
 
-    if (fs::exists(settingsManager->getSSLCertPath())) {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading SSL certificate...");
-        if (!loadCert(settingsManager->getSSLCertPath(), &cert)) return false;
-        if (!validateSSLCert(cert, key, CAcert, settingsManager->getDomains())) return false;
-    } else {
-        logger->log(Logger::level::INFO, Logger::group::SETUP, "Cert not found!");
-        if (!createSSLServerCert(CAcert, CAkey, settingsManager->getSSLCertPath(),
-                                 settingsManager->getSSLKeyPath(), settingsManager->getDomains(),
-                                 key, &cert)) return false;
+        if (fs::exists(settingsManager->getSSLCertPath())) {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading SSL certificate...");
+            if (!loadCert(settingsManager->getSSLCertPath(), &cert)) return false;
+            if (!validateSSLCert(cert, key, CAcert, settingsManager->getDomains())) return false;
+        } else {
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "Cert not found!");
+            if (!createSSLServerCert(CAcert, CAkey, settingsManager->getSSLCertPath(),
+                                     settingsManager->getSSLKeyPath(), settingsManager->getDomains(),
+                                     key, &cert)) return false;
+        }
     }
 
     if (settingsManager->isAccountEnabled()) {

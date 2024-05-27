@@ -46,6 +46,7 @@ public:
     [[nodiscard]] sock::IPv4Addr getHTTPListenAddress() const;
     [[nodiscard]] int getHTTPWorkerCount() const;
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
+    [[nodiscard]] bool isHTTP_SSL_Enabled() const;
 
     [[nodiscard]] sock::IPv4Addr getFriendsAuthListenAddress() const;
     [[nodiscard]] int getFriendsAuthWorkerCount() const;

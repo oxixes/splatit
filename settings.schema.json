@@ -105,7 +105,11 @@
         "type": "integer",
         "minimum": 1
       },
-      "required": ["listenAddress", "workerCount", "keepAliveTimeout"]
+      "ssl": {
+        "description": "Enable SSL",
+        "type": "boolean"
+      },
+      "required": ["listenAddress", "workerCount", "keepAliveTimeout", "ssl"]
     },
     "nex": {
       "description": "NEX settings",
@@ -438,7 +442,7 @@
         }
       },
       "then": {
-        "required": ["domain", "ssl", "http", "nex"]
+        "required": ["domain", "http", "nex"]
       }
     },
     {
@@ -453,7 +457,7 @@
         }
       },
       "then": {
-        "required": ["domain", "ssl", "http"]
+        "required": ["domain", "http"]
       }
     },
     {
@@ -484,6 +488,23 @@
       },
       "then": {
         "required": ["nex"]
+      }
+    },
+    {
+      "if": {
+        "required": ["http"],
+        "properties": {
+          "http": {
+            "properties": {
+              "ssl": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+          "required": ["ssl"]
       }
     }
   ]

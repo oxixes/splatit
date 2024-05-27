@@ -89,6 +89,7 @@ int main(int argc, char** argv) {
         try {
             httpServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
                                                         settingsMgr->getHTTPKeepAliveTimeout(),
+                                                        settingsMgr->isHTTP_SSL_Enabled(),
                                                         certManager->getSSLKey(),
                                                         certManager->getSSLCert());
         } catch (const std::exception& e) {
