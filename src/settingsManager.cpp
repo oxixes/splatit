@@ -337,6 +337,19 @@ bool SettingsManager::isHTTP_SSL_Enabled() const {
     return settings["http"]["ssl"];
 }
 
+std::set<sock::IPv4Addr> SettingsManager::getKnownProxies() const {
+    std::set<sock::IPv4Addr> knownProxies;
+
+    // Check if the settings file contains the knownProxies key
+    if (!settings["nex"].contains("knownProxies")) return knownProxies;
+
+    for (const auto& proxy : settings["nex"]["knownProxies"]) {
+        knownProxies.insert(util::stringToIPv4(proxy.get<std::string>()));
+    }
+
+    return knownProxies;
+}
+
 int SettingsManager::getHTTPWorkerCount() const {
     return settings["http"]["workerCount"];
 }

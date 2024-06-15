@@ -10,6 +10,7 @@
 #include "../../socket/socket.hpp"
 #include "../../logger.hpp"
 #include "../../socket/socketManager.hpp"
+#include "../../settingsManager.hpp"
 #include "packet.hpp"
 
 // Defines the amount of time between the last message received and the next ping.
@@ -130,9 +131,9 @@ struct RMCServerInfo {
 class Server {
 public:
     Server(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<SocketManager> socketMgr,
-           sock::IPv4Addr listenDir, int majorVersion, std::vector<uint8_t> accessKey, bool auth, uint32_t pid,
-           std::vector<uint8_t> securePasswd, bool friends, uint8_t minorVersion = 4, uint32_t supportedFunctions = 0,
-           uint8_t maxSubstreamId = 0, uint16_t initSeqIdUnreliable = 0);
+           std::shared_ptr<SettingsManager> settingsMgr, sock::IPv4Addr listenDir, int majorVersion,
+           std::vector<uint8_t> accessKey, bool auth, uint32_t pid, std::vector<uint8_t> securePasswd, bool friends,
+           uint8_t minorVersion = 4, uint32_t supportedFunctions = 0, uint8_t maxSubstreamId = 0, uint16_t initSeqIdUnreliable = 0);
     ~Server() = default;
 
     bool listen(const std::function<void()>& closeFunc);
@@ -159,6 +160,7 @@ private:
     std::shared_ptr<Logger::Logger> logger;
     Logger::group logGroup;
 
+    std::shared_ptr<SettingsManager> settingsMgr;
     std::shared_ptr<SocketManager> socketMgr;
 
     bool auth;
@@ -170,6 +172,7 @@ private:
 
     std::unordered_map<PRUDPAddress, ClientInfo> clients;
     std::unordered_map<uint32_t, PRUDPAddress> pidToAddr;
+    std::unordered_map<sock::IPv4Addr, sock::IPv4Addr> proxyMap;
     std::recursive_mutex clientsMutex;
     uint8_t nextSessionId = 0;
 
@@ -181,7 +184,7 @@ private:
     void onData(sock::IPv4Addr addr, std::vector<uint8_t> data);
     void processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& packet, std::span<uint8_t> data);
     void processPacketQueue(PRUDPAddress prudpAddr, uint8_t substreamId);
-    bool handlePacket(PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet, bool aggregateAck = false);
+    bool handlePacket(PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet);
     [[nodiscard]] std::vector<uint8_t> calculateConnSignature(sock::IPv4Addr addr) const;
 
     void closeClientConnection(PRUDPAddress addr);
@@ -194,6 +197,7 @@ private:
                                               std::vector<uint16_t> seqIds, std::vector<uint8_t> remoteSignature,
                                               std::vector<uint8_t> sessionKey);
 
+    void sendBytes(sock::IPv4Addr addr, const std::vector<uint8_t>& data);
     void sendPacket(PRUDPAddress addr, const std::shared_ptr<Packet>& packet);
     void resetPingTask(PRUDPAddress addr);
     void deleteNonAckedPacket(PRUDPAddress addr, uint16_t seqId, uint8_t substreamId);

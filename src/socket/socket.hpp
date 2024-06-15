@@ -34,6 +34,12 @@ struct IPv4Addr {
     bool operator ==(const IPv4Addr& other) const {
         return a == other.a && b == other.b && c == other.c && d == other.d && port == other.port;
     }
+
+    bool operator <(const IPv4Addr& other) const {
+        return a < other.a || (a == other.a && b < other.b) || (a == other.a && b == other.b && c < other.c) ||
+               (a == other.a && b == other.b && c == other.c && d < other.d) ||
+               (a == other.a && b == other.b && c == other.c && d == other.d && port < other.port);
+    }
 };
 
 enum class SocketStatus {

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <filesystem>
+#include <set>
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json-schema.hpp>
@@ -47,6 +48,8 @@ public:
     [[nodiscard]] int getHTTPWorkerCount() const;
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
     [[nodiscard]] bool isHTTP_SSL_Enabled() const;
+
+    [[nodiscard]] std::set<sock::IPv4Addr> getKnownProxies() const;
 
     [[nodiscard]] sock::IPv4Addr getFriendsAuthListenAddress() const;
     [[nodiscard]] int getFriendsAuthWorkerCount() const;

@@ -116,8 +116,8 @@ int main(int argc, char** argv) {
     if (settingsMgr->isFriendsAuthEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getFriendsAuthListenAddress();
 
-        friendsAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, addr,
-                                                              0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY,
+        friendsAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, settingsMgr,
+                                                              addr, 0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY,
                                                               true, 1, std::vector<uint8_t>(), true);
 
         sock::IPv4Addr secureAddr = settingsMgr->getFriendsSecureServerAddress();
@@ -134,8 +134,8 @@ int main(int argc, char** argv) {
     std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsSecureRMC;
     if (settingsMgr->isFriendsSecureEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getFriendsSecureListenAddress();
-        friendsSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_SECURE, socketManager, addr,
-                                                                0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY,
+        friendsSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_SECURE, socketManager, settingsMgr,
+                                                                addr, 0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY,
                                                                 false, 2, (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY,
                                                                 true);
 
@@ -149,10 +149,10 @@ int main(int argc, char** argv) {
     std::shared_ptr<nex::rmc::AuthRMC> splatoonAuthRMC;
     if (settingsMgr->isSplatoonAuthEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getSplatoonAuthListenAddress();
-        splatoonAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, addr,
-                                                                1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY,
-                                                                true, 1, std::vector<uint8_t>(),
-                                                                false);
+        splatoonAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, settingsMgr,
+                                                               addr, 1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY,
+                                                               true, 1, std::vector<uint8_t>(),
+                                                               false);
 
         sock::IPv4Addr secureAddr = settingsMgr->getSplatoonSecureServerAddress();
         splatoonAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::SPLATOON_AUTH, db,
@@ -168,10 +168,10 @@ int main(int argc, char** argv) {
     std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonSecureRMC;
     if (settingsMgr->isSplatoonSecureEnabled()) {
         sock::IPv4Addr addr = settingsMgr->getSplatoonSecureListenAddress();
-        splatoonSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_SECURE, socketManager, addr,
-                                                                1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY,
-                                                                false, 2, (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
-                                                                false);
+        splatoonSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_SECURE, socketManager, settingsMgr,
+                                                                 addr, 1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY,
+                                                                 false, 2, (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
+                                                                 false);
 
         splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, db);
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
@@ -181,6 +181,9 @@ int main(int argc, char** argv) {
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+#ifndef _WIN32
+    signal(SIGPIPE, SIG_IGN);
+#endif
 
     TasksManager tasksMgr(POLL_TIMEOUT);
 

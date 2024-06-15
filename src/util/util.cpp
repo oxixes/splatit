@@ -65,6 +65,7 @@ sock::IPv4Addr stringToIPv4(const std::string& str) {
     addr.b = std::stoi(parts[1]);
     addr.c = std::stoi(parts[2]);
     addr.d = std::stoi(parts[3]);
+    addr.port = 0;
     return addr;
 }
 

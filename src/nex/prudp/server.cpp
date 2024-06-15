@@ -10,12 +10,7 @@
 namespace nex::prudp {
 
 bool packetCmpFunc(const std::shared_ptr<Packet>& lhs, const std::shared_ptr<Packet>& rhs) {
-    if (lhs->seqId != rhs->seqId) return lhs->seqId < rhs->seqId;
-    // Fragment IDs start at 1 and increment by 1 for each fragment,
-    // but 0 marks the last fragment, so we need to handle that case.
-    if (lhs->fragmentId == 0) return false;
-    else if (rhs->fragmentId == 0) return true;
-    else return lhs->fragmentId < rhs->fragmentId;
+    return lhs->seqId < rhs->seqId;
 }
 
 PayloadEncoder::PayloadEncoder(std::vector<uint8_t> sessionKey, uint8_t maxSubstreamId) {
@@ -68,10 +63,11 @@ std::vector<uint8_t> PayloadEncoder::combineKeys(std::vector<uint8_t> a, std::ve
 }
 
 Server::Server(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<SocketManager> socketMgr,
-               sock::IPv4Addr listenDir, int majorVersion, std::vector<uint8_t> accessKey, bool auth, uint32_t pid,
-               std::vector<uint8_t> securePasswd, bool friends, uint8_t minorVersion, uint32_t supportedFunctions,
-               uint8_t maxSubstreamId, uint16_t initSeqIdUnreliable) {
+               std::shared_ptr<SettingsManager> settingsMgr, sock::IPv4Addr listenDir, int majorVersion,
+               std::vector<uint8_t> accessKey, bool auth, uint32_t pid, std::vector<uint8_t> securePasswd, bool friends,
+               uint8_t minorVersion, uint32_t supportedFunctions, uint8_t maxSubstreamId, uint16_t initSeqIdUnreliable) {
     this->logger = std::move(logger);
+    this->settingsMgr = std::move(settingsMgr);
     this->logGroup = logGroup;
     this->socketMgr = std::move(socketMgr);
     this->auth = auth;
@@ -146,8 +142,16 @@ uint64_t Server::process() {
             continue;
         }
 
+        if (packetInfo.packet->type == Type::PING) {
+            // If it's the first time we send this PING packet, we update the sequence ID
+            auto it = clients.find(packetInfo.addr);
+            if (it != clients.end()) {
+                packetInfo.packet->seqId = it->second.unreliableSeqId++;
+            }
+        }
+
         logPacket(packetInfo.packet, false, packetInfo.addr);
-        socketMgr->sendto(mainSocketID, packetInfo.packet->encode(), packetInfo.addr.address);
+        sendBytes(packetInfo.addr.address, packetInfo.packet->encode());
 
         packetInfo.numRetries++;
         auto newTime = now + std::chrono::milliseconds(RETRY_INTERVAL);
@@ -196,10 +200,15 @@ void Server::sendDataPacket(prudp::PRUDPAddress addr, std::vector<uint8_t> data,
     packet->flags = FLAG_RELIABLE | FLAG_NEED_ACK | ((majorVersion == 1) ? FLAG_HAS_SIZE : 0);
     packet->sessionId = it->second.sessionId;
     packet->sessionKey = it->second.sessionKey;
-    packet->seqId = it->second.substreams[substreamId].seqId++;
+    packet->seqId = it->second.substreams[substreamId].seqId;
     packet->fragmentId = 0;
     packet->connectionSignature = calculateConnSignature(addr.address);
     packet->remoteSignature = it->second.remoteSignature;
+
+    // We increment the sequence ID for the next packet to be sent by the amount of fragments
+    // that will be sent, so that the next packet will have the correct sequence ID
+    uint16_t fragments = (data.size() + MAX_PACKET_SIZE - 1) / MAX_PACKET_SIZE;
+    it->second.substreams[substreamId].seqId += fragments;
 
     packet->encoder = it->second.encoder.getReliableEncoder((majorVersion == 0) ? 0 : substreamId);
     packet->data = std::move(data);
@@ -207,11 +216,26 @@ void Server::sendDataPacket(prudp::PRUDPAddress addr, std::vector<uint8_t> data,
     sendPacket(addr, packet);
 }
 
+void Server::sendBytes(sock::IPv4Addr addr, const std::vector<uint8_t>& data) {
+    if (proxyMap.find(addr) != proxyMap.end()) {
+        // If the address is in the proxy map, we need to send the data to the proxy
+        // instead of the real address. We need to include the proxy header in the data.
+        std::vector<uint8_t> newData;
+        std::string proxyHeader = "PROXY " + util::ipv4ToString(addr) + ":" + std::to_string(addr.port) + "|";
+        newData.insert(newData.end(), proxyHeader.begin(), proxyHeader.end());
+        newData.insert(newData.end(), data.begin(), data.end());
+        socketMgr->sendto(mainSocketID, newData, proxyMap[addr]);
+    } else {
+        socketMgr->sendto(mainSocketID, data, addr);
+    }
+}
+
 void Server::sendPacket(prudp::PRUDPAddress addr, const std::shared_ptr<Packet>& packet) {
     std::vector<std::shared_ptr<Packet>> fragments;
 
     // If the packet is too big, we need to fragment it
     uint8_t fragmentId = 1;
+    auto it = clients.find(addr);
     while (packet->data.size() > MAX_PACKET_SIZE) {
         std::shared_ptr<Packet> fragment = nullptr;
         if (majorVersion == 0) {
@@ -221,6 +245,8 @@ void Server::sendPacket(prudp::PRUDPAddress addr, const std::shared_ptr<Packet>&
         }
 
         fragment->fragmentId = fragmentId++;
+        fragment->seqId = packet->seqId++;
+
         fragment->data = std::vector<uint8_t>(packet->data.begin(), packet->data.begin() + MAX_PACKET_SIZE);
         packet->data.erase(packet->data.begin(), packet->data.begin() + MAX_PACKET_SIZE);
 
@@ -235,7 +261,6 @@ void Server::sendPacket(prudp::PRUDPAddress addr, const std::shared_ptr<Packet>&
     std::unique_lock clientsLock(clientsMutex);
     std::unique_lock delayedPacketsLock(delayedPacketsMutex);
 
-    auto it = clients.find(addr);
     for (auto& fragment : fragments) {
         if (fragment->flags & FLAG_NEED_ACK) {
             if (!(fragment->flags & FLAG_RELIABLE)) {
@@ -256,11 +281,64 @@ void Server::sendPacket(prudp::PRUDPAddress addr, const std::shared_ptr<Packet>&
         }
 
         logPacket(fragment, false, addr);
-        socketMgr->sendto(mainSocketID, fragment->encode(), addr.address);
+        sendBytes(addr.address, fragment->encode());
     }
 }
 
 void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
+    // Check if the packet comes from a known proxy. The format is 'PROXY <real ip>:<real port>'
+    std::string proxyHeader = "PROXY";
+    if (data.size() >= proxyHeader.size() && std::equal(proxyHeader.begin(), proxyHeader.end(), data.begin())) {
+        if (proxyMap.find(addr) == proxyMap.end()) {
+            sock::IPv4Addr proxyAddr = addr;
+            proxyAddr.port = 0;
+            std::set knownProxies = settingsMgr->getKnownProxies();
+            if (knownProxies.find(proxyAddr) == knownProxies.end()) {
+                logger->log(Logger::level::WARN, logGroup, "Received packet from unknown proxy " +
+                                                           util::ipv4ToString(addr));
+                return;
+            }
+
+            // Find the '|' character, which separates the proxy header from the actual data
+            auto it = std::find(data.begin(), data.end(), '|');
+            if (it == data.end()) {
+                logger->log(Logger::level::DEBUG, logGroup, "Received packet from proxy with invalid format");
+                return;
+            }
+
+            // Copy and delete the proxy header
+            std::string header(data.begin(), it);
+            data.erase(data.begin(), it + 1);
+
+            // Get the real address from the proxy header
+            auto addrIt = std::find(header.begin(), header.end(), ' ');
+            if (addrIt == header.end()) {
+                logger->log(Logger::level::DEBUG, logGroup, "Received packet from proxy with invalid format");
+                return;
+            }
+
+            std::string realAddrStr(addrIt + 1, header.end());
+            auto colonIt = std::find(realAddrStr.begin(), realAddrStr.end(), ':');
+            if (colonIt == realAddrStr.end()) {
+                logger->log(Logger::level::DEBUG, logGroup, "Received packet from proxy with invalid format");
+                return;
+            }
+
+            std::string realPortStr(colonIt + 1, realAddrStr.end());
+            realAddrStr.erase(colonIt, realAddrStr.end());
+
+            sock::IPv4Addr newAddr = util::stringToIPv4(realAddrStr);
+            newAddr.port = std::stoi(realPortStr);
+
+            proxyMap.insert({newAddr, addr});
+            addr = newAddr;
+        } else {
+            addr = proxyMap[addr];
+        }
+    } else if (proxyMap.find(addr) != proxyMap.end()) {
+        proxyMap.erase(addr);
+    }
+
     try {
         // We do this in a loop because there may be multiple packets in a single UDP datagram
         // (only seen in notifications sent from the server to the client when joining a match,
@@ -275,17 +353,17 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
                 packet->friends = friends;
 
                 size_t size = packet->decode(data);
-                data.erase(data.begin(), data.begin() + (ssize_t) size);
-
                 processPacket(addr, std::move(packet), data);
+
+                data.erase(data.begin(), data.begin() + (ssize_t) size);
             } else {
                 auto packet = std::make_shared<PacketV1>();
                 packet->accessKey = accessKey;
 
                 size_t size = packet->decode(data);
-                data.erase(data.begin(), data.begin() + (ssize_t) size);
-
                 processPacket(addr, std::move(packet), data);
+
+                data.erase(data.begin(), data.begin() + (ssize_t) size);
             }
         }
     } catch (const MalformedException& e) {
@@ -377,6 +455,7 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
             return;
         }
 
+        // TODO Send aggregate ACKs instead of plain ACKs if the client supports it
         // If we have already processed the packet, we can just send
         // an ACK and ignore it. This happens when an ACK is sent, but
         // the client does not receive it, so it sends the packet again.
@@ -424,19 +503,6 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
         // Check the packet fragments (if any) to see if the packet is complete
 
-        // NOTE: The protocol is flawed. Example: If a packet is fragmented into
-        // 3 fragments, the first one has fragment ID 1, the second one has fragment
-        // ID 2 and the last one has fragment ID 0. This means that if the second
-        // fragment is missing, the third one will have fragment ID 0, so we can't
-        // know if the second fragment is missing or if the packet is complete.
-
-        // For this reason, we'll assume that the packet is complete if the last
-        // fragment is received, and check if the function that processes the
-        // packet throws an exception, in which case we'll assume that the packet
-        // is not complete, and we'll wait for the missing fragments. While this
-        // allows us to detect missing fragments, this is not inherent to PRUDP,
-        // and we'll have to rely on the data handler to detect missing fragments
-        // (which in this case will detect them).
         auto fragmentIt = packetIt;
         bool fragmentComplete = false;
 
@@ -448,6 +514,26 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
         bool multipleFragments = false;
         while (!fragmentComplete) {
+            // Send ACKs for all the fragments we have received and has not been ACKed yet
+            if (fragmentIt->get()->seqId > it->second.substreams[substreamId].recvSeqId) {
+                if (fragmentIt->get()->flags & FLAG_NEED_ACK) {
+                    if (supportsAggregateAck && fragmentIt->get()->type == Type::DATA) {
+                        ackedSeqIds.push_back(fragmentIt->get()->seqId);
+                    } else {
+                        auto res = craftAck(prudpAddr, *fragmentIt, it->second.sessionId, it->second.remoteSignature,
+                                            it->second.sessionKey);
+
+                        // If the packet is a disconnect and needs ACK, we send 3 ACK, so that the client
+                        // receives at least one of them, if it does not need it, we just close the connection.
+                        for (int i = 0; i < (fragmentIt->get()->type == Type::DISCONNECT ? 3 : 1); i++) {
+                            sendPacket(prudpAddr, res);
+                        }
+                    }
+                }
+
+                it->second.substreams[substreamId].recvSeqId++;
+            }
+
             // If the fragment ID is 0, it's the last fragment, so we can
             // process it immediately
             if (fragmentIt->get()->fragmentId == 0) {
@@ -456,7 +542,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
                 // If it's not the last fragment, we need to check if the next
                 // fragment is in the queue, if it's not, we can't process it yet
                 if (std::next(fragmentIt) == packetQueue.end()) break;
-                if (std::next(fragmentIt)->get()->seqId != fragmentIt->get()->seqId ||
+                if (std::next(fragmentIt)->get()->seqId != fragmentIt->get()->seqId + 1 ||
                     (std::next(fragmentIt)->get()->fragmentId != fragmentIt->get()->fragmentId + 1 &&
                     std::next(fragmentIt)->get()->fragmentId != 0)) break;
 
@@ -469,16 +555,13 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
         // By this point, the packet should be complete, so we can process it
 
-        // We keep a copy of the encoder in case something goes wrong,
-        // so that we can restore it
         auto encoder = it->second.encoder.getReliableEncoder(substreamId);
-        auto encoderCopy = std::make_shared<Encoder>(*encoder);
 
         std::vector<uint8_t> data;
         fragmentIt = packetIt;
 
         std::shared_ptr<Packet> lastFragment = nullptr;
-        while (fragmentIt != packetQueue.end() && fragmentIt->get()->seqId == packetIt->get()->seqId) {
+        do {
             fragmentIt->get()->encoder = encoder;
             fragmentIt->get()->decryptData();
 
@@ -486,7 +569,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
 
             if (multipleFragments) data.insert(data.end(), fragmentIt->get()->data.begin(), fragmentIt->get()->data.end());
             fragmentIt++;
-        }
+        } while (fragmentIt != packetQueue.end() && fragmentIt->get()->fragmentId != 0);
 
         // Prevent copying the data if there is only one fragment
         if (multipleFragments) lastFragment->data = std::move(data);
@@ -504,20 +587,10 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
                     sendPacket(prudpAddr, res);
                 }
             }
-            if (!handlePacket(prudpAddr, lastFragment, supportsAggregateAck)) break;
-            ackedSeqIds.push_back(lastFragment->seqId);
-        } catch (const NotCompleteException& e) {
-            // If the packet is not complete, we restore the encoder,
-            // but we don't remove the packet from the queue, as it
-            // may be complete later
-            it->second.encoder.setReliableEncoder(substreamId, encoderCopy);
-            break;
+            if (!handlePacket(prudpAddr, lastFragment)) break;
         } catch (const std::exception& e) {
-            // If something went wrong, we restore the encoder
-            it->second.encoder.setReliableEncoder(substreamId, encoderCopy);
-
             // Send all the acks we have processed so far
-            if (supportsAggregateAck) {
+            if (supportsAggregateAck && !ackedSeqIds.empty()) {
                 auto res = craftAggregateAck(prudpAddr, it->second.minorVersion, it->second.sessionId,
                                              substreamId, ackedSeqIds, it->second.remoteSignature,
                                              it->second.sessionKey);
@@ -532,12 +605,11 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
         // If the packet was processed successfully, we can remove it
         // from the queue
         packetIt = packetQueue.erase(packetIt, fragmentIt);
-        it->second.substreams[substreamId].recvSeqId++;
     }
 
     // If the client supports aggregate acknowledgements, send one for
     // all the processed packets of the queue instead of one for each packet.
-    if (supportsAggregateAck && !disconnected) {
+    if (supportsAggregateAck && !disconnected && !ackedSeqIds.empty()) {
         auto res = craftAggregateAck(prudpAddr, it->second.minorVersion, it->second.sessionId,
                                      substreamId, ackedSeqIds, it->second.remoteSignature,
                                      it->second.sessionKey);
@@ -545,7 +617,7 @@ void Server::processPacketQueue(prudp::PRUDPAddress prudpAddr, uint8_t substream
     }
 }
 
-bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet, bool aggregateAck) {
+bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<Packet>& packet) {
     std::unique_lock clientsLock(clientsMutex);
 
     auto it = clients.find(prudpAddr);
@@ -709,7 +781,7 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                 std::move(pingPacket)
         }});
 
-        auto res = craftAck(prudpAddr, packet, nextSessionId, packet->remoteSignature);
+        auto res= craftAck(prudpAddr, packet, nextSessionId, packet->remoteSignature);
 
         if (!auth) {
             responseCheckValue++;
@@ -726,22 +798,13 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                                                 + ":" + std::to_string(prudpAddr.address.port) + " connected");
         return true;
     } else if (packet->type == Type::DISCONNECT) {
-        // If the packet is reliable, we send 3 ACK, so that the client
-        // receives at least one of them, if it's not reliable, we just
-        // close the connection.
-        if (packet->flags & FLAG_NEED_ACK) {
-            auto res = craftAck(prudpAddr, packet, it->second.sessionId, it->second.remoteSignature,
-                                it->second.sessionKey);
-            for (int i = 0; i < 3; i++) sendPacket(prudpAddr, res);
-        }
-
         closeClientConnection(prudpAddr);
         return false;
     } else if (packet->type == Type::PING) {
         // We just have to reply with an ACK if the packet is needs ack,
         // otherwise we just ignore it (although it does not make to send
         // a ping without requiring ack, but we'll follow the protocol).
-        if (packet->flags & FLAG_NEED_ACK) {
+        if (packet->flags & FLAG_NEED_ACK && !(packet->flags & FLAG_RELIABLE)) {
             auto res = craftAck(prudpAddr, packet, it->second.sessionId, it->second.remoteSignature,
                                 it->second.sessionKey);
             sendPacket(prudpAddr, res);
@@ -764,10 +827,6 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
             clientsLock.unlock();
 
             rmcInfo->second.dataFunc(prudpAddr, packetMinorVersion, substreamId, packet->data);
-        }
-
-        if (packet->flags & FLAG_NEED_ACK && !aggregateAck) {
-            sendPacket(prudpAddr, res);
         }
     }
 
@@ -856,6 +915,16 @@ std::shared_ptr<Packet> Server::craftAck(prudp::PRUDPAddress addr, const std::sh
     res->fragmentId = 0;
     res->connectionSignature = (req->type == Type::SYN) ? calculateConnSignature(addr.address) :
                                (majorVersion == 0) ? std::vector<uint8_t>(4, 0) : std::vector<uint8_t>(16, 0);
+
+    auto connSign = calculateConnSignature(addr.address);
+    if (req->type == Type::SYN) {
+        // Print
+        std::stringstream ss;
+        for (uint8_t byte : connSign) {
+            ss << std::hex << std::setw(2) << std::setfill('0') << (int) byte;
+        }
+    }
+
     if (req->type != Type::SYN) res->remoteSignature = std::move(remoteSignature);
 
     return res;
@@ -863,6 +932,7 @@ std::shared_ptr<Packet> Server::craftAck(prudp::PRUDPAddress addr, const std::sh
 
 std::shared_ptr<Packet> Server::craftPing(PRUDPAddress addr, uint8_t sessionId, std::vector<uint8_t> remoteSignature,
                                           std::vector<uint8_t> sessionKey) {
+
     std::shared_ptr<Packet> res;
     if (majorVersion == 0) {
         res = std::make_shared<PacketV0>();
@@ -877,7 +947,7 @@ std::shared_ptr<Packet> Server::craftPing(PRUDPAddress addr, uint8_t sessionId, 
     res->srcStreamType = addr.srcStreamType;
     res->dstPort = addr.vPort;
     res->dstStreamType = addr.streamType;
-    res->flags = FLAG_NEED_ACK;
+    res->flags = (majorVersion == 0) ? FLAG_NEED_ACK : FLAG_NEED_ACK | FLAG_HAS_SIZE;
     res->sessionId = sessionId;
     res->sessionKey = std::move(sessionKey);
     res->seqId = 1;

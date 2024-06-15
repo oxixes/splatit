@@ -266,16 +266,16 @@ uint64_t SocketManager::process(uint64_t ms) {
             std::chrono::system_clock::now().time_since_epoch()).count();
 
     socketsLock.lock();
-    for (auto& socket : sockets) {
+    for (auto socket = sockets.begin(); socket != sockets.end(); socket++) {
         // Check for keep alive timeouts
-        if (socket.second.keepAliveTimeout > 0 && socket.second.keepAliveTimeout < now) {
-            if (socket.second.type == SocketType::TCP_CONN) {
+        if (socket->second.keepAliveTimeout > 0 && socket->second.keepAliveTimeout < now) {
+            if (socket->second.type == SocketType::TCP_CONN) {
                 logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
-                            "Socket with ID " + std::to_string(socket.first) + " has exceeded its keep alive timeout, will be closed");
-                close(socket.first);
+                            "Socket with ID " + std::to_string(socket->first) + " has exceeded its keep alive timeout, will be closed");
+                close(socket->first, false, &socket);
             }
-        } else if (socket.second.keepAliveTimeout > 0 && socket.second.keepAliveTimeout - now < nextTimeout) {
-            nextTimeout = socket.second.keepAliveTimeout - now;
+        } else if (socket->second.keepAliveTimeout > 0 && socket->second.keepAliveTimeout - now < nextTimeout) {
+            nextTimeout = socket->second.keepAliveTimeout - now;
         }
     }
 
@@ -525,7 +525,6 @@ void SocketManager::recvfrom(uint32_t socketId) {
 
 void SocketManager::accept(uint32_t socketId) {
     std::unique_lock socketsLock(socketsMutex);
-    //bool socketsLocked = true;
 
     if (sockets.find(socketId) == sockets.end()) return;
     auto socketInfo = &sockets[socketId];
@@ -566,8 +565,6 @@ void SocketManager::accept(uint32_t socketId) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                     "Socket with ID " + std::to_string(socketId) + " has accepted a new connection with ID " +
                     std::to_string(newSocketId));
-
-        // if (acceptCallback != acceptCallbacks.end()) acceptCallback->second(socketId, newSocketId, dir);
     } catch (const sock::SSLException& e) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK, std::string(e.what()));
     } catch (const sock::FatalException& e) {
@@ -576,7 +573,7 @@ void SocketManager::accept(uint32_t socketId) {
     }
 }
 
-bool SocketManager::close(uint32_t socketId, bool force) {
+bool SocketManager::close(uint32_t socketId, bool force, std::unordered_map<uint32_t, SocketInfo>::iterator* it) {
     std::unique_lock socketsLock(socketsMutex);
 
     if (sockets.find(socketId) == sockets.end()) return false;
@@ -594,6 +591,8 @@ bool SocketManager::close(uint32_t socketId, bool force) {
     if (!force && hasData && std::find(closeQueue.begin(), closeQueue.end(), socketId) == closeQueue.end()) {
         closeQueue.push_back(socketId);
     } else {
+        closeQueueLock.unlock();
+
         try {
             socketInfo->socket->close(force);
         } catch (const sock::RetryableException& e) {
@@ -609,12 +608,21 @@ bool SocketManager::close(uint32_t socketId, bool force) {
 
         if (socketInfo->closeCallback.first != nullptr) {
             auto closeCallback = socketInfo->closeCallback.first;
+            if (it != nullptr) {
+                *it = sockets.erase(*it);
+            } else {
+                sockets.erase(socketId);
+            }
             sockets.erase(socketId);
             socketsLock.unlock();
 
             closeCallback(socketId);
         } else {
-            sockets.erase(socketId);
+            if (it != nullptr) {
+                *it = sockets.erase(*it);
+            } else {
+                sockets.erase(socketId);
+            }
         }
 
         return true;

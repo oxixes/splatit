@@ -80,7 +80,7 @@ public:
     void connect(uint32_t socketId, sock::IPv4Addr address);
     bool send(uint32_t socketId, std::vector<uint8_t> data);
     bool sendto(uint32_t socketId, std::vector<uint8_t> data, sock::IPv4Addr address);
-    bool close(uint32_t socketId, bool force = false);
+    bool close(uint32_t socketId, bool force = false, std::unordered_map<uint32_t, SocketInfo>::iterator* it = nullptr);
 
     bool isClosed(uint32_t socketId);
 
