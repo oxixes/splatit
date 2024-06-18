@@ -220,8 +220,8 @@ std::string AuthRMC::getUserAccessPassword(uint32_t pid) {
     uint32_t id = db::Database::runCommand(db, std::move(dbCmd), registerCloseCall, unregisterCloseCall, shouldStop);
     auto result = db->getResult(id);
     if (result->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
-    if (result->data.empty()) return "";
-    return std::any_cast<std::string>(result->data[0]);
+    if (!result->data.has_value()) return "";
+    return std::any_cast<db::DBGameServerAccessData>(result->data).password;
 }
 
 } // namespace nex::rmc

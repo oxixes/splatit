@@ -88,11 +88,12 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
         if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
         // No user found
-        if (results->data.empty())
+        if (!results->data.has_value())
             return createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
 
-        auto userPid = std::to_string(std::any_cast<uint32_t>(results->data[0]));
-        auto username = std::any_cast<std::string>(results->data[1]);
+        auto userData = std::any_cast<db::DBUserData>(results->data);
+        auto userPid = std::to_string(userData.pid);
+        auto username = userData.username;
 
         pugi::xml_node mapped_id = mapped_ids.append_child("mapped_id");
         if (inputType == "pid")
@@ -160,17 +161,17 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
         std::unique_ptr<db::Result> results = db->getResult(cmdId);
         if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
-        if (results->data.empty()) {
+        if (!results->data.has_value()) {
             return createError(req.getVersion(), 106, "Invalid account ID or password", "", shouldClose);
         }
 
-        auto pid = std::any_cast<uint32_t>(results->data[0]);
+        auto userData = std::any_cast<db::DBUserData>(results->data);
 
         std::string nintendoPasswordHash;
         if (bodyMap.find("password_type") != bodyMap.end() && bodyMap["password_type"] == "hash") {
             nintendoPasswordHash = bodyMap["password"];
         } else {
-            nintendoPasswordHash = crypto::genNintendoPasswordHash(pid, bodyMap["password"]);
+            nintendoPasswordHash = crypto::genNintendoPasswordHash(userData.pid, bodyMap["password"]);
         }
 
         // Verifying a password takes a while, which could allow an attacker to distinguish between
@@ -180,7 +181,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
 
         // Another possible attack is a DDoS by sending a lot of requests with incorrect passwords.
         // To prevent this, we could rate limit requests, but we'll leave it as is for now.
-        if (!crypto::verifyPassword(nintendoPasswordHash, std::any_cast<std::string>(results->data[2]))) {
+        if (!crypto::verifyPassword(nintendoPasswordHash, userData.password)) {
             logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " tried to log in with "
                     "invalid password (client " + util::ipv4ToString(client) + ").");
             return createError(req.getVersion(), 106, "Invalid account ID or password", "", shouldClose);
@@ -190,7 +191,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
         json jwtPayload = {
                 {"exp", time(nullptr) + 3600},
                 {"iss", "account"},
-                {"sub", pid}
+                {"sub", userData.pid}
         };
 
         logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " logged in successfully.");
@@ -303,7 +304,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     std::unique_ptr<db::Result> results = db->getResult(cmdId);
     if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
-    if (results->data.empty()) {
+    if (!results->data.has_value()) {
         return createError(req.getVersion(), 1016, "NEX account not found", "", shouldClose);
     }
 
@@ -316,7 +317,8 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     std::string tokenJwt = crypto::signJWT(settingsManager->getNEXTokenKey(), jwtPayload);
 
-    auto nexPassword = std::any_cast<std::string>(results->data[0]);
+    auto gameServerAccess = std::any_cast<db::DBGameServerAccessData>(results->data);
+    auto nexPassword = gameServerAccess.password;
     auto gameServerHost = settingsManager->getGameServerHost(gameServerId);
 
     pugi::xml_document doc;

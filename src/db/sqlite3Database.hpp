@@ -42,20 +42,23 @@ private:
     std::thread dbThreadHandle;
     std::mutex dbThreadMutex;
     std::condition_variable dbThreadCV;
+    std::condition_variable dbQueueCV;
 
     sqlite3_stmt* getUserByPIDStatement = nullptr;
     sqlite3_stmt* getUserByUsernameStatement = nullptr;
     sqlite3_stmt* getGameServerAccessStatement = nullptr;
     sqlite3_stmt* getUserInfoStatement = nullptr;
     sqlite3_stmt* getFriendsInfoStatement = nullptr;
+    sqlite3_stmt* getUserProfileStatement = nullptr;
+    sqlite3_stmt* getDeviceAttributesStatement = nullptr;
 
     void dbThread();
 
     void processCommand(const std::unique_ptr<Command>& command);
     bool craftStatement(const std::string& command, sqlite3_stmt** outStatement);
-    bool bindData(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
+    bool bindData(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
                   const std::vector<std::shared_ptr<DBData>>& data);
-    bool runStatement(sqlite3_stmt* statement, const std::vector<dbDataType>& dataTypes,
+    bool runStatement(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
                       const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData);
 
     DBVersion obtainVersion();

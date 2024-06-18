@@ -12,44 +12,70 @@ Database::Database(std::shared_ptr<Logger::Logger> logger, DBType type, DBVersio
 }
 
 std::unique_ptr<Command> Database::craftVoidCommand(const std::string& command) {
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GENERIC,
-        std::vector<std::any>{std::any(command), std::any(std::vector<dbDataType>{}),
-        std::any(std::vector<std::shared_ptr<DBData>>{}), std::any(std::vector<dbDataType>{})});
+    DBGenericCommand cmd {
+        .cmd = command,
+        .bindTypes = {},
+        .bindData = {},
+        .resultTypes = {}
+    };
+
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GENERIC, std::any(cmd));
 
     return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetUserByPIDCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_PID,
-        std::vector<std::any>{std::any(pid)});
+                                               std::any(query));
 
     return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::string& username) {
+    DBUsernameQuery query {
+        .username = username
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_USERNAME,
-        std::vector<std::any>{std::any(username)});
+                                               std::any(query));
 
     return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId) {
+    DBGameServerAccessQuery query {
+        .pid = pid,
+        .serverId = serverId
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,
-        std::vector<std::any>{std::any(pid), std::any(serverId)});
+                                               std::any(query));
 
     return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
+    DBPidQuery query {
+            .pid = pid
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_INFO,
-        std::vector<std::any>{std::any(pid)});
+                                               std::any(query));
 
     return dbCommand;
 }
 
 std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
+    DBPidQuery query {
+            .pid = pid
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_FRIENDS_INFO,
-        std::vector<std::any>{std::any(pid)});
+                                               std::any(query));
 
     return dbCommand;
 }
@@ -57,15 +83,23 @@ std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
 std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
                                                               std::optional<bool> showPlaying,
                                                               std::optional<bool> blockRequests,
-                                                              std::vector<uint8_t> nnaInfo,
-                                                              std::vector<uint8_t> presence,
-                                                              std::vector<uint8_t> comment,
+                                                              std::optional<std::vector<uint8_t>> nnaInfo,
+                                                              std::optional<std::vector<uint8_t>> presence,
+                                                              std::optional<std::vector<uint8_t>> comment,
                                                               std::optional<datetime_t> lastOnline) {
+    DBUserInfoUpdate update {
+        .pid = pid,
+        .showPresence = showOnline,
+        .showPlaying = showPlaying,
+        .blockRequests = blockRequests,
+        .nnaInfo = std::move(nnaInfo),
+        .presence = std::move(presence),
+        .comment = std::move(comment),
+        .lastOnline = lastOnline
+    };
+
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::UPDATE_USER_INFO,
-        std::vector<std::any>{std::any(pid), std::any(showOnline), std::any(showPlaying),
-                              std::any(blockRequests), std::any(std::move(nnaInfo)),
-                              std::any(std::move(presence)), std::any(std::move(comment)),
-                              std::any(lastOnline)});
+                                               std::any(update));
 
     return dbCommand;
 }
@@ -135,18 +169,17 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
             // Generic commands can run any SQL command, therefore we need the SQL string,
             // the types of the data to bind, the data to bind, and the types of the data to return.
             // (Actually the same would be necessary for non-SQL commands, but we don't have any of those yet.)
-            if (command->data.size() != 4 || command->data[0].type() != typeid(std::string) ||
-                command->data[1].type() != typeid(std::vector<dbDataType>) ||
-                command->data[2].type() != typeid(std::vector<std::shared_ptr<DBData>>) ||
-                command->data[3].type() != typeid(std::vector<dbDataType>)) {
+            if (command->data.type() != typeid(DBGenericCommand)) {
                 return false;
             }
 
             break;
 
         case DBCommandType::GET_USER_BY_PID:
-            // Get user by PID commands need the PID of the user to get.
-            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
+        case DBCommandType::GET_USER_INFO:
+        case DBCommandType::GET_FRIENDS_INFO:
+        case DBCommandType::GET_USER_PROFILE:
+            if (command->data.type() != typeid(DBPidQuery)) {
                 return false;
             }
 
@@ -154,7 +187,7 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::GET_USER_BY_USERNAME:
             // Get user by username commands need the username of the user to get.
-            if (command->data.size() != 1 || command->data[0].type() != typeid(std::string)) {
+            if (command->data.type() != typeid(DBUsernameQuery)) {
                 return false;
             }
 
@@ -162,24 +195,7 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::GET_GAME_SERVER_ACCESS:
             // Get game server access commands need the PID of the user to get and the ID of the game server.
-            if (command->data.size() != 2 || command->data[0].type() != typeid(uint32_t) ||
-                command->data[1].type() != typeid(std::string)) {
-                return false;
-            }
-
-            break;
-
-        case DBCommandType::GET_USER_INFO:
-            // Get the user information.
-            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
-                return false;
-            }
-
-            break;
-
-        case DBCommandType::GET_FRIENDS_INFO:
-            // Get the information of all friends of the specified PID.
-            if (command->data.size() != 1 || command->data[0].type() != typeid(uint32_t)) {
+            if (command->data.type() != typeid(DBGameServerAccessQuery)) {
                 return false;
             }
 
@@ -187,11 +203,15 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::UPDATE_USER_INFO:
             // Update the user information. Not all fields need to be updated, so they are optionals.
-            if (command->data.size() != 8 || command->data[0].type() != typeid(uint32_t) ||
-                command->data[1].type() != typeid(std::optional<bool>) || command->data[2].type() != typeid(std::optional<bool>) ||
-                command->data[3].type() != typeid(std::optional<bool>) || command->data[4].type() != typeid(std::vector<uint8_t>) ||
-                command->data[5].type() != typeid(std::vector<uint8_t>) || command->data[6].type() != typeid(std::vector<uint8_t>) ||
-                command->data[7].type() != typeid(std::optional<datetime_t>)) {
+            if (command->data.type() != typeid(DBUserInfoUpdate)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_DEVICE_ATTRIBUTES:
+            // Get device attributes commands need the PID of the user to get (to get the attributes of the linked account).
+            if (command->data.type() != typeid(DBDeviceAttributesQuery)) {
                 return false;
             }
 

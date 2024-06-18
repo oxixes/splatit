@@ -7,7 +7,7 @@
 
 namespace db {
 
-enum class dbDataType {
+enum class DBDataType {
     INTEGER,
     STRING,
     BLOB,
@@ -17,13 +17,13 @@ enum class dbDataType {
 class DBData {
 public:
     std::any data;
-    dbDataType type;
+    DBDataType type;
     int id = -1;
 
     virtual ~DBData() = default;
 
 protected:
-    DBData(std::any data, dbDataType type) {
+    DBData(std::any data, DBDataType type) {
         this->data = std::move(data);
         this->type = type;
     }
@@ -31,24 +31,24 @@ protected:
 
 class DBInteger : public DBData {
 public:
-    explicit DBInteger(int64_t data) : DBData(data, dbDataType::INTEGER) {}
+    explicit DBInteger(int64_t data) : DBData(data, DBDataType::INTEGER) {}
 };
 
 class DBString : public DBData {
 public:
-    explicit DBString(const std::string& data) : DBData(data, dbDataType::STRING) {}
+    explicit DBString(const std::string& data) : DBData(data, DBDataType::STRING) {}
 };
 
 class DBBlob : public DBData {
 public:
-    explicit DBBlob(const std::vector<uint8_t>& data) : DBData(data, dbDataType::BLOB) {}
+    explicit DBBlob(const std::vector<uint8_t>& data) : DBData(data, DBDataType::BLOB) {}
 };
 
 typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> datetime_t;
 
 class DBDateTime : public DBData {
 public:
-    explicit DBDateTime(datetime_t data) : DBData(data, dbDataType::DATETIME) {}
+    explicit DBDateTime(datetime_t data) : DBData(data, DBDataType::DATETIME) {}
 };
 
 

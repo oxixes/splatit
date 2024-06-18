@@ -37,7 +37,9 @@ enum class DBCommandType {
     GET_GAME_SERVER_ACCESS,
     GET_USER_INFO,
     GET_FRIENDS_INFO,
-    UPDATE_USER_INFO
+    UPDATE_USER_INFO,
+    GET_USER_PROFILE,
+    GET_DEVICE_ATTRIBUTES
 };
 
 enum class DBResultStatus {
@@ -49,14 +51,124 @@ enum class DBResultStatus {
     FAILURE_EXEC
 };
 
+struct DBGenericCommand {
+    std::string cmd;
+    std::vector<DBDataType> bindTypes;
+    std::vector<std::shared_ptr<DBData>> bindData;
+    std::vector<DBDataType> resultTypes;
+};
+
+struct DBPidQuery {
+    uint32_t pid;
+};
+
+struct DBUsernameQuery {
+    std::string username;
+};
+
+struct DBGameServerAccessQuery {
+    uint32_t pid;
+    std::string serverId;
+};
+
+struct DBUserInfoUpdate {
+    uint32_t pid{};
+    std::optional<bool> showPresence;
+    std::optional<bool> showPlaying;
+    std::optional<bool> blockRequests;
+    std::optional<std::vector<uint8_t>> nnaInfo;
+    std::optional<std::vector<uint8_t>> presence;
+    std::optional<std::vector<uint8_t>> comment;
+    std::optional<datetime_t> lastOnline;
+};
+
+struct DBDeviceAttributesQuery {
+    uint32_t pid;
+    uint32_t deviceId;
+};
+
+struct DBGenericResult {
+    std::vector<std::vector<std::shared_ptr<DBData>>> data;
+};
+
+struct DBUserData {
+    uint32_t pid;
+    std::string username;
+    std::string password;
+};
+
+struct DBGameServerAccessData {
+    uint32_t pid;
+    std::string serverId;
+    std::string password;
+};
+
+struct DBUserInfoData {
+    uint32_t pid;
+    bool showPresence;
+    bool showPlaying;
+    bool blockRequests;
+    std::vector<uint8_t> nnaInfo;
+    std::vector<uint8_t> presence;
+    std::vector<uint8_t> comment;
+    datetime_t lastOnline;
+};
+
+struct DBFriendInfoData {
+    uint32_t friendPid;
+    std::string friendUsername;
+    bool showPresence;
+    bool showPlaying;
+    bool blockRequests;
+    std::vector<uint8_t> nnaInfo;
+    std::vector<uint8_t> presence;
+    std::vector<uint8_t> comment;
+    datetime_t lastOnline;
+    datetime_t becameFriends;
+};
+
+struct DBUserProfileData {
+    uint32_t pid;
+    std::string username;
+    int64_t emailId;
+    int64_t miiId;
+    int64_t region;
+    std::string tz;
+    uint32_t utcOffset;
+    bool active;
+    std::string birthdate;
+    std::string country;
+    datetime_t created;
+    std::string email;
+    bool emailParent;
+    bool emailPrimary;
+    bool emailReachable;
+    std::string emailType;
+    std::string emailUpdatedBy;
+    bool emailValidated;
+    datetime_t emailValidatedDate;
+    std::string miiName;
+    std::string miiData;
+    bool miiPrimary;
+    std::string miiHash;
+};
+
+struct DBDeviceAttributeData {
+    uint32_t pid;
+    uint32_t deviceId;
+    std::string name;
+    std::string value;
+    datetime_t createdDate;
+};
+
 class Command {
 public:
     DBCommandType type;
-    std::vector<std::any> data;
+    std::any data;
     uint32_t commandId = 0;
     bool hasMutex = false;
 
-    explicit Command(DBCommandType type, std::vector<std::any> data) {
+    explicit Command(DBCommandType type, std::any data) {
         this->type = type;
         this->data = std::move(data);
     }
@@ -64,11 +176,11 @@ public:
 
 class Result {
 public:
-    std::vector<std::any> data;
+    std::any data;
     DBResultStatus status;
     uint32_t commandId;
 
-    explicit Result(uint32_t commandId, DBResultStatus status, std::vector<std::any>& data) {
+    explicit Result(uint32_t commandId, DBResultStatus status, std::any data) {
         this->commandId = commandId;
         this->status = status;
         this->data = std::move(data);
@@ -122,9 +234,9 @@ public:
     static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
                                                                std::optional<bool> showPlaying,
                                                                std::optional<bool> blockRequests,
-                                                               std::vector<uint8_t> nnaInfo,
-                                                               std::vector<uint8_t> presence,
-                                                               std::vector<uint8_t> comment,
+                                                               std::optional<std::vector<uint8_t>> nnaInfo,
+                                                               std::optional<std::vector<uint8_t>> presence,
+                                                               std::optional<std::vector<uint8_t>> comment,
                                                                std::optional<datetime_t> lastOnline);
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);

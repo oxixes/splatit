@@ -103,10 +103,8 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
 
     FriendsRegisteredClientInfo clientInfo{client, {}};
 
-    for (auto& friendDataVec : friendsInfo->data) {
-        auto friendData = std::move(std::any_cast<std::vector<std::any>>(friendDataVec));
-
-        clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData[0]));
+    for (auto& friendData : std::any_cast<std::vector<db::DBFriendInfoData>>(friendsInfo->data)) {
+        clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData.friendPid));
     }
 
     registeredClients.insert(std::make_pair(client.pid, std::move(clientInfo)));
@@ -163,18 +161,20 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
         return;
     }
 
-    if (userInfo->data.empty()) {
+    if (!userInfo->data.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         return;
     }
 
+    auto userInfoData = std::any_cast<db::DBUserInfoData>(userInfo->data);
+
     db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
                                                                       std::nullopt, std::move(nnaInfo.encode()),
                                                                       std::move(presence.encode()),
-                                                                      std::vector<uint8_t>(), lastOnline);
+                                                                      std::nullopt, lastOnline);
 
     cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
     auto updateUserInfoResult = db->getResult(cmdId);
@@ -195,28 +195,22 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
     res.success = true;
 
     PrincipalPreference principalPreference(client.minorVersion);
-    principalPreference.showOnline = std::any_cast<bool>(userInfo->data[0]);
-    principalPreference.showPlaying = std::any_cast<bool>(userInfo->data[1]);
-    principalPreference.blockFriendRequest = std::any_cast<bool>(userInfo->data[2]);
+    principalPreference.showOnline = userInfoData.showPresence;
+    principalPreference.showPlaying = userInfoData.showPlaying;
+    principalPreference.blockFriendRequest = userInfoData.blockRequests;
 
     Comment statusMsg(client.minorVersion);
-    statusMsg.decode(std::any_cast<std::vector<uint8_t>>(userInfo->data[5]));
+    statusMsg.decode(userInfoData.comment);
 
     List<FriendInfo> friendList(client.minorVersion);
-    for (auto& friendDataVec : friendsInfo->data) {
-        auto friendData = std::move(std::any_cast<std::vector<std::any>>(friendDataVec));
-
+    for (auto& friendData : std::any_cast<std::vector<db::DBFriendInfoData>>(friendsInfo->data)) {
         FriendInfo friendInfo(client.minorVersion);
 
-        friendInfo.nnaInfo.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData[5])));
-        friendInfo.presence.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData[6])));
-        friendInfo.comment.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData[7])));
-
-        auto lastOnlineDate = std::any_cast<db::datetime_t>(friendData[8]);
-        friendInfo.lastOnline = Datetime(0, lastOnlineDate);
-
-        auto becameFriendsDate = std::any_cast<db::datetime_t>(friendData[9]);
-        friendInfo.becameFriends = Datetime(0, becameFriendsDate);
+        friendInfo.nnaInfo.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.nnaInfo)));
+        friendInfo.presence.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.presence)));
+        friendInfo.comment.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.comment)));
+        friendInfo.lastOnline = Datetime(0, friendData.lastOnline);
+        friendInfo.becameFriends = Datetime(0, friendData.becameFriends);
 
         friendList.push_back(friendInfo);
     }
@@ -242,7 +236,7 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
     sendMsg(client, res, params);
 
     NNAInfo dbUserData(client.minorVersion);
-    dbUserData.decode(std::move(std::any_cast<std::vector<uint8_t>>(userInfo->data[3])));
+    dbUserData.decode(userInfoData.nnaInfo);
     bool miiChanged = nnaInfo.info.mii.encode() != dbUserData.info.mii.encode();
 
     // Send presence (any possibly mii change) update to connected friends
@@ -273,9 +267,9 @@ void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPr
     }
 
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
-                                                                      std::nullopt, std::vector<uint8_t>(),
+                                                                      std::nullopt, std::nullopt,
                                                                       std::move(presence.encode()),
-                                                                      std::vector<uint8_t>(), std::nullopt);
+                                                                      std::nullopt, std::nullopt);
 
     uint32_t cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
     auto updateUserInfoResult = db->getResult(cmdId);
