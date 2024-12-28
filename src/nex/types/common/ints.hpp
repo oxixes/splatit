@@ -63,6 +63,39 @@ namespace nex::rmc {
             return sizeof(T);
         }
 
+        [[nodiscard]] std::string toString(bool includeTypeName, int indentation = 0) const override { // NOLINT(*-default-arguments)
+            if (includeTypeName) {
+                return getName() + "(" + std::to_string(value) + ")";
+            } else {
+                return std::to_string(value);
+            }
+        }
+
+        [[nodiscard]] std::string getName() const override {
+            // Get base type name
+            std::string name;
+            // Is the type unsigned?
+            if constexpr (std::is_unsigned_v<T>) {
+                name = "UInt";
+            } else {
+                return "Int";
+            }
+            // Check if is double or bool
+            if constexpr (std::is_same_v<T, double>) {
+                name = "Double";
+            } else if constexpr (std::is_same_v<T, bool>) {
+                name = "Bool";
+            } else {
+                // Get the size of the type
+                name += std::to_string(sizeof(T) * 8);
+            }
+            return name;
+        }
+
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            return toString(false, indentation);
+        }
+
         // We define these operators so that we can use Int<T> as if it was a T
         operator T& () { return value; }
         operator const T& () const { return value; }

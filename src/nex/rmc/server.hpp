@@ -49,6 +49,8 @@ struct function_traits<ReturnType(ClassType::*)(Args...)>
     };
 };
 
+#define REGISTER_CALL(callback, protoId, methodId) registerCall(this, &callback, protoId, methodId)
+
 class Server {
 public:
     virtual ~Server() = default;

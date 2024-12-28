@@ -132,13 +132,18 @@ struct DBUserProfileData {
     std::string username;
     int64_t emailId;
     int64_t miiId;
+    bool gender;
     int64_t region;
     std::string tz;
     uint32_t utcOffset;
+    std::string language;
     bool active;
+    bool marketing;
+    bool offDevice;
     std::string birthdate;
     std::string country;
     datetime_t created;
+    datetime_t updated;
     std::string email;
     bool emailParent;
     bool emailPrimary;
@@ -238,6 +243,8 @@ public:
                                                                std::optional<std::vector<uint8_t>> presence,
                                                                std::optional<std::vector<uint8_t>> comment,
                                                                std::optional<datetime_t> lastOnline);
+    static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
 

@@ -19,9 +19,9 @@ AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup,
         friends(friends) {
     this->logGroup = logGroup;
 
-    if (friends) registerCall(this, &AuthRMC::login, 10, 1);
-    if (!friends) registerCall(this, &AuthRMC::loginEx, 10, 2);
-    registerCall(this, &AuthRMC::requestTicket, 10, 3);
+    if (friends) REGISTER_CALL(AuthRMC::login, 10, 1);
+    if (!friends) REGISTER_CALL(AuthRMC::loginEx, 10, 2);
+    REGISTER_CALL(AuthRMC::requestTicket, 10, 3);
 }
 
 void AuthRMC::login(ClientInfo client, Request req, String username) {

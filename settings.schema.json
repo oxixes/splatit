@@ -318,6 +318,10 @@
           "description": "The path to the key used to generate device certificates",
           "type": "string"
         },
+        "miiImagesPath": {
+          "description": "The path to the Mii images",
+          "type": "string"
+        },
         "hosts": {
           "description": "Mapping of server ids to hosts",
           "type": "object",
@@ -344,7 +348,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts"]
       },
       "required": ["enabled"]
     },

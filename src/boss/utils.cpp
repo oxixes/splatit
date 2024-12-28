@@ -89,19 +89,92 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
         return false;
     }
 
+    time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    // Format the date as YYYY-MM-DDTHH:MM:SS+0000
+    char nowBuff[25];
+    std::strftime(nowBuff, 25, "%Y-%m-%dT%H:%M:%S+0000", std::gmtime(&now));
+    std::string nowStr = nowBuff;
+
     bossManifest = {
-            {EU_BOSS_APP_ID, {
-                  {"titleId", EU_TITLE_ID},
-                  {"tasksheets", {}}
+            {"tasksheets", {
+                    {EU_BOSS_APP_ID, {
+                            {"titleId", EU_TITLE_ID},
+                            {"tasksheets", {}}
+                    }},
+                    {US_BOSS_APP_ID, {
+                            {"titleId", US_TITLE_ID},
+                            {"tasksheets", {}}
+                    }},
+                    {JP_BOSS_APP_ID, {
+                            {"titleId", JP_TITLE_ID},
+                            {"tasksheets", {}}
+                    }}
             }},
-            {US_BOSS_APP_ID, {
-                  {"titleId", US_TITLE_ID},
-                  {"tasksheets", {}}
+            {"policyLists", {
+                    {"GB", {
+                            {"major", 1},
+                            {"minor", 0},
+                            {"id", 1946},
+                            {"defaultStop", false},
+                            {"forceVersionUp", false},
+                            {"updateTime", nowStr},
+                            {"titles", {
+                                    {"0005001010040000", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010040100", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010040200", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010047000", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010047100", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010047200", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010062000", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010062100", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010062200", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"0005001010066000", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"000500101004d000", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"000500101004d100", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                                    {"000500101004d200", {
+                                            {"id", "G_ALTASK"},
+                                            {"level", "MEDIUM"}
+                                    }},
+                            }}
+                    }}
             }},
-            {JP_BOSS_APP_ID, {
-                  {"titleId", JP_TITLE_ID},
-                  {"tasksheets", {}}
-            }}
+            {"backupPolicyCountry", "GB"}
     };
 
     festival::FestivalInfo defaultFestivalInfo{
@@ -224,7 +297,7 @@ bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<S
 
 int getNextResourceId() {
     int id = 1000;
-    for (const auto& [key, value] : bossManifest.items()) {
+    for (const auto& [key, value] : bossManifest["tasksheets"].items()) {
         for (const auto& [tsKey, tsVal]: value["tasksheets"].items()) {
             for (const auto& [fileKey, fileVal]: tsVal["files"].items()) {
                 id = std::max(id, fileVal["id"].get<int>());
@@ -340,9 +413,11 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
             }}
     };
 
-    bossManifest[EU_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
-    bossManifest[US_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
-    bossManifest[JP_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
+    bossManifest["tasksheets"];
+
+    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
+    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
+    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
 }
 
 void createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTime, const fs::path& bossDir) {
@@ -394,9 +469,9 @@ void createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTim
             }}
     };
 
-    bossManifest[EU_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
-    bossManifest[US_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
-    bossManifest[JP_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
+    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
+    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
+    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
 }
 
 

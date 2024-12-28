@@ -48,6 +48,25 @@ namespace nex::rmc {
             return sizeof(uint32_t) + dataSize;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string str = getName() + "[";
+            for (const auto& item : data) {
+                str += item.toString(indentation + 1);
+                str += ", ";
+            }
+            if (!data.empty()) {
+                str.pop_back();
+                str.pop_back();
+            }
+
+            str += "]";
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override {
+            return (data.empty()) ? "List" : "List<" + data[0].getName() + ">";
+        }
+
         [[nodiscard]] size_t size() const { return data.size(); }
         [[nodiscard]] bool empty() const { return data.empty(); }
         auto begin() { return data.begin(); }

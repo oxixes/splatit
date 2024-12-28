@@ -85,6 +85,32 @@ namespace nex::rmc {
             return size;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string result = "MatchmakeSession {\n";
+            result += indent + "Parent gathering: " + Gathering::toString(indentation + 1) + "\n";
+            result += indent + "gameMode: " + gameMode.toString(true, indentation + 1) + "\n";
+            result += indent + "attributes: " + attributes.toString(indentation + 1) + "\n";
+            result += indent + "openParticipation: " + openParticipation.toString(true, indentation + 1) + "\n";
+            result += indent + "matchmakeSystemType: " + matchmakeSystemType.toString(true, indentation + 1) + "\n";
+            result += indent + "appBuffer: " + appBuffer.toString(indentation + 1) + "\n";
+            result += indent + "participationCount: " + participationCount.toString(true, indentation + 1) + "\n";
+            result += indent + "progressScore: " + progressScore.toString(true, indentation + 1) + "\n";
+            result += indent + "sessionKey: " + sessionKey.toString(indentation + 1) + "\n";
+            result += indent + "option0: " + option0.toString(true, indentation + 1) + "\n";
+            result += indent + "matchmakeParam: " + matchmakeParam.toString(indentation + 1) + "\n";
+            result += indent + "startedTime: " + startedTime.toString(indentation + 1) + "\n";
+            result += indent + "userPassword: " + userPassword.toString(indentation + 1) + "\n";
+            result += indent + "referGid: " + referGid.toString(true, indentation + 1) + "\n";
+            result += indent + "userPasswordEnabled: " + userPasswordEnabled.toString(true, indentation + 1) + "\n";
+            result += indent + "systemPasswordEnabled: " + systemPasswordEnabled.toString(true, indentation + 1) + "\n";
+            result += last_indent + "}";
+            return result;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "MatchmakeSession"; }
+
         UInt32 gameMode;
         List<UInt32> attributes;
         Bool openParticipation;

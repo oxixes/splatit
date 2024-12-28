@@ -11,6 +11,8 @@
 
 namespace nex::rmc {
 
+#define INDENTATION_SPACES 4
+
 class Type {
 public:
     explicit Type(uint8_t minorVersion) : minorVersion(minorVersion) {};
@@ -18,6 +20,16 @@ public:
 
     [[nodiscard]] virtual std::vector<uint8_t> encode() const = 0;
     virtual size_t decode(std::span<const uint8_t> data) = 0;
+
+    [[nodiscard]] virtual std::string toString(int indentation = 0) const { // NOLINT(*-default-arguments)
+        return "TYPE TO STRING NOT IMPLEMENTED";
+    }
+    [[nodiscard]] virtual std::string toString(bool includeTypeName, int indentation = 0) const { // NOLINT(*-default-arguments)
+        return "TYPE TO STRING NOT IMPLEMENTED";
+    }
+    [[nodiscard]] virtual std::string getName() const {
+        return "TYPE TO STRING NOT IMPLEMENTED";
+    }
 
 protected:
     uint8_t minorVersion = 0;

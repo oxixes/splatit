@@ -382,7 +382,7 @@ void SocketManager::send(uint32_t socketId) {
 
     size_t oldSize = socketInfo->tcpSendBuffer.size();
 
-    if (!send(socketId, socketInfo->tcpSendBuffer)) {
+    if (send(socketId, socketInfo->tcpSendBuffer)) {
         socketInfo->tcpSendBuffer.erase(socketInfo->tcpSendBuffer.begin(),
                                         socketInfo->tcpSendBuffer.begin() + (ssize_t) oldSize);
     }

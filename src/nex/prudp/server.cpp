@@ -82,7 +82,7 @@ Server::Server(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, s
     this->minorVersion = (majorVersion == 0) ? 0 : minorVersion;
     this->supportedFunctions = (majorVersion == 0) ? 0 : supportedFunctions;
     this->maxSubstreamId = (majorVersion == 0) ? 0 : maxSubstreamId;
-    this->initSeqIdUnreliable = (majorVersion == 0) ? 0 : initSeqIdUnreliable;
+    this->initSeqIdUnreliable = (majorVersion == 0) ? 1 : initSeqIdUnreliable;
 
     socket = std::make_shared<sock::UDPSocket>();
     socket->setBlocking(false);
@@ -142,7 +142,7 @@ uint64_t Server::process() {
             continue;
         }
 
-        if (packetInfo.packet->type == Type::PING) {
+        if (packetInfo.packet->type == Type::PING && packetInfo.numRetries == 0) {
             // If it's the first time we send this PING packet, we update the sequence ID
             auto it = clients.find(packetInfo.addr);
             if (it != clients.end()) {
@@ -428,7 +428,7 @@ void Server::processPacket(sock::IPv4Addr addr, const std::shared_ptr<Packet>& p
         // and check if there are not any missing packets, in which case we
         // can process them.
         if (!(packet->flags & FLAG_RELIABLE)) {
-            if (packet->fragmentId != 0) {
+            if (packet->fragmentId != 0 && !(packet->flags & FLAG_ACK)) {
                 logger->log(Logger::level::WARN, logGroup, "[UNIMPLEMENTED] Received unreliable fragmented packet from " +
                                                             util::ipv4ToString(prudpAddr.address));
                 return;

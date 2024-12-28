@@ -553,12 +553,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         sqlite3_finalize(statement);
     } else if (command->type == DBCommandType::GET_USER_PROFILE) {
         if (getUserProfileStatement == nullptr) {
-            std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.region, u.tz, u.utc_offset, u.active,"
-                                     "u.birth_date, u.country, u.create_date, e.address AS email_address, e.parent AS email_parent,"
-                                     "e.`primary` AS email_primary, e.reachable AS email_reachable, e.type AS email_type,"
-                                     "e.updated_by AS email_updated_by, e.validated AS email_validated,"
-                                     "e.validated_date AS email_validated_date, m.name AS mii_name, m.data AS mii_data,"
-                                     "m.`primary` AS mii_primary, m.hash AS mii_hash "
+            std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.gender, u.region, u.tz, u.utc_offset,"
+                                     "u.language, u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated,"
+                                     "e.address AS email_address, e.parent AS email_parent, e.`primary` AS email_primary, "
+                                     "e.reachable AS email_reachable, e.type AS email_type, e.updated_by AS email_updated_by, "
+                                     "e.validated AS email_validated, e.validated_date AS email_validated_date, m.name AS mii_name, "
+                                     "m.data AS mii_data, m.`primary` AS mii_primary, m.hash AS mii_hash "
                                      "FROM users u LEFT JOIN emails e ON u.email_id = e.id LEFT JOIN miis m ON u.mii_id = m.id "
                                      "WHERE u.pid = ?;";
 
@@ -577,13 +577,15 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
 
         std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
-                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
-                                                   DBDataType::STRING, DBDataType::DATETIME, DBDataType::STRING,
                                                    DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING,
+                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                   DBDataType::STRING, DBDataType::STRING, DBDataType::DATETIME,
+                                                   DBDataType::DATETIME, DBDataType::STRING, DBDataType::INTEGER,
+                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::DATETIME,
                                                    DBDataType::STRING, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::DATETIME, DBDataType::STRING, DBDataType::STRING,
-                                                   DBDataType::INTEGER, DBDataType::STRING};
+                                                   DBDataType::STRING};
 
         if (!runStatement(getUserProfileStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -601,25 +603,30 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
                 .username = std::any_cast<std::string>((*returnedData)[0][1]->data),
                 .emailId = std::any_cast<int64_t>((*returnedData)[0][2]->data),
                 .miiId = std::any_cast<int64_t>((*returnedData)[0][3]->data),
-                .region = std::any_cast<int64_t>((*returnedData)[0][4]->data),
-                .tz = std::any_cast<std::string>((*returnedData)[0][5]->data),
-                .utcOffset = std::any_cast<uint32_t>((*returnedData)[0][6]->data),
-                .active = (bool) std::any_cast<int64_t>((*returnedData)[0][7]->data),
-                .birthdate = std::any_cast<std::string>((*returnedData)[0][8]->data),
-                .country = std::any_cast<std::string>((*returnedData)[0][9]->data),
-                .created = std::any_cast<datetime_t>((*returnedData)[0][10]->data),
-                .email = std::any_cast<std::string>((*returnedData)[0][11]->data),
-                .emailParent = (bool) std::any_cast<int64_t>((*returnedData)[0][12]->data),
-                .emailPrimary = (bool) std::any_cast<int64_t>((*returnedData)[0][13]->data),
-                .emailReachable = (bool) std::any_cast<int64_t>((*returnedData)[0][14]->data),
-                .emailType = std::any_cast<std::string>((*returnedData)[0][15]->data),
-                .emailUpdatedBy = std::any_cast<std::string>((*returnedData)[0][16]->data),
-                .emailValidated = (bool) std::any_cast<int64_t>((*returnedData)[0][17]->data),
-                .emailValidatedDate = std::any_cast<datetime_t>((*returnedData)[0][18]->data),
-                .miiName = std::any_cast<std::string>((*returnedData)[0][19]->data),
-                .miiData = std::any_cast<std::string>((*returnedData)[0][20]->data),
-                .miiPrimary = (bool) std::any_cast<int64_t>((*returnedData)[0][21]->data),
-                .miiHash = std::any_cast<std::string>((*returnedData)[0][22]->data)
+                .gender = (bool) std::any_cast<int64_t>((*returnedData)[0][4]->data),
+                .region = std::any_cast<int64_t>((*returnedData)[0][5]->data),
+                .tz = std::any_cast<std::string>((*returnedData)[0][6]->data),
+                .utcOffset = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][7]->data),
+                .language = std::any_cast<std::string>((*returnedData)[0][8]->data),
+                .active = (bool) std::any_cast<int64_t>((*returnedData)[0][9]->data),
+                .marketing = (bool) std::any_cast<int64_t>((*returnedData)[0][10]->data),
+                .offDevice = (bool) std::any_cast<int64_t>((*returnedData)[0][11]->data),
+                .birthdate = std::any_cast<std::string>((*returnedData)[0][12]->data),
+                .country = std::any_cast<std::string>((*returnedData)[0][13]->data),
+                .created = std::any_cast<datetime_t>((*returnedData)[0][14]->data),
+                .updated = std::any_cast<datetime_t>((*returnedData)[0][15]->data),
+                .email = std::any_cast<std::string>((*returnedData)[0][16]->data),
+                .emailParent = (bool) std::any_cast<int64_t>((*returnedData)[0][17]->data),
+                .emailPrimary = (bool) std::any_cast<int64_t>((*returnedData)[0][18]->data),
+                .emailReachable = (bool) std::any_cast<int64_t>((*returnedData)[0][19]->data),
+                .emailType = std::any_cast<std::string>((*returnedData)[0][20]->data),
+                .emailUpdatedBy = std::any_cast<std::string>((*returnedData)[0][21]->data),
+                .emailValidated = (bool) std::any_cast<int64_t>((*returnedData)[0][22]->data),
+                .emailValidatedDate = std::any_cast<datetime_t>((*returnedData)[0][23]->data),
+                .miiName = std::any_cast<std::string>((*returnedData)[0][24]->data),
+                .miiData = std::any_cast<std::string>((*returnedData)[0][25]->data),
+                .miiPrimary = (bool) std::any_cast<int64_t>((*returnedData)[0][26]->data),
+                .miiHash = std::any_cast<std::string>((*returnedData)[0][27]->data)
             };
 
             resultsData = std::move(profileData);
@@ -636,14 +643,15 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
         auto* query = std::any_cast<DBDeviceAttributesQuery>(&command->data);
 
-        if (!bindData(getDeviceAttributesStatement, {DBDataType::INTEGER, DBDataType::STRING},
+        if (!bindData(getDeviceAttributesStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid),
                        std::make_shared<DBInteger>(query->deviceId)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             goto push_results;
         }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING};
+        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+                                                   DBDataType::STRING, DBDataType::DATETIME};
 
         if (!runStatement(getDeviceAttributesStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -656,13 +664,13 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         sqlite3_clear_bindings(getDeviceAttributesStatement);
 
         std::vector<DBDeviceAttributeData> attributesData;
-        if (!returnedData->empty()) {
+        for (const auto& row : *returnedData) {
             DBDeviceAttributeData attributeData {
-                .pid = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][0]->data),
-                .deviceId = std::any_cast<uint32_t>((*returnedData)[0][1]->data),
-                .name = std::any_cast<std::string>((*returnedData)[0][2]->data),
-                .value = std::any_cast<std::string>((*returnedData)[0][3]->data),
-                .createdDate = std::any_cast<datetime_t>((*returnedData)[0][4]->data)
+                .pid = (uint32_t) std::any_cast<int64_t>(row[0]->data),
+                .deviceId = (uint32_t) std::any_cast<int64_t>(row[1]->data),
+                .name = std::any_cast<std::string>(row[2]->data),
+                .value = std::any_cast<std::string>(row[3]->data),
+                .createdDate = std::any_cast<datetime_t>(row[4]->data)
             };
 
             attributesData.push_back(attributeData);

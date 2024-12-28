@@ -109,6 +109,38 @@ namespace nex::rmc {
             }
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string str = "Variant<";
+            switch (getType()) {
+                case VariantType::NONE:
+                    str += "NONE";
+                    break;
+                case VariantType::INT64:
+                    str += "Int64>(" + std::any_cast<Int64>(value).toString() + ")";
+                    break;
+                case VariantType::DOUBLE:
+                    str += "Double>(" + std::any_cast<Double>(value).toString() + ")";
+                    break;
+                case VariantType::BOOLEAN:
+                    str += "Bool>(" + std::any_cast<Bool>(value).toString() + ")";
+                    break;
+                case VariantType::STRING:
+                    str += "String>(" + std::any_cast<String>(value).toString() + ")";
+                    break;
+                case VariantType::DATETIME:
+                    str += "Datetime>(" + std::any_cast<Datetime>(value).toString() + ")";
+                    break;
+                case VariantType::UINT64:
+                    str += "UInt64>(" + std::any_cast<UInt64>(value).toString() + ")";
+                    break;
+                default:
+                    throw std::runtime_error("Invalid variant type");
+            }
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "Variant"; }
+
         template<typename T> requires std::derived_from<T, Type>
         void set(T v) {
             this->value = v;
@@ -119,7 +151,7 @@ namespace nex::rmc {
             return std::any_cast<T>(value);
         }
 
-        VariantType getType() const {
+        [[nodiscard]] VariantType getType() const {
             if (!value.has_value()) return VariantType::NONE;
             if (value.type() == typeid(Int64)) return VariantType::INT64;
             if (value.type() == typeid(Double)) return VariantType::DOUBLE;

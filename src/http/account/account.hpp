@@ -38,6 +38,20 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
                                          const std::shared_ptr<SettingsManager>& settingsManager,
                                          const std::shared_ptr<CertManager>& certManager);
 
+http::Response v1_api_people_me_profile(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
+                                         const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                         const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                         const std::function<void(unsigned int)>& unregisterCloseCall,
+                                         const std::shared_ptr<SettingsManager>& settingsManager,
+                                         const std::shared_ptr<CertManager>& certManager);
+
+http::Response v1_api_provider_service_token_me(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
+                                        const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                        const std::function<void(unsigned int)>& unregisterCloseCall,
+                                        const std::shared_ptr<SettingsManager>& settingsManager,
+                                        const std::shared_ptr<CertManager>& certManager);
+
 http::Response createError(http::Version version, int code, const std::string& message, const std::string& cause,
                            bool& shouldClose);
 

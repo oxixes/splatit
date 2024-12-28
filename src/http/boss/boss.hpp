@@ -26,6 +26,8 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
                              const std::shared_ptr<SettingsManager>& settingsMgr);
 http::Response p01_data(const http::Request& req, const std::string& titleId, const std::string& tasksheetId,
                         const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr);
+http::Response p01_policylist(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                              const std::shared_ptr<SettingsManager>& settingsMgr);
 
 http::Response getError(int status, http::Version version);
 

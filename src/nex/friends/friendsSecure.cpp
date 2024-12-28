@@ -22,11 +22,11 @@ FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::
     logGroup = Logger::group::FRIENDS_SECURE;
 
     // Protocol 11 - Secure connection
-    registerCall(this, &FriendsSecureRMC::registerEx, 11, 4);
+    REGISTER_CALL(FriendsSecureRMC::registerEx, 11, 4);
 
     // Protocol 102 - Friends (Wii U)
-    registerCall(this, &FriendsSecureRMC::updateAndGetAllInformation, 102, 1);
-    registerCall(this, &FriendsSecureRMC::updatePresence, 102, 13);
+    REGISTER_CALL(FriendsSecureRMC::updateAndGetAllInformation, 102, 1);
+    REGISTER_CALL(FriendsSecureRMC::updatePresence, 102, 13);
 }
 
 void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data) {
@@ -51,17 +51,17 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
 
     std::vector<T_ptr> params(3);
 
-    if (urls.size() != 1) {
+    /* if (urls.size() != 1) {
         retval.success = false;
         retval.code = Error::CORE__INVALID_ARGUMENT;
 
         params[0] = std::make_shared<Result>(retval);
         params[1] = std::make_shared<UInt32>();
-        params[1] = std::make_shared<StationURL>();
+        params[2] = std::make_shared<StationURL>();
 
         sendMsg(client, res, params);
         return;
-    }
+    } */
 
     String jwtToken;
     try {
@@ -333,9 +333,9 @@ void FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
         db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
         auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(clientIt->second.client.pid, std::nullopt,
                                                                           std::nullopt, std::nullopt,
-                                                                          std::vector<uint8_t>(),
+                                                                          std::nullopt,
                                                                           std::move(presence.encode()),
-                                                                          std::vector<uint8_t>(), lastOnline);
+                                                                          std::nullopt, lastOnline);
 
         uint32_t cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
         auto updateUserInfoResult = db->getResult(cmdId);

@@ -66,6 +66,19 @@ namespace nex::rmc {
             return sizeof(uint64_t);
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            // Convert the time_point to a readable string
+            if (value.time_since_epoch().count() < 0) return "N/A";
+
+            auto t = std::chrono::system_clock::to_time_t(value);
+            auto tm = *std::gmtime(&t);
+            char buf[80];
+            strftime(buf, sizeof(buf), "%d/%m/%Y %H:%M:%S", &tm);
+            return buf;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "Datetime"; }
+
         operator time_point&() { return value; }
         operator const time_point&() const { return value; }
         Datetime& operator=(const time_point& other) { value = other; return *this; }

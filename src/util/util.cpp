@@ -86,6 +86,14 @@ std::string getXNintendoDateHeader() {
     return std::to_string(duration);
 }
 
+std::string getDateISO8601(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> time) {
+    char buff[128];
+    std::time_t tt = std::chrono::system_clock::to_time_t(time);
+    tm* gmt = gmtime(&tt);
+    strftime(buff, sizeof(buff), "%Y-%m-%dT%H:%M:%S", gmt);
+    return std::string{buff};
+}
+
 void getu64Little(uint64_t& v) {
     if (std::endian::native == std::endian::little) {
         return;

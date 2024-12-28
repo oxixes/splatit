@@ -26,6 +26,7 @@ bool SettingsManager::init(const argParser::options& serverOptions) {
     if (settings.contains("accounts") && settings["accounts"]["enabled"]) {
         enabledServers.account = true;
         domains.account = "account." + std::string(settings["domain"]);
+        domains.miiSecure = "mii-secure.account." + std::string(settings["domain"]);
     }
 
     if (settings.contains("boss") && settings["boss"]["enabled"]) {
@@ -194,6 +195,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"tokenKey", tokenKeyString},
                     {"refreshTokenKey", refreshTokenKeyString},
                     {"deviceKeyPath", (certsPath/fs::path("device.key")).string()},
+                    {"miiImagesPath", (dataDirAbsPath/fs::path("miis")).string()},
                     {"hosts", { // TODO Change this to a real address
                         {"00003200", "127.0.0.1:1201"},
                         {"10162B00", "127.0.0.1:1203"}
@@ -322,6 +324,10 @@ fs::path SettingsManager::getBOSSPath() const {
     return settings["boss"]["path"];
 }
 
+fs::path SettingsManager::getMiiImagesPath() const {
+    return settings["accounts"]["miiImagesPath"];
+}
+
 sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
     std::string addressStr = settings["http"]["listenAddress"].get<std::string>();
     bool sslEnabled = settings["http"]["ssl"];
@@ -424,6 +430,7 @@ std::vector<std::string> SettingsManager::getDomains() const {
     std::vector<std::string> usedDomains;
 
     if (!domains.account.empty()) usedDomains.push_back(domains.account);
+    if (!domains.miiSecure.empty()) usedDomains.push_back(domains.miiSecure);
     if (!domains.bossNPTS.empty()) usedDomains.push_back(domains.bossNPTS);
     if (!domains.bossNPPL.empty()) usedDomains.push_back(domains.bossNPPL);
     if (!domains.bossNPDI.empty()) usedDomains.push_back(domains.bossNPDI);

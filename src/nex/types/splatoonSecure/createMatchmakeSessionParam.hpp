@@ -47,6 +47,22 @@ namespace nex::rmc {
             return size;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string result = "CreateMatchmakeSessionParam {\n";
+            result += indent + "srcMatchmakeSession: " + srcMatchmakeSession.toString(indentation + 1) + "\n";
+            result += indent + "additionalParticipants: " + additionalParticipants.toString(indentation + 1) + "\n";
+            result += indent + "gidForParticipationCheck: " + gidForParticipationCheck.toString(true, indentation + 1) + "\n";
+            result += indent + "createMatchmakeSessionOption: " + createMatchmakeSessionOption.toString(true, indentation + 1) + "\n";
+            result += indent + "joinMessage: " + joinMessage.toString(indentation + 1) + "\n";
+            result += indent + "participationCount: " + participationCount.toString(true, indentation + 1) + "\n";
+            result += last_indent + "}";
+            return result;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "CreateMatchmakeSessionParam"; }
+
         MatchmakeSession srcMatchmakeSession;
         List<PID> additionalParticipants;
         UInt32 gidForParticipationCheck;

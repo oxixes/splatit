@@ -4,6 +4,7 @@
 #include <openssl/ssl.h>
 #include <queue>
 #include <condition_variable>
+#include <regex>
 
 #include "../logger.hpp"
 #include "../socket/socketManager.hpp"
@@ -29,6 +30,10 @@ public:
     void unregisterCloseCall(uint32_t id);
 
     void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
+            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
+
+    void registerRegexRoute(const std::string& host, const std::string& path, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
             std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
 
@@ -58,6 +63,10 @@ private:
     std::unordered_map<std::string, std::unordered_map<std::string, std::function<http::Response(
             std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
             std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>> routes;
+
+    std::unordered_map<std::string, std::vector<std::pair<std::regex, std::function<http::Response(
+            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
+            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>>> regexRoutes;
     std::mutex routesMutex;
 
     std::unordered_map<std::string, std::function<http::Response(

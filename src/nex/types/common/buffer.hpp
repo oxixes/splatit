@@ -37,6 +37,21 @@ namespace nex::rmc {
             return sizeof(LengthT) + length;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string str = getName() + "(";
+            std::stringstream ss;
+            for (auto byte : data) {
+                ss << std::hex << std::setw(2) << std::setfill('0') << (int) byte;
+            }
+            str += ss.str() + ")";
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override {
+            if (sizeof(LengthT) == 4) return "Buffer";
+            return "qBuffer";
+        }
+
         std::vector<uint8_t> data;
     };
 

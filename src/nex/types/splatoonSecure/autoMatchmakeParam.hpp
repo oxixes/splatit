@@ -42,12 +42,6 @@ namespace nex::rmc {
         size_t decode(std::span<const uint8_t> data) override {
             size_t size = 0;
 
-            // Print the data
-            std::cout << "AutoMatchmakeParam::decode(): data = ";
-            for (int i = 0; i < data.size(); i++) {
-                printf("%02X", data[i]);
-            }
-
             printf("\n");
 
             size += decodeHeader(data.subspan(size), AUTO_MATCHMAKE_PARAM_VERSION);
@@ -62,6 +56,24 @@ namespace nex::rmc {
 
             return size;
         }
+
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string result = "AutoMatchmakeParam {\n";
+            result += indent + "srcMatchmakeSession: " + srcMatchmakeSession.toString(indentation + 1) + "\n";
+            result += indent + "additionalParticipants: " + additionalParticipants.toString(indentation + 1) + "\n";
+            result += indent + "gidForParitipationCheck: " + gidForParitipationCheck.toString(indentation + 1) + "\n";
+            result += indent + "autoMatchmakeOption: " + autoMatchmakeOption.toString(indentation + 1) + "\n";
+            result += indent + "joinMessage: " + joinMessage.toString(indentation + 1) + "\n";
+            result += indent + "participationCount: " + participationCount.toString(indentation + 1) + "\n";
+            result += indent + "searchCriteria: " + searchCriteria.toString(indentation + 1) + "\n";
+            result += indent + "targetGids: " + targetGids.toString(indentation + 1) + "\n";
+            result += last_indent + "}";
+            return result;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "AutoMatchmakeParam"; }
 
         MatchmakeSession srcMatchmakeSession;
         List<PID> additionalParticipants;

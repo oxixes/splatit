@@ -15,33 +15,33 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     logGroup = Logger::group::SPLATOON_SECURE;
 
     // Protocol 3 - NAT Traversal
-    registerCall(this, &SplatoonSecureRMC::requestProbeInitiationExt, 3, 3);
-    registerCall(this, &SplatoonSecureRMC::reportNatTraversalResult, 3, 4);
-    registerCall(this, &SplatoonSecureRMC::reportNatProperties, 3, 5);
+    REGISTER_CALL(SplatoonSecureRMC::requestProbeInitiationExt, 3, 3);
+    REGISTER_CALL(SplatoonSecureRMC::reportNatTraversalResult, 3, 4);
+    REGISTER_CALL(SplatoonSecureRMC::reportNatProperties, 3, 5);
 
     // Protocol 11 - Secure connection
-    registerCall(this, &SplatoonSecureRMC::secure_register, 11, 1);
-    registerCall(this, &SplatoonSecureRMC::replaceUrl, 11, 7);
-    registerCall(this, &SplatoonSecureRMC::sendReport, 11, 8);
+    REGISTER_CALL(SplatoonSecureRMC::secure_register, 11, 1);
+    REGISTER_CALL(SplatoonSecureRMC::replaceUrl, 11, 7);
+    REGISTER_CALL(SplatoonSecureRMC::sendReport, 11, 8);
 
     // Protocol 21 - Matchmaking
-    registerCall(this, &SplatoonSecureRMC::unregisterGathering, 21, 2);
-    registerCall(this, &SplatoonSecureRMC::findBySingleId, 21, 21);
-    registerCall(this, &SplatoonSecureRMC::getSessionUrls, 21, 41);
-    registerCall(this, &SplatoonSecureRMC::updateSessionHost, 21, 42);
+    REGISTER_CALL(SplatoonSecureRMC::unregisterGathering, 21, 2);
+    REGISTER_CALL(SplatoonSecureRMC::findBySingleId, 21, 21);
+    REGISTER_CALL(SplatoonSecureRMC::getSessionUrls, 21, 41);
+    REGISTER_CALL(SplatoonSecureRMC::updateSessionHost, 21, 42);
 
     // Protocol 50 - Matchmaking (Extension)
-    registerCall(this, &SplatoonSecureRMC::endParticipation, 50, 1);
+    REGISTER_CALL(SplatoonSecureRMC::endParticipation, 50, 1);
 
     // Protocol 109 - Matchmake Extension
-    registerCall(this, &SplatoonSecureRMC::closeParticipation, 109, 1);
-    registerCall(this, &SplatoonSecureRMC::openParticipation, 109, 2);
-    registerCall(this, &SplatoonSecureRMC::modifyCurrentGameAttribute, 109, 8);
-    registerCall(this, &SplatoonSecureRMC::getPlayingSessions, 109, 16);
-    registerCall(this, &SplatoonSecureRMC::updateProgressScore, 109, 34);
-    registerCall(this, &SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
-    registerCall(this, &SplatoonSecureRMC::joinMatchmakeSessionWithParam, 109, 39);
-    registerCall(this, &SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
+    REGISTER_CALL(SplatoonSecureRMC::closeParticipation, 109, 1);
+    REGISTER_CALL(SplatoonSecureRMC::openParticipation, 109, 2);
+    REGISTER_CALL(SplatoonSecureRMC::modifyCurrentGameAttribute, 109, 8);
+    REGISTER_CALL(SplatoonSecureRMC::getPlayingSessions, 109, 16);
+    REGISTER_CALL(SplatoonSecureRMC::updateProgressScore, 109, 34);
+    REGISTER_CALL(SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
+    REGISTER_CALL(SplatoonSecureRMC::joinMatchmakeSessionWithParam, 109, 39);
+    REGISTER_CALL(SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
 }
 
 void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req, List<StationURL> targets, StationURL probe) {
@@ -85,6 +85,10 @@ void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req
     sendMsg(client, res, {});
 }
 
+// FIXME: It seems that if the player fails to connect with another, leaves the gathering without notifying the server
+// but it tries to connect two times. To correctly handle removing the player from the gathering, we should check if the
+// player has failed to connect with another player and remove it from the gathering if it has, but not on the first
+// failed connection.
 void SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req, UInt32 cid, Bool result, UInt32 rtt) {
     Response res;
     res.protocolId = req.protocolId;
@@ -204,6 +208,8 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req, StationURL ol
     sendMsg(client, res, {});
 }
 
+// FIXME: In regards to the fixme in reportNATTraversalResult, the report may contain what we are looking for
+// to remove the player from the gathering
 void SplatoonSecureRMC::sendReport(ClientInfo client, Request req, UInt32 id, qBuffer report) {
     Response res;
     res.protocolId = req.protocolId;
@@ -214,6 +220,15 @@ void SplatoonSecureRMC::sendReport(ClientInfo client, Request req, UInt32 id, qB
 
     // We'll just ignore the report for now. It has a header and a payload that is zlib compressed and then encrypted
     // with AES-ECB, with key 901edf193dc5ef3c5290647bff20c385.
+
+    // Log the report
+    std::stringstream reportStream;
+    for (auto& byte : report.data) {
+        // Print the hex value of the byte
+        reportStream << std::hex << std::setw(2) << std::setfill('0') << (int) byte;
+    }
+    std::string reportStr = reportStream.str();
+    std::cout << "Report: " << reportStr << std::endl;
 
     sendMsg(client, res, {});
 }
@@ -553,6 +568,8 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
         return;
     }
 
+    logger->log(Logger::level::DEBUG, logGroup, "Creating matchmake session with " + std::to_string(param.additionalParticipants.size()) + " additional participants.");
+
     MatchmakeSession session = param.srcMatchmakeSession;
     session.id = getNewGatheringId();
     session.ownerPid = client.pid;
@@ -583,6 +600,8 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
 
     if (!session.userPassword.empty()) session.userPasswordEnabled = true; // Why is this not set by the client?
 
+    logger->log(Logger::level::DEBUG, logGroup, "Matchmake session created with ID " + std::to_string(session.id) + " for " + std::to_string(client.pid) + ":\n" + session.toString());
+
     // All checks passed, add players to session and send success
     matchmakeSessions[session.id] = {std::make_shared<MatchmakeSession>(session), std::set<uint32_t>(playerPids.begin(), playerPids.end())};
 
@@ -593,6 +612,7 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
 
     auto sessionPtr = matchmakeSessions[session.id].session;
     // Send notifications to all players
+    // FIXME Actually send only to owner
     for (auto& pid : playerPids) {
         auto playerInfoIt = registeredClients.find(pid);
         if (playerInfoIt == registeredClients.end()) continue;
@@ -715,6 +735,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
 }
 
 // FIXME: Check if players can be in multiple sessions at the same time
+// FIXME: What happens if the session found is where the player is already in?
 void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param) {
     Response res;
     res.protocolId = req.protocolId;
@@ -749,6 +770,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             return;
         }
     }
+
+    logger->log(Logger::level::DEBUG, logGroup, "AutoMatchmakeParam from " + std::to_string(client.pid) + ":\n" + param.toString());
 
     auto filter = [&](const SessionInfo& sessionInfo) -> bool {
         bool valid = true;
@@ -859,6 +882,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->participationCount = 0;
         session->sessionKey = Buffer(crypto::genKey());
         session->startedTime = std::chrono::system_clock::now();
+
+        logger->log(Logger::level::INFO, logGroup, "Creating new session " + std::to_string(session->id) + " for " + std::to_string(client.pid) + ":\n" + session->toString());
 
         std::set<uint32_t> players;
         players.insert(client.pid);
@@ -1007,11 +1032,14 @@ void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid
         unregisterGathering_internal(gId, playerPid);
         return;
     } else {
-        for (auto& pid : sessionIt->second.players) {
-            sendNotification(registeredClients[pid].client,
-                             (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
-                             playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-        }
+        uint32_t ownerPid = sessionIt->second.session->ownerPid;
+        sendNotification(registeredClients[ownerPid].client, (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
+                         playerPid, sessionIt->second.session->id, playerPid, msg, 0);
+        // for (auto& pid : sessionIt->second.players) {
+        //     sendNotification(registeredClients[pid].client,
+        //                      (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
+        //                      playerPid, sessionIt->second.session->id, playerPid, msg, 0);
+        // }
     }
 
     if (sessionIt->second.session->ownerPid == playerPid) {

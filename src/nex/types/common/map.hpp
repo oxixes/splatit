@@ -55,6 +55,27 @@ namespace nex::rmc {
             return sizeof(uint32_t) + dataSize;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string str = getName() + ": {" + (data.empty() ? "}" : "\n");
+            if (data.empty()) return str;
+
+            std::string indent((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent(indentation * INDENTATION_SPACES, ' ');
+            for (auto& [key, value] : data) {
+                str += indent + key.toString(indentation + 1) + ": " + value.toString(indentation + 1) + "\n";
+            }
+            str += last_indent + "}";
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override {
+            std::string name = "Map";
+            if (!data.empty()) {
+                name += "<" + data.begin()->first.getName() + ", " + data.begin()->second.getName() + ">";
+            }
+            return name;
+        }
+
         auto begin() { return data.begin(); }
         auto begin() const { return data.begin(); }
         auto end() { return data.end(); }

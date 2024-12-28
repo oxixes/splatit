@@ -181,9 +181,18 @@ void Server::serverThread() {
                                          std::function<void(uint32_t)>)> handler = nullptr;
 
             std::unique_lock routesLock(routesMutex);
-            if (request.second.hasHeader("host") && routes.find(request.second.getHeader("host")[0]) != routes.end()
-            && routes[request.second.getHeader("host")[0]].find(request.second.getPath()) != routes[request.second.getHeader("host")[0]].end()) {
-                handler = routes[request.second.getHeader("host")[0]][request.second.getPath()];
+            if (request.second.hasHeader("host")) {
+                if (routes.find(request.second.getHeader("host")[0]) != routes.end()
+                    && routes[request.second.getHeader("host")[0]].find(request.second.getPath()) != routes[request.second.getHeader("host")[0]].end()) {
+                    handler = routes[request.second.getHeader("host")[0]][request.second.getPath()];
+                } else if (regexRoutes.find(request.second.getHeader("host")[0]) != regexRoutes.end()) {
+                    for (auto& route : regexRoutes[request.second.getHeader("host")[0]]) {
+                        if (std::regex_match(request.second.getPath(), route.first)) {
+                            handler = route.second;
+                            break;
+                        }
+                    }
+                }
             }
 
             routesLock.unlock();
@@ -307,6 +316,22 @@ void Server::registerRoute(const std::string& host, const std::string& path, std
     }
 
     routes[host][path] = std::move(func);
+}
+
+void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<Response(
+        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
+        std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
+    std::unique_lock lock(routesMutex);
+
+    std::regex regexPath(path);
+
+    if (regexRoutes.find(host) == regexRoutes.end()) {
+        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<Response(
+                std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
+                std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>>();
+    }
+
+    regexRoutes[host].emplace_back(std::move(regexPath), std::move(func));
 }
 
 void Server::unregisterHost(const std::string& host) {

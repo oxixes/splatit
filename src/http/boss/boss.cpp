@@ -14,7 +14,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
                              const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
 
-    json tasksheetManifest = bossManifest[titleId]["tasksheets"][tasksheetId];
+    json tasksheetManifest = bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId];
 
     pugi::xml_document doc;
 
@@ -23,7 +23,7 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     decl.append_attribute("encoding") = "UTF-8";
 
     pugi::xml_node tasksheet = doc.append_child("TaskSheet");
-    tasksheet.append_child("TitleId").text().set(bossManifest[titleId]["titleId"].get<std::string>().c_str());
+    tasksheet.append_child("TitleId").text().set(bossManifest["tasksheets"][titleId]["titleId"].get<std::string>().c_str());
     tasksheet.append_child("TaskId").text().set(tasksheetId.c_str());
     tasksheet.append_child("ServiceStatus").text().set(tasksheetManifest["open"] ? "open" : "closed");
 
@@ -93,7 +93,7 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
                         const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
 
-    fs::path filePath = settingsMgr->getBOSSPath() / bossManifest[titleId]["tasksheets"][tasksheetId]["files"][fileHash]["path"];
+    fs::path filePath = settingsMgr->getBOSSPath() / bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId]["files"][fileHash]["path"];
 
     if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
         return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
@@ -128,6 +128,61 @@ http::Response p01_data(const http::Request& req, const std::string& titleId, co
     return res;
 }
 
+/*
+ * Handler for GET https://nppl.app.<domain>/p01/policylist/<console type>/<major version>/<country>
+ * Returns the requested policy list.
+ */
+http::Response p01_policylist(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                              const std::shared_ptr<SettingsManager>& settingsMgr) {
+    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
+
+    // Get the country
+    std::string country = req.getPath().substr(req.getPath().find_last_of('/') + 1);
+    if (country.size() != 2) return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+
+    if (bossManifest["policyLists"].find(country) == bossManifest["policyLists"].end() &&
+        bossManifest["policyLists"].find(bossManifest["backupPolicyCountry"]) == bossManifest["policyLists"].end()) {
+        return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+    }
+
+    json policyList = bossManifest["policyLists"].find(country) != bossManifest["policyLists"].end() ?
+                      bossManifest["policyLists"][country] : bossManifest["policyLists"][bossManifest["backupPolicyCountry"]];
+
+    pugi::xml_document doc;
+    pugi::xml_node policyListNode = doc.append_child("PolicyList");
+    std::string major = std::to_string(policyList["major"].get<int>());
+    policyListNode.append_child("MajorVersion").text().set(major.c_str(), major.size());
+    std::string minor = std::to_string(policyList["minor"].get<int>());
+    policyListNode.append_child("MinorVersion").text().set(minor.c_str(), minor.size());
+    std::string id = std::to_string(policyList["id"].get<int>());
+    policyListNode.append_child("ListId").text().set(id.c_str(), id.size());
+    std::string defaultStop = (policyList["defaultStop"].get<bool>() ? "true" : "false");
+    policyListNode.append_child("DefaultStop").text().set(defaultStop.c_str(), defaultStop.size());
+    std::string forceVersionUp = (policyList["forceVersionUp"].get<bool>() ? "true" : "false");
+    policyListNode.append_child("ForceVersionUp").text().set(forceVersionUp.c_str(), forceVersionUp.size());
+    policyListNode.append_child("UpdateTime").text().set(policyList["updateTime"].get<std::string>().c_str(), policyList["updateTime"].get<std::string>().size());
+    for (auto& priority : policyList["titles"].items()) {
+        pugi::xml_node priorityNode = policyListNode.append_child("Priority");
+        priorityNode.append_child("TitleId").text().set(priority.key().c_str(), priority.key().size());
+        priorityNode.append_child("TaskId").text().set(priority.value()["id"].get<std::string>().c_str(), priority.value()["id"].get<std::string>().size());
+        priorityNode.append_child("Level").text().set(priority.value()["level"].get<std::string>().c_str(), priority.value()["level"].get<std::string>().size());
+    }
+
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Date", util::getDateHeader());
+    if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
+
+    std::stringstream ss;
+    doc.save(ss, "    ");
+
+    std::string body = ss.str();
+    std::vector<uint8_t> bodyVec(body.begin(), body.end());
+    res.setBody(bodyVec);
+
+    return res;
+}
+
 http::Response getError(int status, http::Version version) {
     http::Response res(version, status);
 
@@ -146,7 +201,7 @@ http::Response getError(int status, http::Version version) {
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {
     std::string domain = settingsMgr->getTopDomain();
 
-    for (auto& title : bossManifest.items()) {
+    for (auto& title : bossManifest["tasksheets"].items()) {
         const std::string& titleId = title.key();
         for (auto& tasksheet : title.value()["tasksheets"].items()) {
             const std::string& tasksheetId = tasksheet.key();
@@ -183,6 +238,15 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
         }
     }
 
+    server->registerRegexRoute("nppl.app." + domain, R"(^\/p01\/policylist\/1\/1\/[A-Z]{2}$)",
+                               [settingsMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                                             sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                             const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                             const std::function<void(unsigned int)>& unregisterCloseCall) {
+        shouldClose = true;
+        return p01_policylist(logger, req, settingsMgr);
+    });
+
     std::function errorHandler = [](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
                                     sock::IPv4Addr client, int httpStatus) {
         return getError(httpStatus, req.getVersion());
@@ -196,6 +260,7 @@ void unregisterRoutes(const std::shared_ptr<http::Server>& server, const std::sh
     std::string domain = settingsMgr->getTopDomain();
     server->unregisterHost("npts.app." + domain);
     server->unregisterHost("npdi.cdn." + domain);
+    server->unregisterHost("nppl.app." + domain);
 }
 
 } // namespace boss

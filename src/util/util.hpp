@@ -25,6 +25,7 @@ namespace util {
     std::string getDateHeader();
     std::string getDateHeader(time_t time);
     std::string getXNintendoDateHeader();
+    std::string getDateISO8601(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> time);
 
     void getu64Little(uint64_t& v);
     void getu32Little(uint32_t& v);

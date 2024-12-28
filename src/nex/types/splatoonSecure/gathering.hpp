@@ -42,7 +42,7 @@ namespace nex::rmc {
             return result;
         }
 
-        virtual size_t decode(std::span<const uint8_t> data) override {
+        size_t decode(std::span<const uint8_t> data) override {
             size_t size = 0;
 
             size += decodeHeader(data, GATHERING_VERSION);
@@ -59,6 +59,26 @@ namespace nex::rmc {
 
             return size;
         }
+
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string str = "Gathering {\n";
+            str += indent + "id: " + id.toString(true, indentation + 1) + "\n";
+            str += indent + "ownerPid: " + ownerPid.toString(true, indentation + 1) + "\n";
+            str += indent + "hostPid: " + hostPid.toString(true, indentation + 1) + "\n";
+            str += indent + "minParticipants: " + minParticipants.toString(true, indentation + 1) + "\n";
+            str += indent + "maxParticipants: " + maxParticipants.toString(true, indentation + 1) + "\n";
+            str += indent + "participationPolicy: " + participationPolicy.toString(true, indentation + 1) + "\n";
+            str += indent + "policyArgument: " + policyArgument.toString(true, indentation + 1) + "\n";
+            str += indent + "flags: " + flags.toString(true, indentation + 1) + "\n";
+            str += indent + "state: " + state.toString(true, indentation + 1) + "\n";
+            str += indent + "description: " + description.toString(indentation + 1) + "\n";
+            str += last_indent + "}";
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "Gathering"; }
 
         UInt32 id;
         PID ownerPid;

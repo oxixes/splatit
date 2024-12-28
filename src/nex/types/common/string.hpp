@@ -43,6 +43,9 @@ namespace nex::rmc {
             return length + 2;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { return "\"" + value + "\""; } // NOLINT(*-default-arguments)
+        [[nodiscard]] std::string getName() const override { return "String"; }
+
         operator std::string&() { return value; }
         operator const std::string&() const { return value; }
         String& operator=(const std::string& other) { value = other; return *this; }

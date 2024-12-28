@@ -161,11 +161,11 @@ bool PacketV0::checkSignature() {
 }
 
 std::vector<uint8_t> PacketV0::calculateSignature(const std::vector<uint8_t>& remoteSignature) {
-    if (type == Type::PING && flags & FLAG_ACK) {
+    /*if (type == Type::PING && flags & FLAG_ACK) {
         // Seems like Cemu sends 0 as the signature for PING ACK packets. Will have to test on real hardware to see if
         // this is correct. Also, I don't know if it's only on friends or on all servers.
         return {0, 0, 0, 0};
-    }
+    }*/
 
     std::vector<uint8_t> signature;
     if (friends) {

@@ -179,10 +179,18 @@ int main(int argc, char** argv) {
         splatoonSecureSrv->listen(stop);
     }
 
+#ifdef _WIN32
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
-#ifndef _WIN32
-    signal(SIGPIPE, SIG_IGN);
+#else
+    struct sigaction sigIntHandler{};
+    sigIntHandler.sa_handler = signalHandler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &sigIntHandler, nullptr);
+    sigaction(SIGTERM, &sigIntHandler, nullptr);
+    sigIntHandler.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sigIntHandler, nullptr);
 #endif
 
     TasksManager tasksMgr(POLL_TIMEOUT);

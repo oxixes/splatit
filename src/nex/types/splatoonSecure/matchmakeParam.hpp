@@ -34,6 +34,17 @@ namespace nex::rmc {
             return size;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string str = "MatchmakeParam {\n";
+            str += indent + "params: " + params.toString(indentation + 1) + "\n";
+            str += last_indent + "}";
+            return str;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "MatchmakeParam"; }
+
         Map<String, Variant> params;
 
     private:

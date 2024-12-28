@@ -1,46 +1,95 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "patternProperties": {
-    "^[a-zA-Z0-9]{16}$": {
+  "properties": {
+    "tasksheets": {
       "type": "object",
-      "properties": {
-        "titleId": { "type": "string" },
-        "tasksheets": {
+      "patternProperties": {
+        "^[a-zA-Z0-9]{16}$": {
           "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "open": { "type": "boolean" },
-              "files": {
+          "properties": {
+            "titleId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{16}$"
+            },
+            "tasksheets": {
+              "type": "object",
+              "additionalProperties": {
                 "type": "object",
-                "patternProperties": {
-                  "^[a-zA-Z0-9]{32}$": {
+                "properties": {
+                  "open": { "type": "boolean" },
+                  "files": {
                     "type": "object",
-                    "properties": {
-                      "id": { "type": "integer" },
-                      "type": { "type": "string" },
-                      "filename": { "type": "string" },
-                      "path": { "type": "string" },
-                      "notify": {
+                    "patternProperties": {
+                      "^[a-fA-F0-9]{32}$": {
                         "type": "object",
                         "properties": {
-                          "new": { "type": "string" },
-                          "LED": { "type": "boolean" }
+                          "id": { "type": "integer" },
+                          "type": { "type": "string" },
+                          "filename": { "type": "string" },
+                          "path": { "type": "string" },
+                          "notify": {
+                            "type": "object",
+                            "properties": {
+                              "new": { "type": "string" },
+                              "LED": { "type": "boolean" }
+                            },
+                            "required": ["new", "LED"]
+                          }
                         },
-                        "required": ["new", "LED"]
+                        "required": ["id", "type", "filename", "path", "notify"]
                       }
-                    },
-                    "required": ["id", "type", "filename", "path", "notify"]
+                    }
                   }
+                },
+                "required": ["open", "files"]
+              }
+            }
+          },
+          "required": ["titleId", "tasksheets"]
+        }
+      }
+    },
+    "policyLists": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Z]{2}$": {
+          "type": "object",
+          "properties": {
+            "major": { "type": "integer" },
+            "minor": { "type": "integer" },
+            "id": { "type": "integer" },
+            "defaultStop": { "type": "boolean" },
+            "forceVersionUp": { "type": "boolean" },
+            "updateTime": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\+[0-9]{4}$"
+            },
+            "titles": {
+              "type": "object",
+              "patternProperties": {
+                "^[a-f0-9]{16}$": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "level": {
+                      "type": "string",
+                      "enum": ["LOW", "MEDIUM", "HIGH", "EXPEDITE"]
+                    }
+                  },
+                  "required": ["id", "level"]
                 }
               }
-            },
-            "required": ["open", "files"]
-          }
+            }
+          },
+          "required": ["major", "minor", "id", "defaultStop", "forceVersionUp", "updateTime", "titles"]
         }
-      },
-      "required": ["titleId", "tasksheets"]
+      }
+    },
+    "backupPolicyCountry": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
     }
-  }
+  },
+  "required": ["tasksheets", "policyLists", "backupPolicyCountry"]
 }

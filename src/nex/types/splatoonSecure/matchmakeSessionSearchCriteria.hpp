@@ -73,6 +73,30 @@ namespace nex::rmc {
             return pos;
         }
 
+        [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
+            std::string indent = std::string((indentation + 1) * INDENTATION_SPACES, ' ');
+            std::string last_indent = std::string(indentation * INDENTATION_SPACES, ' ');
+            std::string result = "MatchmakeSessionSearchCriteria {\n";
+            result += indent + "attributes: " + attributes.toString(indentation + 1) + "\n";
+            result += indent + "gameMode: " + gameMode.toString(indentation + 1) + "\n";
+            result += indent + "minParticipants: " + minParticipants.toString(indentation + 1) + "\n";
+            result += indent + "maxParticipants: " + maxParticipants.toString(indentation + 1) + "\n";
+            result += indent + "matchmakeSystemType: " + matchmakeSystemType.toString(indentation + 1) + "\n";
+            result += indent + "vacantOnly: " + vacantOnly.toString(true, indentation + 1) + "\n";
+            result += indent + "excludeLocked: " + excludeLocked.toString(true, indentation + 1) + "\n";
+            result += indent + "excludeNonHostPid: " + excludeNonHostPid.toString(true, indentation + 1) + "\n";
+            result += indent + "selectionMethod: " + selectionMethod.toString(true, indentation + 1) + "\n";
+            result += indent + "vacantParticipants: " + vacantParticipants.toString(true, indentation + 1) + "\n";
+            result += indent + "matchmakeParam: " + matchmakeParam.toString(indentation + 1) + "\n";
+            result += indent + "excludeUserPasswordSet: " + excludeUserPasswordSet.toString(true, indentation + 1) + "\n";
+            result += indent + "excludeSystemPasswordSet: " + excludeSystemPasswordSet.toString(true, indentation + 1) + "\n";
+            result += indent + "referGid: " + referGid.toString(true, indentation + 1) + "\n";
+            result += last_indent + "}";
+            return result;
+        }
+
+        [[nodiscard]] std::string getName() const override { return "MatchmakeSessionSearchCriteria"; }
+
         List<String> attributes;
         String gameMode;
         String minParticipants;

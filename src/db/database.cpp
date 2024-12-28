@@ -104,6 +104,29 @@ std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std:
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetUserProfileCommand(uint32_t pid) {
+    DBPidQuery query {
+            .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_PROFILE,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId) {
+    DBDeviceAttributesQuery query {
+            .pid = pid,
+            .deviceId = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_DEVICE_ATTRIBUTES,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
 std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
     std::unique_lock<std::mutex> lock(resultsMutex);
 

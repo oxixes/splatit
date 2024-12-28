@@ -41,6 +41,7 @@ public:
     [[nodiscard]] fs::path getDeviceKeyPath() const;
     [[nodiscard]] std::string getTopDomain() const;
     [[nodiscard]] fs::path getBOSSPath() const;
+    [[nodiscard]] fs::path getMiiImagesPath() const;
 
     [[nodiscard]] json getDBSettings() const;
 
@@ -80,6 +81,7 @@ private:
 
     struct domains {
         std::string account;
+        std::string miiSecure;
         std::string bossNPTS;
         std::string bossNPPL;
         std::string bossNPDI;

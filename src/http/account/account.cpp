@@ -39,7 +39,7 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
     }
 
     http::Response res(req.getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose, false)) {
         return res;
     }
 
@@ -87,13 +87,9 @@ http::Response v1_api_admin_mapped_ids(const std::shared_ptr<Logger::Logger>& lo
         std::unique_ptr<db::Result> results = db->getResult(cmdId);
         if (results->status != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
-        // No user found
-        if (!results->data.has_value())
-            return createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
-
-        auto userData = std::any_cast<db::DBUserData>(results->data);
-        auto userPid = std::to_string(userData.pid);
-        auto username = userData.username;
+        auto userData = (results->data.has_value()) ? std::any_cast<db::DBUserData>(results->data) : db::DBUserData{};
+        auto userPid = (results->data.has_value()) ? std::to_string(userData.pid) : ((inputType == "pid") ? id : "");
+        auto username = (results->data.has_value()) ? userData.username : ((inputType == "user_id") ? id : "");
 
         pugi::xml_node mapped_id = mapped_ids.append_child("mapped_id");
         if (inputType == "pid")
@@ -132,6 +128,12 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
     if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose)) {
         return res;
     }
+
+    std::string deviceCert = req.getHeader("x-nintendo-device-cert")[0];
+    std::vector<uint8_t> certBin = crypto::base64Decode(deviceCert);
+    std::string deviceIdHex(certBin.begin() + 0xC6, certBin.begin() + 0xCE);
+    // We convert the hex string to a number
+    uint32_t deviceId = std::stoul(deviceIdHex, nullptr, 16);
 
     if (!req.hasHeader("content-type") || req.getHeader("content-type")[0] != "application/x-www-form-urlencoded") {
         return createError(req.getVersion(), 1600, "Unable to process request", "Bad Request", shouldClose);
@@ -188,46 +190,51 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
         }
 
         // At this point, the username is found and the password is correct
-        json jwtPayload = {
-                {"exp", time(nullptr) + 3600},
-                {"iss", "account"},
-                {"sub", userData.pid}
+        crypto::AccountToken token {
+            .pid = userData.pid,
+            .deviceId = deviceId,
+            .expiration = (uint64_t) time(nullptr) + 3600,
+            .key = crypto::base64Decode(settingsManager->getTokenKey())
         };
 
         logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " logged in successfully.");
 
-        tokenJwt = crypto::signJWT(settingsManager->getTokenKey(), jwtPayload);
-        refreshJwt = crypto::signJWT(settingsManager->getRefreshTokenKey(), jwtPayload);
+        tokenJwt = crypto::generateAccountToken(token);
+
+        token.key = crypto::base64Decode(settingsManager->getRefreshTokenKey());
+        refreshJwt = crypto::generateAccountToken(token);
     } else {
         if (bodyMap.find("refresh_token") == bodyMap.end()) {
             return createError(req.getVersion(), 3, "Missing refresh_token", "refresh_token", shouldClose);
         }
 
-        std::string refreshToken = bodyMap["refresh_token"];
+        std::string refreshTokenStr = bodyMap["refresh_token"];
+        crypto::AccountToken refreshToken {
+            .key = crypto::base64Decode(settingsManager->getRefreshTokenKey())
+        };
 
-        if (!crypto::verifyJWT(settingsManager->getRefreshTokenKey(), refreshToken)) {
+        if (!crypto::parseAccountToken(refreshTokenStr, refreshToken)) {
             return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
         }
 
-        // We assume the structure is valid since we just verified its signature
-        json refreshTokenPayload = json::parse(crypto::base64UrlDecode(refreshToken.substr(refreshToken.find('.') + 1,
-                                                                   refreshToken.rfind('.') - refreshToken.find('.') - 1)));
-
-        if (time(nullptr) > refreshTokenPayload["exp"].get<time_t>()) {
+        if (time(nullptr) > refreshToken.expiration) {
             return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
         }
 
-        json jwtPayload = {
-                {"exp", time(nullptr) + 3600},
-                {"iss", "account"},
-                {"sub", refreshTokenPayload["sub"]}
+        crypto::AccountToken token {
+            .pid = refreshToken.pid,
+            .deviceId = refreshToken.deviceId,
+            .expiration = (uint64_t) time(nullptr) + 3600,
+            .key = crypto::base64Decode(settingsManager->getTokenKey())
         };
 
         logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
-                    "User with PID " + std::to_string(refreshTokenPayload["sub"].get<uint32_t>()) + " refreshed their access token.");
+                    "User with PID " + std::to_string(refreshToken.pid) + " refreshed their access token.");
 
-        tokenJwt = crypto::signJWT(settingsManager->getTokenKey(), jwtPayload);
-        refreshJwt = crypto::signJWT(settingsManager->getRefreshTokenKey(), jwtPayload);
+        tokenJwt = crypto::generateAccountToken(token);
+
+        token.key = crypto::base64Decode(settingsManager->getRefreshTokenKey());
+        refreshJwt = crypto::generateAccountToken(token);
     }
 
     pugi::xml_document doc;
@@ -246,8 +253,7 @@ http::Response v1_api_access_token_gen(const std::shared_ptr<Logger::Logger>& lo
 /*
  * Handler for GET https://account.<domain>/v1/api/provider/nex_token/@me
  * Creates an access token for the given NEX game server.
- * Requires a device certificate, as well as authentication with an
- * access token generated at /v1/api/oauth20/access_token/generate.
+ * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
  */
 http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
                                          const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
@@ -287,19 +293,14 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
     }
 
     token = token.substr(7);
-    if (!crypto::verifyJWT(settingsManager->getTokenKey(), token)) {
+    crypto::AccountToken accountToken {
+        .key = crypto::base64Decode(settingsManager->getTokenKey())
+    };
+    if (!crypto::parseAccountToken(token, accountToken) || time(nullptr) > accountToken.expiration) {
         return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
     }
 
-    json tokenPayload = json::parse(crypto::base64UrlDecode(token.substr(token.find('.') + 1,
-                                                                         token.rfind('.') - token.find('.') - 1)));
-
-    if (time(nullptr) > tokenPayload["exp"].get<time_t>()) {
-        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
-    }
-
-    int pid = tokenPayload["sub"].get<int>();
-    std::unique_ptr<db::Command> cmd = db->craftGetGameServerAccessCommand(pid, req.getQuery("game_server_id"));
+    std::unique_ptr<db::Command> cmd = db->craftGetGameServerAccessCommand(accountToken.pid, req.getQuery("game_server_id"));
     uint32_t cmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
 
     std::unique_ptr<db::Result> results = db->getResult(cmdId);
@@ -311,7 +312,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
     json jwtPayload = {
             {"exp", time(nullptr) + 3600},
             {"iss", "account"},
-            {"sub", pid},
+            {"sub", accountToken.pid},
             {"game_server_id", gameServerId}
     };
 
@@ -323,7 +324,7 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
 
     pugi::xml_document doc;
     pugi::xml_node nex_token = doc.append_child("nex_token");
-    nex_token.append_child("pid").text().set(std::to_string(pid).c_str(), std::to_string(pid).length());
+    nex_token.append_child("pid").text().set(std::to_string(accountToken.pid).c_str(), std::to_string(accountToken.pid).length());
     nex_token.append_child("nex_password").text().set(nexPassword.c_str(), nexPassword.length());
     nex_token.append_child("token").text().set(tokenJwt.c_str(), tokenJwt.length());
 
@@ -334,11 +335,266 @@ http::Response v1_api_provider_nex_token(const std::shared_ptr<Logger::Logger>& 
     nex_token.append_child("port").text().set(gameServerPort.c_str(), gameServerPort.length());
 
     logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
-                "User with PID " + std::to_string(pid) + " successfully obtained NEX token for game server " + gameServerId);
+                "User with PID " + std::to_string(accountToken.pid) + " successfully obtained NEX token for game server " + gameServerId);
 
     shouldClose = true;
 
     return prepareResponse(req.getVersion(), doc);
+}
+
+/*
+ * Handler for GET https://account.<domain>/v1/api/people/@me/profile
+ * Obtains the profile of the user with the given principal id.
+ * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
+ */
+http::Response v1_api_people_me_profile(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
+                                         const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                         const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                         const std::function<void(unsigned int)>& unregisterCloseCall,
+                                         const std::shared_ptr<SettingsManager>& settingsManager,
+                                         const std::shared_ptr<CertManager>& certManager) {
+    if (req.getMethod() != http::Method::M_GET) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose, false)) {
+        return res;
+    }
+
+    if (!req.hasHeader("authorization")) {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    std::string token = req.getHeader("authorization")[0];
+
+    if (token.substr(0, 7) != "Bearer ") {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    token = token.substr(7);
+    crypto::AccountToken accountToken {
+            .key = crypto::base64Decode(settingsManager->getTokenKey())
+    };
+    if (!crypto::parseAccountToken(token, accountToken) || time(nullptr) > accountToken.expiration) {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    std::unique_ptr<db::Command> cmd = db->craftGetUserProfileCommand(accountToken.pid);
+    uint32_t profileCmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
+    cmd = db->craftGetDeviceAttributesCommand(accountToken.pid, accountToken.deviceId);
+    uint32_t deviceCmdId = db::Database::runCommand(db, std::move(cmd), registerCloseCall, unregisterCloseCall, shouldStop);
+
+    std::unique_ptr<db::Result> profileResults = db->getResult(profileCmdId);
+    std::unique_ptr<db::Result> deviceResults = db->getResult(deviceCmdId);
+    if (profileResults->status != db::DBResultStatus::SUCCESS || deviceResults->status != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (!profileResults->data.has_value()) {
+        // TODO Change this to appropiate error
+        return createError(req.getVersion(), 1016, "NEX account not found", "", shouldClose);
+    }
+
+    auto userProfile = std::any_cast<db::DBUserProfileData>(profileResults->data);
+    auto deviceAttributes = std::any_cast<std::vector<db::DBDeviceAttributeData>>(deviceResults->data);
+
+    pugi::xml_document doc;
+    pugi::xml_node person = doc.append_child("person");
+    person.append_child("active_flag").text().set((userProfile.active) ? "Y" : "N", 1);
+    person.append_child("birth_date").text().set(userProfile.birthdate.c_str(), userProfile.birthdate.length());
+    person.append_child("country").text().set(userProfile.country.c_str(), userProfile.country.length());
+
+    std::string createDate = util::getDateISO8601(userProfile.created);
+    person.append_child("create_date").text().set(createDate.c_str(), createDate.length());
+
+    person.append_child("gender").text().set((userProfile.gender) ? "F" : "M", 1);
+    person.append_child("language").text().set(userProfile.language.c_str(), userProfile.language.length());
+
+    std::string updatedDate = util::getDateISO8601(userProfile.updated);
+    person.append_child("updated").text().set(updatedDate.c_str(), updatedDate.length());
+
+    person.append_child("marketing_flag").text().set((userProfile.marketing) ? "Y" : "N", 1);
+    person.append_child("off_device_flag").text().set((userProfile.offDevice) ? "Y" : "N", 1);
+
+    std::string pidStr = std::to_string(userProfile.pid);
+    person.append_child("pid").text().set(pidStr.c_str(), pidStr.length());
+
+    std::string regionStr = std::to_string(userProfile.region);
+    person.append_child("region").text().set(regionStr.c_str(), regionStr.length());
+
+    person.append_child("tz_name").text().set(userProfile.tz.c_str(), userProfile.tz.length());
+    person.append_child("user_id").text().set(userProfile.username.c_str(), userProfile.username.length());
+
+    std::string utcOffsetStr = std::to_string(userProfile.utcOffset);
+    person.append_child("utc_offset").text().set(utcOffsetStr.c_str(), utcOffsetStr.length());
+
+    pugi::xml_node deviceAttributesNode = person.append_child("device_attributes");
+    for (const auto& attr : deviceAttributes) {
+        pugi::xml_node deviceAttribute = deviceAttributesNode.append_child("device_attribute");
+        std::string createdDateStr = util::getDateISO8601(attr.createdDate);
+        deviceAttribute.append_child("created_date").text().set(createdDateStr.c_str(), createdDateStr.length());
+        deviceAttribute.append_child("name").text().set(attr.name.c_str(), attr.name.length());
+        deviceAttribute.append_child("value").text().set(attr.value.c_str(), attr.value.length());
+    }
+
+    pugi::xml_node email = person.append_child("email");
+    email.append_child("address").text().set(userProfile.email.c_str(), userProfile.email.length());
+
+    std::string emailIdStr = std::to_string(userProfile.emailId);
+    email.append_child("id").text().set(emailIdStr.c_str(), emailIdStr.length());
+
+    email.append_child("parent").text().set((userProfile.emailParent) ? "Y" : "N", 1);
+    email.append_child("primary").text().set((userProfile.emailPrimary) ? "Y" : "N", 1);
+    email.append_child("reachable").text().set((userProfile.emailReachable) ? "Y" : "N", 1);
+    email.append_child("type").text().set(userProfile.emailType.c_str(), userProfile.emailType.length());
+    email.append_child("updated_by").text().set(userProfile.emailUpdatedBy.c_str(), userProfile.emailUpdatedBy.length());
+    email.append_child("validated").text().set((userProfile.emailValidated) ? "Y" : "N", 1);
+
+    std::string emailValidatedDateStr = util::getDateISO8601(userProfile.emailValidatedDate);
+    email.append_child("validated_date").text().set(emailValidatedDateStr.c_str(), emailValidatedDateStr.length());
+
+    pugi::xml_node mii = person.append_child("mii");
+    mii.append_child("data").text().set(userProfile.miiData.c_str(), userProfile.miiData.length());
+
+    std::string miiStatus = "COMPLETED";
+    mii.append_child("status").text().set(miiStatus.c_str(), miiStatus.length());
+
+    std::string miiIdStr = std::to_string(userProfile.miiId);
+    mii.append_child("id").text().set(miiIdStr.c_str(), miiIdStr.length());
+
+    mii.append_child("name").text().set(userProfile.miiName.c_str(), userProfile.miiName.length());
+    mii.append_child("mii_hash").text().set(userProfile.miiHash.c_str(), userProfile.miiHash.length());
+    mii.append_child("primary").text().set((userProfile.miiPrimary) ? "Y" : "N", 1);
+
+    pugi::xml_node miiImages = mii.append_child("mii_images");
+    pugi::xml_node miiImage = miiImages.append_child("mii_image");
+
+    std::string miiType = "standard"; // Profile images are always standard
+    miiImage.append_child("type").text().set(miiType.c_str(), miiType.length());
+
+    std::string miiImageId = std::to_string(userProfile.miiId); // This should be its own id, but we'll use the mii id for now
+    miiImage.append_child("id").text().set(miiImageId.c_str(), miiImageId.length());
+
+    std::string miiImageUrl = "https://mii-secure.account." + settingsManager->getTopDomain() + "/standard.tga" +
+                              "?id=" + std::to_string(userProfile.miiId);
+
+    miiImage.append_child("url").text().set(miiImageUrl.c_str(), miiImageUrl.length());
+    miiImage.append_child("cached_url").text().set(miiImageUrl.c_str(), miiImageUrl.length());
+
+    shouldClose = true;
+
+    return prepareResponse(req.getVersion(), doc);
+}
+
+http::Response v1_api_provider_service_token_me(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
+                                                const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                                const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                                const std::function<void(unsigned int)>& unregisterCloseCall,
+                                                const std::shared_ptr<SettingsManager>& settingsManager,
+                                                const std::shared_ptr<CertManager>& certManager) {
+    if (req.getMethod() != http::Method::M_GET) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(req, settingsManager, certManager, &res, shouldClose, false)) {
+        return res;
+    }
+
+    if (!req.hasHeader("authorization")) {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    std::string token = req.getHeader("authorization")[0];
+
+    if (token.substr(0, 7) != "Bearer ") {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    token = token.substr(7);
+    crypto::AccountToken accountToken {
+            .key = crypto::base64Decode(settingsManager->getTokenKey())
+    };
+    if (!crypto::parseAccountToken(token, accountToken) || time(nullptr) > accountToken.expiration) {
+        return createError(req.getVersion(), 5, "Invalid access token", "access_token", shouldClose);
+    }
+
+    if (!req.hasQuery("client_id") || !req.hasHeader("x-nintendo-title-id")) {
+        return createError(req.getVersion(), 1201, "The requested game server was not found", "", shouldClose);
+    }
+
+    std::string clientId = req.getQuery("client_id");
+    std::string titleId = req.getHeader("x-nintendo-title-id")[0];
+
+    // Currently only returning maintenance
+    return createError(req.getVersion(), 2002, "The requested game server is under maintenance", "", shouldClose);
+}
+
+/*
+ * Handler for GET https://mii-secure.account.<domain>/<type>.<format>?id=<mii id>
+ * Obtains the image of the Mii with the given id.
+ */
+http::Response mii_image(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<db::Database>& db,
+                                        const http::Request& req, sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                        const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                        const std::function<void(unsigned int)>& unregisterCloseCall,
+                                        const std::shared_ptr<SettingsManager>& settingsManager,
+                                        const std::shared_ptr<CertManager>& certManager) {
+
+    if (req.getMethod() != http::Method::M_GET) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    std::string type = req.getPath();
+    // Split the path into the type and format
+    type = type.substr(1, type.find('.') - 1);
+    std::string format = req.getPath().substr(type.length() + 2);
+
+    fs::path miiImagesPath = settingsManager->getMiiImagesPath();
+    if (!fs::exists(miiImagesPath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT, "Mii images path does not exist.");
+        return createError(req.getVersion(), 2001, "Unable to process request", "Internal Server Error", shouldClose);
+    }
+
+    if (!req.hasQuery("id")) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    fs::path miiImagePath = miiImagesPath / (req.getQuery("id") + "_" + type + "." + format);
+
+    // For security purposes, we don't want to expose the file system structure. We make sure the resulting path is inside
+    // the mii images directory.
+    auto absoluteImagesPath = fs::absolute(miiImagesPath);
+    auto absoluteImagePath = fs::absolute(miiImagePath);
+    if (absoluteImagePath.string().rfind(absoluteImagesPath.string(), 0)) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    if (!fs::exists(miiImagePath) || !fs::is_regular_file(miiImagePath)) {
+        return createError(req.getVersion(), 8, "Not Found", "", shouldClose);
+    }
+
+    std::ifstream file(miiImagePath, std::ios::binary);
+    std::vector<uint8_t> image((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    http::Response res(req.getVersion(), HTTP_STATUS_OK);
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Date", util::getDateHeader());
+    // Get last modified time
+    std::filesystem::file_time_type lastModified = fs::last_write_time(miiImagePath);
+    time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<
+            std::chrono::system_clock::duration>(lastModified - std::filesystem::file_time_type::clock::now() +
+                                                 std::chrono::system_clock::now()));
+
+    res.setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
+    res.setHeader("Connection", "close");
+
+    res.setBody(image);
+
+    shouldClose = true;
+    return res;
 }
 
 http::Response createError(http::Version version, int code, const std::string& message, const std::string& cause,
@@ -403,7 +659,7 @@ http::Response prepareResponse(http::Version version, pugi::xml_document& doc) {
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
 
     http::Response res = prepareResponse(version);
-    res.setHeader("Content-Type", "text/xml");
+    res.setHeader("Content-Type", "application/xml;charset=UTF-8");
     res.setBody(bodyVec);
 
     return res;
@@ -493,7 +749,50 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                                              certMgr);
                           });
 
+    server->registerRoute("account." + domain, "/v1/api/people/@me/profile",
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                                                     sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                                     const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                                     const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
+                              return v1_api_people_me_profile(logger, db, req, client, shouldStop, shouldClose,
+                                                               registerCloseCall, unregisterCloseCall, settingsMgr,
+                                                               certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/api/provider/service_token/@me",
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                              sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                              const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                              const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
+                              return v1_api_provider_service_token_me(logger, db, req, client, shouldStop, shouldClose,
+                                                                     registerCloseCall, unregisterCloseCall, settingsMgr,
+                                                                     certMgr);
+                          });
+
+    constexpr std::array<std::string_view, 7> miiTypes = {"normal_face", "frustrated_face", "happy_face", "like_face",
+                                                          "puzzled_face", "surprised_face", "whole_body"};
+    for (const auto& type : miiTypes) {
+        server->registerRoute("mii-secure.account." + domain, "/" + std::string(type) + ".png",
+                              [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                                  sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                  const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                  const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
+                                  return mii_image(logger, db, req, client, shouldStop, shouldClose, registerCloseCall,
+                                                   unregisterCloseCall, settingsMgr, certMgr);
+                              });
+    }
+
+    server->registerRoute("mii-secure.account." + domain, "/standard.tga",
+                          [db, settingsMgr, certMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
+                                                     sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
+                                                     const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
+                                                     const std::function<void(unsigned int)>& unregisterCloseCall) -> http::Response {
+                              return mii_image(logger, db, req, client, shouldStop, shouldClose, registerCloseCall,
+                                               unregisterCloseCall, settingsMgr, certMgr);
+                          });
+
     server->registerErrorPage("account." + domain, errorHandler);
+    server->registerErrorPage("mii-secure.account." + domain, errorHandler);
 }
 
 } // namespace acc

@@ -16,9 +16,11 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
             sqlCmds.emplace_back("CREATE TABLE miis (id INTEGER, hash TEXT NOT NULL, name TEXT NOT NULL,"
                                  "'primary' INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE users (pid INTEGER, username TEXT NOT NULL, password TEXT NOT NULL,"
-                                 "email_id INTEGER NOT NULL, mii_id INTEGER NOT NULL, region INTEGER NOT NULL,"
-                                 "tz TEXT NOT NULL, utc_offset INTEGER NOT NULL, active INTEGER NOT NULL,"
-                                 "birth_date TEXT NOT NULL, country TEXT NOT NULL, create_date TEXT NOT NULL, PRIMARY KEY (pid),"
+                                 "email_id INTEGER NOT NULL, mii_id INTEGER NOT NULL, gender INTEGER NOT NULL,"
+                                 "region INTEGER NOT NULL,tz TEXT NOT NULL, utc_offset INTEGER NOT NULL,"
+                                 "language TEXT NOT NULL, active INTEGER NOT NULL, marketing INTEGER NOT NULL,"
+                                 "off_device INTEGER NOT NULL, birth_date TEXT NOT NULL, country TEXT NOT NULL,"
+                                 "create_date TEXT NOT NULL, last_updated TEXT NOT NULL, PRIMARY KEY (pid),"
                                  "FOREIGN KEY (email_id) REFERENCES emails(id) ON UPDATE CASCADE ON DELETE RESTRICT,"
                                  "FOREIGN KEY (mii_id) REFERENCES miis(id) ON UPDATE CASCADE ON DELETE RESTRICT);");
             sqlCmds.emplace_back("CREATE TABLE devices (id INTEGER, language TEXT NOT NULL, platform_id INTEGER NOT NULL,"

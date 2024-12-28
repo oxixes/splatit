@@ -48,7 +48,7 @@ namespace nex::rmc {
                 proto = Protocol::PRUDPS;
                 url = url.substr(8);
             } else {
-                throw MalformedException("Invalid protocol");
+                throw MalformedException("Invalid protocol: " + url);
             }
 
             std::string_view urlView(url);

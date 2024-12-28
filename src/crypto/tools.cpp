@@ -7,6 +7,7 @@
 #include <openssl/sha.h>
 #include <openssl/kdf.h>
 #include <openssl/pem.h>
+#include <iostream>
 
 #include "tools.hpp"
 #include "../util/util.hpp"
@@ -88,6 +89,70 @@ std::vector<uint8_t> base64UrlDecode(const std::string& data) {
     return base64Decode(result);
 }
 
+std::string generateAccountToken(const AccountToken& token) {
+    std::vector<uint8_t> data;
+    uint32_t pid = token.pid;
+    uint32_t deviceId = token.deviceId;
+    uint64_t expiration = token.expiration;
+    util::getu32Little(pid);
+    util::getu32Little(deviceId);
+    util::getu64Little(expiration);
+
+    data.insert(data.end(), (uint8_t*) &pid, (uint8_t*) &pid + 4);
+    data.insert(data.end(), (uint8_t*) &deviceId, (uint8_t*) &deviceId + 4);
+    data.insert(data.end(), (uint8_t*) &expiration, (uint8_t*) &expiration + 8);
+
+    std::vector<uint8_t> signature = HMAC_SHA256(token.key, data);
+    // Only take the first 8 bytes of the signature since the token length can't be more than 32 characters,
+    // and base64 encoding will increase the length by 33%.
+    data.insert(data.end(), signature.begin(), signature.begin() + 8);
+
+    // Print the encrypted data in hex
+    std::stringstream ss;
+    for (uint8_t c : data) {
+        ss << std::hex << std::setfill('0') << std::setw(2) << (int) c;
+    }
+    std::cout << ss.str() << std::endl;
+
+    return base64Encode(data);
+}
+
+bool parseAccountToken(const std::string& token, AccountToken& out) {
+    std::vector<uint8_t> data;
+    try {
+        data = base64Decode(token);
+    } catch (const std::runtime_error& e) {
+        return false;
+    }
+
+    if (data.size() != 24) {
+        return false;
+    }
+
+    // Check the signature
+    std::vector<uint8_t> signature(data.end() - 8, data.end());
+    data.resize(data.size() - 8);
+    std::vector<uint8_t> calculatedSignature = HMAC_SHA256(out.key, data);
+    calculatedSignature.resize(8);
+    if (signature != calculatedSignature) {
+        return false;
+    }
+
+    uint32_t pid = *(uint32_t*) data.data();
+    uint32_t deviceId = *(uint32_t*) (data.data() + 4);
+    uint64_t expiration = *(uint64_t*) (data.data() + 8);
+
+    util::getu32Little(pid);
+    util::getu32Little(deviceId);
+    util::getu64Little(expiration);
+
+    out.pid = pid;
+    out.deviceId = deviceId;
+    out.expiration = expiration;
+
+    return true;
+}
+
 std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
     std::vector<uint8_t> result(EVP_MAX_MD_SIZE);
     unsigned int length = 0;
@@ -151,6 +216,66 @@ std::vector<uint8_t> AES_128_CTR(const std::vector<uint8_t>& key, const std::vec
     if (EVP_EncryptFinal_ex(ctx, result.data() + length, &finalLength) != 1) {
         EVP_CIPHER_CTX_free(ctx);
         throw std::runtime_error("Failed to finalize encryption with AES-128-CTR: " + util::getOpenSSLError());
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+    result.resize(length + finalLength);
+
+    return result;
+}
+
+std::vector<uint8_t> AES_192_ECB_ENC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_CIPHER_CTX: " + util::getOpenSSLError());
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_192_ecb(), nullptr, key.data(), nullptr) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize AES-192-ECB: " + util::getOpenSSLError());
+    }
+
+    std::vector<uint8_t> result(data.size() + 16);
+    int length = 0;
+    if (EVP_EncryptUpdate(ctx, result.data(), &length, data.data(), (int) data.size()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to encrypt data with AES-192-ECB: " + util::getOpenSSLError());
+    }
+
+    int finalLength = 0;
+    if (EVP_EncryptFinal_ex(ctx, result.data() + length, &finalLength) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize encryption with AES-192-ECB: " + util::getOpenSSLError());
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+    result.resize(length + finalLength);
+
+    return result;
+}
+
+std::vector<uint8_t> AES_192_ECB_DEC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_CIPHER_CTX: " + util::getOpenSSLError());
+    }
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_192_ecb(), nullptr, key.data(), nullptr) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize AES-192-ECB: " + util::getOpenSSLError());
+    }
+
+    std::vector<uint8_t> result(data.size() + 16);
+    int length = 0;
+    if (EVP_DecryptUpdate(ctx, result.data(), &length, data.data(), (int) data.size()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to decrypt data with AES-192-ECB: " + util::getOpenSSLError());
+    }
+
+    int finalLength = 0;
+    if (EVP_DecryptFinal_ex(ctx, result.data() + length, &finalLength) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize decryption with AES-192-ECB: " + util::getOpenSSLError());
     }
 
     EVP_CIPHER_CTX_free(ctx);
