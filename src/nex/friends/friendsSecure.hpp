@@ -39,8 +39,11 @@ private:
     std::string base64JWTKey;
 
     uint32_t nextRVConnId = 0;
+    std::mutex rvConnIdMutex;
     uint32_t nextCallId = 0;
+    std::mutex callIdMutex;
     std::unordered_map<uint32_t, FriendsRegisteredClientInfo> registeredClients;
+    std::recursive_mutex registeredClientsMutex;
 };
 
 } // namespace nex::rmc

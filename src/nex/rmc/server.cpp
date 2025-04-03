@@ -38,12 +38,14 @@ void Server::registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, u
 void Server::onConnect(prudp::PRUDPAddress address, uint32_t pid) {
     if (shouldStop) return;
 
+    std::unique_lock lock(pidMapMutex);
     pidMap[address] = pid;
 }
 
 void Server::onDisconnect(prudp::PRUDPAddress address) {
     if (shouldStop) return;
 
+    std::unique_lock lock(pidMapMutex);
     pidMap.erase(address);
 }
 
@@ -96,6 +98,15 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
                     std::to_string(request.extendedProtocolId) + ", method id: " +
                     std::to_string(request.methodId) + ")");
 
+        // Log the data that was received
+        std::stringstream ss;
+        ss << "Data: ";
+        for (auto byte : data) {
+            ss << std::setw(2) << std::setfill('0') << std::hex << (int) byte;
+        }
+
+        logger->log(Logger::level::DEBUG, logGroup, ss.str());
+
         sendMsg(ClientInfo{addr, minor_version, substreamId},
                 createError(request, Error::CORE__NOT_IMPLEMENTED), {});
         return;
@@ -106,7 +117,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
         params = call->second.parser(minor_version, data);
 
         std::unique_lock lock(queueMutex);
-
+        std::unique_lock pidMapLock(pidMapMutex);
         uint32_t pid = 0;
         auto pidIt = pidMap.find(addr);
         if (pidIt != pidMap.end()) {

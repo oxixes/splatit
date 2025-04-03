@@ -106,6 +106,7 @@ protected:
     bool shouldStop = false;
 
     std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
+    std::recursive_mutex pidMapMutex;
 private:
     // These are functions used to call the callback function with the correct parameters.
     // They expand the parameter vector into the parameters of the callback function.

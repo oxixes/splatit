@@ -73,9 +73,13 @@ private:
     std::shared_ptr<db::Database> db;
 
     uint32_t nextRVConnId = 1;
+    std::mutex rvConnIdMutex;
     uint32_t nextReqCallId = 0;
+    std::mutex reqCallIdMutex;
     std::unordered_map<uint32_t, SplatoonRegisteredClientInfo> registeredClients;
+    std::recursive_mutex registeredClientsMutex;
     std::unordered_map<uint32_t, SessionInfo> matchmakeSessions;
+    std::recursive_mutex matchmakeSessionsMutex;
 };
 
 } // namespace nex::rmc

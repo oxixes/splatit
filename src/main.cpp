@@ -26,7 +26,7 @@ void stop() {
     shouldStop = true;
 }
 
-void signalHandler(int signal) {
+void signalHandler(const int signal) {
     switch (signal) {
         case SIGINT:
         case SIGTERM:

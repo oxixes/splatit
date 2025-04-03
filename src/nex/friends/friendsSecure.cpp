@@ -107,14 +107,18 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
         clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData.friendPid));
     }
 
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
     registeredClients.insert(std::make_pair(client.pid, std::move(clientInfo)));
+    registeredClientsLock.unlock();
 
     logger->log(Logger::level::INFO, logGroup, "Registered " + std::to_string(client.pid) + " from "
                             + util::ipv4ToString(client.address.address) + ":" + std::to_string(client.address.address.port));
 
     retval.code = Error::CORE__UNKNOWN;
     retval.success = true;
+    std::unique_lock rvConnIdLock(rvConnIdMutex);
     rvConnId = nextRVConnId++;
+    rvConnIdLock.unlock();
 
     clientPublicUrl.proto = Protocol::PRUDP;
     clientPublicUrl.ip = client.address.address;
@@ -135,6 +139,7 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
 
 void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req, NNAInfo nnaInfo,
                                                   NintendoPresenceV2 presence, Datetime birthdate) {
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
@@ -142,6 +147,7 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         return;
     }
+    registeredClientsLock.unlock();
 
     auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
     auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
@@ -240,6 +246,8 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
     bool miiChanged = nnaInfo.info.mii.encode() != dbUserData.info.mii.encode();
 
     // Send presence (any possibly mii change) update to connected friends
+    registeredClientsLock.lock();
+    clientIt = registeredClients.find(client.pid);
     for (auto& friendPid : clientIt->second.friends) {
         AnyDataHolder data;
         presence.pid = client.pid;
@@ -258,6 +266,7 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
 }
 
 void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPresenceV2 presence) {
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
@@ -265,6 +274,7 @@ void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPr
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         return;
     }
+    registeredClientsLock.unlock();
 
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
                                                                       std::nullopt, std::nullopt,
@@ -292,6 +302,8 @@ void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPr
 
     sendMsg(client, res, {});
 
+    registeredClientsLock.lock();
+    clientIt = registeredClients.find(client.pid);
     // Send presence update to connected friends
     for (auto& friendPid : clientIt->second.friends) {
         AnyDataHolder data;
@@ -312,7 +324,9 @@ void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationT
     req.protocolId = 100; // Nintendo Notification Event Protocol
     req.extendedProtocolId = 0;
     req.methodId = NintendoNotificationEvent::getMethodForType(type);
+    std::unique_lock callIdLock(callIdMutex);
     req.callId = nextCallId++;
+    callIdLock.unlock();
 
     NintendoNotificationEvent notificationEvent(client.minorVersion);
     notificationEvent.type = type;
@@ -328,6 +342,7 @@ void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationT
 void FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     NintendoPresenceV2 presence(0);
 
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(pidMap[address]);
     if (clientIt != registeredClients.end()) {
         db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
@@ -362,6 +377,7 @@ void FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
 
         registeredClients.erase(clientIt);
     }
+    registeredClientsLock.unlock();
 
     Server::onDisconnect(address);
 }

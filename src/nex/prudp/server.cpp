@@ -1128,6 +1128,7 @@ void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRU
     output += (incoming) ? "<- " : "-> ";
     output += typeStr + " - " + flagsStr + " | " + seqIdStr + " | " + fragmentIdStr + " | " + sessionIdStr + " | " + sizeStr;
 
+
     logger->log(Logger::level::DEBUG, logGroup, output);
 }
 

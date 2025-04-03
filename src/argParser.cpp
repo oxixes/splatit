@@ -2,8 +2,8 @@
 
 namespace argParser {
 
-    bool parseArgs(int argc, char** argv, options& serverOptions, const std::shared_ptr<Logger::Logger>& logger) {
-        const option args[] = {
+    bool parseArgs(const int argc, char** argv, options& serverOptions, const std::shared_ptr<Logger::Logger>& logger) {
+        constexpr option args[] = {
                 {"data", required_argument, nullptr, 'd'},
                 {"log-level", required_argument, nullptr, 'l'},
                 {"help",               no_argument, nullptr, 'h'}

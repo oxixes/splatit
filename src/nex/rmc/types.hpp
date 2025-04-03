@@ -31,7 +31,6 @@ public:
         return "TYPE TO STRING NOT IMPLEMENTED";
     }
 
-protected:
     uint8_t minorVersion = 0;
 };
 

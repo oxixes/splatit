@@ -178,7 +178,7 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
     };
 
     festival::FestivalInfo defaultFestivalInfo{
-        1000,
+        0x1CE0,
         1,
         true,
         false,
