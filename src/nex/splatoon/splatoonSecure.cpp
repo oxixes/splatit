@@ -5,6 +5,8 @@
 
 #include <random>
 
+#include "../types/splatoonSecure/competitionRankingScoreInfo.hpp"
+
 namespace nex::rmc {
 
 SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db) :
@@ -39,6 +41,9 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     REGISTER_CALL(SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
     REGISTER_CALL(SplatoonSecureRMC::joinMatchmakeSessionWithParam, 109, 39);
     REGISTER_CALL(SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
+
+    // Protocol 112 - Ranking
+    REGISTER_CALL(SplatoonSecureRMC::getCompetitionRankingScore, 112, 16);
 }
 
 void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req, List<StationURL> targets, StationURL probe) {
@@ -171,7 +176,7 @@ void SplatoonSecureRMC::secure_register(ClientInfo client, Request req, List<Sta
 
     auto clientInfo = SplatoonRegisteredClientInfo();
     clientInfo.client = client;
-    clientInfo.urls = (std::vector<StationURL>) std::move(urls);
+    clientInfo.urls = std::vector(urls.begin(), urls.end());
     clientInfo.publicUrl = urlPublic;
     clientInfo.rvConnId = nextRVConnId;
 
@@ -520,7 +525,7 @@ void SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req, List<
     std::unique_lock clientsLock(registeredClientsMutex);
 
     List<PlayingSession> sessions(client.minorVersion);
-    for (const auto& pid : (std::vector<PID>) pids) {
+    for (const auto& pid : std::vector(pids.begin(), pids.end())) {
         auto clientInfoIt = registeredClients.find(pid);
         if (clientInfoIt == registeredClients.end()) continue;
         if (clientInfoIt->second.joinedGathering == nullptr) continue;
@@ -529,7 +534,7 @@ void SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req, List<
         session.pid = pid;
         session.gathering = *clientInfoIt->second.joinedGathering;
 
-        ((std::vector<PlayingSession>) sessions).push_back(std::move(session));
+        sessions.push_back(std::move(session));
     }
 
     std::vector<T_ptr> params(1);
@@ -842,7 +847,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
                 if (attrValue != sessionInfo.session->attributes[j]) sessionValid = false;
             }
 
-            if (std::stoi(criteria.gameMode) != sessionInfo.session->gameMode) sessionValid = false;
+            if (static_cast<uint32_t>(std::stoi(criteria.gameMode)) != sessionInfo.session->gameMode) sessionValid = false;
 
             auto minParticipants = (std::string) criteria.minParticipants;
             if (minParticipants.find(',') == std::string::npos) {
@@ -861,7 +866,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             if (sessionInfo.session->minParticipants < min_minParticipants || sessionInfo.session->minParticipants > max_minParticipants) sessionValid = false;
             if (sessionInfo.session->maxParticipants < min_maxParticipants || sessionInfo.session->maxParticipants > max_maxParticipants) sessionValid = false;
 
-            if (std::stoi(criteria.matchmakeSystemType) != sessionInfo.session->matchmakeSystemType) sessionValid = false;
+            if (static_cast<uint32_t>(std::stoi(criteria.matchmakeSystemType)) != sessionInfo.session->matchmakeSystemType) sessionValid = false;
             if (criteria.excludeUserPasswordSet && sessionInfo.session->userPasswordEnabled) sessionValid = false;
             if (criteria.excludeSystemPasswordSet && sessionInfo.session->systemPasswordEnabled) sessionValid = false;
             if (criteria.referGid != sessionInfo.session->referGid) sessionValid = false;
@@ -941,7 +946,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         params[0] = sessionInfo.session;
     }
 
-    sessionInfo.session->participationCount += (uint32_t) param.additionalParticipants.size() + 1;
+    sessionInfo.session->participationCount += static_cast<uint32_t>(param.additionalParticipants.size()) + 1;
 
     params[0]->minorVersion = client.minorVersion;
     sendMsg(client, res, params);
@@ -994,6 +999,61 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 //                             sessionInfo.session->id, pid, "", 1);
 //        }
 //    }
+}
+
+void SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingGetParam param)
+{
+    // TODO We don't know yet what this should return, so for debugging purposes, we'll just return a dummy value.
+    logger->log(Logger::level::DEBUG, logGroup, "getCompetitionRankingScore called with param: " + param.toString());
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.methodId = req.methodId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.success = true;
+
+    std::vector<T_ptr> params(1);
+
+    List<CompetitionRankingScoreInfo> scores(client.minorVersion);
+    CompetitionRankingScoreInfo scoreInfo(client.minorVersion);
+    scoreInfo.festivalId = 0x1CE0; // Festival ID
+    scoreInfo.unk1 = 0xCAFE0002;
+
+    List<UInt32> unk_vec_1(client.minorVersion);
+    unk_vec_1.emplace_back(client.minorVersion, 10);
+    unk_vec_1.emplace_back(client.minorVersion, 90);
+
+    List<UInt32> unk_vec_2(client.minorVersion);
+    unk_vec_2.emplace_back(client.minorVersion, 40);
+    unk_vec_2.emplace_back(client.minorVersion, 60);
+
+    scoreInfo.teamWins = std::move(unk_vec_1);
+    scoreInfo.teamVotes = std::move(unk_vec_2);
+
+    List<CompetitionRankingScoreData> scoreData(client.minorVersion);
+    CompetitionRankingScoreData data(client.minorVersion);
+    data.unk1 = 0xCAFE0005;
+    data.userId = 0xCAFE0006;
+    data.unk3 = 0xCAFE0007;
+    Datetime now(client.minorVersion);
+    data.uploadDate = now;
+    data.unk4 = true;
+    qBuffer buffer;
+    std::vector<uint8_t> dummyData = {0xCA, 0xFE, 0x00, 0x09};
+    buffer.data = std::move(dummyData);
+    data.metadata = std::move(buffer);
+
+    //scoreData.push_back(data);
+    scoreInfo.scoreData = std::move(scoreData);
+
+    scores.push_back(scoreInfo);
+
+    params[0] = std::make_shared<List<CompetitionRankingScoreInfo>>(scores);
+
+    logger->log(Logger::level::DEBUG, logGroup, "Returning dummy competition ranking score for client " + std::to_string(client.pid) + ": " + scores.toString());
+
+    sendMsg(client, res, params);
 }
 
 void SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {

@@ -12,7 +12,7 @@ namespace nex::rmc {
         explicit Gathering(uint8_t minorVersion) : Structure(minorVersion) {};
         ~Gathering() override = default;
 
-        [[nodiscard]] virtual std::vector<uint8_t> encode() const override {
+        [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> data;
 
             auto idData = id.encode();

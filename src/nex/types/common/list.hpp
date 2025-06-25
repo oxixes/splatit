@@ -51,7 +51,7 @@ namespace nex::rmc {
         [[nodiscard]] std::string toString(int indentation = 0) const override { // NOLINT(*-default-arguments)
             std::string str = getName() + "[";
             for (const auto& item : data) {
-                str += item.toString(indentation + 1);
+                str += item.toString(indentation);
                 str += ", ";
             }
             if (!data.empty()) {

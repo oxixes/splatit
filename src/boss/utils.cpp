@@ -178,8 +178,8 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
     };
 
     festival::FestivalInfo defaultFestivalInfo{
-        0x1CE0,
-        1,
+        0x1CE1,
+        2,
         true,
         false,
         {
@@ -253,9 +253,9 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
         {100, 100, 100, 255},
         std::chrono::system_clock::now(),
         std::chrono::system_clock::now(),
-        std::chrono::system_clock::now(),
-        std::chrono::system_clock::now(),
-        std::chrono::system_clock::now(),
+        std::chrono::system_clock::now() + std::chrono::days(1024),
+        std::chrono::system_clock::now() + std::chrono::days(1025),
+        std::chrono::system_clock::now() + std::chrono::days(1025),
         festival::Language::AMERICAN_ENGLISH
     };
 

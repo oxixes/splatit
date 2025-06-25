@@ -5,6 +5,7 @@ target_sources(splatoon_server PRIVATE
         list.hpp
         map.hpp
         result.hpp
+        resultRange.hpp
         datetime.hpp
         variant.hpp
         stationURL.hpp

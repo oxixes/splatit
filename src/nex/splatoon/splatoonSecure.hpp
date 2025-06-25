@@ -12,6 +12,7 @@
 #include "../types/splatoonSecure/notificationEvent.hpp"
 #include "../types/splatoonSecure/joinMatchmakeSessionParam.hpp"
 #include "../types/splatoonSecure/createMatchmakeSessionParam.hpp"
+#include "../types/splatoonSecure/competitionRankingGetParam.hpp"
 
 namespace nex::rmc {
 
@@ -59,7 +60,8 @@ private:
     void updateProgressScore(ClientInfo client, Request req, UInt32 gId, UInt8 score);
     void createMatchmakeSessionWithParam(ClientInfo client, Request req, CreateMatchmakeSessionParam param);
     void joinMatchmakeSessionWithParam(ClientInfo client, Request req, JoinMatchmakeSessionParam param);
-    void autoMatchmakeWithParam_Postpone(ClientInfo sessionInfo, Request req, AutoMatchmakeParam param);
+    void autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param);
+    void getCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingGetParam param);
 
     void onDisconnect(prudp::PRUDPAddress address) override;
 

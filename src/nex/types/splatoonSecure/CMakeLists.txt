@@ -8,4 +8,7 @@ target_sources(splatoon_server PRIVATE
         notificationEvent.hpp
         matchmakeBlockListParam.hpp
         joinMatchmakeSessionParam.hpp
-        createMatchmakeSessionParam.hpp)
+        createMatchmakeSessionParam.hpp
+        competitionRankingGetParam.hpp
+        competitionRankingScoreInfo.hpp
+        competitionRankingScoreData.hpp)
