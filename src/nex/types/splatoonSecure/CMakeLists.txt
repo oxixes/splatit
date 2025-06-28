@@ -11,4 +11,5 @@ target_sources(splatoon_server PRIVATE
         createMatchmakeSessionParam.hpp
         competitionRankingGetParam.hpp
         competitionRankingScoreInfo.hpp
-        competitionRankingScoreData.hpp)
+        competitionRankingScoreData.hpp
+        competitionRankingUploadScoreParam.hpp)

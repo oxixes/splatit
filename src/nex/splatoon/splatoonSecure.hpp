@@ -13,6 +13,7 @@
 #include "../types/splatoonSecure/joinMatchmakeSessionParam.hpp"
 #include "../types/splatoonSecure/createMatchmakeSessionParam.hpp"
 #include "../types/splatoonSecure/competitionRankingGetParam.hpp"
+#include "../types/splatoonSecure/competitionRankingUploadScoreParam.hpp"
 
 namespace nex::rmc {
 
@@ -27,7 +28,7 @@ struct SplatoonRegisteredClientInfo {
     std::vector<StationURL> urls;
     StationURL publicUrl;
     uint32_t rvConnId;
-    std::shared_ptr<Gathering> joinedGathering = nullptr;
+    std::vector<std::shared_ptr<Gathering>> joinedGatherings = {};
     NATProperties lastReportedNATProperties;
 };
 
@@ -52,6 +53,7 @@ private:
     void findBySingleId(ClientInfo client, Request req, UInt32 id);
     void getSessionUrls(ClientInfo client, Request req, UInt32 gId);
     void updateSessionHost(ClientInfo client, Request req, UInt32 gId, Bool migrateOwner);
+    void migrateGatheringOwnership(ClientInfo client, Request req, UInt32 gId, List<PID> potentialNewOwners, Bool participantsOnly);
     void endParticipation(ClientInfo client, Request req, UInt32 gId, String msg);
     void closeParticipation(ClientInfo client, Request req, UInt32 gId);
     void openParticipation(ClientInfo client, Request req, UInt32 gId);
@@ -62,6 +64,7 @@ private:
     void joinMatchmakeSessionWithParam(ClientInfo client, Request req, JoinMatchmakeSessionParam param);
     void autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param);
     void getCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingGetParam param);
+    void uploadCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingUploadScoreParam param);
 
     void onDisconnect(prudp::PRUDPAddress address) override;
 
@@ -70,7 +73,7 @@ private:
                           const std::string& strParam, uint32_t param3);
     void unregisterGathering_internal(uint32_t gId, uint32_t srcPid);
 //    void addPlayersToSession(uint32_t gId, const std::vector<uint32_t>& playerPids);
-    void removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg = "", bool disconnected = false, bool switching = false);
+    void removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg = "", bool disconnected = false);
 
     std::shared_ptr<db::Database> db;
 
