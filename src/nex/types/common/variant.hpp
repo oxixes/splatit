@@ -23,6 +23,8 @@ namespace nex::rmc {
     class Variant : public Type {
     public:
         explicit Variant(uint8_t minorVersion = 0) : Type(minorVersion) {}
+        Variant(const Variant& other) = default;
+        Variant(Variant&& other) noexcept = default;
         ~Variant() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -183,6 +185,9 @@ namespace nex::rmc {
                     throw std::runtime_error("Invalid variant type");
             }
         }
+
+        Variant& operator=(const Variant& other) = default;
+        Variant& operator=(Variant&& other) noexcept = default;
 
     private:
         std::any value;

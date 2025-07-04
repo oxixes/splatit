@@ -62,26 +62,30 @@ void Request::setBody(std::vector<uint8_t>& newBody) {
     body = newBody;
 }
 
-Request Request::parse(const std::vector<uint8_t>& data, size_t& length) {
+void Request::setBody(std::vector<uint8_t>&& newBody) {
+    body = std::move(newBody);
+}
+
+std::unique_ptr<Request> Request::parse(const std::vector<uint8_t>& data, size_t& length) {
     length = 0;
-    Request request;
+    std::unique_ptr<Request> request = std::make_unique<Request>();
 
     if (!isHeaderComplete(data, length)) {
         throw NotCompleteException("Header incomplete");
     }
 
-    request.parseHTTPHeader(data, length);
+    request->parseHTTPHeader(data, length);
 
     size_t contentLength = 0;
-    if (!request.isBodyComplete(data, contentLength, length)) {
+    if (!request->isBodyComplete(data, contentLength, length)) {
         throw NotCompleteException("Body incomplete");
     }
 
-    request.parseHTTPBody(data, length, contentLength);
+    request->parseHTTPBody(data, length, contentLength);
 
     length += contentLength;
 
-    return request;
+    return std::move(request);
 }
 
 bool Request::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {
@@ -247,7 +251,6 @@ std::vector<uint8_t> Request::serialize() const {
         }
 
         for (auto& value : header.second) {
-
             data.insert(data.end(), header.first.begin(), header.first.end());
             data.push_back(':');
             data.push_back(' ');
@@ -264,7 +267,7 @@ std::vector<uint8_t> Request::serialize() const {
 
     data.insert(data.end(), body.begin(), body.end());
 
-    return data;
+    return std::move(data);
 }
 
 } // namespace http

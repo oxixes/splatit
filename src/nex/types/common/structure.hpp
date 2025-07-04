@@ -13,6 +13,8 @@ namespace nex::rmc {
 
     protected:
         explicit Structure(uint8_t minorVersion) : Type(minorVersion) {};
+        Structure(const Structure& other) = default;
+        Structure(Structure&& other) noexcept = default;
 
         [[nodiscard]] std::vector<uint8_t> encodeHeader(uint8_t version, uint32_t length) const {
             if (minorVersion < 3) return {};
@@ -41,6 +43,9 @@ namespace nex::rmc {
 
             return sizeof(uint8_t) + sizeof(uint32_t);
         }
+
+        Structure& operator=(const Structure& other) = default;
+        Structure& operator=(Structure&& other) noexcept = default;
     };
 
 } // namespace nex::rmc

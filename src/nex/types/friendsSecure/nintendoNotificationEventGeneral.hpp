@@ -10,6 +10,9 @@ namespace nex::rmc {
     class NintendoNotificationEventGeneral : public Data {
     public:
         explicit NintendoNotificationEventGeneral(uint8_t minorVersion) : Data(minorVersion) {};
+        NintendoNotificationEventGeneral(const NintendoNotificationEventGeneral& other) = default;
+        NintendoNotificationEventGeneral(NintendoNotificationEventGeneral&& other) noexcept = default;
+        ~NintendoNotificationEventGeneral() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -44,6 +47,9 @@ namespace nex::rmc {
 
             return size + parentSize;
         }
+
+        NintendoNotificationEventGeneral& operator=(const NintendoNotificationEventGeneral& other) = default;
+        NintendoNotificationEventGeneral& operator=(NintendoNotificationEventGeneral&& other) noexcept = default;
 
         UInt32 u32_param;
         UInt64 u64_param1;

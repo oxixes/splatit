@@ -21,15 +21,15 @@ namespace boss {
 
 extern json bossManifest; // Defined in /boss/utils.cpp
 
-http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                             const std::string& titleId, const std::string& tasksheetId,
-                             const std::shared_ptr<SettingsManager>& settingsMgr);
-http::Response p01_data(const http::Request& req, const std::string& titleId, const std::string& tasksheetId,
-                        const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr);
-http::Response p01_policylist(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                              const std::shared_ptr<SettingsManager>& settingsMgr);
+void p01_tasksheet(http::Server* srv, std::unique_ptr<http::Context> ctx,
+                   const std::string& titleId, const std::string& tasksheetId,
+                   const std::shared_ptr<SettingsManager>& settingsMgr);
+void p01_data(http::Server* srv, std::unique_ptr<http::Context> ctx, const std::string& titleId,
+              const std::string& tasksheetId, const std::string& fileHash,
+              const std::shared_ptr<SettingsManager>& settingsMgr);
+void p01_policylist(http::Server* srv, std::unique_ptr<http::Context> ctx);
 
-http::Response getError(int status, http::Version version);
+std::unique_ptr<http::Response> getError(int status, http::Version version);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
 void unregisterRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);

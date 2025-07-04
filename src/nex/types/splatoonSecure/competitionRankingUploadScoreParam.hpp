@@ -10,6 +10,8 @@ namespace nex::rmc {
     class CompetitionRankingUploadScoreParam : public Structure {
     public:
         explicit CompetitionRankingUploadScoreParam(uint8_t minorVersion) : Structure(minorVersion) {};
+        CompetitionRankingUploadScoreParam(const CompetitionRankingUploadScoreParam& other) = default;
+        CompetitionRankingUploadScoreParam(CompetitionRankingUploadScoreParam&& other) noexcept = default;
         ~CompetitionRankingUploadScoreParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -71,6 +73,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "CompetitionRankingUploadScoreParam"; }
+
+        CompetitionRankingUploadScoreParam& operator=(const CompetitionRankingUploadScoreParam& other) = default;
+        CompetitionRankingUploadScoreParam& operator=(CompetitionRankingUploadScoreParam&& other) noexcept = default;
 
         UInt32 unk1;
         UInt32 festivalId;

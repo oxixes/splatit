@@ -10,6 +10,8 @@ namespace nex::rmc {
     class CompetitionRankingGetParam : public Structure {
     public:
         explicit CompetitionRankingGetParam(uint8_t minorVersion) : Structure(minorVersion), resultRange(minorVersion) {};
+        CompetitionRankingGetParam(const CompetitionRankingGetParam& other) = default;
+        CompetitionRankingGetParam(CompetitionRankingGetParam&& other) noexcept = default;
         ~CompetitionRankingGetParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -51,6 +53,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "CompetitionRankingGetParam"; }
+
+        CompetitionRankingGetParam& operator=(const CompetitionRankingGetParam& other) = default;
+        CompetitionRankingGetParam& operator=(CompetitionRankingGetParam&& other) noexcept = default;
 
         UInt32 unk1;
         ResultRange resultRange;

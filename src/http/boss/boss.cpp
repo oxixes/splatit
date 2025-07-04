@@ -9,10 +9,14 @@ namespace boss {
  * Returns the appropiate tasksheet requested, based on the title id (which game)
  * and tasksheet id.
  */
-http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                             const std::string& titleId, const std::string& tasksheetId,
-                             const std::shared_ptr<SettingsManager>& settingsMgr) {
-    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
+void p01_tasksheet(http::Server* srv, std::unique_ptr<http::Context> ctx,
+                   const std::string& titleId, const std::string& tasksheetId,
+                   const std::shared_ptr<SettingsManager>& settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_GET) {
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
+    }
 
     json tasksheetManifest = bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId];
 
@@ -31,10 +35,12 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
     for (auto& file : tasksheetManifest["files"].items()) {
         fs::path filePath = settingsMgr->getBOSSPath() / file.value()["path"];
         if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
-            logger->log(Logger::level::WARN, Logger::group::BOSS,
+            ctx->logger->log(Logger::level::WARN, Logger::group::BOSS,
                         "The BOSS file " + file.value()["path"].get<std::string>() + " does not exist or is not a file.");
 
-            return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+            std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            return;
         }
 
         pugi::xml_node fileNode = files.append_child("File");
@@ -56,32 +62,32 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
         notify.append_child("LED").text().set(file.value()["notify"]["LED"].get<bool>());
     }
 
-    http::Response res(req.getVersion(), HTTP_STATUS_OK);
-    res.setHeader("Content-Type", "application/xml; charset=utf-8");
-    res.setHeader("Date", util::getDateHeader());
-    res.setHeader("Cache-Control", "private, must-revalidate, max-age=0");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader("X-Content-Type-Options", "nosniff, nosniff");
-    res.setHeader("X-XSS-Protection", "1; mode=block");
-    res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-    res.setHeader("X-Download-Options", "noopen");
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    res->setHeader("Content-Type", "application/xml; charset=utf-8");
+    res->setHeader("Date", util::getDateHeader());
+    res->setHeader("Cache-Control", "private, must-revalidate, max-age=0");
+    res->setHeader("X-Frame-Options", "SAMEORIGIN");
+    res->setHeader("X-Content-Type-Options", "nosniff, nosniff");
+    res->setHeader("X-XSS-Protection", "1; mode=block");
+    res->setHeader("X-Permitted-Cross-Domain-Policies", "none");
+    res->setHeader("X-Download-Options", "noopen");
 
     std::filesystem::file_time_type lastModified = fs::last_write_time(settingsMgr->getBOSSPath() / "manifest.json");
     time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<
             std::chrono::system_clock::duration>(lastModified - std::filesystem::file_time_type::clock::now() +
             std::chrono::system_clock::now()));
 
-    res.setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
-    if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
+    res->setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
+    if (ctx->request->getVersion() == http::Version::HTTP_1_1) res->setHeader("Connection", "close");
 
     std::stringstream ss;
     doc.save(ss, "    ");
 
     std::string body = ss.str();
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
-    res.setBody(bodyVec);
+    res->setBody(std::move(bodyVec));
 
-    return res;
+    srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
 /*
@@ -89,60 +95,76 @@ http::Response p01_tasksheet(const std::shared_ptr<Logger::Logger>& logger, cons
  * Returns the requested file. These URLs are obtained from the tasksheets returned by
  * p01_tasksheet.
  */
-http::Response p01_data(const http::Request& req, const std::string& titleId, const std::string& tasksheetId,
-                        const std::string& fileHash, const std::shared_ptr<SettingsManager>& settingsMgr) {
-    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
+void p01_data(http::Server* srv, std::unique_ptr<http::Context> ctx, const std::string& titleId,
+              const std::string& tasksheetId, const std::string& fileHash,
+              const std::shared_ptr<SettingsManager>& settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_GET) {
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
+    }
 
     fs::path filePath = settingsMgr->getBOSSPath() / bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId]["files"][fileHash]["path"];
 
     if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
-        return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
     }
 
     std::ifstream file(filePath, std::ios::binary);
     std::vector<uint8_t> body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-    http::Response res(req.getVersion(), HTTP_STATUS_OK);
-    res.setHeader("Content-Type", "applicatoin/octet-stream"); // Yes, "applicatoin", Nintendo made a typo
-    res.setHeader("Date", util::getDateHeader());
-    res.setHeader("Cache-Control", "private, max-age=33835");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader("X-Content-Type-Options", "nosniff, nosniff");
-    res.setHeader("X-XSS-Protection", "1; mode=block");
-    res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-    res.setHeader("X-Download-Options", "noopen");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Content-Disposition", "attachment");
-    res.setHeader("Content-Tranfer-Encoding", "binary");
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    res->setHeader("Content-Type", "applicatoin/octet-stream"); // Yes, "applicatoin", Nintendo made a typo
+    res->setHeader("Date", util::getDateHeader());
+    res->setHeader("Cache-Control", "private, max-age=33835");
+    res->setHeader("X-Frame-Options", "SAMEORIGIN");
+    res->setHeader("X-Content-Type-Options", "nosniff, nosniff");
+    res->setHeader("X-XSS-Protection", "1; mode=block");
+    res->setHeader("X-Permitted-Cross-Domain-Policies", "none");
+    res->setHeader("X-Download-Options", "noopen");
+    res->setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res->setHeader("Content-Disposition", "attachment");
+    res->setHeader("Content-Tranfer-Encoding", "binary");
 
     std::filesystem::file_time_type lastModified = fs::last_write_time(filePath);
     time_t lastModifiedTime = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<
             std::chrono::system_clock::duration>(lastModified - std::filesystem::file_time_type::clock::now() +
                                                  std::chrono::system_clock::now()));
 
-    res.setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
-    if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
+    res->setHeader("Last-Modified", util::getDateHeader(lastModifiedTime));
+    if (ctx->request->getVersion() == http::Version::HTTP_1_1) res->setHeader("Connection", "close");
 
-    res.setBody(body);
+    res->setBody(std::move(body));
 
-    return res;
+    srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
 /*
  * Handler for GET https://nppl.app.<domain>/p01/policylist/<console type>/<major version>/<country>
  * Returns the requested policy list.
  */
-http::Response p01_policylist(const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                              const std::shared_ptr<SettingsManager>& settingsMgr) {
-    if (req.getMethod() != http::Method::M_GET) return getError(HTTP_STATUS_METHOD_NOT_ALLOWED, req.getVersion());
+void p01_policylist(http::Server* srv, std::unique_ptr<http::Context> ctx) {
+    if (ctx->request->getMethod() != http::Method::M_GET) {
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
+    }
 
     // Get the country
-    std::string country = req.getPath().substr(req.getPath().find_last_of('/') + 1);
-    if (country.size() != 2) return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+    std::string country = ctx->request->getPath().substr(ctx->request->getPath().find_last_of('/') + 1);
+    if (country.size() != 2) {
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
+    }
 
     if (bossManifest["policyLists"].find(country) == bossManifest["policyLists"].end() &&
         bossManifest["policyLists"].find(bossManifest["backupPolicyCountry"]) == bossManifest["policyLists"].end()) {
-        return getError(HTTP_STATUS_NOT_FOUND, req.getVersion());
+        std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
     }
 
     json policyList = bossManifest["policyLists"].find(country) != bossManifest["policyLists"].end() ?
@@ -168,34 +190,34 @@ http::Response p01_policylist(const std::shared_ptr<Logger::Logger>& logger, con
         priorityNode.append_child("Level").text().set(priority.value()["level"].get<std::string>().c_str(), priority.value()["level"].get<std::string>().size());
     }
 
-    http::Response res(req.getVersion(), HTTP_STATUS_OK);
-    res.setHeader("Content-Type", "application/xml; charset=utf-8");
-    res.setHeader("Date", util::getDateHeader());
-    if (req.getVersion() == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    res->setHeader("Content-Type", "application/xml; charset=utf-8");
+    res->setHeader("Date", util::getDateHeader());
+    if (ctx->request->getVersion() == http::Version::HTTP_1_1) res->setHeader("Connection", "close");
 
     std::stringstream ss;
     doc.save(ss, "    ");
 
     std::string body = ss.str();
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
-    res.setBody(bodyVec);
+    res->setBody(std::move(bodyVec));
 
-    return res;
+    srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
-http::Response getError(int status, http::Version version) {
-    http::Response res(version, status);
+std::unique_ptr<http::Response> getError(int status, http::Version version) {
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(version, status);
 
-    res.setHeader("Content-Type", "text/html; charset=UTF-8");
-    res.setHeader("Date", util::getDateHeader());
-    if (version == http::Version::HTTP_1_1) res.setHeader("Connection", "close");
+    res->setHeader("Content-Type", "text/html; charset=UTF-8");
+    res->setHeader("Date", util::getDateHeader());
+    if (version == http::Version::HTTP_1_1) res->setHeader("Connection", "close");
 
     std::string error = http::STATUS_CODE_MSG.at(status);
     std::vector<uint8_t> body(error.begin(), error.end());
 
-    res.setBody(body);
+    res->setBody(body);
 
-    return res;
+    return std::move(res);
 }
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr) {
@@ -209,13 +231,8 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
             path.append(titleId).append("/").append(tasksheetId);
 
             server->registerRoute("npts.app." + domain, path,
-                                  [titleId, tasksheetId, settingsMgr](const std::shared_ptr<Logger::Logger>& logger,
-                                                                      const http::Request& req, sock::IPv4Addr client,
-                                                                      bool& shouldStop, bool& shouldClose,
-                                                                      const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                                                                      const std::function<void(unsigned int)>& unregisterCloseCall) {
-                shouldClose = true;
-                return p01_tasksheet(logger, req, titleId, tasksheetId, settingsMgr);
+                                  [titleId, tasksheetId, settingsMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                return p01_tasksheet(srv, std::move(ctx), titleId, tasksheetId, settingsMgr);
             });
 
             for (auto& file : tasksheet.value()["files"].items()) {
@@ -226,30 +243,21 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 
 
                 server->registerRoute("npdi.cdn." + domain, path,
-                                      [titleId, tasksheetId, fileHash, settingsMgr](const std::shared_ptr<Logger::Logger>& logger,
-                                                                                      const http::Request& req, sock::IPv4Addr client,
-                                                                                      bool& shouldStop, bool& shouldClose,
-                                                                                      const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                                                                                      const std::function<void(unsigned int)>& unregisterCloseCall) {
-                    shouldClose = false;
-                    return p01_data(req, titleId, tasksheetId, fileHash, settingsMgr);
+                                      [titleId, tasksheetId, fileHash, settingsMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                    return p01_data(srv, std::move(ctx), titleId, tasksheetId, fileHash, settingsMgr);
                 });
             }
         }
     }
 
     server->registerRegexRoute("nppl.app." + domain, R"(^\/p01\/policylist\/1\/1\/[A-Z]{2}$)",
-                               [settingsMgr](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                                             sock::IPv4Addr client, bool& shouldStop, bool& shouldClose,
-                                             const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                                             const std::function<void(unsigned int)>& unregisterCloseCall) {
-        shouldClose = true;
-        return p01_policylist(logger, req, settingsMgr);
+                               [](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+        return p01_policylist(srv, std::move(ctx));
     });
 
-    std::function errorHandler = [](const std::shared_ptr<Logger::Logger>& logger, const http::Request& req,
-                                    sock::IPv4Addr client, int httpStatus) {
-        return getError(httpStatus, req.getVersion());
+    std::function errorHandler = [](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+        std::unique_ptr<http::Response> res = getError(ctx->status, ctx->request->getVersion());
+        srv->sendResponse(std::move(ctx), std::move(res), false);
     };
 
     server->registerErrorPage("npts.app." + domain, errorHandler);

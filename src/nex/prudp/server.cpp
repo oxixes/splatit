@@ -1065,18 +1065,21 @@ void Server::stop() {
 
     logger->log(Logger::level::INFO, logGroup, "Stopping PRUDP server");
 
-    socketMgr->close(mainSocketID, true);
-    socket = nullptr;
-
     std::unique_lock clientsLock(clientsMutex);
     std::unique_lock delayedPacketsLock(delayedPacketsMutex);
 
     clients.clear();
     delayedPackets.clear();
+
+    socketMgr->close(mainSocketID, true);
+    socket = nullptr;
 }
 
 void Server::logPacket(const std::shared_ptr<Packet>& packet, bool incoming, PRUDPAddress addr) {
     std::string typeStr = "UNKNOWN";
+
+    if (packet->type == Type::PING) return;
+
     switch (packet->type) {
         case Type::SYN:
             typeStr = "SYN";

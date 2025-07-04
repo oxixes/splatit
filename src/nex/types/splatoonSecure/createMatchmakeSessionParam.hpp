@@ -9,6 +9,8 @@ namespace nex::rmc {
     class CreateMatchmakeSessionParam : public Structure {
     public:
         explicit CreateMatchmakeSessionParam(uint8_t minorVersion) : Structure(minorVersion), srcMatchmakeSession(minorVersion) {};
+        CreateMatchmakeSessionParam(const CreateMatchmakeSessionParam& other) = default;
+        CreateMatchmakeSessionParam(CreateMatchmakeSessionParam&& other) noexcept = default;
         ~CreateMatchmakeSessionParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -62,6 +64,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "CreateMatchmakeSessionParam"; }
+
+        CreateMatchmakeSessionParam& operator=(const CreateMatchmakeSessionParam& other) = default;
+        CreateMatchmakeSessionParam& operator=(CreateMatchmakeSessionParam&& other) noexcept = default;
 
         MatchmakeSession srcMatchmakeSession;
         List<PID> additionalParticipants;

@@ -127,23 +127,7 @@ std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid,
     return dbCommand;
 }
 
-std::unique_ptr<Result> Database::getResult(uint32_t commandID) {
-    std::unique_lock<std::mutex> lock(resultsMutex);
-
-    auto result = std::find_if(this->results.begin(), this->results.end(),
-        [commandID](const std::unique_ptr<Result>& result) {
-            return result->commandId == commandID;
-        });
-
-    if (result == this->results.end()) return nullptr;
-
-    auto resultPtr = std::move(*result);
-    results.erase(result);
-
-    return resultPtr;
-}
-
-std::shared_ptr<Database> Database::createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger) {
+std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(std::move(logger), config["path"].get<std::string>());
         return std::shared_ptr<Database>((Database*) db);
@@ -154,28 +138,17 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, std::shar
     }
 }
 
-uint32_t Database::runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
-                const std::function<uint32_t(std::function<void()>)>& registerCloseCall,
-                const std::function<void(uint32_t)>& unregisterCloseCall,
-                bool& shouldStop) {
+std::shared_ptr<Promise<std::unique_ptr<Result>>> Database::runCommand(std::unique_ptr<Command> command,
+                std::shared_ptr<std::mutex> promisesMutex,
+                std::shared_ptr<std::condition_variable> promisesCV,
+                std::shared_ptr<PromisesQueue> promisesQueue) {
+    if (shouldStop) return std::make_shared<Promise<std::unique_ptr<Result>>>();
 
-    uint32_t cmdId = db->queueCommand(std::move(command), true);
-    unsigned int closeCallId;
-    if (registerCloseCall != nullptr)
-        closeCallId = registerCloseCall([cmdId, &db]() { db->notifyCommand(cmdId); });
-    // The server may be set to stop while the closeCall is being registered, which may cause it not to be called,
-    // so we check if it should stop here.
-    if (!shouldStop) {
-        db->processQueue();
-        db->waitForCommand(cmdId, std::make_shared<bool>(shouldStop));
-    }
+    auto promise = queueCommand(std::move(command), std::move(promisesMutex), std::move(promisesCV), std::move(promisesQueue));
 
-    if (shouldStop) throw std::runtime_error("Server is stopping");
-    db->clearCommandMutex(cmdId);
-    if (unregisterCloseCall != nullptr && registerCloseCall != nullptr)
-        unregisterCloseCall(closeCallId);
+    processQueue();
 
-    return cmdId;
+    return promise;
 }
 
 DBType Database::getType() const {

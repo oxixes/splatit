@@ -17,6 +17,17 @@
 
 namespace http {
 
+struct Context {
+    std::shared_ptr<Logger::Logger> logger;
+    sock::IPv4Addr client;
+    uint32_t clientSockId;
+    std::shared_ptr<Request> request;
+    int status;
+    std::shared_ptr<db::PromisesQueue> promisesQueue;
+    std::shared_ptr<std::mutex> queueMutex;
+    std::shared_ptr<std::condition_variable> queueCV;
+};
+
 class Server {
 public:
     Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
@@ -26,21 +37,18 @@ public:
     void listen(int workerCount, const std::function<void()>& closeFunc);
     void stop();
 
-    uint32_t registerCloseCall(std::function<void()> closeFunc);
-    void unregisterCloseCall(uint32_t id);
+    void registerRoute(const std::string& host, const std::string& path, std::function<void(
+            Server*, std::unique_ptr<Context>)> func);
 
-    void registerRoute(const std::string& host, const std::string& path, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
-            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
-
-    void registerRegexRoute(const std::string& host, const std::string& path, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
-            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func);
+    void registerRegexRoute(const std::string& host, const std::string& path, std::function<void(
+            Server*, std::unique_ptr<Context>)> func);
 
     void unregisterHost(const std::string& host);
 
-    void registerErrorPage(const std::string& host, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)> func);
+    void registerErrorPage(const std::string& host, std::function<void(
+            Server*, std::unique_ptr<Context>)> func);
+
+    void sendResponse(std::unique_ptr<http::Context> context, std::unique_ptr<http::Response> response, bool keepAlive = false);
 
 private:
     std::shared_ptr<Logger::Logger> logger;
@@ -53,32 +61,24 @@ private:
     std::unordered_map<uint32_t, std::vector<uint8_t>> buffers;
     std::vector<std::thread> threads;
 
-    std::queue<std::pair<uint32_t, http::Request>> requestsQueue;
-    std::mutex requestsQueueMutex;
-
-    std::mutex workerMutex;
-    std::condition_variable workerCV;
+    std::queue<std::pair<uint32_t, std::shared_ptr<http::Request>>> requestsQueue;
+    std::shared_ptr<db::PromisesQueue> promisesQueue = std::make_shared<db::PromisesQueue>();
+    std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
+    std::shared_ptr<std::condition_variable> queueCV = std::make_shared<std::condition_variable>();
 
     // This is a map of maps, the first key is the host, the second key is the path for that given host
-    std::unordered_map<std::string, std::unordered_map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
-            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>> routes;
+    std::unordered_map<std::string, std::unordered_map<std::string, std::function<void(
+            Server*, std::unique_ptr<Context>)>>> routes;
 
-    std::unordered_map<std::string, std::vector<std::pair<std::regex, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, bool&, bool&,
-            std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>>> regexRoutes;
+    std::unordered_map<std::string, std::vector<std::pair<std::regex, std::function<void(
+            Server*, std::unique_ptr<Context>)>>>> regexRoutes;
+
+    std::unordered_map<std::string, std::function<void(
+            Server*, std::unique_ptr<Context>)>> errorPages;
     std::mutex routesMutex;
-
-    std::unordered_map<std::string, std::function<http::Response(
-            std::shared_ptr<Logger::Logger>, http::Request, sock::IPv4Addr, int)>> errorPages;
-    std::mutex errorPagesMutex;
 
     std::map<uint32_t, sock::IPv4Addr> clients;
     std::mutex clientsMutex;
-
-    uint32_t closeCallID = 0;
-    std::map<uint32_t, std::function<void()>> closeCalls;
-    std::mutex closeCallsMutex;
 
     bool shouldStop = false;
 
@@ -87,8 +87,8 @@ private:
     void onClose(uint32_t sockId);
     void onDataReceived(uint32_t sockId, std::vector<uint8_t> data);
 
-    static http::Response getError(http::Version version, int status);
-    void sendError(uint32_t sockId, int status, const http::Request& request, sock::IPv4Addr client);
+    static std::unique_ptr<http::Response> getError(http::Version version, int status);
+    void sendError(uint32_t sockId, int status, const std::shared_ptr<Request>& request, sock::IPv4Addr client);
     // Sent when a request is not available, as it couldn't be parsed
     void sendError(uint32_t sockId, int status);
 };

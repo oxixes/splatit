@@ -5,6 +5,8 @@
 #include <vector>
 #include <unordered_map>
 #include <stdexcept>
+#include <span>
+#include <memory>
 
 #include "common.hpp"
 
@@ -20,8 +22,12 @@ enum class Method {
 
 class Request {
 public:
+    Request() = default;
     explicit Request(const std::string& path, Method method = Method::M_GET, Version version = Version::HTTP_1_1);
-    static Request parse(const std::vector<uint8_t>& data, size_t& length);
+    Request(const Request&) = default;
+    Request(Request&&) = default;
+
+    static std::unique_ptr<Request> parse(const std::vector<uint8_t>& data, size_t& length);
 
     [[nodiscard]] Method getMethod() const;
     [[nodiscard]] Version getVersion() const;
@@ -38,12 +44,14 @@ public:
 
     [[nodiscard]] const std::vector<uint8_t>& getBody() const;
     void setBody(std::vector<uint8_t>& newBody);
+    void setBody(std::vector<uint8_t>&& newBody);
 
     [[nodiscard]] std::vector<uint8_t> serialize() const;
 
-private:
-    Request() = default;
+    Request& operator=(const Request&) = default;
+    Request& operator=(Request&&) = default;
 
+private:
     Method method = Method::M_GET;
     Version version = Version::HTTP_1_1;
     std::string path;

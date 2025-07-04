@@ -53,23 +53,40 @@ bool migration_initial(const std::shared_ptr<Logger::Logger>& logger, const std:
             break;
     }
 
+    std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
+    std::shared_ptr<PromisesQueue> promisesQueue = std::make_shared<PromisesQueue>();
+
     for (auto & sqlCmd : sqlCmds) {
+        std::unique_ptr<Result> result = nullptr;
+
         std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmd);
-        uint32_t cmdId = db->queueCommand(std::move(command), false);
+        db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::unique_ptr<Result> res) {
+            result = std::move(res);
+        });
         db->processQueue();
-        db->waitForQueue(nullptr);
-        std::unique_ptr<Result> result = db->getResult(cmdId);
+        db->waitForQueue();
+
+        std::unique_lock lock(*queueMutex);
+        if (promisesQueue->empty()) {
+            promisesQueue->front()->resolve();
+            promisesQueue->pop();
+        }
+        lock.unlock();
+
         if (result == nullptr) {
             logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to get result for command: " + sqlCmd);
             return false;
         }
 
-        if (result->status != DBResultStatus::SUCCESS) {
+        if (result->getStatus() != DBResultStatus::SUCCESS) {
             // Rollback transaction
             command = Database::craftVoidCommand("ROLLBACK;");
-            db->queueCommand(std::move(command), false);
+            db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::unique_ptr<Result> res){
+                result = std::move(res);
+            });
             db->processQueue();
-            db->waitForQueue(nullptr);
+            db->waitForQueue();
+
             logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to execute command: " + sqlCmd);
             return false;
         }

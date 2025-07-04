@@ -11,6 +11,9 @@ namespace nex::rmc {
     public:
         explicit List(uint8_t minorVersion = 0, const std::vector<T>& data = {}) : Type(minorVersion), data(data) {}
         explicit List(const std::vector<T>& data) : Type(0), data(data) {}
+        List(const List& other) = default;
+        List(List&& other) noexcept = default;
+        ~List() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> encoded;
@@ -75,6 +78,7 @@ namespace nex::rmc {
         auto end() const { return data.end(); }
         auto insert(auto pos, auto first, auto last) { return data.insert(pos, first, last); }
         auto push_back(const T& value) { return data.push_back(value); }
+        auto push_back(T&& value) { return data.push_back(std::move(value)); }
         auto emplace_back(auto&&... args) { return data.emplace_back(args...); }
         auto erase(auto pos) { return data.erase(pos); }
         auto erase(auto first, auto last) { return data.erase(first, last); }
@@ -88,6 +92,9 @@ namespace nex::rmc {
         explicit operator const std::vector<T>&() const { return data; }
         T& operator [](size_t index) { return data[index]; }
         const T& operator [](size_t index) const { return data[index]; }
+
+        List& operator=(const List& other) = default;
+        List& operator=(List&& other) noexcept = default;
 
     private:
         std::vector<T> data;

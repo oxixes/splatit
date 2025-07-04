@@ -42,29 +42,33 @@ const std::vector<uint8_t>& Response::getBody() const {
 }
 
 void Response::setBody(std::vector<uint8_t>& newBody) {
+    this->body = newBody;
+}
+
+void Response::setBody(std::vector<uint8_t>&& newBody) {
     this->body = std::move(newBody);
 }
 
-Response Response::parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose, bool reqWasHead) {
+std::unique_ptr<Response> Response::parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose, bool reqWasHead) {
     length = 0;
-    Response response;
+    std::unique_ptr<Response> response = std::make_unique<Response>();
 
     if (!isHeaderComplete(data, length)) {
         throw NotCompleteException("Header incomplete");
     }
 
-    response.parseHTTPHeader(data, length);
+    response->parseHTTPHeader(data, length);
 
     size_t contentLength = 0;
-    if (!response.isBodyComplete(data, contentLength, length, connectionClose, reqWasHead)) {
+    if (!response->isBodyComplete(data, contentLength, length, connectionClose, reqWasHead)) {
         throw NotCompleteException("Body incomplete");
     }
 
-    response.parseHTTPBody(data, length, contentLength);
+    response->parseHTTPBody(data, length, contentLength);
 
     length += contentLength;
 
-    return response;
+    return std::move(response);
 }
 
 bool Response::isHeaderComplete(const std::vector<uint8_t>& data, size_t& length) {

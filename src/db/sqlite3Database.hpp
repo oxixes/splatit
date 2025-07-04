@@ -26,23 +26,22 @@ public:
     bool run() override;
     void close() override;
 
-    uint32_t queueCommand(std::unique_ptr<Command> command, bool commandMutex) override;
+    std::shared_ptr<Promise<std::unique_ptr<Result>>> queueCommand(std::unique_ptr<Command> command,
+                                                                   std::shared_ptr<std::mutex> promisesMutex,
+                                                                   std::shared_ptr<std::condition_variable> promisesCV,
+                                                                   std::shared_ptr<PromisesQueue> promisesQueue) override;
     void processQueue() override;
-    void waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) override;
-    void waitForQueue(std::shared_ptr<bool> shouldEnd) override;
-    void clearCommandMutex(uint32_t commandId) override;
-    void notifyCommand(uint32_t commandId) override;
-    void notifyQueue() override;
+    void waitForQueue() override;
 
 private:
     sqlite3* db = nullptr;
     fs::path dbPath;
 
-    bool running = false;
     std::thread dbThreadHandle;
-    std::mutex dbThreadMutex;
-    std::condition_variable dbThreadCV;
     std::condition_variable dbQueueCV;
+
+    std::mutex queueWaitMutex;
+    std::condition_variable dbQueueWaitCV;
 
     sqlite3_stmt* getUserByPIDStatement = nullptr;
     sqlite3_stmt* getUserByUsernameStatement = nullptr;
@@ -54,7 +53,7 @@ private:
 
     void dbThread();
 
-    void processCommand(const std::unique_ptr<Command>& command);
+    void processCommand(const std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>>& command);
     bool craftStatement(const std::string& command, sqlite3_stmt** outStatement);
     bool bindData(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
                   const std::vector<std::shared_ptr<DBData>>& data);

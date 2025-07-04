@@ -9,6 +9,9 @@ namespace nex::rmc {
     class NNAInfo : public Data {
     public:
         explicit NNAInfo(uint8_t minorVersion) : Data(minorVersion), info(minorVersion) {};
+        NNAInfo(const NNAInfo& other) = default;
+        NNAInfo(NNAInfo&& other) noexcept = default;
+        ~NNAInfo() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -40,6 +43,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        NNAInfo& operator=(const NNAInfo& other) = default;
+        NNAInfo& operator=(NNAInfo&& other) noexcept = default;
 
         PrincipalBasicInfo info;
         UInt8 unk1;

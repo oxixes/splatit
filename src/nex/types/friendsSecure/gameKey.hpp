@@ -9,6 +9,9 @@ namespace nex::rmc {
     class GameKey : public Data {
     public:
         explicit GameKey(uint8_t minorVersion) : Data(minorVersion) {};
+        GameKey(const GameKey& other) = default;
+        GameKey(GameKey&& other) noexcept = default;
+        ~GameKey() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -37,6 +40,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        GameKey& operator=(const GameKey& other) = default;
+        GameKey& operator=(GameKey&& other) noexcept = default;
 
         UInt64 titleId;
         UInt16 titleVersion;

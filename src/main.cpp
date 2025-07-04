@@ -203,13 +203,13 @@ int main(int argc, char** argv) {
         if (splatoonSecureSrv != nullptr) tasksMgr.push(splatoonSecureSrv->process());
     }
 
+    db->close();
     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
     if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
     if (httpServer != nullptr) httpServer->stop();
     socketManager->cleanup();
-    db->close();
     certManager->cleanup();
 
     // Cleanup sockets (only needed on Windows)

@@ -13,6 +13,8 @@ namespace nex::rmc {
     class Int : public Type {
     public:
         explicit Int(uint8_t minorVersion = 0, T value = 0) : Type(minorVersion), value(value) {};
+        Int(const Int& other) = default;
+        Int(Int&& other) noexcept = default;
         ~Int() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -128,6 +130,9 @@ namespace nex::rmc {
         Int<T>& operator<<=(const T& other) { value <<= other; return *this; }
         Int<T>& operator>>=(const T& other) { value >>= other; return *this; }
         std::ostream& operator<<(std::ostream &os) const { return os << value; }
+
+        Int& operator=(const Int& other) = default;
+        Int& operator=(Int&& other) noexcept = default;
 
     private:
         T value;

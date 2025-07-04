@@ -10,7 +10,12 @@ namespace nex::rmc {
     class BufferT : public Type {
     public:
         explicit BufferT(uint8_t minorVersion = 0, const std::vector<uint8_t>& data = {}) : Type(minorVersion), data(data) {}
+        explicit BufferT(uint8_t minorVersion, std::vector<uint8_t>&& data) : Type(minorVersion), data(std::move(data)) {}
         explicit BufferT(const std::vector<uint8_t>& data) : Type(0), data(data) {}
+        explicit BufferT(std::vector<uint8_t>&& data) : Type(0), data(std::move(data)) {}
+        BufferT(const BufferT& other) = default;
+        BufferT(BufferT&& other) noexcept = default;
+        ~BufferT() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> encoded;
@@ -51,6 +56,9 @@ namespace nex::rmc {
             if (sizeof(LengthT) == 4) return "Buffer";
             return "qBuffer";
         }
+
+        BufferT& operator=(const BufferT& other) = default;
+        BufferT& operator=(BufferT&& other) noexcept = default;
 
         std::vector<uint8_t> data;
     };

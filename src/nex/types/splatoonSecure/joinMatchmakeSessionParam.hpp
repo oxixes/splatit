@@ -12,6 +12,8 @@ namespace nex::rmc {
     class JoinMatchmakeSessionParam : public Structure {
     public:
         explicit JoinMatchmakeSessionParam(uint8_t minorVersion) : Structure(minorVersion) {};
+        JoinMatchmakeSessionParam(const JoinMatchmakeSessionParam& other) = default;
+        JoinMatchmakeSessionParam(JoinMatchmakeSessionParam&& other) noexcept = default;
         ~JoinMatchmakeSessionParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -64,6 +66,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        JoinMatchmakeSessionParam& operator=(const JoinMatchmakeSessionParam& other) = default;
+        JoinMatchmakeSessionParam& operator=(JoinMatchmakeSessionParam&& other) noexcept = default;
 
         UInt32 gid;
         List<PID> additionalParticipants;

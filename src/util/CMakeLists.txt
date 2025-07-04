@@ -2,4 +2,5 @@ target_sources(splatoon_server PRIVATE
         util.cpp
         util.hpp
         tasksManager.cpp
-        tasksManager.hpp)
+        tasksManager.hpp
+        promise.hpp)

@@ -11,6 +11,9 @@ namespace nex::rmc {
     class Comment : public Data {
     public:
         explicit Comment(uint8_t minorVersion) : Data(minorVersion) {};
+        Comment(const Comment& other) = default;
+        Comment(Comment&& other) noexcept = default;
+        ~Comment() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -42,6 +45,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        Comment& operator=(const Comment& other) = default;
+        Comment& operator=(Comment&& other) noexcept = default;
 
         UInt8 unk1;
         String message;

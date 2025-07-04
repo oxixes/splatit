@@ -9,6 +9,9 @@ namespace nex::rmc {
     class PrincipalPreference : public Data {
     public:
         explicit PrincipalPreference(uint8_t minorVersion) : Data(minorVersion) {};
+        PrincipalPreference(const PrincipalPreference& other) = default;
+        PrincipalPreference(PrincipalPreference&& other) noexcept = default;
+        ~PrincipalPreference() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -40,6 +43,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        PrincipalPreference& operator=(const PrincipalPreference& other) = default;
+        PrincipalPreference& operator=(PrincipalPreference&& other) noexcept = default;
 
         Bool showOnline;
         Bool showPlaying;

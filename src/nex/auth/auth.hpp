@@ -17,11 +17,9 @@ public:
     ~AuthRMC() override = default;
 
 private:
-    void login(ClientInfo client, Request req, String username);
-    void loginEx(ClientInfo client, Request req, String username, AnyDataHolder authInfo);
-    void requestTicket(ClientInfo client, Request req, PID idSource, PID idTarget);
-
-    std::string getUserAccessPassword(uint32_t pid);
+    void login(ClientInfo client, Request req, std::unique_ptr<String> username);
+    void loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo);
+    void requestTicket(ClientInfo client, Request req, std::unique_ptr<PID> idSource, std::unique_ptr<PID> idTarget);
 
     std::shared_ptr<db::Database> db;
     sock::IPv4Addr secureAddr;

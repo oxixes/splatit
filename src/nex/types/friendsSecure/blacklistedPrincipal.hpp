@@ -12,6 +12,9 @@ namespace nex::rmc {
     public:
         explicit BlacklistedPrincipal(uint8_t minorVersion) : Data(minorVersion), principalBasicInfo(minorVersion),
                                                               gameKey(minorVersion) {};
+        BlacklistedPrincipal(const BlacklistedPrincipal& other) = default;
+        BlacklistedPrincipal(BlacklistedPrincipal&& other) noexcept = default;
+        ~BlacklistedPrincipal() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -43,6 +46,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        BlacklistedPrincipal& operator=(const BlacklistedPrincipal& other) = default;
+        BlacklistedPrincipal& operator=(BlacklistedPrincipal&& other) noexcept = default;
 
         PrincipalBasicInfo principalBasicInfo;
         GameKey gameKey;

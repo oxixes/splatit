@@ -15,6 +15,8 @@ namespace nex::rmc {
     public:
         explicit String(uint8_t minorVersion = 0, std::string value = "") : Type(minorVersion), value(std::move(value)) {};
         explicit String(std::string value) : Type(0), value(std::move(value)) {};
+        String(const String& other) = default;
+        String(String&& other) noexcept = default;
 
         ~String() override = default;
 
@@ -58,6 +60,9 @@ namespace nex::rmc {
         std::string::iterator begin() { return value.begin(); }
         std::string::iterator end() { return value.end(); }
         bool empty() const { return value.empty(); }
+
+        String& operator=(const String& other) = default;
+        String& operator=(String&& other) noexcept = default;
 
     private:
         std::string value;

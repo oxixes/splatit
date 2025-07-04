@@ -12,6 +12,9 @@ namespace nex::rmc {
     class NintendoPresenceV2 : public Data {
     public:
         explicit NintendoPresenceV2(uint8_t minorVersion) : Data(minorVersion), gameKey(minorVersion) {};
+        NintendoPresenceV2(const NintendoPresenceV2& other) = default;
+        NintendoPresenceV2(NintendoPresenceV2&& other) noexcept = default;
+        ~NintendoPresenceV2() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -79,6 +82,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        NintendoPresenceV2& operator=(const NintendoPresenceV2& other) = default;
+        NintendoPresenceV2& operator=(NintendoPresenceV2&& other) noexcept = default;
 
         UInt32 changedFlags; // https://github.com/kinnay/NintendoClients/wiki/Friends-Protocol-(Wii-U)#changed-flags
         Bool online;

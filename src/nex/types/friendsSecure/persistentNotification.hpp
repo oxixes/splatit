@@ -10,6 +10,9 @@ namespace nex::rmc {
     class PersistentNotification : public Data {
     public:
         explicit PersistentNotification(uint8_t minorVersion) : Data(minorVersion) {};
+        PersistentNotification(const PersistentNotification& other) = default;
+        PersistentNotification(PersistentNotification&& other) noexcept = default;
+        ~PersistentNotification() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -47,6 +50,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        PersistentNotification& operator=(const PersistentNotification& other) = default;
+        PersistentNotification& operator=(PersistentNotification&& other) noexcept = default;
 
         UInt64 unk1;
         UInt32 unk2;

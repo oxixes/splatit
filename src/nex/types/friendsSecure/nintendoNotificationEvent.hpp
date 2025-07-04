@@ -22,6 +22,9 @@ namespace nex::rmc {
     class NintendoNotificationEvent : public Structure {
     public:
         explicit NintendoNotificationEvent(uint8_t minorVersion) : Structure(minorVersion) {};
+        NintendoNotificationEvent(const NintendoNotificationEvent&) = default;
+        NintendoNotificationEvent(NintendoNotificationEvent&& other) noexcept = default;
+        ~NintendoNotificationEvent() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> data;
@@ -66,6 +69,9 @@ namespace nex::rmc {
                     return 1;
             }
         }
+
+        NintendoNotificationEvent& operator=(const NintendoNotificationEvent&) = default;
+        NintendoNotificationEvent& operator=(NintendoNotificationEvent&& other) noexcept = default;
 
         NintendoNotificationType type = NintendoNotificationType::NONE;
         PID sender;

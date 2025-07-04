@@ -20,6 +20,8 @@ namespace nex::rmc {
     class StationURL : public Type {
     public:
         explicit StationURL(uint8_t minorVersion = 0) : Type(minorVersion) {};
+        StationURL(const StationURL& other) = default;
+        StationURL(StationURL&& other) noexcept = default;
         ~StationURL() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -143,6 +145,9 @@ namespace nex::rmc {
          * they will ever appear on this game. */
 
         bool operator== (const StationURL& other) const { return encodeString() == other.encodeString(); }
+
+        StationURL& operator=(const StationURL& other) = default;
+        StationURL& operator=(StationURL&& other) noexcept = default;
 
     private:
         std::string encodeString() const {

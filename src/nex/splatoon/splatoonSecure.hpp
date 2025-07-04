@@ -43,28 +43,52 @@ public:
     ~SplatoonSecureRMC() override = default;
 
 private:
-    void requestProbeInitiationExt(ClientInfo client, Request req, List<StationURL> targets, StationURL probe);
-    void reportNatTraversalResult(ClientInfo client, Request req, UInt32 cid, Bool result, UInt32 rtt);
-    void reportNatProperties(ClientInfo client, Request req, UInt32 mapping, UInt32 filtering, UInt32 rtt);
-    void secure_register(ClientInfo client, Request req, List<StationURL> urls);
-    void replaceUrl(ClientInfo client, Request req, StationURL oldUrl, StationURL newUrl);
-    void sendReport(ClientInfo client, Request req, UInt32 id, qBuffer report);
-    void unregisterGathering(ClientInfo client, Request req, UInt32 gId);
-    void findBySingleId(ClientInfo client, Request req, UInt32 id);
-    void getSessionUrls(ClientInfo client, Request req, UInt32 gId);
-    void updateSessionHost(ClientInfo client, Request req, UInt32 gId, Bool migrateOwner);
-    void migrateGatheringOwnership(ClientInfo client, Request req, UInt32 gId, List<PID> potentialNewOwners, Bool participantsOnly);
-    void endParticipation(ClientInfo client, Request req, UInt32 gId, String msg);
-    void closeParticipation(ClientInfo client, Request req, UInt32 gId);
-    void openParticipation(ClientInfo client, Request req, UInt32 gId);
-    void modifyCurrentGameAttribute(ClientInfo client, Request req, UInt32 gId, UInt32 attribIndex, UInt32 newValue);
-    void getPlayingSessions(ClientInfo client, Request req, List<PID> pids);
-    void updateProgressScore(ClientInfo client, Request req, UInt32 gId, UInt8 score);
-    void createMatchmakeSessionWithParam(ClientInfo client, Request req, CreateMatchmakeSessionParam param);
-    void joinMatchmakeSessionWithParam(ClientInfo client, Request req, JoinMatchmakeSessionParam param);
-    void autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, AutoMatchmakeParam param);
-    void getCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingGetParam param);
-    void uploadCompetitionRankingScore(ClientInfo client, Request req, CompetitionRankingUploadScoreParam param);
+    void requestProbeInitiationExt(ClientInfo client, Request req,
+                                   std::unique_ptr<List<StationURL>> targets, std::unique_ptr<StationURL> probe);
+    void reportNatTraversalResult(ClientInfo client, Request req, std::unique_ptr<UInt32> cid,
+                                  std::unique_ptr<Bool> result, std::unique_ptr<UInt32> rtt);
+    void reportNatProperties(ClientInfo client, Request req,
+                             std::unique_ptr<UInt32> mapping, std::unique_ptr<UInt32> filtering, std::unique_ptr<UInt32> rtt);
+    void secure_register(ClientInfo client, Request req,
+                         std::unique_ptr<List<StationURL>> urls);
+    void replaceUrl(ClientInfo client, Request req,
+                    std::unique_ptr<StationURL> oldUrl, std::unique_ptr<StationURL> newUrl);
+    void sendReport(ClientInfo client, Request req,
+                    std::unique_ptr<UInt32> id, std::unique_ptr<qBuffer> report);
+    void unregisterGathering(ClientInfo client, Request req,
+                             std::unique_ptr<UInt32> gId);
+    void findBySingleId(ClientInfo client, Request req,
+                        std::unique_ptr<UInt32> id);
+    void getSessionUrls(ClientInfo client, Request req,
+                        std::unique_ptr<UInt32> gId);
+    void updateSessionHost(ClientInfo client, Request req,
+                           std::unique_ptr<UInt32> gId, std::unique_ptr<Bool> migrateOwner);
+    void migrateGatheringOwnership(ClientInfo client, Request req,
+                                   std::unique_ptr<UInt32> gId, std::unique_ptr<List<PID>> potentialNewOwners,
+                                   std::unique_ptr<Bool> participantsOnly);
+    void endParticipation(ClientInfo client, Request req,
+                          std::unique_ptr<UInt32> gId, std::unique_ptr<String> msg);
+    void closeParticipation(ClientInfo client, Request req,
+                            std::unique_ptr<UInt32> gId);
+    void openParticipation(ClientInfo client, Request req,
+                           std::unique_ptr<UInt32> gId);
+    void modifyCurrentGameAttribute(ClientInfo client, Request req,
+                                    std::unique_ptr<UInt32> gId, std::unique_ptr<UInt32> attribIndex,
+                                    std::unique_ptr<UInt32> newValue);
+    void getPlayingSessions(ClientInfo client, Request req,
+                            std::unique_ptr<List<PID>> pids);
+    void updateProgressScore(ClientInfo client, Request req,
+                             std::unique_ptr<UInt32> gId, std::unique_ptr<UInt8> score);
+    void createMatchmakeSessionWithParam(ClientInfo client, Request req,
+                                         std::unique_ptr<CreateMatchmakeSessionParam> param);
+    void joinMatchmakeSessionWithParam(ClientInfo client, Request req,
+                                       std::unique_ptr<JoinMatchmakeSessionParam> param);
+    void autoMatchmakeWithParam_Postpone(ClientInfo client, Request req, 
+                                         std::unique_ptr<AutoMatchmakeParam> param);
+    void getCompetitionRankingScore(ClientInfo client, Request req,
+                                    std::unique_ptr<CompetitionRankingGetParam> param);
+    void uploadCompetitionRankingScore(ClientInfo client, Request req,
+                                       std::unique_ptr<CompetitionRankingUploadScoreParam> param);
 
     void onDisconnect(prudp::PRUDPAddress address) override;
 

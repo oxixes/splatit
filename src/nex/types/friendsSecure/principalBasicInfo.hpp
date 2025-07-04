@@ -11,6 +11,9 @@ namespace nex::rmc {
     class PrincipalBasicInfo : public Data {
     public:
         explicit PrincipalBasicInfo(uint8_t minorVersion) : Data(minorVersion), mii(minorVersion) {};
+        PrincipalBasicInfo(const PrincipalBasicInfo& other) = default;
+        PrincipalBasicInfo(PrincipalBasicInfo&& other) noexcept = default;
+        ~PrincipalBasicInfo() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -45,6 +48,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        PrincipalBasicInfo& operator=(const PrincipalBasicInfo& other) = default;
+        PrincipalBasicInfo& operator=(PrincipalBasicInfo&& other) noexcept = default;
 
         PID pid;
         String NNID;

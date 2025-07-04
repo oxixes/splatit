@@ -11,6 +11,7 @@
 #include "request.hpp"
 #include "response.hpp"
 #include "../../util/util.hpp"
+#include "../../db/database.hpp"
 
 namespace nex::rmc {
 
@@ -22,8 +23,8 @@ struct ClientInfo {
 };
 
 struct CallInfo {
-    std::function<void(ClientInfo, Request, const std::vector<T_ptr>&)> callback;
-    std::function<std::vector<T_ptr>(uint8_t minorVersion, std::vector<uint8_t> data)> parser;
+    std::function<void(ClientInfo, Request, std::vector<T_ptr>)> callback;
+    std::function<std::vector<T_ptr>(uint8_t minorVersion, std::span<const uint8_t> data)> parser;
 };
 
 struct RequestInfo {
@@ -35,6 +36,16 @@ struct RequestInfo {
 // These are traits and functions used to get the types of the parameters of the callback function
 // without having to specify them manually.
 template<typename T>
+struct unwrap_unique_ptr {
+    using type = T;
+};
+
+template<typename T>
+struct unwrap_unique_ptr<std::unique_ptr<T>> {
+    using type = T;
+};
+
+template<typename T>
 struct function_traits;
 
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -45,7 +56,8 @@ struct function_traits<ReturnType(ClassType::*)(Args...)>
     template <size_t i>
     struct arg
     {
-        typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+        using raw_type = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        using type = typename unwrap_unique_ptr<raw_type>::type;
     };
 };
 
@@ -74,7 +86,7 @@ protected:
         std::vector<uint8_t> data;
 
         for (auto& param : params) {
-            auto paramData = param->encode();
+            auto paramData = std::move(param->encode());
             // Log the data
 //            std::cout << "Param: ";
 //            for (auto& byte : paramData) {
@@ -100,36 +112,38 @@ protected:
     std::shared_ptr<Logger::Logger> logger;
     Logger::group logGroup = Logger::group::SETUP; // This should be set by the constructor of the derived class
 
-    std::function<uint32_t(std::function<void()>)> registerCloseCall;
-    std::function<void(uint32_t)> unregisterCloseCall;
-
     bool shouldStop = false;
 
     std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
     std::recursive_mutex pidMapMutex;
+
+    std::shared_ptr<db::PromisesQueue> promisesQueue = std::make_shared<db::PromisesQueue>();
+    std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
+
+    std::shared_ptr<std::condition_variable> queueCV = std::make_shared<std::condition_variable>();
 private:
     // These are functions used to call the callback function with the correct parameters.
     // They expand the parameter vector into the parameters of the callback function.
     template<typename T, typename Func, typename... Types, std::size_t... I> requires (std::is_base_of_v<Type, Types> && ...)
-    auto call_callback(T* self, Func func, ClientInfo client, Request req, const std::vector<T_ptr>& arr, std::index_sequence<I...>) {
-        return (self->*func)(client, req, std::move(*std::dynamic_pointer_cast<Types>(arr.at(I)))...);
+    auto call_callback(T* self, Func func, ClientInfo client, Request req, const std::span<T_ptr> arr, std::index_sequence<I...>) {
+        return (self->*func)(client, std::move(req), std::unique_ptr<Types>(dynamic_cast<Types*>(arr[I].release()))...);
     }
 
     template<typename T, typename F, std::size_t ... I>
     void registerCall(T* self, F callback, std::index_sequence<I ...> sequence, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
         auto func = [this, self, callback, sequence](ClientInfo client, Request req,
-                const std::vector<T_ptr>& params) {
+                std::vector<T_ptr> params) {
             call_callback<T, F,
                     typename function_traits<
                             typename std::decay<F>::type>::template arg<I + 2>::type...
-            >(self, callback, client, req, params, sequence);
+            >(self, callback, client, std::move(req), params, sequence);
         };
 
-        auto parser = [](uint8_t minorVersion, std::vector<uint8_t> data) {
+        auto parser = [](uint8_t minorVersion, std::span<const uint8_t> data) {
             return ParamParser<
                     typename function_traits<
                             typename std::decay<F>::type>::template arg<I + 2>::type...
-            >::decode(minorVersion, std::move(data));
+            >::decode(minorVersion, data);
         };
 
         calls.emplace(std::make_tuple(protoId, extProtoId, methodId), CallInfo{func, parser});
@@ -182,16 +196,8 @@ private:
     std::map<std::tuple<uint8_t, uint16_t, uint32_t>, CallInfo> calls;
 
     std::queue<RequestInfo> requestsQueue;
-    std::mutex queueMutex;
-
-    std::mutex workerMutex;
-    std::condition_variable workerCV;
 
     std::vector<std::thread> threads;
-
-    uint32_t closeCallID = 0;
-    std::map<uint32_t, std::function<void()>> closeCalls;
-    std::mutex closeCallsMutex;
 };
 
 

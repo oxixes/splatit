@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <span>
 
 #include "common.hpp"
 #include "status_codes.hpp"
@@ -12,8 +13,12 @@ namespace http {
 
 class Response {
 public:
+    Response() = default;
     explicit Response(Version version, int status = HTTP_STATUS_OK);
-    static Response parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose,
+    Response(const Response&) = default;
+    Response(Response&&) = default;
+
+    static std::unique_ptr<Response> parse(const std::vector<uint8_t>& data, size_t& length, bool connectionClose,
                           bool reqWasHead);
 
     [[nodiscard]] Version getVersion() const;
@@ -26,12 +31,14 @@ public:
 
     [[nodiscard]] const std::vector<uint8_t>& getBody() const;
     void setBody(std::vector<uint8_t>& newBody);
+    void setBody(std::vector<uint8_t>&& newBody);
 
     [[nodiscard]] std::vector<uint8_t> serialize() const;
 
-private:
-    Response() = default;
+    Response& operator=(const Response&) = default;
+    Response& operator=(Response&&) = default;
 
+private:
     Version version = Version::HTTP_1_1;
     int status = HTTP_STATUS_OK;
     std::unordered_map<std::string, std::vector<std::string>> headers;

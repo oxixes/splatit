@@ -11,6 +11,9 @@ namespace nex::rmc {
     public:
         explicit FriendRequest(uint8_t minorVersion) : Data(minorVersion), principalBasicInfo(minorVersion),
                                                        friendRequestMsg(minorVersion) {};
+        FriendRequest(const FriendRequest& other) = default;
+        FriendRequest(FriendRequest&& other) noexcept = default;
+        ~FriendRequest() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -42,6 +45,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        FriendRequest& operator=(const FriendRequest& other) = default;
+        FriendRequest& operator=(FriendRequest&& other) noexcept = default;
 
         PrincipalBasicInfo principalBasicInfo;
         FriendRequestMsg friendRequestMsg;

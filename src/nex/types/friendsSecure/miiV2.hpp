@@ -12,6 +12,9 @@ namespace nex::rmc {
     class MiiV2 : public Data {
     public:
         explicit MiiV2(uint8_t minorVersion) : Data(minorVersion) {};
+        MiiV2(const MiiV2& other) = default;
+        MiiV2(MiiV2&& other) noexcept = default;
+        ~MiiV2() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -48,6 +51,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        MiiV2& operator=(const MiiV2& other) = default;
+        MiiV2& operator=(MiiV2&& other) noexcept = default;
 
         String name;
         UInt8 unk1;

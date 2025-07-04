@@ -12,6 +12,9 @@ namespace nex::rmc {
     class FriendRequestMsg : public Data {
     public:
         explicit FriendRequestMsg(uint8_t minorVersion) : Data(minorVersion), gameKey(minorVersion) {};
+        FriendRequestMsg(const FriendRequestMsg& other) = default;
+        FriendRequestMsg(FriendRequestMsg&& other) noexcept = default;
+        ~FriendRequestMsg() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -61,6 +64,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        FriendRequestMsg& operator=(const FriendRequestMsg& other) = default;
+        FriendRequestMsg& operator=(FriendRequestMsg&& other) noexcept = default;
 
         UInt64 id;
         UInt8 isReceived; // Should this be a bool?, the docs say it's a byte

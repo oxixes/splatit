@@ -16,6 +16,8 @@ namespace nex::rmc {
 class Type {
 public:
     explicit Type(uint8_t minorVersion) : minorVersion(minorVersion) {};
+    Type(const Type& other) = default;
+    Type(Type&& other) noexcept = default;
     virtual ~Type() = default;
 
     [[nodiscard]] virtual std::vector<uint8_t> encode() const = 0;
@@ -31,10 +33,13 @@ public:
         return "TYPE TO STRING NOT IMPLEMENTED";
     }
 
+    Type& operator=(const Type& other) = default;
+    Type& operator=(Type&& other) noexcept = default;
+
     uint8_t minorVersion = 0;
 };
 
-typedef std::shared_ptr<Type> T_ptr;
+typedef std::unique_ptr<Type> T_ptr;
 //template <typename A> requires std::derived_from<A, Type> using T = std::shared_ptr<A>;
 
 // We define a class that, given the types that we expect to receive, will parse the data
@@ -45,7 +50,7 @@ public:
     ParamParser() = delete;
     ~ParamParser() = delete;
 
-    static std::vector<T_ptr> decode(uint8_t minorVersion, std::vector<uint8_t> data) {
+    static std::vector<T_ptr> decode(uint8_t minorVersion, std::span<const uint8_t> data) {
         std::vector<T_ptr> params;
 
         parse(std::make_index_sequence<sizeof...(Types)>{}, minorVersion, data, params);
@@ -66,22 +71,22 @@ public:
 
 private:
     template<std::size_t... I>
-    static void parse(std::index_sequence<I...>, uint8_t minorVersion, std::vector<uint8_t>& data, std::vector<T_ptr>& params) {
+    static void parse(std::index_sequence<I...>, uint8_t minorVersion, std::span<const uint8_t>& data, std::vector<T_ptr>& params) {
         (parseAndErase<std::tuple_element_t<I, std::tuple<Types...>>>(minorVersion, data, params), ...);
     }
 
     template<typename T> requires std::derived_from<T, Type>
-    static size_t decodeParam(uint8_t minorVersion, const std::vector<uint8_t>& data, std::vector<T_ptr>& params) {
-        auto param = std::make_shared<T>(minorVersion);
+    static size_t decodeParam(uint8_t minorVersion, std::span<const uint8_t> data, std::vector<T_ptr>& params) {
+        auto param = std::make_unique<T>(minorVersion);
         size_t size = param->decode(data);
         params.push_back(std::move(param));
         return size;
     }
 
     template<typename T> requires std::derived_from<T, Type>
-    static void parseAndErase(uint8_t minorVersion, std::vector<uint8_t>& data, std::vector<T_ptr>& params) {
+    static void parseAndErase(uint8_t minorVersion, std::span<const uint8_t>& data, std::vector<T_ptr>& params) {
         size_t size = decodeParam<T>(minorVersion, data, params);
-        data.erase(data.begin(), data.begin() + (ssize_t) size);
+        data = data.subspan(size);
     }
 };
 

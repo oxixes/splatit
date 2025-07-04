@@ -10,6 +10,9 @@ namespace nex::rmc {
     class AuthenticationInfo : public Data {
     public:
         explicit AuthenticationInfo(uint8_t minorVersion) : Data(minorVersion) {}
+        AuthenticationInfo(const AuthenticationInfo& other) = default;
+        AuthenticationInfo(AuthenticationInfo&& other) noexcept = default;
+        ~AuthenticationInfo() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -47,6 +50,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        AuthenticationInfo& operator=(const AuthenticationInfo& other) = default;
+        AuthenticationInfo& operator=(AuthenticationInfo&& other) noexcept = default;
 
         String authToken;
         UInt32 version;

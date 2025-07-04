@@ -10,9 +10,15 @@ namespace nex::rmc {
 class Request {
 public:
     Request() = default;
+    Request(const Request& other) = default;
+    Request(Request&& other) noexcept = default;
+    ~Request() = default;
 
     [[nodiscard]] std::vector<uint8_t> encode(size_t paramLength) const;
     std::vector<uint8_t> decode(std::vector<uint8_t> data);
+
+    Request& operator=(const Request& other) = default;
+    Request& operator=(Request&& other) noexcept = default;
 
     uint8_t protocolId = 0;
     uint16_t extendedProtocolId = 0;

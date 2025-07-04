@@ -10,6 +10,8 @@ namespace nex::rmc {
     class Gathering : public Structure {
     public:
         explicit Gathering(uint8_t minorVersion) : Structure(minorVersion) {};
+        Gathering(const Gathering& other) = default;
+        Gathering(Gathering&& other) noexcept = default;
         ~Gathering() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -79,6 +81,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "Gathering"; }
+
+        Gathering& operator=(const Gathering& other) = default;
+        Gathering& operator=(Gathering&& other) noexcept = default;
 
         UInt32 id;
         PID ownerPid;

@@ -11,6 +11,8 @@ namespace nex::rmc {
     public:
         explicit AutoMatchmakeParam(uint8_t minorVersion) : Structure(minorVersion), srcMatchmakeSession(minorVersion),
                                                             searchCriteria(minorVersion) {};
+        AutoMatchmakeParam(const AutoMatchmakeParam& other) = default;
+        AutoMatchmakeParam(AutoMatchmakeParam&& other) noexcept = default;
         ~AutoMatchmakeParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -74,6 +76,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "AutoMatchmakeParam"; }
+
+        AutoMatchmakeParam& operator=(const AutoMatchmakeParam& other) = default;
+        AutoMatchmakeParam& operator=(AutoMatchmakeParam&& other) noexcept = default;
 
         MatchmakeSession srcMatchmakeSession;
         List<PID> additionalParticipants;

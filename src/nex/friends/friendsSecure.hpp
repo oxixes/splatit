@@ -26,10 +26,11 @@ public:
     ~FriendsSecureRMC() override = default;
 
 private:
-    void registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data);
-    void updateAndGetAllInformation(ClientInfo client, Request req, NNAInfo nnaInfo, NintendoPresenceV2 presence,
-                                    Datetime birthdate);
-    void updatePresence(ClientInfo client, Request req, NintendoPresenceV2 presence);
+    void registerEx(ClientInfo client, Request req, std::unique_ptr<List<StationURL>> urls,
+                    std::unique_ptr<AnyDataHolder> data);
+    void updateAndGetAllInformation(ClientInfo client, Request req, std::unique_ptr<NNAInfo> nnaInfo,
+                                    std::unique_ptr<NintendoPresenceV2> presence, std::unique_ptr<Datetime> birthdate);
+    void updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence);
 
     void onDisconnect(prudp::PRUDPAddress address) override;
 

@@ -11,6 +11,8 @@ namespace nex::rmc {
     class MatchmakeSessionSearchCriteria : public Structure {
     public:
         explicit MatchmakeSessionSearchCriteria(uint8_t minorVersion) : Structure(minorVersion), matchmakeParam(minorVersion) {};
+        MatchmakeSessionSearchCriteria(const MatchmakeSessionSearchCriteria& other) = default;
+        MatchmakeSessionSearchCriteria(MatchmakeSessionSearchCriteria&& other) noexcept = default;
         ~MatchmakeSessionSearchCriteria() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -96,6 +98,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "MatchmakeSessionSearchCriteria"; }
+
+        MatchmakeSessionSearchCriteria& operator=(const MatchmakeSessionSearchCriteria& other) = default;
+        MatchmakeSessionSearchCriteria& operator=(MatchmakeSessionSearchCriteria&& other) noexcept = default;
 
         List<String> attributes;
         String gameMode;

@@ -12,6 +12,8 @@ namespace nex::rmc {
     class AnyDataHolder : public Type {
     public:
         explicit AnyDataHolder(uint8_t minorVersion = 0) : Type(minorVersion) {};
+        AnyDataHolder(const AnyDataHolder& other) = default;
+        AnyDataHolder(AnyDataHolder&& other) noexcept = default;
         ~AnyDataHolder() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -77,6 +79,9 @@ namespace nex::rmc {
         [[nodiscard]] std::string getType() const {
             return type;
         }
+
+        AnyDataHolder& operator=(const AnyDataHolder& other) = default;
+        AnyDataHolder& operator=(AnyDataHolder&& other) noexcept = default;
 
     private:
         std::string type;

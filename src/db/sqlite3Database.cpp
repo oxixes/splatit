@@ -75,162 +75,75 @@ DBVersion sqlite3Database::obtainVersion() {
 }
 
 bool sqlite3Database::run() {
-    running = true;
+    shouldStop = false;
     dbThreadHandle = std::thread(&sqlite3Database::dbThread, this);
     logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread started.");
     return true;
 }
 
-uint32_t sqlite3Database::queueCommand(std::unique_ptr<Command> command, bool commandMutex) {
+std::shared_ptr<Promise<std::unique_ptr<Result>>> sqlite3Database::queueCommand(std::unique_ptr<Command> command,
+                                                                                std::shared_ptr<std::mutex> promisesMutex,
+                                                                                std::shared_ptr<std::condition_variable> promisesCV,
+                                                                                std::shared_ptr<PromisesQueue> promisesQueue) {
+    if (shouldStop) return std::make_shared<Promise<std::unique_ptr<Result>>>();
+
+    command->promisesQueue = std::move(promisesQueue);
+    command->promisesMutex = std::move(promisesMutex);
+    command->promisesCV = std::move(promisesCV);
+
+    auto promise = std::make_shared<Promise<std::unique_ptr<Result>>>();
+
     std::unique_lock lock(commandQueueMutex);
-    command->commandId = commandId;
+    commandQueue.emplace(std::move(command), promise);
 
-    if (commandMutex) {
-        auto mutex = std::make_unique<std::mutex>();
-        auto cv = std::make_unique<std::condition_variable>();
-        auto condition_variable_info = std::make_tuple(command->commandId, std::move(mutex),
-                                                       std::move(cv), std::this_thread::get_id());
-        std::unique_lock cmdMutexLock(commandCVsMutex);
-        commandCVs.push_back(std::move(condition_variable_info));
-        command->hasMutex = true;
-    }
-
-    commandQueue.push(std::move(command));
-
-    return commandId++;
+    return promise;
 }
 
 void sqlite3Database::processQueue() {
-    dbThreadCV.notify_one();
+    dbQueueCV.notify_one();
 }
 
-void sqlite3Database::waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) {
-    std::unique_lock commandCVsLock(commandCVsMutex);
-    auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
-        return std::get<0>(info) == commandId;
+void sqlite3Database::waitForQueue() {
+    std::unique_lock lock(queueWaitMutex);
+    dbQueueWaitCV.wait(lock, [this] {
+        return commandQueue.empty() || shouldStop;
     });
-
-    if (CVInfo == commandCVs.end()) {
-        logger->log(Logger::level::DEBUG, Logger::group::DB,
-                    "Attempted to wait for a command that does not exist or doesn't have a mutex (ID: " +
-                    std::to_string(commandId) + ")");
-        return;
-    }
-
-    // FIXME: Use smart pointers here?
-    std::mutex* mutex = std::get<1>(*CVInfo).get();
-    std::condition_variable* cv = std::get<2>(*CVInfo).get();
-    commandCVsLock.unlock();
-
-    std::unique_lock lock(*mutex);
-    (*cv).wait(lock, [this, commandId, shouldEnd] {
-        if (!running || (shouldEnd != nullptr && *shouldEnd)) {
-            return true;
-        } else {
-            std::unique_lock resultsLock(resultsMutex);
-            return std::ranges::any_of(results, [commandId](const std::unique_ptr<Result>& result) {
-                return result->commandId == commandId;
-            });
-        }
-    });
-}
-
-void sqlite3Database::waitForQueue(std::shared_ptr<bool> shouldEnd) {
-    std::unique_lock lock(dbThreadMutex);
-    dbQueueCV.wait(lock, [this, shouldEnd] {
-        if (!running || (shouldEnd != nullptr && *shouldEnd)) return true;
-        std::unique_lock lock(commandQueueMutex);
-        return commandQueue.empty();
-    });
-}
-
-void sqlite3Database::clearCommandMutex(uint32_t commandId) {
-    std::unique_lock lock(commandCVsMutex);
-    std::erase_if(commandCVs, [commandId](const auto& info) {
-        if (std::get<0>(info) == commandId && std::this_thread::get_id() != std::get<3>(info)) {
-            throw std::runtime_error("Attempted to clear command mutex from a different thread where it was created.");
-        }
-
-        return std::get<0>(info) == commandId;
-    });
-}
-
-void sqlite3Database::notifyCommand(uint32_t commandId) {
-    std::unique_lock lock(commandCVsMutex);
-    auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
-        return std::get<0>(info) == commandId;
-    });
-
-    if (CVInfo == commandCVs.end()) {
-        logger->log(Logger::level::DEBUG, Logger::group::DB,
-                    "Attempted to notify a command that does not exist or doesn't have a mutex (ID: " +
-                    std::to_string(commandId) + ")");
-        return;
-    }
-
-    std::condition_variable* cv = std::get<2>(*CVInfo).get();
-    lock.unlock();
-    (*cv).notify_all();
-}
-
-void sqlite3Database::notifyQueue() {
-    dbQueueCV.notify_all();
 }
 
 void sqlite3Database::dbThread() {
     while (true) {
-        std::unique_lock lock(dbThreadMutex);
-        dbThreadCV.wait(lock, [this] {
-            if (!running) return true;
-            std::unique_lock lock(commandQueueMutex);
+        std::unique_lock lock(commandQueueMutex);
+        dbQueueCV.wait(lock, [this] {
+            if (shouldStop) return true;
             return !commandQueue.empty();
         });
 
-        if (!running) {
-            lock.unlock();
-            break;
-        }
+        if (shouldStop) break;
 
-        std::unique_lock queueLock(commandQueueMutex);
-        while (!commandQueue.empty()) {
-            if (!running) break;
-
-            std::unique_ptr<Command> command = std::move(commandQueue.front());
-            processCommand(command);
+        while (!commandQueue.empty() && !shouldStop) {
+            std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>> command = std::move(commandQueue.front());
             commandQueue.pop();
 
-            if (command->hasMutex) {
-                uint32_t commandId = command->commandId;
-                std::unique_lock commandCVsLock(commandCVsMutex);
-                auto CVInfo = std::find_if(commandCVs.begin(), commandCVs.end(), [commandId] (const auto& info) {
-                    return std::get<0>(info) == commandId;
-                });
-
-                if (CVInfo == commandCVs.end()) {
-                    logger->log(Logger::level::DEBUG, Logger::group::DB,
-                                "Attempted to notify a command that does not exist or doesn't have a mutex (ID: " +
-                                std::to_string(commandId) + ")");
-                } else {
-                    std::get<2>(*CVInfo)->notify_all();
-                }
-            }
+            lock.unlock();
+            processCommand(command);
+            lock.lock();
         }
 
-        queueLock.unlock();
-        lock.unlock();
-        dbQueueCV.notify_all();
-        if (!running) break;
+        dbQueueWaitCV.notify_all();
+        if (shouldStop) break;
     }
+
+    dbQueueWaitCV.notify_all();
 }
 
-void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
+void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>>& command) {
     auto returnedData = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
     sqlite3_stmt* statement = nullptr;
 
     std::any resultsData;
     DBResultStatus resultStatus = DBResultStatus::SUCCESS;
 
-    if (!verifyCommandArgs(command)) {
+    if (!verifyCommandArgs(command.first)) {
         logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Failed to run SQLite 3 statement: invalid command arguments");
         resultStatus = DBResultStatus::FAILURE_ARGS;
@@ -238,8 +151,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         goto push_results;
     }
 
-    if (command->type == DBCommandType::GENERIC) {
-        auto* query = std::any_cast<DBGenericCommand>(&command->data);
+    if (command.first->type == DBCommandType::GENERIC) {
+        auto* query = std::any_cast<DBGenericCommand>(&command.first->data);
 
         if (!craftStatement(query->cmd, &statement)) {
             resultStatus = DBResultStatus::FAILURE_STMT;
@@ -265,30 +178,30 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         };
 
         resultsData = std::move(result);
-    } else if (command->type == DBCommandType::GET_USER_BY_PID || command->type == DBCommandType::GET_USER_BY_USERNAME) {
+    } else if (command.first->type == DBCommandType::GET_USER_BY_PID || command.first->type == DBCommandType::GET_USER_BY_USERNAME) {
         // Since the statement is always the same, we can just prepare it once
-        if (command->type == DBCommandType::GET_USER_BY_PID && getUserByPIDStatement == nullptr) {
+        if (command.first->type == DBCommandType::GET_USER_BY_PID && getUserByPIDStatement == nullptr) {
             if (!craftStatement("SELECT pid, username, password FROM users WHERE pid = ?;", &getUserByPIDStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
             }
-        } else if (command->type == DBCommandType::GET_USER_BY_USERNAME && getUserByUsernameStatement == nullptr) {
+        } else if (command.first->type == DBCommandType::GET_USER_BY_USERNAME && getUserByUsernameStatement == nullptr) {
             if (!craftStatement("SELECT pid, username, password FROM users WHERE username = ?;", &getUserByUsernameStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
             }
         }
 
-        statement = (command->type == DBCommandType::GET_USER_BY_PID) ? getUserByPIDStatement : getUserByUsernameStatement;
+        statement = (command.first->type == DBCommandType::GET_USER_BY_PID) ? getUserByPIDStatement : getUserByUsernameStatement;
 
         std::shared_ptr<DBData> identifier;
         DBDataType identifierType;
-        if (command->type == DBCommandType::GET_USER_BY_PID) {
-            auto* query = std::any_cast<DBPidQuery>(&command->data);
+        if (command.first->type == DBCommandType::GET_USER_BY_PID) {
+            auto* query = std::any_cast<DBPidQuery>(&command.first->data);
             identifierType = DBDataType::INTEGER;
             identifier = std::make_shared<DBInteger>((int64_t) query->pid);
         } else {
-            auto* query = std::any_cast<DBUsernameQuery>(&command->data);
+            auto* query = std::any_cast<DBUsernameQuery>(&command.first->data);
             identifierType = DBDataType::STRING;
             identifier = std::make_shared<DBString>(query->username);
         }
@@ -319,7 +232,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             };
             resultsData = std::move(userData);
         }
-    } else if (command->type == DBCommandType::GET_GAME_SERVER_ACCESS) {
+    } else if (command.first->type == DBCommandType::GET_GAME_SERVER_ACCESS) {
         if (getGameServerAccessStatement == nullptr) {
             if (!craftStatement("SELECT * FROM game_server_access WHERE pid = ? AND game_server_id = ?;",
                                 &getGameServerAccessStatement)) {
@@ -328,7 +241,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             }
         }
 
-        auto* query = std::any_cast<DBGameServerAccessQuery>(&command->data);
+        auto* query = std::any_cast<DBGameServerAccessQuery>(&command.first->data);
 
         if (!bindData(getGameServerAccessStatement, {DBDataType::INTEGER, DBDataType::STRING},
                       {std::make_shared<DBInteger>((int64_t) query->pid),
@@ -359,7 +272,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
             resultsData = std::move(accessData);
         }
-    } else if (command->type == DBCommandType::GET_USER_INFO) {
+    } else if (command.first->type == DBCommandType::GET_USER_INFO) {
         if (getUserInfoStatement == nullptr) {
             if (!craftStatement("SELECT * FROM user_info WHERE pid = ?;", &getUserInfoStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -367,7 +280,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             }
         }
 
-        auto* query = std::any_cast<DBPidQuery>(&command->data);
+        auto* query = std::any_cast<DBPidQuery>(&command.first->data);
 
         if (!bindData(getUserInfoStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
@@ -403,7 +316,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
             resultsData = std::move(userInfoData);
         }
-    } else if (command->type == DBCommandType::GET_FRIENDS_INFO) {
+    } else if (command.first->type == DBCommandType::GET_FRIENDS_INFO) {
         if (getFriendsInfoStatement == nullptr) {
             std::string sqlCommand = "SELECT fuser.pid "               "AS friend_pid, "
                                             "fuser.username "          "AS friend_username, "
@@ -433,7 +346,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             }
         }
 
-        auto* query = std::any_cast<DBPidQuery>(&command->data);
+        auto* query = std::any_cast<DBPidQuery>(&command.first->data);
 
         if (!bindData(getFriendsInfoStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
@@ -475,16 +388,16 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
 
         resultsData = std::move(friendsData);
-    } else if (command->type == DBCommandType::UPDATE_USER_INFO) {
+    } else if (command.first->type == DBCommandType::UPDATE_USER_INFO) {
         std::vector<DBDataType> dataTypes;
         std::vector<std::shared_ptr<DBData>> data;
 
-        auto* updateData = std::any_cast<DBUserInfoUpdate>(&command->data);
+        auto* updateData = std::any_cast<DBUserInfoUpdate>(&command.first->data);
 
         // Not all data needs to be updated, so we need to check which fields are being updated.
         // These are given by optionals, so we can just check if they have a value.
         std::string sqlCommand = "UPDATE user_info SET ";
-        auto& cmdData = command->data;
+        auto& cmdData = command.first->data;
         if (updateData->showPresence.has_value()) {
             sqlCommand += "show_presence = ?, ";
             dataTypes.push_back(DBDataType::INTEGER);
@@ -551,7 +464,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
         }
 
         sqlite3_finalize(statement);
-    } else if (command->type == DBCommandType::GET_USER_PROFILE) {
+    } else if (command.first->type == DBCommandType::GET_USER_PROFILE) {
         if (getUserProfileStatement == nullptr) {
             std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.gender, u.region, u.tz, u.utc_offset,"
                                      "u.language, u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated,"
@@ -568,7 +481,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             }
         }
 
-        auto* query = std::any_cast<DBPidQuery>(&command->data);
+        auto* query = std::any_cast<DBPidQuery>(&command.first->data);
 
         if (!bindData(getUserProfileStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
@@ -631,7 +544,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
 
             resultsData = std::move(profileData);
         }
-    } else if (command->type == DBCommandType::GET_DEVICE_ATTRIBUTES) {
+    } else if (command.first->type == DBCommandType::GET_DEVICE_ATTRIBUTES) {
         if (getDeviceAttributesStatement == nullptr) {
             std::string sqlCommand = "SELECT * FROM device_attributes WHERE pid = ? AND device_id = ?;";
 
@@ -641,7 +554,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
             }
         }
 
-        auto* query = std::any_cast<DBDeviceAttributesQuery>(&command->data);
+        auto* query = std::any_cast<DBDeviceAttributesQuery>(&command.first->data);
 
         if (!bindData(getDeviceAttributesStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid),
@@ -680,8 +593,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command) {
     }
 
     push_results:
-    std::unique_lock lock(resultsMutex);
-    results.push_back(std::make_unique<Result>(command->commandId, resultStatus, std::move(resultsData)));
+    command.second->setResolveValue(std::make_unique<Result>(resultStatus, std::move(resultsData)));
+
+    std::unique_lock<std::mutex> promiseLock(*command.first->promisesMutex);
+    command.first->promisesQueue->push(command.second);
+
+    if (command.first->promisesCV != nullptr) command.first->promisesCV->notify_one();
 }
 
 bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** outStatement) {
@@ -797,35 +714,17 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
 void sqlite3Database::close() {
     if (db == nullptr) return;
 
-    running = false;
-    dbThreadCV.notify_all();
+    shouldStop = true;
+    dbQueueCV.notify_all();
     dbThreadHandle.join();
 
     logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread stopped.");
 
-    // NOTE: All threads should be stopped at this point, but just in case,
-    //       we'll notify all the condition variables so that any thread that
-    //       is waiting for a command to finish will be notified and can exit
-    std::unique_lock CVLock(commandCVsMutex);
-    for (auto& cv : commandCVs) {
-        std::get<2>(cv)->notify_all();
-    }
-    dbQueueCV.notify_all();
-
     std::unique_lock queueLock(commandQueueMutex);
     while (!commandQueue.empty()) {
-        std::unique_ptr<Command> command = std::move(commandQueue.front());
         commandQueue.pop();
     }
     queueLock.unlock();
-
-    std::unique_lock resultsLock(resultsMutex);
-    results.clear();
-    resultsLock.unlock();
-
-    // NOTE: Maybe we should let all threads that created the mutexes destroy them?
-    commandCVs.clear();
-    CVLock.unlock();
 
     if (getUserByPIDStatement != nullptr) sqlite3_finalize(getUserByPIDStatement);
     if (getUserByUsernameStatement != nullptr) sqlite3_finalize(getUserByUsernameStatement);

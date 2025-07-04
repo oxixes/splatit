@@ -13,6 +13,9 @@ namespace nex::rmc {
     public:
         explicit Map(uint8_t minorVersion = 0, const std::map<K, T>& data = {}) : Type(minorVersion), data(data) {}
         explicit Map(const std::map<K, T>& data = {}) : Type(0), data(data) {}
+        Map(const Map& other) = default;
+        Map(Map&& other) noexcept = default;
+        ~Map() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> encoded;
@@ -87,6 +90,9 @@ namespace nex::rmc {
         explicit operator std::map<K, T>& () { return data; }
         explicit operator const std::map<K, T>& () const { return data; }
         T& operator[](const K& key) { return data[key]; }
+
+        Map& operator=(const Map& other) = default;
+        Map& operator=(Map&& other) noexcept = default;
 
     private:
         std::map<K, T> data;

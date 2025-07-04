@@ -12,8 +12,6 @@
 
 #include <utility>
 
-// TODO Add mutex
-
 namespace nex::rmc {
 
 FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
@@ -29,9 +27,12 @@ FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::
     REGISTER_CALL(FriendsSecureRMC::updatePresence, 102, 13);
 }
 
-void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationURL> urls, AnyDataHolder data) {
-    if (data.getType() != "NintendoLoginData") {
-        logger->log(Logger::level::WARN, logGroup, "Invalid data type for registerEx: " + data.getType()
+void FriendsSecureRMC::registerEx(ClientInfo client,
+                                  Request req,
+                                  std::unique_ptr<List<StationURL>> urls,
+                                  std::unique_ptr<AnyDataHolder> data) {
+    if (data->getType() != "NintendoLoginData") {
+        logger->log(Logger::level::WARN, logGroup, "Invalid data type for registerEx: " + data->getType()
                                 + " from " + util::ipv4ToString(client.address.address) + ":"
                                 + std::to_string(client.address.address.port));
 
@@ -45,27 +46,15 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
     res.callId = req.callId;
     res.success = true; // Even if the JWT is invalid, the error is in the %retval% field
 
-    Result retval;
-    UInt32 rvConnId;
-    StationURL clientPublicUrl;
+    std::unique_ptr<Result> retval = std::make_unique<Result>();
+    std::unique_ptr<UInt32> rvConnId = std::make_unique<UInt32>(0, 0);
+    std::unique_ptr<StationURL> clientPublicUrl = std::make_unique<StationURL>();
 
     std::vector<T_ptr> params(3);
 
-    /* if (urls.size() != 1) {
-        retval.success = false;
-        retval.code = Error::CORE__INVALID_ARGUMENT;
-
-        params[0] = std::make_shared<Result>(retval);
-        params[1] = std::make_shared<UInt32>();
-        params[2] = std::make_shared<StationURL>();
-
-        sendMsg(client, res, params);
-        return;
-    } */
-
     String jwtToken;
     try {
-        jwtToken = data.get<String>();
+        jwtToken = data->get<String>();
     } catch (const MalformedException& e) {
         logger->log(Logger::level::WARN, logGroup, "Malformed String in registerEx: " + std::string(e.what())
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -76,69 +65,78 @@ void FriendsSecureRMC::registerEx(ClientInfo client, Request req, List<StationUR
     }
 
     if (!utils::checkJWT(jwtToken, base64JWTKey, FRIENDS_SERVER_ID, client, logger, logGroup)) {
-        retval.code = Error::CORE__ACCESS_DENIED;
-        retval.success = false;
+        retval->code = Error::CORE__ACCESS_DENIED;
+        retval->success = false;
 
-        params[0] = std::make_shared<Result>(retval);
-        params[1] = std::make_shared<UInt32>(0, rvConnId);
-        params[2] = std::make_shared<StationURL>(clientPublicUrl);
+        params[0] = std::move(retval);
+        params[1] = std::move(rvConnId);
+        params[2] = std::move(clientPublicUrl);
 
         sendMsg(client, res, params);
         return;
     }
 
     auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
+    db->runCommand(std::move(getFriendsInfoCmd), queueMutex, queueCV, promisesQueue)
+        ->setContext(std::pair<ClientInfo, Request>(client, req))
+        .then([params = std::move(params),
+                retval = std::move(retval),
+                rvConnId = std::move(rvConnId),
+                clientPublicUrl = std::move(clientPublicUrl),
+                urls = std::move(urls),
+                data = std::move(data),
+                client, req, res, this](std::unique_ptr<db::Result> friendsInfo) mutable {
 
-    uint32_t cmdId = db::Database::runCommand(db, std::move(getFriendsInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-    auto friendsInfo = db->getResult(cmdId);
+        if (friendsInfo->getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get friends info for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
 
-    if (friendsInfo->status != db::DBResultStatus::SUCCESS) {
-        logger->log(Logger::level::WARN, logGroup, "Failed to get friends info for " + std::to_string(client.pid)
-                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                   + std::to_string(client.address.address.port));
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            return;
+        }
 
-        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-        return;
-    }
+        FriendsRegisteredClientInfo clientInfo{client, {}};
 
-    FriendsRegisteredClientInfo clientInfo{client, {}};
+        for (auto& friendData : friendsInfo->getData<std::vector<db::DBFriendInfoData>>()) {
+            clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData.friendPid));
+        }
 
-    for (auto& friendData : std::any_cast<std::vector<db::DBFriendInfoData>>(friendsInfo->data)) {
-        clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData.friendPid));
-    }
+        std::unique_lock registeredClientsLock(registeredClientsMutex);
+        registeredClients.insert(std::make_pair(client.pid, std::move(clientInfo)));
+        registeredClientsLock.unlock();
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    registeredClients.insert(std::make_pair(client.pid, std::move(clientInfo)));
-    registeredClientsLock.unlock();
+        logger->log(Logger::level::INFO, logGroup, "Registered " + std::to_string(client.pid) + " from "
+                                                   + util::ipv4ToString(client.address.address) + ":" + std::to_string(client.address.address.port));
 
-    logger->log(Logger::level::INFO, logGroup, "Registered " + std::to_string(client.pid) + " from "
-                            + util::ipv4ToString(client.address.address) + ":" + std::to_string(client.address.address.port));
+        retval->code = Error::CORE__UNKNOWN;
+        retval->success = true;
+        std::unique_lock rvConnIdLock(rvConnIdMutex);
+        *rvConnId = nextRVConnId++;
+        rvConnIdLock.unlock();
 
-    retval.code = Error::CORE__UNKNOWN;
-    retval.success = true;
-    std::unique_lock rvConnIdLock(rvConnIdMutex);
-    rvConnId = nextRVConnId++;
-    rvConnIdLock.unlock();
+        clientPublicUrl->proto = Protocol::PRUDP;
+        clientPublicUrl->ip = client.address.address;
+        clientPublicUrl->port = client.address.address.port;
+        clientPublicUrl->natf = 0;
+        clientPublicUrl->natm = 0;
+        clientPublicUrl->pmp = 0;
+        clientPublicUrl->sid = 15;
+        clientPublicUrl->type = 3;
+        clientPublicUrl->upnp = 0;
 
-    clientPublicUrl.proto = Protocol::PRUDP;
-    clientPublicUrl.ip = client.address.address;
-    clientPublicUrl.port = client.address.address.port;
-    clientPublicUrl.natf = 0;
-    clientPublicUrl.natm = 0;
-    clientPublicUrl.pmp = 0;
-    clientPublicUrl.sid = 15;
-    clientPublicUrl.type = 3;
-    clientPublicUrl.upnp = 0;
+        params[0] = std::move(retval);
+        params[1] = std::move(rvConnId);
+        params[2] = std::move(clientPublicUrl);
 
-    params[0] = std::make_shared<Result>(retval);
-    params[1] = std::make_shared<UInt32>(0, rvConnId);
-    params[2] = std::make_shared<StationURL>(clientPublicUrl);
-
-    sendMsg(client, res, params);
+        sendMsg(client, res, params);
+    });
 }
 
-void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req, NNAInfo nnaInfo,
-                                                  NintendoPresenceV2 presence, Datetime birthdate) {
+void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req,
+                                                  std::unique_ptr<NNAInfo> nnaInfo,
+                                                  std::unique_ptr<NintendoPresenceV2> presence,
+                                                  std::unique_ptr<Datetime> birthdate) {
     std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
@@ -150,122 +148,139 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
     registeredClientsLock.unlock();
 
     auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
-    auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
 
-    uint32_t cmdId = db::Database::runCommand(db, std::move(getUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-    auto userInfo = db->getResult(cmdId);
+    db->runCommand(std::move(getUserInfoCmd), queueMutex, queueCV, promisesQueue)
+        ->setContext(std::pair<ClientInfo, Request>(client, req))
+        .then([nnaInfo = std::move(nnaInfo),
+                presence = std::move(presence),
+                client, req, this](std::unique_ptr<db::Result> userInfo) mutable {
 
-    cmdId = db::Database::runCommand(db, std::move(getFriendsInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-    auto friendsInfo = db->getResult(cmdId);
+        auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
 
-    if (userInfo->status != db::DBResultStatus::SUCCESS || friendsInfo->status != db::DBResultStatus::SUCCESS) {
-        logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
-                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                   + std::to_string(client.address.address.port));
+        db->runCommand(std::move(getFriendsInfoCmd), queueMutex, queueCV, promisesQueue)
+            ->setContext(std::pair<ClientInfo, Request>(client, req))
+            .then([userInfo = std::move(userInfo),
+                    nnaInfo = std::move(nnaInfo),
+                    presence = std::move(presence),
+                    client, req, this](std::unique_ptr<db::Result> friendsInfo) mutable {
 
-        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-        return;
-    }
+            if (userInfo->getStatus() != db::DBResultStatus::SUCCESS || friendsInfo->getStatus() != db::DBResultStatus::SUCCESS) {
+                logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                           + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                           + std::to_string(client.address.address.port));
 
-    if (!userInfo->data.has_value()) {
-        logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
+                sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+                return;
+            }
 
-        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
-        return;
-    }
+            if (!userInfo->hasData()) {
+                logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
 
-    auto userInfoData = std::any_cast<db::DBUserInfoData>(userInfo->data);
+                sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+                return;
+            }
 
-    db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
-    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
-                                                                      std::nullopt, std::move(nnaInfo.encode()),
-                                                                      std::move(presence.encode()),
-                                                                      std::nullopt, lastOnline);
+            db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+            auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
+                                                                              std::nullopt, std::move(nnaInfo->encode()),
+                                                                              std::move(presence->encode()),
+                                                                              std::nullopt, lastOnline);
 
-    cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-    auto updateUserInfoResult = db->getResult(cmdId);
-    if (updateUserInfoResult->status != db::DBResultStatus::SUCCESS) {
-        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
-                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                   + std::to_string(client.address.address.port));
+            db->runCommand(std::move(updateUserInfoCmd), queueMutex, queueCV, promisesQueue)
+                ->setContext(std::pair<ClientInfo, Request>(client, req))
+                .then([userInfo = std::move(userInfo),
+                        friendsInfo = std::move(friendsInfo),
+                        nnaInfo = std::move(nnaInfo),
+                        presence = std::move(presence),
+                        client, req, this](std::unique_ptr<db::Result> updateUserInfoResult) mutable{
 
-        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-        return;
-    }
+                if (updateUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS) {
+                    logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
+                                                               + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                               + std::to_string(client.address.address.port));
 
-    Response res;
-    res.protocolId = req.protocolId;
-    res.extendedProtocolId = req.extendedProtocolId;
-    res.methodId = req.methodId;
-    res.callId = req.callId;
-    res.success = true;
+                    sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+                    return;
+                }
 
-    PrincipalPreference principalPreference(client.minorVersion);
-    principalPreference.showOnline = userInfoData.showPresence;
-    principalPreference.showPlaying = userInfoData.showPlaying;
-    principalPreference.blockFriendRequest = userInfoData.blockRequests;
+                Response res;
+                res.protocolId = req.protocolId;
+                res.extendedProtocolId = req.extendedProtocolId;
+                res.methodId = req.methodId;
+                res.callId = req.callId;
+                res.success = true;
 
-    Comment statusMsg(client.minorVersion);
-    statusMsg.decode(userInfoData.comment);
+                auto userInfoData = userInfo->getData<db::DBUserInfoData>();
 
-    List<FriendInfo> friendList(client.minorVersion);
-    for (auto& friendData : std::any_cast<std::vector<db::DBFriendInfoData>>(friendsInfo->data)) {
-        FriendInfo friendInfo(client.minorVersion);
+                std::unique_ptr<PrincipalPreference> principalPreference = std::make_unique<PrincipalPreference>(client.minorVersion);
+                principalPreference->showOnline = userInfoData.showPresence;
+                principalPreference->showPlaying = userInfoData.showPlaying;
+                principalPreference->blockFriendRequest = userInfoData.blockRequests;
 
-        friendInfo.nnaInfo.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.nnaInfo)));
-        friendInfo.presence.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.presence)));
-        friendInfo.comment.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.comment)));
-        friendInfo.lastOnline = Datetime(0, friendData.lastOnline);
-        friendInfo.becameFriends = Datetime(0, friendData.becameFriends);
+                std::unique_ptr<Comment> statusMsg = std::make_unique<Comment>(client.minorVersion);
+                statusMsg->decode(userInfoData.comment);
 
-        friendList.push_back(friendInfo);
-    }
+                std::unique_ptr<List<FriendInfo>> friendList = std::make_unique<List<FriendInfo>>(client.minorVersion);
+                for (auto& friendData : friendsInfo->getData<std::vector<db::DBFriendInfoData>>()) {
+                    FriendInfo friendInfo(client.minorVersion);
 
-    List<FriendRequest> sentFriendRequests(client.minorVersion);
-    List<FriendRequest> receivedFriendRequests(client.minorVersion);
-    List<BlacklistedPrincipal> blacklistedPrincipals(client.minorVersion);
-    Bool unk1;
-    List<PersistentNotification> notifications(client.minorVersion);
-    Bool unk2;
+                    friendInfo.nnaInfo.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.nnaInfo)));
+                    friendInfo.presence.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.presence)));
+                    friendInfo.comment.decode(std::move(std::any_cast<std::vector<uint8_t>>(friendData.comment)));
+                    friendInfo.lastOnline = Datetime(0, friendData.lastOnline);
+                    friendInfo.becameFriends = Datetime(0, friendData.becameFriends);
 
-    std::vector<T_ptr> params(9);
-    params[0] = std::make_shared<PrincipalPreference>(principalPreference);
-    params[1] = std::make_shared<Comment>(statusMsg);
-    params[2] = std::make_shared<List<FriendInfo>>(friendList);
-    params[3] = std::make_shared<List<FriendRequest>>(sentFriendRequests);
-    params[4] = std::make_shared<List<FriendRequest>>(receivedFriendRequests);
-    params[5] = std::make_shared<List<BlacklistedPrincipal>>(blacklistedPrincipals);
-    params[6] = std::make_shared<Bool>(0, unk1);
-    params[7] = std::make_shared<List<PersistentNotification>>(notifications);
-    params[8] = std::make_shared<Bool>(0, unk2);
+                    friendList->push_back(std::move(friendInfo));
+                }
 
-    sendMsg(client, res, params);
+                std::unique_ptr<List<FriendRequest>> sentFriendRequests = std::make_unique<List<FriendRequest>>(client.minorVersion);
+                std::unique_ptr<List<FriendRequest>> receivedFriendRequests = std::make_unique<List<FriendRequest>>(client.minorVersion);
+                std::unique_ptr<List<BlacklistedPrincipal>> blacklistedPrincipals = std::make_unique<List<BlacklistedPrincipal>>(client.minorVersion);
+                std::unique_ptr<Bool> unk1 = std::make_unique<Bool>(client.minorVersion, false);
+                std::unique_ptr<List<PersistentNotification>> notifications = std::make_unique<List<PersistentNotification>>(client.minorVersion);
+                std::unique_ptr<Bool> unk2 = std::make_unique<Bool>(client.minorVersion, false);
 
-    NNAInfo dbUserData(client.minorVersion);
-    dbUserData.decode(userInfoData.nnaInfo);
-    bool miiChanged = nnaInfo.info.mii.encode() != dbUserData.info.mii.encode();
+                std::vector<T_ptr> params(9);
+                params[0] = std::move(principalPreference);
+                params[1] = std::move(statusMsg);
+                params[2] = std::move(friendList);
+                params[3] = std::move(sentFriendRequests);
+                params[4] = std::move(receivedFriendRequests);
+                params[5] = std::move(blacklistedPrincipals);
+                params[6] = std::move(unk1);
+                params[7] = std::move(notifications);
+                params[8] = std::move(unk2);
 
-    // Send presence (any possibly mii change) update to connected friends
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
-    for (auto& friendPid : clientIt->second.friends) {
-        AnyDataHolder data;
-        presence.pid = client.pid;
-        presence.online = true;
-        data.set(presence, "NintendoPresenceV2");
+                sendMsg(client, res, params);
 
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+                NNAInfo dbUserData(client.minorVersion);
+                dbUserData.decode(userInfoData.nnaInfo);
+                bool miiChanged = nnaInfo->info.mii.encode() != dbUserData.info.mii.encode();
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
-        if (miiChanged) {
-            data.set(nnaInfo, "NNAInfo");
-            sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
-        }
-    }
+                // Send presence (any possibly mii change) update to connected friends
+                std::unique_lock registeredClientsLock(registeredClientsMutex);
+                auto clientIt = registeredClients.find(client.pid);
+                for (auto& friendPid : clientIt->second.friends) {
+                    AnyDataHolder data;
+                    presence->pid = client.pid;
+                    presence->online = true;
+                    data.set(*presence, "NintendoPresenceV2");
+
+                    auto friendIt = registeredClients.find(friendPid);
+                    if (friendIt == registeredClients.end()) continue;
+
+                    sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+                    if (miiChanged) {
+                        data.set(*nnaInfo, "NNAInfo");
+                        sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
+                    }
+                }
+            });
+        });
+    });
 }
 
-void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPresenceV2 presence) {
+void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence) {
     std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
@@ -278,44 +293,47 @@ void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, NintendoPr
 
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
                                                                       std::nullopt, std::nullopt,
-                                                                      std::move(presence.encode()),
+                                                                      std::move(presence->encode()),
                                                                       std::nullopt, std::nullopt);
 
-    uint32_t cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-    auto updateUserInfoResult = db->getResult(cmdId);
+    db->runCommand(std::move(updateUserInfoCmd), queueMutex, queueCV, promisesQueue)
+        ->setContext(std::pair<ClientInfo, Request>(client, req))
+        .then([presence = std::move(presence),
+               client, req, this](std::unique_ptr<db::Result> updateUserInfoResult) {
 
-    if (updateUserInfoResult->status != db::DBResultStatus::SUCCESS) {
-        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
-                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                   + std::to_string(client.address.address.port));
+        if (updateUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
 
-        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-        return;
-    }
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            return;
+        }
 
-    Response res;
-    res.protocolId = req.protocolId;
-    res.extendedProtocolId = req.extendedProtocolId;
-    res.methodId = req.methodId;
-    res.callId = req.callId;
-    res.success = true;
+        Response res;
+        res.protocolId = req.protocolId;
+        res.extendedProtocolId = req.extendedProtocolId;
+        res.methodId = req.methodId;
+        res.callId = req.callId;
+        res.success = true;
 
-    sendMsg(client, res, {});
+        sendMsg(client, res, {});
 
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
-    // Send presence update to connected friends
-    for (auto& friendPid : clientIt->second.friends) {
-        AnyDataHolder data;
-        presence.pid = client.pid;
-        presence.online = true;
-        data.set(presence, "NintendoPresenceV2");
+        std::unique_lock registeredClientsLock(registeredClientsMutex);
+        auto clientIt = registeredClients.find(client.pid);
+        // Send presence update to connected friends
+        for (auto& friendPid : clientIt->second.friends) {
+            AnyDataHolder data;
+            presence->pid = client.pid;
+            presence->online = true;
+            data.set(*presence, "NintendoPresenceV2");
 
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+            auto friendIt = registeredClients.find(friendPid);
+            if (friendIt == registeredClients.end()) continue;
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
-    }
+            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+        }
+    });
 }
 
 void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender,
@@ -334,7 +352,7 @@ void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationT
     notificationEvent.eventData = data;
 
     std::vector<T_ptr> params;
-    params.push_back(std::make_shared<NintendoNotificationEvent>(notificationEvent));
+    params.push_back(std::make_unique<NintendoNotificationEvent>(notificationEvent));
 
     sendMsg(client, req, params);
 }
@@ -352,14 +370,18 @@ void FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
                                                                           std::move(presence.encode()),
                                                                           std::nullopt, lastOnline);
 
-        uint32_t cmdId = db::Database::runCommand(db, std::move(updateUserInfoCmd), registerCloseCall, unregisterCloseCall, shouldStop);
-        auto updateUserInfoResult = db->getResult(cmdId);
+        db->runCommand(std::move(updateUserInfoCmd), queueMutex, queueCV, promisesQueue)
+            ->then([address, this](std::unique_ptr<db::Result> updateUserInfoResult) {
 
-        if (updateUserInfoResult->status != db::DBResultStatus::SUCCESS) {
-            logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(clientIt->second.client.pid)
-                                                       + " from " + util::ipv4ToString(clientIt->second.client.address.address) + ":"
-                                                       + std::to_string(clientIt->second.client.address.address.port));
-        }
+            std::unique_lock registeredClientsLock(registeredClientsMutex);
+            auto clientIt = registeredClients.find(pidMap[address]);
+
+            if (updateUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS && clientIt != registeredClients.end()) {
+                logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(clientIt->second.client.pid)
+                                                           + " from " + util::ipv4ToString(clientIt->second.client.address.address) + ":"
+                                                           + std::to_string(clientIt->second.client.address.address.port));
+            }
+        });
 
         // Send presence update to connected friends
         NintendoNotificationEventGeneral generalEvent(0);

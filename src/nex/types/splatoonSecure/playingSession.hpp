@@ -11,6 +11,8 @@ namespace nex::rmc {
     class PlayingSession : public Structure {
     public:
         explicit PlayingSession(uint8_t minorVersion) : Structure(minorVersion), gathering(minorVersion) {};
+        PlayingSession(const PlayingSession& other) = default;
+        PlayingSession(PlayingSession&& other) noexcept = default;
         ~PlayingSession() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -45,6 +47,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        PlayingSession& operator=(const PlayingSession& other) = default;
+        PlayingSession& operator=(PlayingSession&& other) noexcept = default;
 
         PID pid;
         Gathering gathering;

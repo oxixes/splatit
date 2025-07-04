@@ -11,9 +11,15 @@ namespace nex::rmc {
 class Response {
 public:
     Response() = default;
+    Response(const Response& other) = default;
+    Response(Response&& other) noexcept = default;
+    ~Response() = default;
 
     [[nodiscard]] std::vector<uint8_t> encode(size_t paramLength) const;
     std::vector<uint8_t> decode(std::vector<uint8_t> data);
+
+    Response& operator=(const Response& other) = default;
+    Response& operator=(Response&& other) noexcept = default;
 
     uint8_t protocolId = 0;
     uint16_t extendedProtocolId = 0;

@@ -11,6 +11,8 @@ namespace nex::rmc {
     class MatchmakeParam : public Structure {
     public:
         explicit MatchmakeParam(uint8_t minorVersion) : Structure(minorVersion), params(minorVersion) {};
+        MatchmakeParam(const MatchmakeParam& other) = default;
+        MatchmakeParam(MatchmakeParam&& other) noexcept = default;
         ~MatchmakeParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -44,6 +46,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "MatchmakeParam"; }
+
+        MatchmakeParam& operator=(const MatchmakeParam& other) = default;
+        MatchmakeParam& operator=(MatchmakeParam&& other) noexcept = default;
 
         Map<String, Variant> params;
 

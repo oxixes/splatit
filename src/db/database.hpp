@@ -14,6 +14,7 @@
 
 #include "../logger.hpp"
 #include "dbTypes.hpp"
+#include "../util/promise.hpp"
 
 using json = nlohmann::json;
 
@@ -166,28 +167,56 @@ struct DBDeviceAttributeData {
     datetime_t createdDate;
 };
 
-class Command {
+class Result {
+protected:
+    std::any data;
+    DBResultStatus status;
+
 public:
+    explicit Result(DBResultStatus status, std::any data) {
+        this->status = status;
+        this->data = std::move(data);
+    }
+
+    [[nodiscard]] DBResultStatus getStatus() const {
+        return status;
+    }
+
+    [[nodiscard]] bool hasData() const {
+        return data.has_value();
+    }
+
+    template<typename T>
+    [[nodiscard]] T getData() const {
+        if (!data.has_value()) {
+            throw std::runtime_error("No data available in Result");
+        }
+        return std::any_cast<T>(data);
+    }
+
+    [[nodiscard]] std::any getRawData() const {
+        return data;
+    }
+
+    friend class Database;
+};
+
+using PromisesQueue = std::queue<std::shared_ptr<Promise<std::unique_ptr<Result>>>>;
+
+class Command {
+protected:
+    std::shared_ptr<PromisesQueue> promisesQueue = nullptr;
+    std::shared_ptr<std::mutex> promisesMutex = nullptr;
+    std::shared_ptr<std::condition_variable> promisesCV = nullptr;
     DBCommandType type;
     std::any data;
-    uint32_t commandId = 0;
-    bool hasMutex = false;
+
+public:
+    friend class Database;
+    friend class sqlite3Database;
 
     explicit Command(DBCommandType type, std::any data) {
         this->type = type;
-        this->data = std::move(data);
-    }
-};
-
-class Result {
-public:
-    std::any data;
-    DBResultStatus status;
-    uint32_t commandId;
-
-    explicit Result(uint32_t commandId, DBResultStatus status, std::any data) {
-        this->commandId = commandId;
-        this->status = status;
         this->data = std::move(data);
     }
 };
@@ -198,19 +227,13 @@ protected:
 
     std::shared_ptr<Logger::Logger> logger;
 
-    std::queue<std::unique_ptr<Command>> commandQueue;
+    std::queue<std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>>> commandQueue;
     std::mutex commandQueueMutex;
-
-    std::vector<std::unique_ptr<Result>> results;
-    std::mutex resultsMutex;
-
-    std::vector<std::tuple<uint32_t, std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>, std::thread::id>> commandCVs;
-    std::mutex commandCVsMutex;
-
-    uint32_t commandId = 0;
 
     DBType dbType;
     DBVersion dbVersion;
+
+    bool shouldStop = false;
 
     static bool verifyCommandArgs(const std::unique_ptr<Command>& command);
 public:
@@ -220,15 +243,12 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual uint32_t queueCommand(std::unique_ptr<Command> command, bool commandMutex) = 0;
+    virtual std::shared_ptr<Promise<std::unique_ptr<Result>>> queueCommand(std::unique_ptr<Command> command,
+                                                                           std::shared_ptr<std::mutex> promisesMutex,
+                                                                           std::shared_ptr<std::condition_variable> promisesCV,
+                                                                           std::shared_ptr<PromisesQueue> promisesQueue) = 0;
     virtual void processQueue() = 0;
-    virtual void waitForCommand(uint32_t commandId, std::shared_ptr<bool> shouldEnd) = 0;
-    virtual void waitForQueue(std::shared_ptr<bool> shouldEnd) = 0;
-    virtual void clearCommandMutex(uint32_t commandId) = 0;
-    virtual void notifyCommand(uint32_t commandId) = 0;
-    virtual void notifyQueue() = 0;
-
-    std::unique_ptr<Result> getResult(uint32_t commandID);
+    virtual void waitForQueue() = 0;
 
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
     static std::unique_ptr<Command> craftGetUserByPIDCommand(uint32_t pid);
@@ -246,11 +266,12 @@ public:
     static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
 
-    static std::shared_ptr<Database> createDatabase(const json& config, std::shared_ptr<Logger::Logger> logger);
+    static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 
-    static uint32_t runCommand(std::shared_ptr<Database> db, std::unique_ptr<Command> command,
-                           const std::function<unsigned int(std::function<void()>)>& registerCloseCall,
-                           const std::function<void(unsigned int)>& unregisterCloseCall, bool& shouldStop);
+    std::shared_ptr<Promise<std::unique_ptr<Result>>> runCommand(std::unique_ptr<Command> command,
+                           std::shared_ptr<std::mutex> promisesMutex,
+                           std::shared_ptr<std::condition_variable> promisesCV,
+                           std::shared_ptr<PromisesQueue> promisesQueue);
 
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;

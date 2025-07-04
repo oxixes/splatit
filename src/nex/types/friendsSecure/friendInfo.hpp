@@ -12,6 +12,9 @@ namespace nex::rmc {
     public:
         explicit FriendInfo(uint8_t minorVersion) : Data(minorVersion), nnaInfo(minorVersion), presence(minorVersion),
                                                     comment(minorVersion) {};
+        FriendInfo(const FriendInfo& other) = default;
+        FriendInfo(FriendInfo&& other) noexcept = default;
+        ~FriendInfo() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> parentData = Data::encode();
@@ -52,6 +55,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        FriendInfo& operator=(const FriendInfo& other) = default;
+        FriendInfo& operator=(FriendInfo&& other) noexcept = default;
 
         NNAInfo nnaInfo;
         NintendoPresenceV2 presence;

@@ -13,6 +13,8 @@ namespace nex::rmc {
                                                           urlRegularProtocols(minorVersion),
                                                           lstSpecialProtocols(minorVersion),
                                                           urlSpecialProtocols(minorVersion) {};
+        RVConnectionData(const RVConnectionData& other) = default;
+        RVConnectionData(RVConnectionData&& other) noexcept = default;
         ~RVConnectionData() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -46,6 +48,9 @@ namespace nex::rmc {
 
             return headerSize + regularProtocolsSize + bufSpecialProtocolsSize + specialProtocolsSize;
         }
+
+        RVConnectionData& operator=(const RVConnectionData& other) = default;
+        RVConnectionData& operator=(RVConnectionData&& other) noexcept = default;
 
         StationURL urlRegularProtocols;
         Buffer lstSpecialProtocols;

@@ -107,13 +107,6 @@ std::string generateAccountToken(const AccountToken& token) {
     // and base64 encoding will increase the length by 33%.
     data.insert(data.end(), signature.begin(), signature.begin() + 8);
 
-    // Print the encrypted data in hex
-    std::stringstream ss;
-    for (uint8_t c : data) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << (int) c;
-    }
-    std::cout << ss.str() << std::endl;
-
     return base64Encode(data);
 }
 

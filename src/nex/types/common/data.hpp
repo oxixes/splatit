@@ -8,6 +8,8 @@ namespace nex::rmc {
     class Data : public Structure {
     public:
         explicit Data(uint8_t minorVersion) : Structure(minorVersion) {};
+        Data(const Data& other) = default;
+        Data(Data&& other) noexcept = default;
         ~Data() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -17,6 +19,9 @@ namespace nex::rmc {
         size_t decode(std::span<const uint8_t> data) override {
             return decodeHeader(data, 0);
         }
+
+        Data& operator=(const Data& other) = default;
+        Data& operator=(Data&& other) noexcept = default;
     };
 
 } // namespace nex::rmc

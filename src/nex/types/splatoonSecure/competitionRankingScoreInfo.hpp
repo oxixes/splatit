@@ -10,6 +10,8 @@ namespace nex::rmc {
     class CompetitionRankingScoreInfo : public Structure {
     public:
         explicit CompetitionRankingScoreInfo(uint8_t minorVersion) : Structure(minorVersion) {};
+        CompetitionRankingScoreInfo(const CompetitionRankingScoreInfo& other) = default;
+        CompetitionRankingScoreInfo(CompetitionRankingScoreInfo&& other) noexcept = default;
         ~CompetitionRankingScoreInfo() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -59,6 +61,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "CompetitionRankingScoreInfo"; }
+
+        CompetitionRankingScoreInfo& operator=(const CompetitionRankingScoreInfo& other) = default;
+        CompetitionRankingScoreInfo& operator=(CompetitionRankingScoreInfo&& other) noexcept = default;
 
         UInt32 festivalId;
         List<CompetitionRankingScoreData> scoreData;

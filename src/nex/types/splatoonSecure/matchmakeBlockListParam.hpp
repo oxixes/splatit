@@ -9,6 +9,8 @@ namespace nex::rmc {
     class MatchmakeBlockListParam : public Structure {
     public:
         explicit MatchmakeBlockListParam(uint8_t minorVersion) : Structure(minorVersion) {};
+        MatchmakeBlockListParam(const MatchmakeBlockListParam& other) = default;
+        MatchmakeBlockListParam(MatchmakeBlockListParam&& other) noexcept = default;
         ~MatchmakeBlockListParam() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -31,6 +33,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        MatchmakeBlockListParam& operator=(const MatchmakeBlockListParam& other) = default;
+        MatchmakeBlockListParam& operator=(MatchmakeBlockListParam&& other) noexcept = default;
 
         UInt32 optionFlag;
 

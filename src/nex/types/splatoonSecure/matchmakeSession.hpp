@@ -12,6 +12,8 @@ namespace nex::rmc {
     class MatchmakeSession : public Gathering {
     public:
         explicit MatchmakeSession(uint8_t minorVersion) : Gathering(minorVersion), matchmakeParam(minorVersion) {};
+        MatchmakeSession(const MatchmakeSession& other) = default;
+        MatchmakeSession(MatchmakeSession&& other) noexcept = default;
         ~MatchmakeSession() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -110,6 +112,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "MatchmakeSession"; }
+
+        MatchmakeSession& operator=(const MatchmakeSession& other) = default;
+        MatchmakeSession& operator=(MatchmakeSession&& other) noexcept = default;
 
         UInt32 gameMode;
         List<UInt32> attributes;

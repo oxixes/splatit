@@ -24,6 +24,8 @@ namespace nex::rmc {
     class NotificationEvent : public Structure {
     public:
         explicit NotificationEvent(uint8_t minorVersion) : Structure(minorVersion) {};
+        NotificationEvent(const NotificationEvent& other) = default;
+        NotificationEvent(NotificationEvent&& other) noexcept = default;
         ~NotificationEvent() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -63,6 +65,9 @@ namespace nex::rmc {
 
             return size;
         }
+
+        NotificationEvent& operator=(const NotificationEvent& other) = default;
+        NotificationEvent& operator=(NotificationEvent&& other) noexcept = default;
 
         PID srcPid;
         NotificationType type;

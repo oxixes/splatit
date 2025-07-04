@@ -11,6 +11,9 @@ namespace nex::rmc {
     class Result : public Type {
     public:
         explicit Result(uint8_t minorVersion = 0) : Type(minorVersion) {}
+        Result(const Result& other) = default;
+        Result(Result&& other) noexcept = default;
+        ~Result() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             std::vector<uint8_t> data(sizeof(uint32_t));
@@ -33,6 +36,9 @@ namespace nex::rmc {
 
             return sizeof(uint32_t);
         }
+
+        Result& operator=(const Result& other) = default;
+        Result& operator=(Result&& other) noexcept = default;
 
         Error code = Error::NONE;
         bool success = true;

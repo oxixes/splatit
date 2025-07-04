@@ -102,7 +102,7 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
                                     + std::to_string(dir.c) + "." + std::to_string(dir.d) + ":" + std::to_string(dir.port);
 
             std::string method;
-            switch(request.getMethod()) {
+            switch(request->getMethod()) {
                 case Method::M_GET:
                     method = "GET";
                     break;
@@ -121,12 +121,12 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
             }
 
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Received request from " +
-                                                                      ipAndPort + " " + method + " " + request.getPath());
+                                                                      ipAndPort + " " + method + " " + request->getPath());
 
-            std::unique_lock lock(requestsQueueMutex);
+            std::unique_lock lock(*queueMutex);
             requestsQueue.emplace(sockId, std::move(request));
+            queueCV->notify_one();
             lock.unlock();
-            workerCV.notify_one();
 
             buffer.erase(buffer.begin(), buffer.begin() + (ssize_t) length);
             finish = false;
@@ -154,40 +154,50 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
 
 void Server::serverThread() {
     while (true) {
-        std::unique_lock lock(workerMutex);
-        workerCV.wait(lock, [this] { return !requestsQueue.empty() || shouldStop; });
-        lock.unlock();
+        std::unique_lock lock(*queueMutex);
+        queueCV->wait(lock, [this] { return !requestsQueue.empty() || !promisesQueue->empty() || shouldStop; });
 
         if (shouldStop) return;
 
-        bool shouldContinue = true;
+        while (!promisesQueue->empty() && !shouldStop) {
+            auto promise = std::move(promisesQueue->front());
+            promisesQueue->pop();
 
-        while (shouldContinue && !shouldStop) {
-            std::unique_lock queueLock(requestsQueueMutex);
+            lock.unlock();
+            try {
+                promise->resolve();
+            } catch (const std::exception& e) {
+                if (promise->hasContext()) {
+                    auto context = std::move(promise->getContext<std::pair<uint32_t, std::shared_ptr<Request>>>());
+                    std::unique_lock clientsLock(clientsMutex);
+                    sock::IPv4Addr clientDir = clients[context.first];
+                    clientsLock.unlock();
+                    sendError(context.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, context.second, clientDir);
+                }
 
-            if (requestsQueue.empty()) {
-                shouldContinue = false;
-                continue;
+                logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while resolving a promise: " +
+                                                                            std::string(e.what()));
             }
+            lock.lock();
+        }
 
+        if (shouldStop) break;
+
+        while (!requestsQueue.empty() && !shouldStop) {
             auto request = std::move(requestsQueue.front());
             requestsQueue.pop();
+            lock.unlock();
 
-            shouldContinue = !requestsQueue.empty();
-            queueLock.unlock();
-
-            std::function<Response(std::shared_ptr<Logger::Logger>, Request,
-                                         sock::IPv4Addr, bool&, bool&, std::function<uint32_t(std::function<void()>)>,
-                                         std::function<void(uint32_t)>)> handler = nullptr;
+            std::function<void(Server*, std::unique_ptr<Context>)> handler = nullptr;
 
             std::unique_lock routesLock(routesMutex);
-            if (request.second.hasHeader("host")) {
-                if (routes.find(request.second.getHeader("host")[0]) != routes.end()
-                    && routes[request.second.getHeader("host")[0]].find(request.second.getPath()) != routes[request.second.getHeader("host")[0]].end()) {
-                    handler = routes[request.second.getHeader("host")[0]][request.second.getPath()];
-                } else if (regexRoutes.find(request.second.getHeader("host")[0]) != regexRoutes.end()) {
-                    for (auto& route : regexRoutes[request.second.getHeader("host")[0]]) {
-                        if (std::regex_match(request.second.getPath(), route.first)) {
+            if (request.second->hasHeader("host")) {
+                if (routes.find(request.second->getHeader("host")[0]) != routes.end()
+                    && routes[request.second->getHeader("host")[0]].find(request.second->getPath()) != routes[request.second->getHeader("host")[0]].end()) {
+                    handler = routes[request.second->getHeader("host")[0]][request.second->getPath()];
+                } else if (regexRoutes.find(request.second->getHeader("host")[0]) != regexRoutes.end()) {
+                    for (auto& route : regexRoutes[request.second->getHeader("host")[0]]) {
+                        if (std::regex_match(request.second->getPath(), route.first)) {
                             handler = route.second;
                             break;
                         }
@@ -204,55 +214,61 @@ void Server::serverThread() {
             if (handler == nullptr) {
                 logger->log(Logger::level::INFO, Logger::group::NETWORK,
                             "Received request for unknown route from " + std::to_string(request.first) + ", closing connection");
+
+                // Log the request for debugging purposes
+                std::string body(request.second->getBody().begin(), request.second->getBody().end());
+                logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Body: " + body);
+
                 sendError(request.first, HTTP_STATUS_NOT_FOUND, request.second, clientDir);
             } else {
                 try {
-                    bool shouldClose = false;
-                    auto response = handler(logger, request.second, clientDir, shouldStop, shouldClose,
-                                            [this] (std::function<void()> func) { return registerCloseCall(std::move(func)); },
-                                            [this] (uint32_t id) { return unregisterCloseCall(id); });
-
-                    // The handler may take a long time to execute, so we need to check if the socket is still open
-                    if (!socketMgr->isClosed(request.first)) {
-                        socketMgr->send(request.first, std::move(response.serialize()));
-                        if (shouldClose) socketMgr->close(request.first);
-                    }
+                    std::unique_ptr<Context> context = std::make_unique<Context>(logger, clientDir, request.first, std::move(request.second), 0,
+                                                                                 promisesQueue, queueMutex, queueCV);
+                    handler(this, std::move(context));
                 } catch (std::exception& e) {
                     logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "Error while handling request: " + std::string(e.what()));
                     sendError(request.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, request.second, clientDir);
                 }
             }
+
+            lock.lock();
         }
     }
 }
 
-Response Server::getError(Version version, int status) {
-    Response response(version, status);
+std::unique_ptr<Response> Server::getError(Version version, int status) {
+    std::unique_ptr<Response> response = std::make_unique<Response>(version, status);
 
-    response.setHeader("Content-Type", "text/html");
-    response.setHeader("Connection", "close");
+    response->setHeader("Content-Type", "text/html");
+    if (version == Version::HTTP_1_1) response->setHeader("Connection", "close");
 
     std::string statusString = std::to_string(status) + " " + STATUS_CODE_MSG.at(status);
 
     std::string body = "<!DOCTYPE html><html><head><title>" + statusString +
                        "</title></head><body><h1>" + statusString + "</h1></body></html>";
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
-    response.setBody(bodyVec);
+    response->setBody(std::move(bodyVec));
 
-    return response;
+    return std::move(response);
 }
 
-void Server::sendError(uint32_t sockId, int status, const Request& request, sock::IPv4Addr client) {
-    std::unique_lock lock(errorPagesMutex);
-    auto response = (!request.hasHeader("host")
-            || errorPages.find(request.getHeader("host")[0]) == errorPages.end()) ? getError(request.getVersion(), status) :
-            errorPages[request.getHeader("host")[0]](logger, request, client, status);
-    socketMgr->send(sockId, std::move(response.serialize()));
-    socketMgr->close(sockId);
+void Server::sendError(uint32_t sockId, int status, const std::shared_ptr<Request>& request, sock::IPv4Addr client) {
+    std::unique_lock lock(routesMutex);
+
+    if (!request->hasHeader("host") || errorPages.find(request->getHeader("host")[0]) == errorPages.end()) {
+        auto response = std::move(getError(request->getVersion(), status));
+        socketMgr->send(sockId, std::move(response->serialize()));
+        socketMgr->close(sockId);
+    } else {
+        std::unique_ptr<Context> context = std::make_unique<Context>(logger, client, sockId, request, status,
+                                                                     promisesQueue, queueMutex, queueCV);
+        lock.unlock();
+        errorPages[request->getHeader("host")[0]](this, std::move(context));
+    }
 }
 
 void Server::sendError(uint32_t sockId, int status) {
-    Request req("", Method::M_GET, Version::HTTP_1_1);
+    std::shared_ptr<Request> req = std::make_shared<Request>("", Method::M_GET, Version::HTTP_1_1);
     sock::IPv4Addr client{};
     sendError(sockId, status, req, client);
 }
@@ -266,14 +282,7 @@ void Server::stop() {
 
     shouldStop = true;
 
-    std::unique_lock closeCallsLock(closeCallsMutex);
-    for (auto& call : closeCalls) {
-        call.second();
-    }
-    closeCalls.clear();
-    closeCallsLock.unlock();
-
-    workerCV.notify_all();
+    queueCV->notify_all();
     for (auto& thread : threads) {
         thread.join();
     }
@@ -286,49 +295,31 @@ void Server::stop() {
     clients.clear();
     buffers.clear();
 
-    std::unique_lock requestsQueueLock(requestsQueueMutex);
-    while (!requestsQueue.empty()) requestsQueue.pop();
+    std::unique_lock requestsQueueLock(*queueMutex);
+    requestsQueue = std::queue<std::pair<uint32_t, std::shared_ptr<Request>>>();
+    promisesQueue = std::make_shared<db::PromisesQueue>();
 
     mainSocket = nullptr;
 }
 
-uint32_t Server::registerCloseCall(std::function<void()> closeFunc) {
-    if (shouldStop) return 0;
-    std::unique_lock lock(closeCallsMutex);
-    uint32_t id = closeCallID++;
-    closeCalls[id] = std::move(closeFunc);
-    return id;
-}
-
-void Server::unregisterCloseCall(uint32_t id) {
-    std::unique_lock lock(closeCallsMutex);
-    closeCalls.erase(id);
-}
-
-void Server::registerRoute(const std::string& host, const std::string& path, std::function<Response(
-        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
-        std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
+void Server::registerRoute(const std::string& host, const std::string& path, std::function<void(
+        Server*, std::unique_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
-        routes[host] = std::unordered_map<std::string, std::function<Response(
-                std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
-                std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>();
+        routes[host] = std::unordered_map<std::string, std::function<void(Server*, std::unique_ptr<Context>)>>();
     }
 
     routes[host][path] = std::move(func);
 }
 
-void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<Response(
-        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
-        std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)> func) {
+void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<void(
+        Server*, std::unique_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
 
     std::regex regexPath(path);
 
     if (regexRoutes.find(host) == regexRoutes.end()) {
-        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<Response(
-                std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, bool&, bool&,
-                std::function<uint32_t(std::function<void()>)>, std::function<void(uint32_t)>)>>>();
+        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<void(Server*, std::unique_ptr<Context>)>>>();
     }
 
     regexRoutes[host].emplace_back(std::move(regexPath), std::move(func));
@@ -339,10 +330,15 @@ void Server::unregisterHost(const std::string& host) {
     routes.erase(host);
 }
 
-void Server::registerErrorPage(const std::string &host, std::function<Response(
-        std::shared_ptr<Logger::Logger>, Request, sock::IPv4Addr, int)> func) {
-    std::unique_lock lock(errorPagesMutex);
+void Server::registerErrorPage(const std::string& host, std::function<void(
+        Server*, std::unique_ptr<Context>)> func) {
+    std::unique_lock lock(routesMutex);
     errorPages[host] = std::move(func);
+}
+
+void Server::sendResponse(std::unique_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) {
+    socketMgr->send(context->clientSockId, std::move(response->serialize()));
+    if (!keepAlive) socketMgr->close(context->clientSockId);
 }
 
 } // namespace http

@@ -8,6 +8,8 @@ namespace nex::rmc {
     class ResultRange : public Structure {
     public:
         explicit ResultRange(uint8_t minorVersion) : Structure(minorVersion) {};
+        ResultRange(const ResultRange& other) = default;
+        ResultRange(ResultRange&& other) noexcept = default;
         ~ResultRange() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
@@ -45,6 +47,9 @@ namespace nex::rmc {
         }
 
         [[nodiscard]] std::string getName() const override { return "ResultRange"; }
+
+        ResultRange& operator=(const ResultRange& other) = default;
+        ResultRange& operator=(ResultRange&& other) noexcept = default;
 
         UInt32 offset;
         UInt32 length;

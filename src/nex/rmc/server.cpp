@@ -1,25 +1,10 @@
 #include "server.hpp"
 
-#include <utility>
-
 #include "../../exceptions.hpp"
 
 namespace nex::rmc {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {
-    registerCloseCall = [this](std::function<void()> closeFunc) -> uint32_t {
-        if (shouldStop) return 0;
-        std::unique_lock lock(closeCallsMutex);
-        auto id = closeCallID++;
-        closeCalls[id] = std::move(closeFunc);
-        return id;
-    };
-
-    unregisterCloseCall = [this](uint32_t id) {
-        std::unique_lock lock(closeCallsMutex);
-        closeCalls.erase(id);
-    };
-}
+Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) { }
 
 void Server::registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, uint8_t listenPort, int workerCount) {
     server->registerRMCServer(listenPort,
@@ -116,7 +101,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
     try {
         params = call->second.parser(minor_version, data);
 
-        std::unique_lock lock(queueMutex);
+        std::unique_lock lock(*queueMutex);
         std::unique_lock pidMapLock(pidMapMutex);
         uint32_t pid = 0;
         auto pidIt = pidMap.find(addr);
@@ -128,7 +113,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
                                        request, std::move(params)});
         lock.unlock();
 
-        workerCV.notify_one();
+        queueCV->notify_one();
     } catch (const MalformedException& e) {
         logger->log(Logger::level::WARN, logGroup, "Received a malformed parameter data from " +
                                                     util::ipv4ToString(addr.address) + ": " +
@@ -148,33 +133,55 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
 
 void Server::serverThread() {
     while (true) {
-        std::unique_lock lock(workerMutex);
-        workerCV.wait(lock, [this] { return !requestsQueue.empty() || shouldStop; });
-        lock.unlock();
+        std::unique_lock lock(*queueMutex);
+        queueCV->wait(lock, [this] { return !requestsQueue.empty() || !promisesQueue->empty() || shouldStop; });
 
         if (shouldStop) break;
 
-        bool shouldContinue = true;
+        while (!promisesQueue->empty() && !shouldStop) {
+            auto promise = std::move(promisesQueue->front());
+            promisesQueue->pop();
 
-        while (shouldContinue && !shouldStop) {
-            std::unique_lock queueLock(queueMutex);
-            auto reqInfo = requestsQueue.front();
+            lock.unlock();
+            try {
+                promise->resolve();
+            } catch (const std::exception& e) {
+                if (promise->hasContext()) {
+                    auto context = std::move(promise->getContext<std::pair<ClientInfo, Request>>());
+                    logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
+                                                                  "(protocol id: " +
+                                                                  std::to_string(context.second.protocolId) + ", extended protocol id: " +
+                                                                  std::to_string(context.second.extendedProtocolId) + ", method id: " +
+                                                                  std::to_string(context.second.methodId) + "): " +
+                                                                  std::string(e.what()));
+                    sendMsg(context.first, createError(context.second, Error::CORE__EXCEPTION), {});
+                } else {
+                    logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while resolving a promise: " +
+                                                                  std::string(e.what()));
+                }
+            }
+            lock.lock();
+        }
+
+        if (shouldStop) break;
+
+        while (!requestsQueue.empty() && !shouldStop) {
+            auto reqInfo= std::move(requestsQueue.front());
             requestsQueue.pop();
 
-            if (requestsQueue.empty()) shouldContinue = false;
-            queueLock.unlock();
-
-            if (shouldStop) continue;
-
+            lock.unlock();
             auto callId = std::tuple(reqInfo.request.protocolId, reqInfo.request.extendedProtocolId,
                                      reqInfo.request.methodId);
             auto call = calls.find(callId);
 
             // This should never happen, as only existing request are added to the queue, but we check anyway
-            if (call == calls.end()) continue;
+            if (call == calls.end()) {
+                lock.lock();
+                continue;
+            }
 
             try {
-                call->second.callback(reqInfo.client, reqInfo.request, reqInfo.params);
+                call->second.callback(reqInfo.client, reqInfo.request, std::move(reqInfo.params));
             } catch (const std::exception& e) {
                 logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
                                                               "(protocol id: " +
@@ -185,7 +192,10 @@ void Server::serverThread() {
 
                 sendMsg(reqInfo.client, createError(reqInfo.request, Error::CORE__EXCEPTION), {});
             }
+            lock.lock();
         }
+
+        if (shouldStop) break;
     }
 }
 
@@ -206,21 +216,15 @@ void Server::stop() {
 
     shouldStop = true;
 
-    std::unique_lock closeCallsLock(closeCallsMutex);
-    for (auto& call : closeCalls) {
-        call.second();
-    }
-    closeCalls.clear();
-    closeCallsLock.unlock();
-
-    workerCV.notify_all();
+    queueCV->notify_all();
     for (auto& thread : threads) {
         thread.join();
     }
     threads.clear();
 
-    std::unique_lock queueLock(queueMutex);
+    std::unique_lock queueLock(*queueMutex);
     requestsQueue = std::queue<RequestInfo>(); // Clear the queue
+    promisesQueue = std::make_shared<db::PromisesQueue>(); // Reset the promises queue
 }
 
 Response Server::createError(const Request& req, Error error) {

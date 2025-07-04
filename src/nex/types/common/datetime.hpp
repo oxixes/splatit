@@ -19,6 +19,9 @@ namespace nex::rmc {
         explicit Datetime(uint8_t minorVersion = 0, time_point t = std::chrono::system_clock::now()) :
             Type(minorVersion), value(t) {}
         explicit Datetime(time_point t) : Type(0), value(t) {}
+        Datetime(const Datetime& other) = default;
+        Datetime(Datetime&& other) noexcept = default;
+        ~Datetime() override = default;
 
         [[nodiscard]] std::vector<uint8_t> encode() const override {
             uint64_t datetime = 0;
@@ -88,6 +91,9 @@ namespace nex::rmc {
         bool operator>(const time_point& other) const { return value > other; }
         bool operator<=(const time_point& other) const { return value <= other; }
         bool operator>=(const time_point& other) const { return value >= other; }
+
+        Datetime& operator=(const Datetime& other) = default;
+        Datetime& operator=(Datetime&& other) noexcept = default;
 
     private:
         time_point value;
