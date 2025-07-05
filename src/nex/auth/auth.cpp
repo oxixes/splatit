@@ -46,7 +46,7 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
     res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
     if (validUsername) {
-        auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid, serverId);
+        auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
         db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
             ->setContext(std::pair<ClientInfo, Request>(client, req))
             .then([username = std::move(username),
@@ -213,7 +213,7 @@ void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID>
     res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
     if (validPid) {
-        auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource, serverId);
+        auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource);
         db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
             ->setContext(std::pair<ClientInfo, Request>(client, req))
             .then([idSource = std::move(idSource),

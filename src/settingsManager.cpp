@@ -183,10 +183,6 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
     }
 
     settings = {
-            {"db", {
-                    {"type", "SQLite3"},
-                    {"path", (dataDirAbsPath/fs::path("db.db")).string()}
-            }},
             {"ssl", {
                     {"caCert", (certsPath/fs::path("ca.crt")).string()},
                     {"caKey", (certsPath/fs::path("ca.key")).string()},
@@ -203,6 +199,10 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"hosts", { // TODO Change this to a real address
                         {"00003200", "127.0.0.1:1201"},
                         {"10162B00", "127.0.0.1:1203"}
+                    }},
+                    {"db", {
+                        {"type", "SQLite3"},
+                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
                     }},
                     {"allowRealWiiU", true},
                     {"allowGeneratedWiiU", true}
@@ -232,6 +232,10 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"secure", {
                         {"address", "127.0.0.1"},
                         {"port", 1202}
+                    }},
+                    {"db", {
+                        {"type", "SQLite3"},
+                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
                     }}
             }},
             {"splatoonAuth", {
@@ -242,13 +246,21 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"secure", {
                        {"address", "127.0.0.1"},
                        {"port", 1204}
+                   }},
+                   {"db", {
+                       {"type", "SQLite3"},
+                       {"path", (dataDirAbsPath/fs::path("db.db")).string()}
                    }}
             }},
             {"friendsSecure", {
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
                     {"port", 1202},
-                    {"workerCount", 3}
+                    {"workerCount", 3},
+                    {"db", {
+                        {"type", "SQLite3"},
+                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+                    }}
             }},
             {"splatoonSecure", {
                    {"enabled", true},
@@ -447,8 +459,20 @@ bool SettingsManager::isgRPCReflectionEnabled() const {
     return settings["grpc"].contains("reflection") && settings["grpc"]["reflection"].get<bool>();
 }
 
-json SettingsManager::getDBSettings() const {
-    return settings["db"];
+json SettingsManager::getAccountsDBSettings() const {
+    return settings["accounts"]["db"];
+}
+
+json SettingsManager::getFriendsAuthDBSettings() const {
+    return settings["friendsAuth"]["db"];
+}
+
+json SettingsManager::getFriendsSecureDBSettings() const {
+    return settings["friendsSecure"]["db"];
+}
+
+json SettingsManager::getSplatoonAuthDBSettings() const {
+    return settings["splatoonAuth"]["db"];
 }
 
 std::vector<std::string> SettingsManager::getDomains() const {

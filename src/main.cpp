@@ -54,64 +54,15 @@ int main(int argc, char** argv) {
     logger->setMinLevel(serverOptions.minLogLevel);
 
     std::shared_ptr<SettingsManager> settingsMgr(new SettingsManager(logger));
-    if (!settingsMgr->init(serverOptions)) {
+    std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
+    if (!settingsMgr->init(serverOptions) || !certManager->init()) {
         sock::cleanup();
         return 1;
-    }
-
-    std::shared_ptr<db::Database> db = db::Database::createDatabase(settingsMgr->getDBSettings(), logger);
-    if (!db->init() || !db->run()) {
-        db->close();
-        sock::cleanup();
-        return 1;
-    }
-
-    if (db->getVersion() != db::CURRENT_VERSION) {
-        if (!db::migrations::migrate(logger, db, db::DBType::SQLITE3, db->getVersion())) {
-            db->close();
-            sock::cleanup();
-            return 1;
-        }
     }
 
     std::shared_ptr<SocketManager> socketManager(new SocketManager(logger));
-    std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
-    std::shared_ptr<http::Server> httpServer = nullptr;
+
     std::shared_ptr<grpcimpl::Server> grpcServer = nullptr;
-
-    if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
-        if (!certManager->init() || (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr))) {
-            socketManager->cleanup();
-            certManager->cleanup();
-            db->close();
-            sock::cleanup();
-            return 1;
-        }
-
-        try {
-            httpServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
-                                                        settingsMgr->getHTTPKeepAliveTimeout(),
-                                                        settingsMgr->isHTTP_SSL_Enabled(),
-                                                        certManager->getSSLKey(),
-                                                        certManager->getSSLCert());
-        } catch (const std::exception& e) {
-            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                        std::string("An error occurred while initializing the HTTP server: ") + e.what());
-            socketManager->cleanup();
-            certManager->cleanup();
-            db->close();
-            sock::cleanup();
-            return 1;
-        }
-
-        if (settingsMgr->isAccountEnabled())
-            acc::registerRoutes(httpServer, settingsMgr, certManager, db);
-
-        if (settingsMgr->isBOSSEnabled())
-            boss::registerRoutes(httpServer, settingsMgr);
-
-        httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
-    }
 
     if (settingsMgr->isgRPCEnabled()) {
         try {
@@ -123,15 +74,37 @@ int main(int argc, char** argv) {
                         std::string("An error occurred while initializing the gRPC server: ") + e.what());
             socketManager->cleanup();
             certManager->cleanup();
-            db->close();
             sock::cleanup();
             return 1;
         }
     }
 
+    std::shared_ptr<db::Database> friendsAuthDB = nullptr;
     std::shared_ptr<nex::prudp::Server> friendsAuthSrv = nullptr;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
     if (settingsMgr->isFriendsAuthEnabled()) {
+        friendsAuthDB = db::Database::createDatabase(settingsMgr->getFriendsAuthDBSettings(), logger);
+        if (!friendsAuthDB->init() || !friendsAuthDB->run()) {
+            friendsAuthDB->close();
+            if (grpcServer != nullptr) grpcServer->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (friendsAuthDB->getVersion() != db::CURRENT_VERSION) {
+            if (!db::migrations::migrate(logger, friendsAuthDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_AUTH,
+                                         friendsAuthDB->getVersion())) {
+                friendsAuthDB->close();
+                if (grpcServer != nullptr) grpcServer->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+        }
+
         sock::IPv4Addr addr = settingsMgr->getFriendsAuthListenAddress();
 
         friendsAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_AUTH, socketManager, settingsMgr,
@@ -139,7 +112,7 @@ int main(int argc, char** argv) {
                                                               true, 1, std::vector<uint8_t>(), true);
 
         sock::IPv4Addr secureAddr = settingsMgr->getFriendsSecureServerAddress();
-        friendsAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::FRIENDS_AUTH, db,
+        friendsAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::FRIENDS_AUTH, friendsAuthDB,
                                                              secureAddr, FRIENDS_SERVER_ID,
                                                              (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY,
                                                              FRIENDS_SERVER_BUILD, "", true);
@@ -148,24 +121,82 @@ int main(int argc, char** argv) {
         friendsAuthSrv->listen(stop);
     }
 
+    std::shared_ptr<db::Database> friendsSecureDB = nullptr;
     std::shared_ptr<nex::prudp::Server> friendsSecureSrv = nullptr;
     std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsSecureRMC;
     if (settingsMgr->isFriendsSecureEnabled()) {
+        friendsSecureDB = db::Database::createDatabase(settingsMgr->getFriendsSecureDBSettings(), logger);
+        if (!friendsSecureDB->init() || !friendsSecureDB->run()) {
+            friendsSecureDB->close();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            if (grpcServer != nullptr) grpcServer->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (friendsSecureDB->getVersion() != db::CURRENT_VERSION) {
+            if (!db::migrations::migrate(logger, friendsSecureDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_SECURE,
+                                         friendsSecureDB->getVersion())) {
+                friendsSecureDB->close();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                if (grpcServer != nullptr) grpcServer->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+        }
+
         sock::IPv4Addr addr = settingsMgr->getFriendsSecureListenAddress();
         friendsSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::FRIENDS_SECURE, socketManager, settingsMgr,
                                                                 addr, 0, (std::vector<uint8_t>) FRIENDS_ACCESS_KEY,
                                                                 false, 2, (std::vector<uint8_t>) FRIENDS_SECURE_SERVER_KEY,
                                                                 true);
 
-        friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, db, settingsMgr->getNEXTokenKey());
+        friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, friendsSecureDB, settingsMgr->getNEXTokenKey());
         friendsSecureRMC->registerPRUDPServer(friendsSecureSrv, 1, settingsMgr->getFriendsSecureWorkerCount());
 
         friendsSecureSrv->listen(stop);
     }
 
+    std::shared_ptr<db::Database> splatoonAuthDB = nullptr;
     std::shared_ptr<nex::prudp::Server> splatoonAuthSrv = nullptr;
     std::shared_ptr<nex::rmc::AuthRMC> splatoonAuthRMC;
     if (settingsMgr->isSplatoonAuthEnabled()) {
+        splatoonAuthDB = db::Database::createDatabase(settingsMgr->getSplatoonAuthDBSettings(), logger);
+        if (!splatoonAuthDB->init() || !splatoonAuthDB->run()) {
+            splatoonAuthDB->close();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            if (grpcServer != nullptr) grpcServer->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (splatoonAuthDB->getVersion() != db::CURRENT_VERSION) {
+            if (!db::migrations::migrate(logger, splatoonAuthDB, db::DBType::SQLITE3, db::SystemType::SPLATOON_AUTH,
+                                         splatoonAuthDB->getVersion())) {
+                splatoonAuthDB->close();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                if (grpcServer != nullptr) grpcServer->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+        }
+
         sock::IPv4Addr addr = settingsMgr->getSplatoonAuthListenAddress();
         splatoonAuthSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_AUTH, socketManager, settingsMgr,
                                                                addr, 1, (std::vector<uint8_t>) SPLATOON_ACCESS_KEY,
@@ -173,7 +204,7 @@ int main(int argc, char** argv) {
                                                                false);
 
         sock::IPv4Addr secureAddr = settingsMgr->getSplatoonSecureServerAddress();
-        splatoonAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::SPLATOON_AUTH, db,
+        splatoonAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::SPLATOON_AUTH, splatoonAuthDB,
                                                              secureAddr, SPLATOON_SERVER_ID,
                                                              (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
                                                              SPLATOON_SERVER_BUILD, settingsMgr->getNEXTokenKey(), false);
@@ -191,10 +222,86 @@ int main(int argc, char** argv) {
                                                                  false, 2, (std::vector<uint8_t>) SPLATOON_SECURE_SERVER_KEY,
                                                                  false);
 
-        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, db);
+        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr);
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
         splatoonSecureSrv->listen(stop);
+    }
+
+    std::shared_ptr<db::Database> accountsDB = nullptr;
+    std::shared_ptr<http::Server> httpServer = nullptr;
+
+    if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
+        if (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr)) {
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            if (grpcServer != nullptr) grpcServer->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        try {
+            httpServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getHTTPListenAddress(),
+                                                        settingsMgr->getHTTPKeepAliveTimeout(),
+                                                        settingsMgr->isHTTP_SSL_Enabled(),
+                                                        certManager->getSSLKey(),
+                                                        certManager->getSSLCert());
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        std::string("An error occurred while initializing the HTTP server: ") + e.what());
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (settingsMgr->isAccountEnabled()) {
+            accountsDB = db::Database::createDatabase(settingsMgr->getAccountsDBSettings(), logger);
+            if (!accountsDB->init() || !accountsDB->run()) {
+                accountsDB->close();
+                httpServer->stop();
+                if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                if (grpcServer != nullptr) grpcServer->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+
+            if (accountsDB->getVersion() != db::CURRENT_VERSION) {
+                if (!db::migrations::migrate(logger, accountsDB, db::DBType::SQLITE3, db::SystemType::ACCOUNTS,
+                                             accountsDB->getVersion())) {
+                    accountsDB->close();
+                    httpServer->stop();
+                    if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                    if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                    if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                    if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                    if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                    if (grpcServer != nullptr) grpcServer->stop();
+                    socketManager->cleanup();
+                    certManager->cleanup();
+                    sock::cleanup();
+                    return 1;
+                }
+            }
+
+            acc::registerRoutes(httpServer, settingsMgr, certManager, accountsDB);
+        }
+
+        if (settingsMgr->isBOSSEnabled())
+            boss::registerRoutes(httpServer, settingsMgr);
+
+        httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }
 
 #ifdef _WIN32
@@ -221,7 +328,10 @@ int main(int argc, char** argv) {
         if (splatoonSecureSrv != nullptr) tasksMgr.push(splatoonSecureSrv->process());
     }
 
-    db->close();
+    if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
+    if (friendsSecureDB != nullptr) friendsSecureDB->close();
+    if (friendsAuthDB != nullptr) friendsAuthDB->close();
+    if (accountsDB != nullptr) accountsDB->close();
     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
     if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();

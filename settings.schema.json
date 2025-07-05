@@ -32,56 +32,6 @@
       },
       "required": ["caCert", "cert", "caKey", "key"]
     },
-    "db": {
-      "description": "Database settings",
-      "type": "object",
-      "properties": {
-        "type": {
-          "description": "The database type to use",
-          "type": "string",
-          "enum": ["SQLite3"]
-        },
-        "path": {
-          "description": "Path to the database file",
-          "type": "string"
-        },
-        "host": {
-          "description": "Host of the database",
-          "type": "string"
-        },
-        "port": {
-          "description": "Port of the database",
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535
-        },
-        "user": {
-          "description": "User name of the database",
-          "type": "string"
-        },
-        "password": {
-          "description": "Password of the user in the database",
-          "type": "string"
-        },
-        "name": {
-          "description": "Name of the database to connect to",
-          "type": "string"
-        }
-      },
-      "required": ["type"],
-      "if": {
-        "properties": {
-          "type": {"const": "SQLite3"}
-        },
-        "required": ["type"]
-      },
-      "then": {
-        "required": ["path"]
-      },
-      "else": {
-        "required": ["host", "port", "user", "password", "name"]
-      }
-    },
     "http": {
       "description": "HTTP settings (apply to the account and BOSS servers)",
       "listenAddress": {
@@ -201,6 +151,56 @@
             }
           },
           "required": ["address", "port"]
+        },
+        "db": {
+          "description": "Database settings",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "The database type to use",
+              "type": "string",
+              "enum": ["SQLite3"]
+            },
+            "path": {
+              "description": "Path to the database file",
+              "type": "string"
+            },
+            "host": {
+              "description": "Host of the database",
+              "type": "string"
+            },
+            "port": {
+              "description": "Port of the database",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "user": {
+              "description": "User name of the database",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password of the user in the database",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the database to connect to",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "if": {
+            "properties": {
+              "type": {"const": "SQLite3"}
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          },
+          "else": {
+            "required": ["host", "port", "user", "password", "name"]
+          }
         }
       },
       "if": {
@@ -209,7 +209,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount", "secure"]
+        "required": ["listenAddress", "port", "workerCount", "secure", "db"]
       },
       "required": ["enabled"]
     },
@@ -253,6 +253,56 @@
             }
           },
           "required": ["address", "port"]
+        },
+        "db": {
+          "description": "Database settings",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "The database type to use",
+              "type": "string",
+              "enum": ["SQLite3"]
+            },
+            "path": {
+              "description": "Path to the database file",
+              "type": "string"
+            },
+            "host": {
+              "description": "Host of the database",
+              "type": "string"
+            },
+            "port": {
+              "description": "Port of the database",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "user": {
+              "description": "User name of the database",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password of the user in the database",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the database to connect to",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "if": {
+            "properties": {
+              "type": {"const": "SQLite3"}
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          },
+          "else": {
+            "required": ["host", "port", "user", "password", "name"]
+          }
         }
       },
       "if": {
@@ -261,7 +311,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount", "secure"]
+        "required": ["listenAddress", "port", "workerCount", "secure", "db"]
       },
       "required": ["enabled"]
     },
@@ -287,6 +337,56 @@
           "description": "Number of worker threads to use",
           "type": "integer",
           "minimum": 1
+        },
+        "db": {
+          "description": "Database settings",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "The database type to use",
+              "type": "string",
+              "enum": ["SQLite3"]
+            },
+            "path": {
+              "description": "Path to the database file",
+              "type": "string"
+            },
+            "host": {
+              "description": "Host of the database",
+              "type": "string"
+            },
+            "port": {
+              "description": "Port of the database",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "user": {
+              "description": "User name of the database",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password of the user in the database",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the database to connect to",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "if": {
+            "properties": {
+              "type": {"const": "SQLite3"}
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          },
+          "else": {
+            "required": ["host", "port", "user", "password", "name"]
+          }
         }
       },
       "if": {
@@ -295,7 +395,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount"]
+        "required": ["listenAddress", "port", "workerCount", "db"]
       },
       "required": ["enabled"]
     },
@@ -374,6 +474,56 @@
         "allowGeneratedWiiU": {
             "description": "Allow generated Wii U consoles (fake files) to connect",
             "type": "boolean"
+        },
+        "db": {
+          "description": "Database settings",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "The database type to use",
+              "type": "string",
+              "enum": ["SQLite3"]
+            },
+            "path": {
+              "description": "Path to the database file",
+              "type": "string"
+            },
+            "host": {
+              "description": "Host of the database",
+              "type": "string"
+            },
+            "port": {
+              "description": "Port of the database",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "user": {
+              "description": "User name of the database",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password of the user in the database",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the database to connect to",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "if": {
+            "properties": {
+              "type": {"const": "SQLite3"}
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          },
+          "else": {
+            "required": ["host", "port", "user", "password", "name"]
+          }
         }
       },
       "if": {
@@ -382,7 +532,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db"]
       },
       "required": ["enabled"]
     },
@@ -400,7 +550,6 @@
       }
     }
   },
-  "required": ["db"],
   "anyOf": [
     {
       "required": ["accounts"],

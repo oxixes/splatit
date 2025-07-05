@@ -24,6 +24,13 @@ enum class DBType {
     SQLITE3
 };
 
+enum class SystemType {
+    ACCOUNTS,
+    FRIENDS_AUTH,
+    FRIENDS_SECURE,
+    SPLATOON_AUTH
+};
+
 enum class DBVersion {
     EMPTY = 0,
     INITIAL
@@ -69,7 +76,6 @@ struct DBUsernameQuery {
 
 struct DBGameServerAccessQuery {
     uint32_t pid;
-    std::string serverId;
 };
 
 struct DBUserInfoUpdate {
@@ -100,7 +106,6 @@ struct DBUserData {
 
 struct DBGameServerAccessData {
     uint32_t pid;
-    std::string serverId;
     std::string password;
 };
 
@@ -117,7 +122,6 @@ struct DBUserInfoData {
 
 struct DBFriendInfoData {
     uint32_t friendPid;
-    std::string friendUsername;
     bool showPresence;
     bool showPlaying;
     bool blockRequests;
@@ -253,7 +257,7 @@ public:
     static std::unique_ptr<Command> craftVoidCommand(const std::string& command);
     static std::unique_ptr<Command> craftGetUserByPIDCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
-    static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId);
+    static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserInfoCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
     static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,

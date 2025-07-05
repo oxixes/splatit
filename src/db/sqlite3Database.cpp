@@ -234,7 +234,7 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         }
     } else if (command.first->type == DBCommandType::GET_GAME_SERVER_ACCESS) {
         if (getGameServerAccessStatement == nullptr) {
-            if (!craftStatement("SELECT * FROM game_server_access WHERE pid = ? AND game_server_id = ?;",
+            if (!craftStatement("SELECT * FROM game_server_access WHERE pid = ?;",
                                 &getGameServerAccessStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
@@ -244,14 +244,13 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         auto* query = std::any_cast<DBGameServerAccessQuery>(&command.first->data);
 
         if (!bindData(getGameServerAccessStatement, {DBDataType::INTEGER, DBDataType::STRING},
-                      {std::make_shared<DBInteger>((int64_t) query->pid),
-                       std::make_shared<DBString>(query->serverId)})) {
+                      {std::make_shared<DBInteger>((int64_t) query->pid)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(getGameServerAccessStatement);
             goto push_results;
         }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING};
+        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING};
 
         if (!runStatement(getGameServerAccessStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -266,8 +265,7 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         if (!returnedData->empty()) {
             DBGameServerAccessData accessData {
                 .pid = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][0]->data),
-                .serverId = std::any_cast<std::string>((*returnedData)[0][1]->data),
-                .password = std::any_cast<std::string>((*returnedData)[0][2]->data)
+                .password = std::any_cast<std::string>((*returnedData)[0][1]->data)
             };
 
             resultsData = std::move(accessData);
@@ -318,27 +316,25 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         }
     } else if (command.first->type == DBCommandType::GET_FRIENDS_INFO) {
         if (getFriendsInfoStatement == nullptr) {
-            std::string sqlCommand = "SELECT fuser.pid "               "AS friend_pid, "
-                                            "fuser.username "          "AS friend_username, "
-                                            "finfo.show_presence "     "AS show_presence, "
-                                            "finfo.show_playing "      "AS show_game, "
-                                            "finfo.block_requests "    "AS block_requests, "
-                                            "finfo.nna_info "          "AS nna_info, "
-                                            "finfo.presence "          "AS presence, "
-                                            "finfo.comment "           "AS comment, "
-                                            "finfo.last_online "       "AS last_online,"
-                                            "friendships.became_friends AS became_friends "
-                                            "FROM users "
-                                            "JOIN friendships "
-                                            "ON users.pid = friendships.pid "
-                                            "OR users.pid = friendships.friend_pid "
-                                            "JOIN users AS fuser "
-                                            "ON (fuser.pid = friendships.pid AND fuser.pid <> users.pid) "
-                                            "OR (fuser.pid = friendships.friend_pid AND fuser.pid <> users.pid) "
-                                            "JOIN user_info AS finfo "
-                                            "ON fuser.pid = finfo.pid "
-                                            "WHERE users.pid = ? "
-                                            "ORDER BY fuser.pid;";
+            std::string sqlCommand =
+                    "SELECT fuser.pid AS friend_pid, "
+                    "fuser.show_presence AS show_presence, "
+                    "fuser.show_playing AS show_game, "
+                    "fuser.block_requests AS block_requests, "
+                    "fuser.nna_info AS nna_info, "
+                    "fuser.presence AS presence, "
+                    "fuser.comment AS comment, "
+                    "fuser.last_online AS last_online, "
+                    "friendships.became_friends AS became_friends "
+                    "FROM user_info "
+                    "JOIN friendships "
+                    "ON user_info.pid = friendships.pid "
+                    "OR user_info.pid = friendships.friend_pid "
+                    "JOIN user_info AS fuser "
+                    "ON (fuser.pid = friendships.pid AND fuser.pid <> user_info.pid) "
+                    "OR (fuser.pid = friendships.friend_pid AND fuser.pid <> user_info.pid) "
+                    "WHERE user_info.pid = ? "
+                    "ORDER BY fuser.pid;";
 
             if (!craftStatement(sqlCommand, &getFriendsInfoStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -354,10 +350,9 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
             goto push_results;
         }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::BLOB,
-                                                   DBDataType::BLOB, DBDataType::BLOB, DBDataType::DATETIME,
-                                                   DBDataType::DATETIME};
+        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                   DBDataType::INTEGER, DBDataType::BLOB, DBDataType::BLOB,
+                                                   DBDataType::BLOB, DBDataType::DATETIME, DBDataType::DATETIME};
 
         if (!runStatement(getFriendsInfoStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -373,15 +368,14 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         for (const auto& row : *returnedData) {
             DBFriendInfoData friendInfo {
                 .friendPid = (uint32_t) std::any_cast<int64_t>(row[0]->data),
-                .friendUsername = std::any_cast<std::string>(row[1]->data),
-                .showPresence = (bool) std::any_cast<int64_t>(row[2]->data),
-                .showPlaying = (bool) std::any_cast<int64_t>(row[3]->data),
-                .blockRequests = (bool) std::any_cast<int64_t>(row[4]->data),
-                .nnaInfo = std::any_cast<std::vector<uint8_t>>(row[5]->data),
-                .presence = std::any_cast<std::vector<uint8_t>>(row[6]->data),
-                .comment = std::any_cast<std::vector<uint8_t>>(row[7]->data),
-                .lastOnline = std::any_cast<datetime_t>(row[8]->data),
-                .becameFriends = std::any_cast<datetime_t>(row[9]->data)
+                .showPresence = (bool) std::any_cast<int64_t>(row[1]->data),
+                .showPlaying = (bool) std::any_cast<int64_t>(row[2]->data),
+                .blockRequests = (bool) std::any_cast<int64_t>(row[3]->data),
+                .nnaInfo = std::any_cast<std::vector<uint8_t>>(row[4]->data),
+                .presence = std::any_cast<std::vector<uint8_t>>(row[5]->data),
+                .comment = std::any_cast<std::vector<uint8_t>>(row[6]->data),
+                .lastOnline = std::any_cast<datetime_t>(row[7]->data),
+                .becameFriends = std::any_cast<datetime_t>(row[8]->data)
             };
 
             friendsData.push_back(friendInfo);
@@ -595,9 +589,8 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
     push_results:
     command.second->setResolveValue(std::make_unique<Result>(resultStatus, std::move(resultsData)));
 
-    std::unique_lock<std::mutex> promiseLock(*command.first->promisesMutex);
+    std::unique_lock promiseLock(*command.first->promisesMutex);
     command.first->promisesQueue->push(command.second);
-
     if (command.first->promisesCV != nullptr) command.first->promisesCV->notify_one();
 }
 
@@ -714,11 +707,13 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
 void sqlite3Database::close() {
     if (db == nullptr) return;
 
-    shouldStop = true;
-    dbQueueCV.notify_all();
-    dbThreadHandle.join();
+    if (dbThreadHandle.joinable()) {
+        shouldStop = true;
+        dbQueueCV.notify_all();
+        dbThreadHandle.join();
 
-    logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread stopped.");
+        logger->log(Logger::level::INFO, Logger::group::DB, "SQLite 3 database thread stopped.");
+    }
 
     std::unique_lock queueLock(commandQueueMutex);
     while (!commandQueue.empty()) {

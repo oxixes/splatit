@@ -46,10 +46,9 @@ std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::stri
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid, const std::string& serverId) {
+std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid) {
     DBGameServerAccessQuery query {
         .pid = pid,
-        .serverId = serverId
     };
 
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,

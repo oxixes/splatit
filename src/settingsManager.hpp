@@ -44,7 +44,10 @@ public:
     [[nodiscard]] fs::path getBOSSPath() const;
     [[nodiscard]] fs::path getMiiImagesPath() const;
 
-    [[nodiscard]] json getDBSettings() const;
+    [[nodiscard]] json getAccountsDBSettings() const;
+    [[nodiscard]] json getFriendsAuthDBSettings() const;
+    [[nodiscard]] json getFriendsSecureDBSettings() const;
+    [[nodiscard]] json getSplatoonAuthDBSettings() const;
 
     [[nodiscard]] sock::IPv4Addr getHTTPListenAddress() const;
     [[nodiscard]] int getHTTPWorkerCount() const;
