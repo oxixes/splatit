@@ -13,7 +13,7 @@ namespace grpcimpl {
 
 class Server {
 public:
-    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir);
+    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection);
     ~Server();
 
     void listen();
@@ -31,6 +31,8 @@ private:
     std::atomic<bool> running = false;
 
     std::shared_ptr<grpcimpl::example::GreeterServiceImpl> greeterService;
+
+    bool reflectionEnabled = false;
 };
 
 } // namespace grpc

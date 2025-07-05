@@ -68,6 +68,7 @@ public:
     [[nodiscard]] int getSplatoonSecureWorkerCount() const;
 
     [[nodiscard]] sock::IPv4Addr getgRPCListenAddress() const;
+    [[nodiscard]] bool isgRPCReflectionEnabled() const;
 
     [[nodiscard]] std::vector<std::string> getDomains() const;
 

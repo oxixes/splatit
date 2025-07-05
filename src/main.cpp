@@ -115,7 +115,8 @@ int main(int argc, char** argv) {
 
     if (settingsMgr->isgRPCEnabled()) {
         try {
-            grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress());
+            grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress(),
+                                                            settingsMgr->isgRPCReflectionEnabled());
             grpcServer->listen();
         } catch (const std::exception& e) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,

@@ -4,11 +4,14 @@
 #include <utility>
 #include <thread>
 
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
+
 namespace grpcimpl {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir) {
+Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection) {
     this->logger = std::move(logger);
     this->listenDir = listenDir;
+    this->reflectionEnabled = reflection;
 }
 
 Server::~Server() {
@@ -22,6 +25,9 @@ void Server::listen() {
 
     greeterService = std::make_shared<grpcimpl::example::GreeterServiceImpl>();
 
+    if (reflectionEnabled) {
+        grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+    }
     grpc::ServerBuilder builder;
     builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), grpc::InsecureServerCredentials());
     builder.RegisterService(greeterService.get());

@@ -221,7 +221,8 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
             {"grpc", {
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
-                    {"port", 1299}
+                    {"port", 1299},
+                    {"reflection", false}
             }},
             {"friendsAuth", {
                     {"enabled", true},
@@ -440,6 +441,10 @@ sock::IPv4Addr SettingsManager::getgRPCListenAddress() const {
     address.port = settings["grpc"]["port"];
 
     return address;
+}
+
+bool SettingsManager::isgRPCReflectionEnabled() const {
+    return settings["grpc"].contains("reflection") && settings["grpc"]["reflection"].get<bool>();
 }
 
 json SettingsManager::getDBSettings() const {

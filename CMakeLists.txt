@@ -67,7 +67,7 @@ target_include_directories(splatoon_server PRIVATE "${GENERATED_DIR}")
 
 target_sources(splatoon_server PRIVATE ${PROTO_SRCS} ${GRPC_SRCS} ${PROTO_HDRS} ${GRPC_HDRS})
 target_include_directories(splatoon_server PRIVATE ${PROTO_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(splatoon_server PRIVATE gRPC::grpc++ protobuf::libprotobuf)
+target_link_libraries(splatoon_server PRIVATE gRPC::grpc++_reflection)
 
 add_subdirectory(src)
 

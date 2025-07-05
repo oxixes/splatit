@@ -144,6 +144,11 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
+        },
+        "reflection": {
+          "description": "Enable or disable gRPC reflection",
+          "type": "boolean",
+          "default": false
         }
       },
       "if": {
