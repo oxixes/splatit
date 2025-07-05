@@ -52,6 +52,10 @@ bool SettingsManager::init(const argParser::options& serverOptions) {
         enabledServers.splatoonSecure = true;
     }
 
+    if (settings.contains("grpc") && settings["grpc"]["enabled"]) {
+        enabledServers.gRPC = true;
+    }
+
     return true;
 }
 
@@ -214,6 +218,11 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"keepAliveTimeout", 10},
                     {"ssl", true}
             }},
+            {"grpc", {
+                    {"enabled", true},
+                    {"listenAddress", "0.0.0.0"},
+                    {"port", 1299}
+            }},
             {"friendsAuth", {
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
@@ -294,6 +303,10 @@ bool SettingsManager::isSplatoonAuthEnabled() const {
 
 bool SettingsManager::isSplatoonSecureEnabled() const {
     return enabledServers.splatoonSecure;
+}
+
+bool SettingsManager::isgRPCEnabled() const {
+    return enabledServers.gRPC;
 }
 
 fs::path SettingsManager::getSSLCertPath() const {
@@ -420,6 +433,13 @@ sock::IPv4Addr SettingsManager::getSplatoonSecureListenAddress() const {
 
 int SettingsManager::getSplatoonSecureWorkerCount() const {
     return settings["splatoonSecure"]["workerCount"];
+}
+
+sock::IPv4Addr SettingsManager::getgRPCListenAddress() const {
+    sock::IPv4Addr address = util::stringToIPv4(settings["grpc"]["listenAddress"].get<std::string>());
+    address.port = settings["grpc"]["port"];
+
+    return address;
 }
 
 json SettingsManager::getDBSettings() const {

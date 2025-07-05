@@ -5,6 +5,7 @@ add_subdirectory(http)
 add_subdirectory(nex)
 add_subdirectory(util)
 add_subdirectory(db)
+add_subdirectory(grpc)
 
 target_sources(splatoon_server PRIVATE
         main.cpp

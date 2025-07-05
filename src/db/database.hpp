@@ -233,7 +233,7 @@ protected:
     DBType dbType;
     DBVersion dbVersion;
 
-    bool shouldStop = false;
+    std::atomic<bool> shouldStop = false;
 
     static bool verifyCommandArgs(const std::unique_ptr<Command>& command);
 public:

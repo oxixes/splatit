@@ -10,6 +10,7 @@
 #include "socket/socket.hpp"
 #include "socket/socketManager.hpp"
 #include "http/server.hpp"
+#include "grpc/server.hpp"
 #include "http/account/account.hpp"
 #include "http/boss/boss.hpp"
 #include "nex/prudp/server.hpp"
@@ -20,7 +21,7 @@
 #include "nex/splatoon/splatoonSecure.hpp"
 #include "boss/utils.hpp"
 
-bool shouldStop = false;
+std::atomic<bool> shouldStop = false;
 
 void stop() {
     shouldStop = true;
@@ -76,6 +77,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<SocketManager> socketManager(new SocketManager(logger));
     std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
     std::shared_ptr<http::Server> httpServer = nullptr;
+    std::shared_ptr<grpcimpl::Server> grpcServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
         if (!certManager->init() || (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr))) {
@@ -109,6 +111,21 @@ int main(int argc, char** argv) {
             boss::registerRoutes(httpServer, settingsMgr);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
+    }
+
+    if (settingsMgr->isgRPCEnabled()) {
+        try {
+            grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress());
+            grpcServer->listen();
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        std::string("An error occurred while initializing the gRPC server: ") + e.what());
+            socketManager->cleanup();
+            certManager->cleanup();
+            db->close();
+            sock::cleanup();
+            return 1;
+        }
     }
 
     std::shared_ptr<nex::prudp::Server> friendsAuthSrv = nullptr;
@@ -209,6 +226,7 @@ int main(int argc, char** argv) {
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
     if (httpServer != nullptr) httpServer->stop();
+    if (grpcServer != nullptr) grpcServer->stop();
     socketManager->cleanup();
     certManager->cleanup();
 

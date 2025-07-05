@@ -112,7 +112,7 @@ protected:
     std::shared_ptr<Logger::Logger> logger;
     Logger::group logGroup = Logger::group::SETUP; // This should be set by the constructor of the derived class
 
-    bool shouldStop = false;
+    std::atomic<bool> shouldStop = false;
 
     std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
     std::recursive_mutex pidMapMutex;

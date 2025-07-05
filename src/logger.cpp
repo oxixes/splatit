@@ -62,6 +62,8 @@ std::string Logger::getGroupName(group group) {
             return "SPLATOON AUTH";
         case group::SPLATOON_SECURE:
             return "SPLATOON SECURE";
+        case group::GRPC:
+            return "GRPC";
         case group::SETUP:
             return "SETUP";
         default:

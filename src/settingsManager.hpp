@@ -33,6 +33,7 @@ public:
     [[nodiscard]] bool isFriendsSecureEnabled() const;
     [[nodiscard]] bool isSplatoonAuthEnabled() const;
     [[nodiscard]] bool isSplatoonSecureEnabled() const;
+    [[nodiscard]] bool isgRPCEnabled() const;
 
     [[nodiscard]] fs::path getSSLCertPath() const;
     [[nodiscard]] fs::path getSSLCACertPath() const;
@@ -66,6 +67,8 @@ public:
     [[nodiscard]] sock::IPv4Addr getSplatoonSecureListenAddress() const;
     [[nodiscard]] int getSplatoonSecureWorkerCount() const;
 
+    [[nodiscard]] sock::IPv4Addr getgRPCListenAddress() const;
+
     [[nodiscard]] std::vector<std::string> getDomains() const;
 
     // These functions return the base64 encoded key
@@ -94,6 +97,7 @@ private:
         bool friendsSecure = false;
         bool splatoonAuth = false;
         bool splatoonSecure = false;
+        bool gRPC = false;
     } enabledServers;
 
     bool openOrCreateFiles(const argParser::options& serverOptions, std::ifstream& settingsFileHandler,
