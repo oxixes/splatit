@@ -1,17 +1,24 @@
 #include "account.hpp"
 #include "../../crypto/tools.hpp"
 #include "../../constants.hpp"
+#include "../../grpc/channelPool.hpp"
+#include "../../grpc/asyncRequest.hpp"
 
 #include <unordered_map>
+#include <auth.grpc.pb.h>
 
 namespace acc {
+
+std::shared_ptr<grpcimpl::ChannelPool> channelPool = nullptr;
+std::map<std::string, std::vector<std::pair<std::string, std::string>>> gameServerHosts;
+std::map<std::string, size_t> gameServerHostIndexRoundRobin;
 
 /*
  * Handler for GET https://account.<domain>/v1/api/admin/time
  * Doesn't actually return anything, but the time is in the response headers.
  * Since it's such a simple request, we won't require a device certificate.
  */
-void v1_api_admin_time(http::Server* srv, std::unique_ptr<http::Context> ctx) {
+void v1_api_admin_time(http::Server* srv, std::shared_ptr<http::Context> ctx) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 8, "Not Found", "");
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -27,7 +34,7 @@ void v1_api_admin_time(http::Server* srv, std::unique_ptr<http::Context> ctx) {
  * The input can be either a principal id or a username.
  * Requires a device certificate.
  */
-void v1_api_admin_mapped_ids(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Context> ctx,
                              const std::shared_ptr<db::Database>& db,
                              const std::shared_ptr<SettingsManager>& settingsManager,
                              const std::shared_ptr<CertManager>& certManager) {
@@ -66,7 +73,7 @@ void v1_api_admin_mapped_ids(http::Server* srv, std::unique_ptr<http::Context> c
         return;
     }
 
-    std::vector<std::shared_ptr<Promise<std::unique_ptr<db::Result>>>> promises;
+    std::vector<std::shared_ptr<Promise>> promises;
     for (const auto& id : input) {
         std::unique_ptr<db::Command> cmd;
         if (inputType == "pid") {
@@ -93,13 +100,15 @@ void v1_api_admin_mapped_ids(http::Server* srv, std::unique_ptr<http::Context> c
         promises.push_back(db->runCommand(std::move(cmd), ctx->queueMutex, ctx->queueCV, ctx->promisesQueue));
     }
 
-    std::make_shared<PromiseAll<std::unique_ptr<db::Result>>>(std::move(promises))
+    std::make_shared<PromiseAll>(std::move(promises))
         ->setContext(std::move(std::pair<uint32_t, std::shared_ptr<http::Request>>(ctx->clientSockId, ctx->request)))
         .then([ctx = std::move(ctx),
                inputType = std::move(inputType),
                outputType = std::move(outputType),
                input = std::move(input),
-               srv](std::vector<std::unique_ptr<db::Result>> resultsList) mutable {
+               srv](std::any&& resultsAny) mutable {
+
+        std::vector<std::unique_ptr<db::Result>> resultsList = std::move(std::any_cast<std::vector<std::unique_ptr<db::Result>>>(std::move(resultsAny)));
 
         pugi::xml_document doc;
         pugi::xml_node mapped_ids = doc.append_child("mapped_ids");
@@ -137,7 +146,7 @@ void v1_api_admin_mapped_ids(http::Server* srv, std::unique_ptr<http::Context> c
  * Generates an access token for the given user.
  * Requires a device certificate. The password can be given directly or as a hash.
  */
-void v1_api_access_token_gen(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Context> ctx,
                              const std::shared_ptr<db::Database>& db,
                              const std::shared_ptr<SettingsManager>& settingsManager,
                              const std::shared_ptr<CertManager>& certManager) {
@@ -189,7 +198,9 @@ void v1_api_access_token_gen(http::Server* srv, std::unique_ptr<http::Context> c
             ->setContext(std::move(std::pair<uint32_t, std::shared_ptr<http::Request>>(ctx->clientSockId, ctx->request)))
             .then([ctx = std::move(ctx), userId = std::move(userId),
                    deviceId, bodyMap = std::move(bodyMap),
-                   srv, db, settingsManager](std::unique_ptr<db::Result> results) mutable {
+                   srv, db, settingsManager](std::any&& resultsAny) mutable {
+
+            std::unique_ptr<db::Result> results = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
             if (results->getStatus() != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
@@ -306,7 +317,7 @@ void v1_api_access_token_gen(http::Server* srv, std::unique_ptr<http::Context> c
  * Creates an access token for the given NEX game server.
  * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
  */
-void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                const std::shared_ptr<db::Database>& db,
                                const std::shared_ptr<SettingsManager>& settingsManager,
                                const std::shared_ptr<CertManager>& certManager) {
@@ -361,14 +372,49 @@ void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context>
         return;
     }
 
-    std::unique_ptr<db::Command> cmd = db::Database::craftGetGameServerAccessCommand(accountToken.pid, ctx->request->getQuery("game_server_id"));
-    db->runCommand(std::move(cmd), ctx->queueMutex, ctx->queueCV, ctx->promisesQueue)
+    const std::pair<std::string, std::string> host = gameServerHosts[gameServerId][gameServerHostIndexRoundRobin[gameServerId]];
+    gameServerHostIndexRoundRobin[gameServerId] = (gameServerHostIndexRoundRobin[gameServerId] + 1) % gameServerHosts[gameServerId].size();
+
+    auto channel = channelPool->getChannel(host.second);
+    if (!channel) {
+        ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                         "Failed to get channel for game server " + gameServerId);
+        res = createError(ctx->request->getVersion(), 1018, "Failure to generate game server token", "");
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        return;
+    }
+
+    auto request = std::make_shared<grpcimpl::auth::v1::GetGameServerCredentialsRequest>();
+    request->set_pid(accountToken.pid);
+    request->set_gameserverid(gameServerId);
+
+    // Create the stub and call the gRPC method
+    auto stub = grpcimpl::auth::v1::AuthService::NewStub(channel);
+
+    auto caller = std::shared_ptr<grpcimpl::AsyncRequest<grpcimpl::auth::v1::AuthService::Stub, grpcimpl::auth::v1::GetGameServerCredentialsRequest, grpcimpl::auth::v1::GetGameServerCredentialsResponse>>(
+            new grpcimpl::AsyncRequest<grpcimpl::auth::v1::AuthService::Stub, grpcimpl::auth::v1::GetGameServerCredentialsRequest, grpcimpl::auth::v1::GetGameServerCredentialsResponse>(
+        std::move(stub), &grpcimpl::auth::v1::AuthService::Stub::async::GetGameServerCredentials,
+        ctx->promisesQueue, ctx->queueMutex, ctx->queueCV));
+
+    caller->call(std::move(request), settingsManager->getAccountsgRPCRequestTimeout())
         ->setContext(std::move(std::pair<uint32_t, std::shared_ptr<http::Request>>(ctx->clientSockId, ctx->request)))
         .then([ctx = std::move(ctx), gameServerId = std::move(gameServerId),
-               accountToken = std::move(accountToken),
-               db, settingsManager, srv](std::unique_ptr<db::Result> results) mutable {
-        if (results->getStatus() != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
-        if (!results->hasData()) {
+               gameServerHost = host.first, srv, settingsManager, accountToken = std::move(accountToken),
+               stub = std::move(caller), clientContext = std::make_unique<grpc::ClientContext>()](std::any&& responseAny) mutable {
+
+        auto response = std::make_shared<std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status>>(
+            std::move(std::any_cast<std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status>>(std::move(responseAny))));
+
+        if (!response->second.ok()) {
+            ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                             "Failed to get game server credentials for game server " + gameServerId);
+            std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 1018,
+                                                              "Failure to generate game server token", "");
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            return;
+        }
+
+        if (!response->first->success()) {
             std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 1016, "NEX account not found", "");
             srv->sendResponse(std::move(ctx), std::move(res), false);
             return;
@@ -383,9 +429,7 @@ void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context>
 
         std::string tokenJwt = crypto::signJWT(settingsManager->getNEXTokenKey(), jwtPayload);
 
-        auto gameServerAccess = std::move(results->getData<db::DBGameServerAccessData>());
-        auto nexPassword = gameServerAccess.password;
-        auto gameServerHost = settingsManager->getGameServerHost(gameServerId);
+        auto nexPassword = response->first->password();
 
         pugi::xml_document doc;
         pugi::xml_node nex_token = doc.append_child("nex_token");
@@ -400,7 +444,7 @@ void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context>
         nex_token.append_child("port").text().set(gameServerPort.c_str(), gameServerPort.length());
 
         ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
-                    "User with PID " + std::to_string(accountToken.pid) + " successfully obtained NEX token for game server " + gameServerId);
+                         "User with PID " + std::to_string(accountToken.pid) + " successfully obtained NEX token for game server " + gameServerId);
 
         std::unique_ptr<http::Response> res = prepareResponse(ctx->request->getVersion(), doc);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -412,7 +456,7 @@ void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context>
  * Obtains the profile of the user with the given principal id.
  * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
  */
-void v1_api_people_me_profile(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Context> ctx,
                               const std::shared_ptr<db::Database>& db,
                               const std::shared_ptr<SettingsManager>& settingsManager,
                               const std::shared_ptr<CertManager>& certManager) {
@@ -455,7 +499,10 @@ void v1_api_people_me_profile(http::Server* srv, std::unique_ptr<http::Context> 
     db->runCommand(std::move(cmd), ctx->queueMutex, ctx->queueCV, ctx->promisesQueue)
         ->setContext(std::move(std::pair<uint32_t, std::shared_ptr<http::Request>>(ctx->clientSockId, ctx->request)))
         .then([ctx = std::move(ctx), accountToken = std::move(accountToken),
-               settingsManager, db, srv](std::unique_ptr<db::Result> profileResults) mutable {
+               settingsManager, db, srv](std::any&& profileResultsAny) mutable {
+
+        std::unique_ptr<db::Result> profileResults = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(profileResultsAny))));
+
         if (profileResults->getStatus() != db::DBResultStatus::SUCCESS) {
             throw std::runtime_error("Database error");
         }
@@ -464,7 +511,9 @@ void v1_api_people_me_profile(http::Server* srv, std::unique_ptr<http::Context> 
         db->runCommand(std::move(cmd), ctx->queueMutex, ctx->queueCV, ctx->promisesQueue)
             ->setContext(std::move(std::pair<uint32_t, std::shared_ptr<http::Request>>(ctx->clientSockId, ctx->request)))
             .then([ctx = std::move(ctx), profileResults = std::move(profileResults),
-                   accountToken = std::move(accountToken), settingsManager, db, srv](std::unique_ptr<db::Result> deviceResults) mutable {
+                   accountToken = std::move(accountToken), settingsManager, db, srv](std::any&& deviceResultsAny) mutable {
+
+            std::unique_ptr<db::Result> deviceResults = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(deviceResultsAny))));
 
             if (deviceResults->getStatus() != db::DBResultStatus::SUCCESS) {
                 throw std::runtime_error("Database error");
@@ -569,7 +618,7 @@ void v1_api_people_me_profile(http::Server* srv, std::unique_ptr<http::Context> 
     });
 }
 
-void v1_api_provider_service_token_me(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                       const std::shared_ptr<db::Database>& db,
                                       const std::shared_ptr<SettingsManager>& settingsManager,
                                       const std::shared_ptr<CertManager>& certManager) {
@@ -626,7 +675,7 @@ void v1_api_provider_service_token_me(http::Server* srv, std::unique_ptr<http::C
  * Handler for GET https://mii-secure.account.<domain>/<type>.<format>?id=<mii id>
  * Obtains the image of the Mii with the given id.
  */
-void mii_image(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void mii_image(http::Server* srv, std::shared_ptr<http::Context> ctx,
                const std::shared_ptr<db::Database>& db,
                const std::shared_ptr<SettingsManager>& settingsManager,
                const std::shared_ptr<CertManager>& certManager) {
@@ -714,7 +763,7 @@ std::unique_ptr<http::Response> createError(http::Version version, int code, con
     return prepareResponse(version, doc);
 }
 
-void errorHandler(http::Server* srv, std::unique_ptr<http::Context> ctx) {
+void errorHandler(http::Server* srv, std::shared_ptr<http::Context> ctx) {
     std::unique_ptr<http::Response> res;
     switch (ctx->status) {
         case HTTP_STATUS_NOT_FOUND:
@@ -806,32 +855,38 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db) {
 
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getAccountsgRPCConnectionPoolMaxSize());
+    gameServerHosts = std::move(settingsMgr->getGameServerHosts());
+    for (const auto& host : gameServerHosts) {
+        gameServerHostIndexRoundRobin[host.first] = 0;
+    }
+
     std::string domain = settingsMgr->getTopDomain();
 
     server->registerRoute("account." + domain, "/v1/api/admin/time", v1_api_admin_time);
 
     server->registerRoute("account." + domain, "/v1/api/admin/mapped_ids",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                 v1_api_admin_mapped_ids(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/oauth20/access_token/generate",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                 v1_api_access_token_gen(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/provider/nex_token/@me",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                               v1_api_provider_nex_token(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/people/@me/profile",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                               v1_api_people_me_profile(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/provider/service_token/@me",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                               v1_api_provider_service_token_me(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
@@ -839,13 +894,13 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                                           "puzzled_face", "surprised_face", "whole_body"};
     for (const auto& type : miiTypes) {
         server->registerRoute("mii-secure.account." + domain, "/" + std::string(type) + ".png",
-                              [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                              [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                   mii_image(srv, std::move(ctx), db, settingsMgr, certMgr);
                               });
     }
 
     server->registerRoute("mii-secure.account." + domain, "/standard.tga",
-                          [db, settingsMgr, certMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                               mii_image(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 

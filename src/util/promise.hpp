@@ -4,32 +4,33 @@
 #include <functional>
 #include <any>
 
-template<typename T>
 struct MoveOnlyCallable {
-    virtual void operator()(T) = 0;
+    virtual void operator()(std::any&&) = 0;
     virtual ~MoveOnlyCallable() = default;
 };
 
-template<typename F, typename T>
-struct MoveOnlyCallableImpl : MoveOnlyCallable<T> {
+template<typename F>
+struct MoveOnlyCallableImpl : MoveOnlyCallable {
     F func;
     explicit MoveOnlyCallableImpl(F&& f) : func(std::move(f)) {}
-    void operator()(T val) override { func(std::move(val)); }
+    void operator()(std::any&& val) override { func(std::move(val)); }
 };
 
-template <typename T>
 class Promise {
 public:
-    using Callback = std::unique_ptr<MoveOnlyCallable<T>>;
+    using Callback = std::unique_ptr<MoveOnlyCallable>;
 
     Promise() = default;
 
     template<typename F>
     void then(F&& then) {
-        callback = std::make_unique<MoveOnlyCallableImpl<F, T>>(std::forward<F>(then));
+        callback = std::make_unique<MoveOnlyCallableImpl<F>>(std::forward<F>(then));
+        if (resolved && callback) {
+            (*callback)(std::move(value));
+        }
     }
 
-    void setResolveValue(T val) {
+    void setResolveValue(std::any val) {
         this->value = std::move(val);
     }
 
@@ -37,6 +38,8 @@ public:
         if (callback) {
             (*callback)(std::move(value));
         }
+
+        resolved = true;
     }
 
     template<typename U>
@@ -56,34 +59,42 @@ public:
 
 private:
     Callback callback;
-    T value;
+    std::any value;
+
+    bool resolved = false;
 
     std::any context;
 };
 
-template<typename T>
-class PromiseAll : public std::enable_shared_from_this<PromiseAll<T>> {
+class PromiseAll : public std::enable_shared_from_this<PromiseAll> {
 public:
-    using Callback = std::unique_ptr<MoveOnlyCallable<std::vector<T>>>;
+    using Callback = std::unique_ptr<MoveOnlyCallable>;
 
-    explicit PromiseAll(std::vector<std::shared_ptr<Promise<T>>> promises)
-            : promises(std::move(promises)), resolvedCount(0), results(this->promises.size()) {}
-
-    template<typename F>
-    void then(F&& then) {
-        callback = std::make_unique<MoveOnlyCallableImpl<F, std::vector<T>>>(std::forward<F>(then));
+    explicit PromiseAll(std::vector<std::shared_ptr<Promise>> promises)
+            : promises(std::move(promises)), resolvedCount(0), results(this->promises.size()) {
         auto self = this->shared_from_this();
         for (size_t i = 0; i < promises.size(); ++i) {
             if (context.has_value()) {
                 promises[i]->setContext(context);
             }
 
-            promises[i]->then([self, i](T val) {
+            promises[i]->then([self, i](std::any&& val) {
                 self->results[i] = std::move(val);
-                if (++self->resolvedCount == self->promises.size() && self->callback) {
-                    (*(self->callback))(std::move(self->results));
+                if (++self->resolvedCount == self->promises.size()) {
+                    self->resolved = true;
+                    if (self->callback) {
+                        (*self->callback)(std::move(self->results));
+                    }
                 }
             });
+        }
+    }
+
+    template<typename F>
+    void then(F&& then) {
+        callback = std::make_unique<MoveOnlyCallableImpl<F>>(std::forward<F>(then));
+        if (resolved && callback) {
+            (*callback)(std::move(results));
         }
     }
 
@@ -99,10 +110,12 @@ public:
     }
 
 private:
-    std::vector<std::shared_ptr<Promise<T>>> promises;
-    std::vector<T> results;
+    std::vector<std::shared_ptr<Promise>> promises;
+    std::vector<std::any> results;
     size_t resolvedCount;
     Callback callback;
+
+    bool resolved = false;
 
     std::any context;
 };

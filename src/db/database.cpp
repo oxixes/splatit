@@ -57,6 +57,18 @@ std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid)
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftInsertGameServerAccessCommand(uint32_t pid, const std::string& password) {
+    DBGameServerAccessData data {
+        .pid = pid,
+        .password = password
+    };
+
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::INSERT_GAME_SERVER_ACCESS,
+                                               std::any(data));
+
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
     DBPidQuery query {
             .pid = pid
@@ -68,13 +80,24 @@ std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
-    DBPidQuery query {
-            .pid = pid
+std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, bool showOnline, bool showPlaying,
+                                                              bool blockRequests, const std::vector<uint8_t>& nnaInfo,
+                                                              const std::vector<uint8_t>& presence,
+                                                              const std::vector<uint8_t>& comment,
+                                                              datetime_t lastOnline) {
+    DBUserInfoData data {
+        .pid = pid,
+        .showPresence = showOnline,
+        .showPlaying = showPlaying,
+        .blockRequests = blockRequests,
+        .nnaInfo = nnaInfo,
+        .presence = presence,
+        .comment = comment,
+        .lastOnline = lastOnline
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_FRIENDS_INFO,
-                                               std::any(query));
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::INSERT_USER_INFO,
+                                               std::any(data));
 
     return dbCommand;
 }
@@ -99,6 +122,17 @@ std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std:
 
     auto dbCommand = std::make_unique<Command>(db::DBCommandType::UPDATE_USER_INFO,
                                                std::any(update));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
+    DBPidQuery query {
+            .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_FRIENDS_INFO,
+                                               std::any(query));
 
     return dbCommand;
 }
@@ -137,11 +171,11 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, const std
     }
 }
 
-std::shared_ptr<Promise<std::unique_ptr<Result>>> Database::runCommand(std::unique_ptr<Command> command,
-                std::shared_ptr<std::mutex> promisesMutex,
-                std::shared_ptr<std::condition_variable> promisesCV,
-                std::shared_ptr<PromisesQueue> promisesQueue) {
-    if (shouldStop) return std::make_shared<Promise<std::unique_ptr<Result>>>();
+std::shared_ptr<Promise> Database::runCommand(std::unique_ptr<Command> command,
+                                              std::shared_ptr<std::mutex> promisesMutex,
+                                              std::shared_ptr<std::condition_variable> promisesCV,
+                                              std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue) {
+    if (shouldStop) return std::make_shared<Promise>();
 
     auto promise = queueCommand(std::move(command), std::move(promisesMutex), std::move(promisesCV), std::move(promisesQueue));
 
@@ -196,9 +230,25 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
+        case DBCommandType::INSERT_GAME_SERVER_ACCESS:
+            // Insert game server access commands need the PID of the user to get and the ID of the game server.
+            if (command->data.type() != typeid(DBGameServerAccessData)) {
+                return false;
+            }
+
+            break;
+
         case DBCommandType::UPDATE_USER_INFO:
             // Update the user information. Not all fields need to be updated, so they are optionals.
             if (command->data.type() != typeid(DBUserInfoUpdate)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_USER_INFO:
+            // Insert user information commands need the PID of the user to get and the user information to insert.
+            if (command->data.type() != typeid(DBUserInfoData)) {
                 return false;
             }
 

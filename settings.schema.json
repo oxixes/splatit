@@ -461,9 +461,25 @@
           "type": "object",
           "patternProperties": {
             "^[A-F0-9]{8}$": {
-              "description": "The host of the server",
-              "type": "string",
-              "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              "description": "Host information for a specific server ID",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Host information",
+                "properties": {
+                  "address": {
+                    "description": "IP address and port of the server",
+                    "type": "string",
+                    "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                  },
+                  "grpcAddress": {
+                    "description": "IP address and port of the gRPC server",
+                    "type": "string",
+                    "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                  }
+                }
+              },
+              "minItems": 1
             }
           }
         },
@@ -524,6 +540,16 @@
           "else": {
             "required": ["host", "port", "user", "password", "name"]
           }
+        },
+        "grpcRequestTimeout": {
+          "description": "Timeout for gRPC requests (in milliseconds)",
+          "type": "integer",
+          "minimum": 1
+        },
+        "grpcConnectionPoolMaxSize": {
+          "description": "Maximum size of the gRPC connection pool",
+          "type": "integer",
+          "minimum": 1
         }
       },
       "if": {
@@ -532,7 +558,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize"]
       },
       "required": ["enabled"]
     },

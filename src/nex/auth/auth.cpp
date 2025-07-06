@@ -8,6 +8,9 @@
 #include "../types/auth/authenticationInfo.hpp"
 #include "authUtils.hpp"
 #include "../../constants.hpp"
+#include "../types/friendsSecure/NNAInfo.hpp"
+#include "../types/friendsSecure/nintendoPresenceV2.hpp"
+#include "../types/friendsSecure/comment.hpp"
 
 namespace nex::rmc {
 
@@ -50,7 +53,10 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
         db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
             ->setContext(std::pair<ClientInfo, Request>(client, req))
             .then([username = std::move(username),
-                    client, pid, req, res, this](std::unique_ptr<db::Result> result) mutable {
+                    client, pid, req, res, this](std::any&& resultsAny) mutable {
+
+            std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+
             if (result->getStatus() != db::DBResultStatus::SUCCESS) {
                 logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(pid)
                                                            + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -218,7 +224,9 @@ void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID>
             ->setContext(std::pair<ClientInfo, Request>(client, req))
             .then([idSource = std::move(idSource),
                     idTarget = std::move(idTarget),
-                    client, req, res, this](std::unique_ptr<db::Result> result) mutable {
+                    client, req, res, this](std::any&& resultsAny) mutable {
+
+            std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
             if (result->getStatus() != db::DBResultStatus::SUCCESS) {
                 logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(*idSource)
@@ -280,6 +288,48 @@ void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID>
         sendMsg(client, res, params);
         return;
     }
+}
+
+std::shared_ptr<Promise> AuthRMC::getOrRegisterUserPassword(uint32_t pid) {
+    std::shared_ptr<Promise> resultPromise = std::make_shared<Promise>();
+
+    auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
+    db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
+        ->then([pid, resultPromise, this](std::any&& resultsAny) {
+
+        std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+
+        if (result->getStatus() != db::DBResultStatus::SUCCESS) {
+            resultPromise->setResolveValue(std::move(std::optional<std::string>(std::nullopt)));
+            resultPromise->resolve();
+            return;
+        }
+
+        if (result->hasData()) {
+            resultPromise->setResolveValue(std::move(std::optional(result->getData<db::DBGameServerAccessData>().password)));
+            resultPromise->resolve();
+        } else {
+            logger->log(Logger::level::INFO, logGroup, "Registering new user password for PID " + std::to_string(pid));
+
+            // Generate a new password for the user
+            std::string newPassword = utils::generateUserPassword();
+            auto insertCmd = db::Database::craftInsertGameServerAccessCommand(pid, newPassword);
+            db->runCommand(std::move(insertCmd), queueMutex, queueCV, promisesQueue)
+                ->then([resultPromise, newPassword](std::any&& resultsAny) {
+
+                std::unique_ptr<db::Result> insertResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+
+                if (insertResult->getStatus() == db::DBResultStatus::SUCCESS) {
+                    resultPromise->setResolveValue(std::move(std::optional(newPassword)));
+                } else {
+                    resultPromise->setResolveValue(std::move(std::optional<std::string>(std::nullopt)));
+                }
+                resultPromise->resolve();
+            });
+        }
+    });
+
+    return resultPromise;
 }
 
 } // namespace nex::rmc

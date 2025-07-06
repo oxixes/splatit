@@ -117,7 +117,7 @@ protected:
     std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
     std::recursive_mutex pidMapMutex;
 
-    std::shared_ptr<db::PromisesQueue> promisesQueue = std::make_shared<db::PromisesQueue>();
+    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
     std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
 
     std::shared_ptr<std::condition_variable> queueCV = std::make_shared<std::condition_variable>();

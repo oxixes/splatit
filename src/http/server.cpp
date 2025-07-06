@@ -297,29 +297,29 @@ void Server::stop() {
 
     std::unique_lock requestsQueueLock(*queueMutex);
     requestsQueue = std::queue<std::pair<uint32_t, std::shared_ptr<Request>>>();
-    promisesQueue = std::make_shared<db::PromisesQueue>();
+    promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
 
     mainSocket = nullptr;
 }
 
 void Server::registerRoute(const std::string& host, const std::string& path, std::function<void(
-        Server*, std::unique_ptr<Context>)> func) {
+        Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
     if (routes.find(host) == routes.end()) {
-        routes[host] = std::unordered_map<std::string, std::function<void(Server*, std::unique_ptr<Context>)>>();
+        routes[host] = std::unordered_map<std::string, std::function<void(Server*, std::shared_ptr<Context>)>>();
     }
 
     routes[host][path] = std::move(func);
 }
 
 void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<void(
-        Server*, std::unique_ptr<Context>)> func) {
+        Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
 
     std::regex regexPath(path);
 
     if (regexRoutes.find(host) == regexRoutes.end()) {
-        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<void(Server*, std::unique_ptr<Context>)>>>();
+        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<void(Server*, std::shared_ptr<Context>)>>>();
     }
 
     regexRoutes[host].emplace_back(std::move(regexPath), std::move(func));
@@ -331,12 +331,12 @@ void Server::unregisterHost(const std::string& host) {
 }
 
 void Server::registerErrorPage(const std::string& host, std::function<void(
-        Server*, std::unique_ptr<Context>)> func) {
+        Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
     errorPages[host] = std::move(func);
 }
 
-void Server::sendResponse(std::unique_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) {
+void Server::sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) {
     socketMgr->send(context->clientSockId, std::move(response->serialize()));
     if (!keepAlive) socketMgr->close(context->clientSockId);
 }

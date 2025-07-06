@@ -76,16 +76,15 @@ void FriendsSecureRMC::registerEx(ClientInfo client,
         return;
     }
 
-    auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
-    db->runCommand(std::move(getFriendsInfoCmd), queueMutex, queueCV, promisesQueue)
-        ->setContext(std::pair<ClientInfo, Request>(client, req))
-        .then([params = std::move(params),
-                retval = std::move(retval),
-                rvConnId = std::move(rvConnId),
-                clientPublicUrl = std::move(clientPublicUrl),
-                urls = std::move(urls),
-                data = std::move(data),
-                client, req, res, this](std::unique_ptr<db::Result> friendsInfo) mutable {
+    auto friendsInfoCallback = [params = std::move(params),
+                                                       retval = std::move(retval),
+                                                       rvConnId = std::move(rvConnId),
+                                                       clientPublicUrl = std::move(clientPublicUrl),
+                                                       urls = std::move(urls),
+                                                       data = std::move(data),
+                                                       client, req, res, this](std::any&& resultsAny) mutable {
+
+        std::unique_ptr<db::Result> friendsInfo = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
         if (friendsInfo->getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to get friends info for " + std::to_string(client.pid)
@@ -130,6 +129,62 @@ void FriendsSecureRMC::registerEx(ClientInfo client,
         params[2] = std::move(clientPublicUrl);
 
         sendMsg(client, res, params);
+    };
+
+    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    db->runCommand(std::move(getUserInfoCmd), queueMutex, queueCV, promisesQueue)
+        ->setContext(std::pair<ClientInfo, Request>(client, req))
+        .then([friendsInfoCallback = std::move(friendsInfoCallback),
+               client, req, this](std::any&& resultsAny) mutable {
+
+        std::unique_ptr<db::Result> userInfo = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+
+        if (userInfo->getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            return;
+        }
+
+        if (!userInfo->hasData()) {
+            logger->log(Logger::level::INFO, logGroup, "User " + std::to_string(client.pid) + " was not found, registering");
+
+            NNAInfo nnaInfo(client.minorVersion);
+            NintendoPresenceV2 presence(client.minorVersion);
+            Comment comment(client.minorVersion);
+
+            auto insertUserInfoCmd = db::Database::craftInsertUserInfoCommand(
+                    client.pid, true, true, false,
+                    nnaInfo.encode(),
+                    presence.encode(),
+                    comment.encode(),
+                    std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
+            db->runCommand(std::move(insertUserInfoCmd), queueMutex, queueCV, promisesQueue)
+                ->setContext(std::pair<ClientInfo, Request>(client, req))
+                .then([friendsInfoCallback = std::move(friendsInfoCallback),
+                       client, req, this](std::any&& resultsAny) mutable {
+
+                    std::unique_ptr<db::Result> insertUserInfoResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+
+                    if (insertUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS) {
+                        logger->log(Logger::level::WARN, logGroup, "Failed to insert user info for " + std::to_string(client.pid)
+                                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                                   + std::to_string(client.address.address.port));
+
+                        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+                        return;
+                    }
+
+                    friendsInfoCallback(std::move(std::make_any<db::Result>(db::DBResultStatus::SUCCESS,
+                                                                            std::vector<db::DBFriendInfoData>{})));
+                });
+        } else {
+            auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
+            db->runCommand(std::move(getFriendsInfoCmd), queueMutex, queueCV, promisesQueue)
+                ->setContext(std::pair<ClientInfo, Request>(client, req)).then(std::move(friendsInfoCallback));
+        }
     });
 }
 
@@ -153,7 +208,9 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
         ->setContext(std::pair<ClientInfo, Request>(client, req))
         .then([nnaInfo = std::move(nnaInfo),
                 presence = std::move(presence),
-                client, req, this](std::unique_ptr<db::Result> userInfo) mutable {
+                client, req, this](std::any&& resultsAny) mutable {
+
+        std::unique_ptr<db::Result> userInfo = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
         auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
 
@@ -162,7 +219,9 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
             .then([userInfo = std::move(userInfo),
                     nnaInfo = std::move(nnaInfo),
                     presence = std::move(presence),
-                    client, req, this](std::unique_ptr<db::Result> friendsInfo) mutable {
+                    client, req, this](std::any&& resultsAny) mutable {
+
+            std::unique_ptr<db::Result> friendsInfo = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
             if (userInfo->getStatus() != db::DBResultStatus::SUCCESS || friendsInfo->getStatus() != db::DBResultStatus::SUCCESS) {
                 logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
@@ -192,7 +251,9 @@ void FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req
                         friendsInfo = std::move(friendsInfo),
                         nnaInfo = std::move(nnaInfo),
                         presence = std::move(presence),
-                        client, req, this](std::unique_ptr<db::Result> updateUserInfoResult) mutable{
+                        client, req, this](std::any&& resultsAny) mutable{
+
+                std::unique_ptr<db::Result> updateUserInfoResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
                 if (updateUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS) {
                     logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
@@ -299,7 +360,9 @@ void FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std::uniqu
     db->runCommand(std::move(updateUserInfoCmd), queueMutex, queueCV, promisesQueue)
         ->setContext(std::pair<ClientInfo, Request>(client, req))
         .then([presence = std::move(presence),
-               client, req, this](std::unique_ptr<db::Result> updateUserInfoResult) {
+               client, req, this](std::any&& resultsAny) {
+
+        std::unique_ptr<db::Result> updateUserInfoResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
         if (updateUserInfoResult->getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
@@ -371,7 +434,9 @@ void FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
                                                                           std::nullopt, lastOnline);
 
         db->runCommand(std::move(updateUserInfoCmd), queueMutex, queueCV, promisesQueue)
-            ->then([address, this](std::unique_ptr<db::Result> updateUserInfoResult) {
+            ->then([address, this](std::any&& resultsAny) {
+
+            std::unique_ptr<db::Result> updateUserInfoResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
 
             std::unique_lock registeredClientsLock(registeredClientsMutex);
             auto clientIt = registeredClients.find(pidMap[address]);

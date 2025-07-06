@@ -80,7 +80,9 @@ public:
     [[nodiscard]] std::string getRefreshTokenKey() const;
     [[nodiscard]] std::string getNEXTokenKey() const;
 
-    [[nodiscard]] std::string getGameServerHost(const std::string& id) const;
+    [[nodiscard]] std::map<std::string, std::vector<std::pair<std::string, std::string>>> getGameServerHosts() const;
+    [[nodiscard]] int getAccountsgRPCRequestTimeout();
+    [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize();
 
 private:
     json settings;

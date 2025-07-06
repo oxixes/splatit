@@ -1,4 +1,6 @@
 #include <nlohmann/json.hpp>
+#include <random>
+
 #include "authUtils.hpp"
 #include "../../crypto/tools.hpp"
 
@@ -41,6 +43,24 @@ namespace nex::rmc::utils {
         }
 
         return true;
+    }
+
+    std::string generateUserPassword() {
+        // Generate a 16 character alphanumeric password
+        const std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+        std::string password;
+        password.reserve(16);
+
+        std::random_device dev;
+        std::mt19937 rng(dev());
+        std::uniform_int_distribution<> dist(0, (int) charset.size() - 1);
+
+        for (size_t i = 0; i < 16; ++i) {
+            password += charset[dist(rng)];
+        }
+
+        return std::move(password);
     }
 
 } // namespace nex::rmc::utils

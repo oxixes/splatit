@@ -197,15 +197,25 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"deviceKeyPath", (certsPath/fs::path("device.key")).string()},
                     {"miiImagesPath", (dataDirAbsPath/fs::path("miis")).string()},
                     {"hosts", { // TODO Change this to a real address
-                        {"00003200", "127.0.0.1:1201"},
-                        {"10162B00", "127.0.0.1:1203"}
+                        {"00003200", {
+                            {
+                                {"address", "127.0.0.1:1201"},
+                                {"grpcAddress", "127.0.0.1:1999"}
+                            },
+                            {
+                                {"address", "127.0.0.1:1203"},
+                                {"grpcAddress", "127.0.0.1:1999"}
+                            }
+                        }}
                     }},
                     {"db", {
                         {"type", "SQLite3"},
                         {"path", (dataDirAbsPath/fs::path("db.db")).string()}
                     }},
                     {"allowRealWiiU", true},
-                    {"allowGeneratedWiiU", true}
+                    {"allowGeneratedWiiU", true},
+                    {"grpcRequestTimeout", 3000}, // in milliseconds
+                    {"grpcConnectionPoolMaxSize", 1}
             }},
             {"boss", {
                     {"enabled", true},
@@ -499,6 +509,24 @@ std::string SettingsManager::getNEXTokenKey() const {
     return settings["nex"]["tokenKey"];
 }
 
-std::string SettingsManager::getGameServerHost(const std::string& id) const {
-    return settings["accounts"]["hosts"][id];
+std::map<std::string, std::vector<std::pair<std::string, std::string>>> SettingsManager::getGameServerHosts() const {
+    std::map<std::string, std::vector<std::pair<std::string, std::string>>> hosts;
+
+    for (const auto& [id, hostList] : settings["accounts"]["hosts"].items()) {
+        std::vector<std::pair<std::string, std::string>> hostPairs;
+        for (const auto& hostInfo : hostList) {
+            hostPairs.emplace_back(hostInfo["address"], hostInfo["grpcAddress"]);
+        }
+        hosts[id] = std::move(hostPairs);
+    }
+
+    return std::move(hosts);
+}
+
+int SettingsManager::getAccountsgRPCRequestTimeout() {
+    return settings["accounts"]["grpcRequestTimeout"];
+}
+
+int SettingsManager::getAccountsgRPCConnectionPoolMaxSize() {
+    return settings["accounts"]["grpcConnectionPoolMaxSize"];
 }

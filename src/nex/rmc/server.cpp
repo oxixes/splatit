@@ -224,7 +224,7 @@ void Server::stop() {
 
     std::unique_lock queueLock(*queueMutex);
     requestsQueue = std::queue<RequestInfo>(); // Clear the queue
-    promisesQueue = std::make_shared<db::PromisesQueue>(); // Reset the promises queue
+    promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>(); // Reset the promises queue
 }
 
 Response Server::createError(const Request& req, Error error) {

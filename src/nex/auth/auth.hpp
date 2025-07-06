@@ -16,6 +16,8 @@ public:
                      std::string build, std::string base64JWTKey, bool friends);
     ~AuthRMC() override = default;
 
+    std::shared_ptr<Promise> getOrRegisterUserPassword(uint32_t pid);
+
 private:
     void login(ClientInfo client, Request req, std::unique_ptr<String> username);
     void loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo);

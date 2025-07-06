@@ -1,5 +1,4 @@
 #include "server.hpp"
-#include "../util/util.hpp"
 
 #include <utility>
 #include <thread>
@@ -8,10 +7,11 @@
 
 namespace grpcimpl {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection) {
+Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, ServerPtrs serverPtrs) {
     this->logger = std::move(logger);
     this->listenDir = listenDir;
     this->reflectionEnabled = reflection;
+    this->serverPtrs = std::move(serverPtrs);
 }
 
 Server::~Server() {
@@ -23,14 +23,19 @@ void Server::listen() {
 
     std::string listenIPv4 = util::ipv4ToString(listenDir);
 
-    greeterService = std::make_shared<grpcimpl::example::GreeterServiceImpl>();
+    if (serverPtrs.friendsAuthRMC != nullptr || serverPtrs.splatoonAuthRMC != nullptr) {
+        authService = std::make_shared<grpcimpl::auth::v1::AuthServiceImpl>(
+                serverPtrs.friendsAuthRMC, serverPtrs.splatoonAuthRMC, logger);
+    }
 
     if (reflectionEnabled) {
         grpc::reflection::InitProtoReflectionServerBuilderPlugin();
     }
     grpc::ServerBuilder builder;
     builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), grpc::InsecureServerCredentials());
-    builder.RegisterService(greeterService.get());
+
+    if (authService != nullptr) builder.RegisterService(authService.get());
+
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {
         throw std::runtime_error("Failed to start gRPC server on " + listenIPv4 + ":" + std::to_string(listenDir.port));

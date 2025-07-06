@@ -15,7 +15,6 @@
 #include "http/boss/boss.hpp"
 #include "nex/prudp/server.hpp"
 #include "util/tasksManager.hpp"
-#include "nex/rmc/server.hpp"
 #include "nex/auth/auth.hpp"
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
@@ -42,7 +41,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<Logger::Logger> logger(new Logger::Logger());
 
     // Initialize sockets (only needed on Windows)
-    if(!sock::initialize()) {
+    if (!sock::initialize()) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while initializing sockets.");
         return 1;
@@ -62,23 +61,6 @@ int main(int argc, char** argv) {
 
     std::shared_ptr<SocketManager> socketManager(new SocketManager(logger));
 
-    std::shared_ptr<grpcimpl::Server> grpcServer = nullptr;
-
-    if (settingsMgr->isgRPCEnabled()) {
-        try {
-            grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress(),
-                                                            settingsMgr->isgRPCReflectionEnabled());
-            grpcServer->listen();
-        } catch (const std::exception& e) {
-            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                        std::string("An error occurred while initializing the gRPC server: ") + e.what());
-            socketManager->cleanup();
-            certManager->cleanup();
-            sock::cleanup();
-            return 1;
-        }
-    }
-
     std::shared_ptr<db::Database> friendsAuthDB = nullptr;
     std::shared_ptr<nex::prudp::Server> friendsAuthSrv = nullptr;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
@@ -86,7 +68,6 @@ int main(int argc, char** argv) {
         friendsAuthDB = db::Database::createDatabase(settingsMgr->getFriendsAuthDBSettings(), logger);
         if (!friendsAuthDB->init() || !friendsAuthDB->run()) {
             friendsAuthDB->close();
-            if (grpcServer != nullptr) grpcServer->stop();
             socketManager->cleanup();
             certManager->cleanup();
             sock::cleanup();
@@ -97,7 +78,6 @@ int main(int argc, char** argv) {
             if (!db::migrations::migrate(logger, friendsAuthDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_AUTH,
                                          friendsAuthDB->getVersion())) {
                 friendsAuthDB->close();
-                if (grpcServer != nullptr) grpcServer->stop();
                 socketManager->cleanup();
                 certManager->cleanup();
                 sock::cleanup();
@@ -130,7 +110,6 @@ int main(int argc, char** argv) {
             friendsSecureDB->close();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
             if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-            if (grpcServer != nullptr) grpcServer->stop();
             socketManager->cleanup();
             certManager->cleanup();
             sock::cleanup();
@@ -143,7 +122,6 @@ int main(int argc, char** argv) {
                 friendsSecureDB->close();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
                 if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-                if (grpcServer != nullptr) grpcServer->stop();
                 socketManager->cleanup();
                 certManager->cleanup();
                 sock::cleanup();
@@ -174,7 +152,6 @@ int main(int argc, char** argv) {
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
             if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-            if (grpcServer != nullptr) grpcServer->stop();
             socketManager->cleanup();
             certManager->cleanup();
             sock::cleanup();
@@ -189,7 +166,6 @@ int main(int argc, char** argv) {
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
                 if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-                if (grpcServer != nullptr) grpcServer->stop();
                 socketManager->cleanup();
                 certManager->cleanup();
                 sock::cleanup();
@@ -238,7 +214,6 @@ int main(int argc, char** argv) {
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
             if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-            if (grpcServer != nullptr) grpcServer->stop();
             socketManager->cleanup();
             certManager->cleanup();
             sock::cleanup();
@@ -270,7 +245,6 @@ int main(int argc, char** argv) {
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
                 if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-                if (grpcServer != nullptr) grpcServer->stop();
                 socketManager->cleanup();
                 certManager->cleanup();
                 sock::cleanup();
@@ -287,7 +261,6 @@ int main(int argc, char** argv) {
                     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                     if (friendsAuthDB != nullptr) friendsAuthDB->close();
                     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-                    if (grpcServer != nullptr) grpcServer->stop();
                     socketManager->cleanup();
                     certManager->cleanup();
                     sock::cleanup();
@@ -302,6 +275,39 @@ int main(int argc, char** argv) {
             boss::registerRoutes(httpServer, settingsMgr);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
+    }
+
+    std::shared_ptr<grpcimpl::Server> grpcServer = nullptr;
+
+    if (settingsMgr->isgRPCEnabled()) {
+        try {
+            grpcimpl::ServerPtrs serverPtrs {
+                httpServer,
+                friendsAuthRMC,
+                splatoonAuthRMC,
+                friendsSecureRMC,
+                splatoonSecureRMC
+            };
+
+            grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress(),
+                                                            settingsMgr->isgRPCReflectionEnabled(),
+                                                            serverPtrs);
+            grpcServer->listen();
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        std::string("An error occurred while initializing the gRPC server: ") + e.what());
+            if (accountsDB != nullptr) accountsDB->close();
+            if (httpServer != nullptr) httpServer->stop();
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
     }
 
 #ifdef _WIN32
@@ -328,6 +334,7 @@ int main(int argc, char** argv) {
         if (splatoonSecureSrv != nullptr) tasksMgr.push(splatoonSecureSrv->process());
     }
 
+    if (grpcServer != nullptr) grpcServer->stop();
     if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
     if (friendsSecureDB != nullptr) friendsSecureDB->close();
     if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -337,7 +344,6 @@ int main(int argc, char** argv) {
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
     if (httpServer != nullptr) httpServer->stop();
-    if (grpcServer != nullptr) grpcServer->stop();
     socketManager->cleanup();
     certManager->cleanup();
 

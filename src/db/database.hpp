@@ -43,9 +43,11 @@ enum class DBCommandType {
     GET_USER_BY_PID,
     GET_USER_BY_USERNAME,
     GET_GAME_SERVER_ACCESS,
+    INSERT_GAME_SERVER_ACCESS,
     GET_USER_INFO,
-    GET_FRIENDS_INFO,
+    INSERT_USER_INFO,
     UPDATE_USER_INFO,
+    GET_FRIENDS_INFO,
     GET_USER_PROFILE,
     GET_DEVICE_ATTRIBUTES
 };
@@ -205,11 +207,9 @@ public:
     friend class Database;
 };
 
-using PromisesQueue = std::queue<std::shared_ptr<Promise<std::unique_ptr<Result>>>>;
-
 class Command {
 protected:
-    std::shared_ptr<PromisesQueue> promisesQueue = nullptr;
+    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = nullptr;
     std::shared_ptr<std::mutex> promisesMutex = nullptr;
     std::shared_ptr<std::condition_variable> promisesCV = nullptr;
     DBCommandType type;
@@ -231,7 +231,7 @@ protected:
 
     std::shared_ptr<Logger::Logger> logger;
 
-    std::queue<std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>>> commandQueue;
+    std::queue<std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise>>> commandQueue;
     std::mutex commandQueueMutex;
 
     DBType dbType;
@@ -247,10 +247,10 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual std::shared_ptr<Promise<std::unique_ptr<Result>>> queueCommand(std::unique_ptr<Command> command,
-                                                                           std::shared_ptr<std::mutex> promisesMutex,
-                                                                           std::shared_ptr<std::condition_variable> promisesCV,
-                                                                           std::shared_ptr<PromisesQueue> promisesQueue) = 0;
+    virtual std::shared_ptr<Promise> queueCommand(std::unique_ptr<Command> command,
+                                                  std::shared_ptr<std::mutex> promisesMutex,
+                                                  std::shared_ptr<std::condition_variable> promisesCV,
+                                                  std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue) = 0;
     virtual void processQueue() = 0;
     virtual void waitForQueue() = 0;
 
@@ -258,8 +258,13 @@ public:
     static std::unique_ptr<Command> craftGetUserByPIDCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
     static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftInsertGameServerAccessCommand(uint32_t pid, const std::string& password);
     static std::unique_ptr<Command> craftGetUserInfoCommand(uint32_t pid);
-    static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftInsertUserInfoCommand(uint32_t pid, bool showOnline, bool showPlaying,
+                                                               bool blockRequests, const std::vector<uint8_t>& nnaInfo,
+                                                               const std::vector<uint8_t>& presence,
+                                                               const std::vector<uint8_t>& comment,
+                                                               datetime_t lastOnline);
     static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
                                                                std::optional<bool> showPlaying,
                                                                std::optional<bool> blockRequests,
@@ -267,15 +272,16 @@ public:
                                                                std::optional<std::vector<uint8_t>> presence,
                                                                std::optional<std::vector<uint8_t>> comment,
                                                                std::optional<datetime_t> lastOnline);
+    static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 
-    std::shared_ptr<Promise<std::unique_ptr<Result>>> runCommand(std::unique_ptr<Command> command,
-                           std::shared_ptr<std::mutex> promisesMutex,
-                           std::shared_ptr<std::condition_variable> promisesCV,
-                           std::shared_ptr<PromisesQueue> promisesQueue);
+    std::shared_ptr<Promise> runCommand(std::unique_ptr<Command> command,
+                                        std::shared_ptr<std::mutex> promisesMutex,
+                                        std::shared_ptr<std::condition_variable> promisesCV,
+                                        std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue);
 
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;

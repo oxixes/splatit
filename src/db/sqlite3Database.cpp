@@ -81,17 +81,17 @@ bool sqlite3Database::run() {
     return true;
 }
 
-std::shared_ptr<Promise<std::unique_ptr<Result>>> sqlite3Database::queueCommand(std::unique_ptr<Command> command,
-                                                                                std::shared_ptr<std::mutex> promisesMutex,
-                                                                                std::shared_ptr<std::condition_variable> promisesCV,
-                                                                                std::shared_ptr<PromisesQueue> promisesQueue) {
-    if (shouldStop) return std::make_shared<Promise<std::unique_ptr<Result>>>();
+std::shared_ptr<Promise> sqlite3Database::queueCommand(std::unique_ptr<Command> command,
+                                                       std::shared_ptr<std::mutex> promisesMutex,
+                                                       std::shared_ptr<std::condition_variable> promisesCV,
+                                                       std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue) {
+    if (shouldStop) return std::make_shared<Promise>();
 
     command->promisesQueue = std::move(promisesQueue);
     command->promisesMutex = std::move(promisesMutex);
     command->promisesCV = std::move(promisesCV);
 
-    auto promise = std::make_shared<Promise<std::unique_ptr<Result>>>();
+    auto promise = std::make_shared<Promise>();
 
     std::unique_lock lock(commandQueueMutex);
     commandQueue.emplace(std::move(command), promise);
@@ -121,7 +121,7 @@ void sqlite3Database::dbThread() {
         if (shouldStop) break;
 
         while (!commandQueue.empty() && !shouldStop) {
-            std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>> command = std::move(commandQueue.front());
+            std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise>> command = std::move(commandQueue.front());
             commandQueue.pop();
 
             lock.unlock();
@@ -136,7 +136,7 @@ void sqlite3Database::dbThread() {
     dbQueueWaitCV.notify_all();
 }
 
-void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise<std::unique_ptr<Result>>>>& command) {
+void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise>>& command) {
     auto returnedData = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
     sqlite3_stmt* statement = nullptr;
 
@@ -243,7 +243,7 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
 
         auto* query = std::any_cast<DBGameServerAccessQuery>(&command.first->data);
 
-        if (!bindData(getGameServerAccessStatement, {DBDataType::INTEGER, DBDataType::STRING},
+        if (!bindData(getGameServerAccessStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(getGameServerAccessStatement);
@@ -270,6 +270,33 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
 
             resultsData = std::move(accessData);
         }
+    } else if (command.first->type == DBCommandType::INSERT_GAME_SERVER_ACCESS) {
+        if (insertGameServerAccessStatement == nullptr) {
+            if (!craftStatement("INSERT INTO game_server_access (pid, password) VALUES (?, ?);",
+                                &insertGameServerAccessStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBGameServerAccessData>(&command.first->data);
+
+        if (!bindData(insertGameServerAccessStatement, {DBDataType::INTEGER, DBDataType::STRING},
+                      {std::make_shared<DBInteger>((int64_t) query->pid), std::make_shared<DBString>(query->password)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertGameServerAccessStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(insertGameServerAccessStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertGameServerAccessStatement);
+            sqlite3_clear_bindings(insertGameServerAccessStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(insertGameServerAccessStatement);
+        sqlite3_clear_bindings(insertGameServerAccessStatement);
     } else if (command.first->type == DBCommandType::GET_USER_INFO) {
         if (getUserInfoStatement == nullptr) {
             if (!craftStatement("SELECT * FROM user_info WHERE pid = ?;", &getUserInfoStatement)) {
@@ -458,6 +485,42 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         }
 
         sqlite3_finalize(statement);
+    } else if (command.first->type == DBCommandType::INSERT_USER_INFO) {
+        if (insertUserInfoStatement == nullptr) {
+            if (!craftStatement("INSERT INTO user_info (pid, show_presence, show_playing, block_requests, nna_info, presence, comment, last_online) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?);", &insertUserInfoStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* userInfoData = std::any_cast<DBUserInfoData>(&command.first->data);
+
+        if (!bindData(insertUserInfoStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                 DBDataType::INTEGER, DBDataType::BLOB, DBDataType::BLOB,
+                                                 DBDataType::BLOB, DBDataType::DATETIME},
+                      {std::make_shared<DBInteger>((int64_t) userInfoData->pid),
+                       std::make_shared<DBInteger>((int64_t) userInfoData->showPresence),
+                       std::make_shared<DBInteger>((int64_t) userInfoData->showPlaying),
+                       std::make_shared<DBInteger>((int64_t) userInfoData->blockRequests),
+                       std::make_shared<DBBlob>(userInfoData->nnaInfo),
+                       std::make_shared<DBBlob>(userInfoData->presence),
+                       std::make_shared<DBBlob>(userInfoData->comment),
+                       std::make_shared<DBDateTime>(userInfoData->lastOnline)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertUserInfoStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(insertUserInfoStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertUserInfoStatement);
+            sqlite3_clear_bindings(insertUserInfoStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(insertUserInfoStatement);
+        sqlite3_clear_bindings(insertUserInfoStatement);
     } else if (command.first->type == DBCommandType::GET_USER_PROFILE) {
         if (getUserProfileStatement == nullptr) {
             std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.gender, u.region, u.tz, u.utc_offset,"
@@ -584,10 +647,14 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         }
 
         resultsData = std::move(attributesData);
+    } else {
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
+                    "Unknown command type: " + std::to_string(static_cast<int>(command.first->type)));
+        return;
     }
 
     push_results:
-    command.second->setResolveValue(std::make_unique<Result>(resultStatus, std::move(resultsData)));
+    command.second->setResolveValue(std::make_any<Result>(resultStatus, std::move(resultsData)));
 
     std::unique_lock promiseLock(*command.first->promisesMutex);
     command.first->promisesQueue->push(command.second);

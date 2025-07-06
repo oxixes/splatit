@@ -9,7 +9,7 @@ namespace boss {
  * Returns the appropiate tasksheet requested, based on the title id (which game)
  * and tasksheet id.
  */
-void p01_tasksheet(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
                    const std::string& titleId, const std::string& tasksheetId,
                    const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
@@ -95,7 +95,7 @@ void p01_tasksheet(http::Server* srv, std::unique_ptr<http::Context> ctx,
  * Returns the requested file. These URLs are obtained from the tasksheets returned by
  * p01_tasksheet.
  */
-void p01_data(http::Server* srv, std::unique_ptr<http::Context> ctx, const std::string& titleId,
+void p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
               const std::string& tasksheetId, const std::string& fileHash,
               const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
@@ -145,7 +145,7 @@ void p01_data(http::Server* srv, std::unique_ptr<http::Context> ctx, const std::
  * Handler for GET https://nppl.app.<domain>/p01/policylist/<console type>/<major version>/<country>
  * Returns the requested policy list.
  */
-void p01_policylist(http::Server* srv, std::unique_ptr<http::Context> ctx) {
+void p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -231,7 +231,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
             path.append(titleId).append("/").append(tasksheetId);
 
             server->registerRoute("npts.app." + domain, path,
-                                  [titleId, tasksheetId, settingsMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                                  [titleId, tasksheetId, settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                 return p01_tasksheet(srv, std::move(ctx), titleId, tasksheetId, settingsMgr);
             });
 
@@ -243,7 +243,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 
 
                 server->registerRoute("npdi.cdn." + domain, path,
-                                      [titleId, tasksheetId, fileHash, settingsMgr](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                                      [titleId, tasksheetId, fileHash, settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                     return p01_data(srv, std::move(ctx), titleId, tasksheetId, fileHash, settingsMgr);
                 });
             }
@@ -251,11 +251,11 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
     }
 
     server->registerRegexRoute("nppl.app." + domain, R"(^\/p01\/policylist\/1\/1\/[A-Z]{2}$)",
-                               [](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+                               [](http::Server* srv, std::shared_ptr<http::Context> ctx) {
         return p01_policylist(srv, std::move(ctx));
     });
 
-    std::function errorHandler = [](http::Server* srv, std::unique_ptr<http::Context> ctx) {
+    std::function errorHandler = [](http::Server* srv, std::shared_ptr<http::Context> ctx) {
         std::unique_ptr<http::Response> res = getError(ctx->status, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
     };

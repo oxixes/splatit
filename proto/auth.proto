@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package grpcimpl.auth.v1;
+
+service AuthService {
+  // Retrieves the game server credentials for a given PID.
+  rpc GetGameServerCredentials(GetGameServerCredentialsRequest) returns (GetGameServerCredentialsResponse);
+}
+
+message GetGameServerCredentialsRequest {
+  uint32 pid = 1;
+  string gameServerId = 2;
+}
+
+message GetGameServerCredentialsResponse {
+  bool success = 1;
+  optional string password = 2;
+}

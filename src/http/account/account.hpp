@@ -16,35 +16,35 @@
 
 namespace acc {
 
-void v1_api_admin_time(http::Server* srv, std::unique_ptr<http::Context> ctx);
-void v1_api_admin_mapped_ids(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_admin_time(http::Server* srv, std::shared_ptr<http::Context> ctx);
+void v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Context> ctx,
                              const std::shared_ptr<db::Database>& db,
                              const std::shared_ptr<SettingsManager>& settingsManager,
                              const std::shared_ptr<CertManager>& certManager);
 
-void v1_api_access_token_gen(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Context> ctx,
                              const std::shared_ptr<db::Database>& db,
                              const std::shared_ptr<SettingsManager>& settingsManager,
                              const std::shared_ptr<CertManager>& certManager);
 
-void v1_api_provider_nex_token(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                const std::shared_ptr<db::Database>& db,
                                const std::shared_ptr<SettingsManager>& settingsManager,
                                const std::shared_ptr<CertManager>& certManager);
 
-void v1_api_people_me_profile(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Context> ctx,
                               const std::shared_ptr<db::Database>& db,
                               const std::shared_ptr<SettingsManager>& settingsManager,
                               const std::shared_ptr<CertManager>& certManager);
 
-void v1_api_provider_service_token_me(http::Server* srv, std::unique_ptr<http::Context> ctx,
+void v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                       const std::shared_ptr<db::Database>& db,
                                       const std::shared_ptr<SettingsManager>& settingsManager,
                                       const std::shared_ptr<CertManager>& certManager);
 
 std::unique_ptr<http::Response> createError(http::Version version, int code, const std::string& message, const std::string& cause);
 
-void errorHandler(http::Server* srv, std::unique_ptr<http::Context> ctx);
+void errorHandler(http::Server* srv, std::shared_ptr<http::Context> ctx);
 
 std::unique_ptr<http::Response> prepareResponse(http::Version version);
 std::unique_ptr<http::Response> prepareResponse(http::Version version, pugi::xml_document& doc);

@@ -79,14 +79,14 @@ DBVersion getVersionFromString(const std::string& str) {
 bool runVoidCommandsSync(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db,
                          const std::vector<std::string>& commands, const std::string& rollbackCommand) {
     std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
-    std::shared_ptr<PromisesQueue> promisesQueue = std::make_shared<PromisesQueue>();
+    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
 
     for (auto & sqlCmd : commands) {
         std::unique_ptr<Result> result = nullptr;
 
         std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmd);
-        db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::unique_ptr<Result> res) {
-            result = std::move(res);
+        db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::any&& resAny) {
+            result = std::move(std::make_unique<Result>(std::move(std::any_cast<Result>(resAny))));
         });
         db->processQueue();
         db->waitForQueue();
@@ -106,8 +106,8 @@ bool runVoidCommandsSync(const std::shared_ptr<Logger::Logger>& logger, const st
         if (result->getStatus() != DBResultStatus::SUCCESS) {
             // Rollback transaction
             command = Database::craftVoidCommand(rollbackCommand);
-            db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::unique_ptr<Result> res){
-                result = std::move(res);
+            db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::any&& resAny){
+                result = std::move(std::make_unique<Result>(std::move(std::any_cast<Result>(resAny))));
             });
             db->processQueue();
             db->waitForQueue();
