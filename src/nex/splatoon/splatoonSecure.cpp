@@ -220,7 +220,7 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
 
     auto& clientInfo = clientInfoIt->second;
 
-    auto urlIt = std::find(clientInfo.urls.begin(), clientInfo.urls.end(), *oldUrl);
+    const auto urlIt = std::ranges::find(clientInfo.urls, *oldUrl);
     if (urlIt == clientInfo.urls.end()) {
         sendMsg(client, res, {});
         return;
@@ -231,8 +231,6 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-// FIXME: In regards to the fixme in reportNATTraversalResult, the report may contain what we are looking for
-// to remove the player from the gathering
 void SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
                                    std::unique_ptr<UInt32> id,
                                    std::unique_ptr<qBuffer> report) {
@@ -250,7 +248,7 @@ void SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
     std::stringstream reportStream;
     for (auto& byte : report->data) {
         // Print the hex value of the byte
-        reportStream << std::hex << std::setw(2) << std::setfill('0') << (int) byte;
+        reportStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
     }
     std::string reportStr = reportStream.str();
     std::cout << "Report: " << reportStr << std::endl;
@@ -312,7 +310,7 @@ void SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
     params[0] = std::make_unique<Bool>(0, true);
 
     Gathering gathering(client.minorVersion);
-    gathering = *sessionIt->second.session;
+    gathering = static_cast<Gathering>(*sessionIt->second.session);
 
     data->set(gathering, "Gathering");
     params[1] = std::move(data);
@@ -599,7 +597,7 @@ void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request re
         return;
     }
 
-    if (*attribIndex < (uint32_t) sessionIt->second.session->attributes.size()) {
+    if (*attribIndex < static_cast<uint32_t>(sessionIt->second.session->attributes.size())) {
         logger->log(Logger::level::DEBUG, logGroup, "Modifying attribute " + std::to_string(*attribIndex) + " to " + std::to_string(*newValue) + " in session " + std::to_string(*gId) + " owned by " + std::to_string(client.pid) + ".");
         // sessionIt->second.session->attributes[attribIndex] = newValue;
     }
@@ -690,7 +688,7 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
         return;
     }
 
-    if ((uint32_t) param->srcMatchmakeSession.maxParticipants < param->additionalParticipants.size() + 1) {
+    if (static_cast<uint32_t>(param->srcMatchmakeSession.maxParticipants) < param->additionalParticipants.size() + 1) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_FULL; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
@@ -703,7 +701,7 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
     session->id = getNewGatheringId();
     session->ownerPid = client.pid;
     session->hostPid = client.pid;
-    session->participationCount = (uint32_t) param->additionalParticipants.size() + 1;
+    session->participationCount = static_cast<uint32_t>(param->additionalParticipants.size()) + 1;
     session->openParticipation = true;
     session->sessionKey = Buffer(crypto::genKey());
     session->startedTime = std::chrono::system_clock::now();
@@ -724,7 +722,7 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
 
     if (!session->userPassword.empty()) session->userPasswordEnabled = true; // Why is this not set by the client?
 
-    logger->log(Logger::level::DEBUG, logGroup, "Matchmake session created with ID " + std::to_string(session->id) + " for " + std::to_string(client.pid) + ":\n" + (*session).toString());
+    logger->log(Logger::level::DEBUG, logGroup, "Matchmake session created with ID " + std::to_string(session->id) + " for " + std::to_string(client.pid) + ":\n" + session->toString());
 
     // All checks passed, add players to session and send success
     matchmakeSessions[session->id] = {session, std::set<uint32_t>(playerPids.begin(), playerPids.end())};
@@ -778,23 +776,23 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
         return;
     }
 
-    auto& sessionInfo = sessionIt->second;
-    if ((uint32_t) sessionInfo.session->participationCount + param->additionalParticipants.size() >
-            (uint16_t) sessionInfo.session->maxParticipants) {
+    auto&[session, players] = sessionIt->second;
+    if (static_cast<uint32_t>(session->participationCount) + param->additionalParticipants.size() >
+            static_cast<uint16_t>(session->maxParticipants)) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_FULL;
         sendMsg(client, res, {});
         return;
     }
 
-    if (!sessionInfo.session->openParticipation) {
+    if (!session->openParticipation) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_CLOSED;
         sendMsg(client, res, {});
         return;
     }
 
-    if (sessionInfo.session->userPasswordEnabled && param->userPassword != sessionInfo.session->userPassword) {
+    if (session->userPasswordEnabled && param->userPassword != session->userPassword) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__MATCHMAKE_SESSION_USER_PASSWORD_UNMATCH;
         sendMsg(client, res, {});
@@ -816,7 +814,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
     }
 
     // All checks passed, add players to session and send success
-    sessionIt->second.session->participationCount += (uint32_t) playerPids.size();
+    sessionIt->second.session->participationCount += static_cast<uint32_t>(playerPids.size());
 
     std::vector<T_ptr> params(1);
     params[0] = std::make_unique<MatchmakeSession>(*sessionIt->second.session);
@@ -826,7 +824,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
 
     for (auto& pid : playerPids) {
         auto playerInfoIt = registeredClients.find(pid);
-        playerInfoIt->second.joinedGatherings.push_back(sessionInfo.session);
+        playerInfoIt->second.joinedGatherings.push_back(session);
 
         for (auto& existingPlayerPid : sessionIt->second.players) {
             auto existingPlayerInfoIt = registeredClients.find(existingPlayerPid);
@@ -911,7 +909,6 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         }
 
         if (!foundGathering) {
-            permissionDenied:
             res.success = false;
             res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
             sendMsg(client, res, {});
@@ -923,8 +920,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 
     // Log all the sessions that are currently available for matchmaking
     logger->log(Logger::level::DEBUG, logGroup, "Current matchmake sessions:");
-    for (const auto& session : matchmakeSessions) {
-        logger->log(Logger::level::DEBUG, logGroup, session.second.session->toString());
+    for (const auto &[session, players]: matchmakeSessions | std::views::values) {
+        logger->log(Logger::level::DEBUG, logGroup, session->toString());
     }
 
     auto filter = [&](const SessionInfo& sessionInfo) -> bool {
@@ -940,9 +937,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 
         // Filter out sessions that are not open for participation or don't have enough space
         if (!sessionInfo.session->openParticipation) valid = false;
-        uint32_t vacantParticipants = param->additionalParticipants.size() + 1;
-        uint32_t maxAllowedExistingPlayers = (uint32_t) sessionInfo.session->maxParticipants - vacantParticipants;
-        if (sessionInfo.session->participationCount > (uint32_t) maxAllowedExistingPlayers) valid = false;
+        const uint32_t vacantParticipants = param->additionalParticipants.size() + 1;
+        if (uint32_t maxAllowedExistingPlayers = static_cast<uint32_t>(sessionInfo.session->maxParticipants) - vacantParticipants; sessionInfo.session->participationCount > maxAllowedExistingPlayers) valid = false;
 
         if (!valid) return false;
 
@@ -964,14 +960,14 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 
             if (static_cast<uint32_t>(std::stoi(criteria.gameMode)) != sessionInfo.session->gameMode) sessionValid = false;
 
-            auto minParticipants = (std::string) criteria.minParticipants;
+            auto minParticipants = static_cast<std::string>(criteria.minParticipants);
             if (minParticipants.find(',') == std::string::npos) {
                 throw std::logic_error("minParticipants does not contain a comma");
             }
             uint16_t min_minParticipants = std::stoi(minParticipants.substr(0, minParticipants.find(',')));
             uint16_t max_minParticipants = std::stoi(minParticipants.substr(minParticipants.find(',') + 1));
 
-            auto maxParticipants = (std::string) criteria.maxParticipants;
+            auto maxParticipants = static_cast<std::string>(criteria.maxParticipants);
             if (maxParticipants.find(',') == std::string::npos) {
                 throw std::logic_error("maxParticipants does not contain a comma");
             }
@@ -1008,12 +1004,12 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
     };
 
     std::priority_queue<std::pair<uint32_t, SessionInfo>, std::vector<std::pair<uint32_t, SessionInfo>>, decltype(cmp)> validSessions(cmp);
-    for (auto& sessionInfo : matchmakeSessions) {
+    for (auto &val: matchmakeSessions | std::views::values) {
         try {
-            if (filter(sessionInfo.second)) {
-                uint32_t sessionExp = sessionInfo.second.session->attributes[1];
+            if (filter(val)) {
+                uint32_t sessionExp = val.session->attributes[1];
                 uint32_t userExp = param->srcMatchmakeSession.attributes[1];
-                validSessions.emplace(abs((int64_t) sessionExp - userExp), sessionInfo.second);
+                validSessions.emplace(abs(static_cast<int64_t>(sessionExp) - userExp), val);
             }
         } catch (const std::logic_error& e) {
             res.success = false;
@@ -1037,7 +1033,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         session->id = getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
-        if (session->gameMode == (uint32_t) 12) { // Festival, I don't know why it is set to not open by default
+        if (session->gameMode == static_cast<uint32_t>(12)) { // Festival, I don't know why it is set to not open by default
             session->openParticipation = true;
         }
         session->participationCount = 0;
@@ -1205,7 +1201,7 @@ uint32_t SplatoonSecureRMC::getNewGatheringId() {
     uint32_t id = dis(gen);
 
     std::unique_lock sessionsLock(matchmakeSessionsMutex);
-    while (matchmakeSessions.find(id) != matchmakeSessions.end()) {
+    while (matchmakeSessions.contains(id)) {
         id = dis(gen);
     }
 
@@ -1251,13 +1247,10 @@ void SplatoonSecureRMC::unregisterGathering_internal(uint32_t gId, uint32_t srcP
         auto& clientInfo = clientIt->second;
         
         // Remove the gathering from the client's joinedGatherings
-        auto gatheringIt = std::find_if(
-                clientInfo.joinedGatherings.begin(),
-                clientInfo.joinedGatherings.end(),
-                [gId](const std::shared_ptr<Gathering>& gathering) {
-                    return gathering->id == gId;
-                }
-        );
+        auto gatheringIt = std::ranges::find_if(clientInfo.joinedGatherings,
+                                                [gId](const std::shared_ptr<Gathering>& gathering) {
+                                                    return gathering->id == gId;
+                                                });
 
         if (gatheringIt != clientInfo.joinedGatherings.end()) {
             clientInfo.joinedGatherings.erase(gatheringIt);
@@ -1294,13 +1287,10 @@ void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid
     sessionIt->second.session->participationCount--;
 
     // Remove the gathering from the client's joinedGatherings
-    auto gatheringIt = std::find_if(
-            clientInfo.joinedGatherings.begin(),
-            clientInfo.joinedGatherings.end(),
-            [gId](const std::shared_ptr<Gathering>& gathering) {
-                return gathering->id == gId;
-            }
-    );
+    const auto gatheringIt = std::ranges::find_if(clientInfo.joinedGatherings,
+                                            [gId](const std::shared_ptr<Gathering>& gathering) {
+                                                return gathering->id == gId;
+                                            });
 
     if (gatheringIt != clientInfo.joinedGatherings.end()) {
         clientInfo.joinedGatherings.erase(gatheringIt);
@@ -1309,16 +1299,16 @@ void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid
     if (sessionIt->second.players.empty()) {
         unregisterGathering_internal(gId, playerPid);
         return;
-    } else {
-        uint32_t ownerPid = sessionIt->second.session->ownerPid;
-        sendNotification(registeredClients[ownerPid].client, (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
-                         playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-        // for (auto& pid : sessionIt->second.players) {
-        //     sendNotification(registeredClients[pid].client,
-        //                      (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
-        //                      playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-        // }
     }
+
+    uint32_t ownerPid = sessionIt->second.session->ownerPid;
+    sendNotification(registeredClients[ownerPid].client, disconnected ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
+                     playerPid, sessionIt->second.session->id, playerPid, msg, 0);
+    // for (auto& pid : sessionIt->second.players) {
+    //     sendNotification(registeredClients[pid].client,
+    //                      (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
+    //                      playerPid, sessionIt->second.session->id, playerPid, msg, 0);
+    // }
 
     if (sessionIt->second.session->ownerPid == playerPid) {
         // TODO Choose the best player as the new owner

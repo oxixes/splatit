@@ -52,6 +52,8 @@ private:
     sqlite3_stmt* getFriendsInfoStatement = nullptr;
     sqlite3_stmt* getUserProfileStatement = nullptr;
     sqlite3_stmt* getDeviceAttributesStatement = nullptr;
+    sqlite3_stmt* getAgreementStatement = nullptr;
+    sqlite3_stmt* getLatestAgreementStatement = nullptr;
 
     void dbThread();
 
@@ -60,7 +62,7 @@ private:
     bool bindData(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
                   const std::vector<std::shared_ptr<DBData>>& data);
     bool runStatement(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
-                      const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData);
+                      const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData) const;
 
     DBVersion obtainVersion();
 };

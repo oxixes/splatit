@@ -1,6 +1,7 @@
 #include "server.hpp"
 
 #include <utility>
+#include <sstream>
 
 #include "../../exceptions.hpp"
 #include "../../crypto/tools.hpp"
@@ -31,13 +32,13 @@ std::shared_ptr<Encoder> PayloadEncoder::getReliableEncoder(uint8_t substreamId)
     return encoders[substreamId];
 }
 
-std::shared_ptr<Encoder> PayloadEncoder::getUnreliableEncoder(const std::shared_ptr<Packet>& packet) {
+std::shared_ptr<Encoder> PayloadEncoder::getUnreliableEncoder(const std::shared_ptr<Packet>& packet) const {
     // Since unreliable packets are not ordered, a single ARC4 stream
     // cannot be used, therefore a different one is used for each
     // packet, with a different key depending on the packet.
 
-    std::vector<uint8_t> constantA = {0x18, 0xd8, 0x23, 0x34, 0x37, 0xe4, 0xe3, 0xfe};
-    std::vector<uint8_t> constantB = {0x23, 0x3e, 0x60, 0x01, 0x23, 0xcd, 0xab, 0x80};
+    const std::vector<uint8_t> constantA = {0x18, 0xd8, 0x23, 0x34, 0x37, 0xe4, 0xe3, 0xfe};
+    const std::vector<uint8_t> constantB = {0x23, 0x3e, 0x60, 0x01, 0x23, 0xcd, 0xab, 0x80};
 
     std::vector<uint8_t> baseKey = combineKeys(sessionKey, constantA);
     std::vector<uint8_t> addition = combineKeys(sessionKey, constantB);

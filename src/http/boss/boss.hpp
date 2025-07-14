@@ -7,7 +7,6 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json-schema.hpp>
 
-#include "../../logger.hpp"
 #include "../../settingsManager.hpp"
 #include "../parser/response.hpp"
 #include "../parser/request.hpp"

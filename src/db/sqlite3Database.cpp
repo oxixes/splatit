@@ -523,7 +523,7 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         sqlite3_clear_bindings(insertUserInfoStatement);
     } else if (command.first->type == DBCommandType::GET_USER_PROFILE) {
         if (getUserProfileStatement == nullptr) {
-            std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.gender, u.region, u.tz, u.utc_offset,"
+            std::string sqlCommand = "SELECT u.pid, u.username, u.email_id, u.mii_id, u.gender, u.region, u.tz,"
                                      "u.language, u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated,"
                                      "e.address AS email_address, e.parent AS email_parent, e.`primary` AS email_primary, "
                                      "e.reachable AS email_reachable, e.type AS email_type, e.updated_by AS email_updated_by, "
@@ -548,14 +548,13 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
 
         std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
                                                    DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
-                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING,
-                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
-                                                   DBDataType::STRING, DBDataType::STRING, DBDataType::DATETIME,
-                                                   DBDataType::DATETIME, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
-                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::DATETIME,
                                                    DBDataType::STRING, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::STRING};
+                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+                                                   DBDataType::STRING, DBDataType::DATETIME, DBDataType::DATETIME,
+                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                   DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                                   DBDataType::INTEGER, DBDataType::DATETIME, DBDataType::STRING,
+                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING};
 
         if (!runStatement(getUserProfileStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -569,14 +568,13 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
 
         if (!returnedData->empty()) {
             DBUserProfileData profileData {
-                .pid = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][0]->data),
+                .pid = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data)),
                 .username = std::any_cast<std::string>((*returnedData)[0][1]->data),
                 .emailId = std::any_cast<int64_t>((*returnedData)[0][2]->data),
                 .miiId = std::any_cast<int64_t>((*returnedData)[0][3]->data),
                 .gender = (bool) std::any_cast<int64_t>((*returnedData)[0][4]->data),
                 .region = std::any_cast<int64_t>((*returnedData)[0][5]->data),
                 .tz = std::any_cast<std::string>((*returnedData)[0][6]->data),
-                .utcOffset = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][7]->data),
                 .language = std::any_cast<std::string>((*returnedData)[0][8]->data),
                 .active = (bool) std::any_cast<int64_t>((*returnedData)[0][9]->data),
                 .marketing = (bool) std::any_cast<int64_t>((*returnedData)[0][10]->data),
@@ -614,13 +612,13 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         auto* query = std::any_cast<DBDeviceAttributesQuery>(&command.first->data);
 
         if (!bindData(getDeviceAttributesStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
-                      {std::make_shared<DBInteger>((int64_t) query->pid),
+                      {std::make_shared<DBInteger>(static_cast<int64_t>(query->pid)),
                        std::make_shared<DBInteger>(query->deviceId)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             goto push_results;
         }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+        std::vector returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
                                                    DBDataType::STRING, DBDataType::DATETIME};
 
         if (!runStatement(getDeviceAttributesStatement, returnedDataTypes, returnedData)) {
@@ -636,8 +634,8 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         std::vector<DBDeviceAttributeData> attributesData;
         for (const auto& row : *returnedData) {
             DBDeviceAttributeData attributeData {
-                .pid = (uint32_t) std::any_cast<int64_t>(row[0]->data),
-                .deviceId = (uint32_t) std::any_cast<int64_t>(row[1]->data),
+                .pid = static_cast<uint32_t>(std::any_cast<int64_t>(row[0]->data)),
+                .deviceId = static_cast<uint32_t>(std::any_cast<int64_t>(row[1]->data)),
                 .name = std::any_cast<std::string>(row[2]->data),
                 .value = std::any_cast<std::string>(row[3]->data),
                 .createdDate = std::any_cast<datetime_t>(row[4]->data)
@@ -647,6 +645,81 @@ void sqlite3Database::processCommand(const std::pair<std::unique_ptr<Command>, s
         }
 
         resultsData = std::move(attributesData);
+    } else if (command.first->type == DBCommandType::GET_AGREEMENT) {
+        auto* query = std::any_cast<DBGetAgreementQuery>(&command.first->data);
+        if (query->version.has_value() && getAgreementStatement == nullptr) {
+            const std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
+                                           "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
+                                           "FROM agreements WHERE type = ? AND version = ? AND country = ? AND language = ?;";
+
+            if (!craftStatement(sqlCommand, &getAgreementStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        } else if (!query->version.has_value() && getLatestAgreementStatement == nullptr) {
+            const std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
+                                           "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
+                                           "FROM agreements WHERE type = ? AND country = ? AND language = ? "
+                                           "ORDER BY version DESC LIMIT 1;";
+
+            if (!craftStatement(sqlCommand, &getLatestAgreementStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        sqlite3_stmt* agreementStatement = query->version.has_value() ? getAgreementStatement : getLatestAgreementStatement;
+
+        if (query->version.has_value() && !bindData(agreementStatement, {DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING},
+                      {std::make_shared<DBString>(query->type),
+                       std::make_shared<DBInteger>(query->version.value()),
+                       std::make_shared<DBString>(query->country),
+                       std::make_shared<DBString>(query->language)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(agreementStatement);
+            goto push_results;
+        }
+
+        if (!query->version.has_value() && !bindData(agreementStatement, {DBDataType::STRING, DBDataType::STRING, DBDataType::STRING},
+                                                     {std::make_shared<DBString>(query->type),
+                                                         std::make_shared<DBString>(query->country),
+                                                         std::make_shared<DBString>(query->language)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(agreementStatement);
+            goto push_results;
+        }
+
+        std::vector returnedDataTypes {DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                       DBDataType::STRING, DBDataType::DATETIME, DBDataType::STRING, DBDataType::STRING,
+                                       DBDataType::STRING, DBDataType::STRING, DBDataType::STRING, DBDataType::STRING};
+
+        if (!runStatement(agreementStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(agreementStatement);
+            sqlite3_clear_bindings(agreementStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(agreementStatement);
+        sqlite3_clear_bindings(agreementStatement);
+
+        if (!returnedData->empty()) {
+            DBAgreementData agreementData {};
+            agreementData.type = std::any_cast<std::string>((*returnedData)[0][0]->data);
+            agreementData.version = static_cast<int>(std::any_cast<int64_t>((*returnedData)[0][1]->data));
+            agreementData.country = std::any_cast<std::string>((*returnedData)[0][2]->data);
+            agreementData.language = std::any_cast<std::string>((*returnedData)[0][3]->data);
+            agreementData.languageName = std::any_cast<std::string>((*returnedData)[0][4]->data);
+            agreementData.publishedAt = std::any_cast<datetime_t>((*returnedData)[0][5]->data);
+            agreementData.mainTitle = std::any_cast<std::string>((*returnedData)[0][6]->data);
+            agreementData.subTitle = std::any_cast<std::string>((*returnedData)[0][7]->data);
+            agreementData.agreeText = std::any_cast<std::string>((*returnedData)[0][8]->data);
+            agreementData.disagreeText = std::any_cast<std::string>((*returnedData)[0][9]->data);
+            agreementData.mainText = std::any_cast<std::string>((*returnedData)[0][10]->data);
+            agreementData.subText = std::any_cast<std::string>((*returnedData)[0][11]->data);
+
+            resultsData = std::move(agreementData);
+        }
     } else {
         logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Unknown command type: " + std::to_string(static_cast<int>(command.first->type)));
@@ -693,12 +766,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<DBData
                 break;
             case DBDataType::DATETIME: {
                 auto tp = std::any_cast<datetime_t>(std::dynamic_pointer_cast<DBDateTime>(data[i])->data);
-                std::time_t tt = std::chrono::system_clock::to_time_t(tp);
-                std::tm tm = *std::localtime(&tt);
-                std::stringstream ss;
-                ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-                std::string date = ss.str();
-
+                std::string date = std::format("{:%Y-%m-%d %H:%M:%S}", tp);
                 result = sqlite3_bind_text(statement, i + 1, date.c_str(), -1, SQLITE_TRANSIENT);
                 break;
             }
@@ -715,7 +783,7 @@ bool sqlite3Database::bindData(sqlite3_stmt *statement, const std::vector<DBData
 }
 
 bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DBDataType>& dataTypes,
-                                   const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData) {
+                                   const std::unique_ptr<std::vector<std::vector<std::shared_ptr<DBData>>>>& returnedData) const {
     if (statement == nullptr) {
         logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to run SQLite 3 statement: statement is null");
         return false;
@@ -725,10 +793,8 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
                                                          std::string(sqlite3_expanded_sql(statement)));
 
     int result = sqlite3_step(statement);
-    //returnedData = new std::vector<std::vector<DBData*>*>();
     while (result != SQLITE_DONE) {
         if (result == SQLITE_ROW && returnedData != nullptr) {
-            //auto* row = new std::vector<DBData*>();
             returnedData->emplace_back();
             for (int i = 0; i < sqlite3_column_count(statement); i++) {
                 switch (dataTypes[i]) {
@@ -752,8 +818,8 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
                                 reinterpret_cast<const char *>(sqlite3_column_text(statement, i))));
                         ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
 
-                        auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
-                        datetime_t datetime = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+                        auto tp = std::chrono::system_clock::from_time_t(timegm(&tm));
+                        const datetime_t datetime = std::chrono::time_point_cast<std::chrono::seconds>(tp);
                         returnedData->back().emplace_back(new DBDateTime(datetime));
                     }
                 }
@@ -761,7 +827,6 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
         } else {
             logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to run SQLite 3 statement: " + std::string(sqlite3_errmsg(db)));
-            //freeData(returnedData);
             return false;
         }
 
@@ -791,9 +856,14 @@ void sqlite3Database::close() {
     if (getUserByPIDStatement != nullptr) sqlite3_finalize(getUserByPIDStatement);
     if (getUserByUsernameStatement != nullptr) sqlite3_finalize(getUserByUsernameStatement);
     if (getGameServerAccessStatement != nullptr) sqlite3_finalize(getGameServerAccessStatement);
+    if (insertGameServerAccessStatement != nullptr) sqlite3_finalize(insertGameServerAccessStatement);
     if (getUserInfoStatement != nullptr) sqlite3_finalize(getUserInfoStatement);
+    if (insertUserInfoStatement != nullptr) sqlite3_finalize(insertUserInfoStatement);
     if (getFriendsInfoStatement != nullptr) sqlite3_finalize(getFriendsInfoStatement);
     if (getUserProfileStatement != nullptr) sqlite3_finalize(getUserProfileStatement);
+    if (getDeviceAttributesStatement != nullptr) sqlite3_finalize(getDeviceAttributesStatement);
+    if (getAgreementStatement != nullptr) sqlite3_finalize(getAgreementStatement);
+    if (getLatestAgreementStatement != nullptr) sqlite3_finalize(getLatestAgreementStatement);
 
     sqlite3_close(db);
     db = nullptr;

@@ -49,7 +49,8 @@ enum class DBCommandType {
     UPDATE_USER_INFO,
     GET_FRIENDS_INFO,
     GET_USER_PROFILE,
-    GET_DEVICE_ATTRIBUTES
+    GET_DEVICE_ATTRIBUTES,
+    GET_AGREEMENT
 };
 
 enum class DBResultStatus {
@@ -94,6 +95,13 @@ struct DBUserInfoUpdate {
 struct DBDeviceAttributesQuery {
     uint32_t pid;
     uint32_t deviceId;
+};
+
+struct DBGetAgreementQuery {
+    std::string type;
+    std::string country;
+    std::string language;
+    std::optional<int> version;
 };
 
 struct DBGenericResult {
@@ -142,7 +150,6 @@ struct DBUserProfileData {
     bool gender;
     int64_t region;
     std::string tz;
-    uint32_t utcOffset;
     std::string language;
     bool active;
     bool marketing;
@@ -171,6 +178,21 @@ struct DBDeviceAttributeData {
     std::string name;
     std::string value;
     datetime_t createdDate;
+};
+
+struct DBAgreementData {
+    std::string type;
+    int version;
+    std::string country;
+    std::string language;
+    std::string languageName;
+    datetime_t publishedAt;
+    std::string mainTitle;
+    std::string subTitle;
+    std::string agreeText;
+    std::string disagreeText;
+    std::string mainText;
+    std::string subText;
 };
 
 class Result {
@@ -275,6 +297,8 @@ public:
     static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftGetAgreementCommand(const std::string& type, const std::string& country,
+                                                             const std::string& language, std::optional<int> version = std::nullopt);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

@@ -5,7 +5,6 @@
 #include <vector>
 #include <unordered_map>
 #include <mutex>
-#include <thread>
 #include <functional>
 
 #include "socket.hpp"
@@ -27,7 +26,7 @@ enum class SocketType {
 
 struct SocketInfo {
     std::shared_ptr<sock::Socket> socket;
-    SocketType type;
+    SocketType type = SocketType::TCP;
     std::function<void(uint32_t, uint32_t, sock::IPv4Addr)> acceptCallback;
     std::function<void(uint32_t)> connectCallback;
     std::function<void(uint32_t, std::vector<uint8_t>)> tcpRecvCallback;
@@ -36,8 +35,8 @@ struct SocketInfo {
     // any connections accepted by the socket (only if type is TCP, and not TCP_CONN).
     std::pair<std::function<void(uint32_t)>, std::function<void(uint32_t)>> closeCallback;
 
-    int64_t keepAliveTimeout;
-    int64_t closeTimeout;
+    int64_t keepAliveTimeout{};
+    int64_t closeTimeout{};
 
     std::vector<uint8_t> tcpSendBuffer;
     std::vector<std::pair<sock::IPv4Addr, std::vector<uint8_t>>> udpSendBuffer;

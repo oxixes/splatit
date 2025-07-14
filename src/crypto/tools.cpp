@@ -20,14 +20,13 @@ std::string base64Encode(const std::vector<uint8_t>& data) {
     BIO* b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     bmem = BIO_push(b64, bmem);
-    int writeResult = BIO_write(bmem, data.data(), (int) data.size());
-    if (writeResult < 0) {
+    if (BIO_write(bmem, data.data(), static_cast<int>(data.size())) < 0) {
         BIO_free_all(bmem);
         throw std::runtime_error("Failed to encode base64");
     }
     BIO_flush(bmem);
     char* buffer;
-    size_t length = BIO_get_mem_data(bmem, &buffer);
+    const size_t length = BIO_get_mem_data(bmem, &buffer);
     std::string result(buffer, length);
     BIO_free_all(bmem);
 
@@ -98,9 +97,9 @@ std::string generateAccountToken(const AccountToken& token) {
     util::getu32Little(deviceId);
     util::getu64Little(expiration);
 
-    data.insert(data.end(), (uint8_t*) &pid, (uint8_t*) &pid + 4);
-    data.insert(data.end(), (uint8_t*) &deviceId, (uint8_t*) &deviceId + 4);
-    data.insert(data.end(), (uint8_t*) &expiration, (uint8_t*) &expiration + 8);
+    data.insert(data.end(), reinterpret_cast<uint8_t *>(&pid), reinterpret_cast<uint8_t *>(&pid) + 4);
+    data.insert(data.end(), reinterpret_cast<uint8_t *>(&deviceId), reinterpret_cast<uint8_t *>(&deviceId) + 4);
+    data.insert(data.end(), reinterpret_cast<uint8_t *>(&expiration), reinterpret_cast<uint8_t *>(&expiration) + 8);
 
     std::vector<uint8_t> signature = HMAC_SHA256(token.key, data);
     // Only take the first 8 bytes of the signature since the token length can't be more than 32 characters,
@@ -114,7 +113,7 @@ bool parseAccountToken(const std::string& token, AccountToken& out) {
     std::vector<uint8_t> data;
     try {
         data = base64Decode(token);
-    } catch (const std::runtime_error& e) {
+    } catch ([[maybe_unused]] const std::runtime_error& e) {
         return false;
     }
 

@@ -6,7 +6,7 @@
 
 namespace nex::rmc::utils {
 
-    bool checkJWT(const std::string& jwtToken, const std::string& base64JWTKey, const std::string& serverId, ClientInfo& client,
+    bool checkJWT(const std::string& jwtToken, const std::string& base64JWTKey, const std::string& serverId, const ClientInfo& client,
                   const std::shared_ptr<Logger::Logger>& logger, Logger::group logGroup) {
         if (!crypto::verifyJWT(base64JWTKey, jwtToken)) {
             logger->log(Logger::level::WARN, logGroup, "Invalid JWT token from " + util::ipv4ToString(client.address.address)
@@ -14,7 +14,7 @@ namespace nex::rmc::utils {
             return false;
         }
 
-        std::string jwtData = ((std::string) jwtToken).substr(((std::string) jwtToken).find('.') + 1);
+        std::string jwtData = jwtToken.substr(jwtToken.find('.') + 1);
         jwtData = jwtData.substr(0, jwtData.find('.'));
 
         auto jwtJson = nlohmann::json::parse(crypto::base64UrlDecode(jwtData));
@@ -54,7 +54,7 @@ namespace nex::rmc::utils {
 
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<> dist(0, (int) charset.size() - 1);
+        std::uniform_int_distribution<> dist(0, static_cast<int>(charset.size()) - 1);
 
         for (size_t i = 0; i < 16; ++i) {
             password += charset[dist(rng)];

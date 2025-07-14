@@ -6,7 +6,7 @@
 
 namespace nex::rmc::utils {
 
-    bool checkJWT(const std::string& jwtToken, const std::string& base64JWTKey, const std::string& serverId, ClientInfo& client,
+    bool checkJWT(const std::string& jwtToken, const std::string& base64JWTKey, const std::string& serverId, const ClientInfo& client,
                   const std::shared_ptr<Logger::Logger>& logger, Logger::group logGroup);
 
     std::string generateUserPassword();

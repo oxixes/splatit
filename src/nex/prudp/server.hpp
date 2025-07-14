@@ -84,7 +84,7 @@ public:
     ~PayloadEncoder() = default;
 
     std::shared_ptr<Encoder> getReliableEncoder(uint8_t substreamId);
-    std::shared_ptr<Encoder> getUnreliableEncoder(const std::shared_ptr<Packet>& packet);
+    std::shared_ptr<Encoder> getUnreliableEncoder(const std::shared_ptr<Packet>& packet) const;
 
     void setReliableEncoder(uint8_t substreamId, std::shared_ptr<Encoder> encoder);
 private:

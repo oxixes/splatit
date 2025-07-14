@@ -17,7 +17,7 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                  "'primary' INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE users (pid INTEGER, username TEXT NOT NULL, password TEXT NOT NULL,"
                                  "email_id INTEGER NOT NULL, mii_id INTEGER NOT NULL, gender INTEGER NOT NULL,"
-                                 "region INTEGER NOT NULL,tz TEXT NOT NULL, utc_offset INTEGER NOT NULL,"
+                                 "region INTEGER NOT NULL, tz TEXT NOT NULL,"
                                  "language TEXT NOT NULL, active INTEGER NOT NULL, marketing INTEGER NOT NULL,"
                                  "off_device INTEGER NOT NULL, birth_date TEXT NOT NULL, country TEXT NOT NULL,"
                                  "create_date TEXT NOT NULL, last_updated TEXT NOT NULL, PRIMARY KEY (pid),"
@@ -36,6 +36,14 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                  "status TEXT NOT NULL, last_updated TEXT NOT NULL, PRIMARY KEY (pid, device_id),"
                                  "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
                                  "FOREIGN KEY (device_id) REFERENCES devices(id) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE agreements (type TEXT NOT NULL, version INTEGER NOT NULL,"
+                                   "country TEXT NOT NULL, language TEXT NOT NULL, language_name TEXT NOT NULL,"
+                                   "publish_date TEXT NOT NULL, main_title TEXT NOT NULL, sub_title TEXT NOT NULL,"
+                                   "agree_text TEXT NOT NULL, non_agree_text TEXT NOT NULL, main_text TEXT NOT NULL,"
+                                   "sub_text TEXT NOT NULL, PRIMARY KEY (type, version, country, language));");
+            sqlCmds.emplace_back("CREATE TABLE user_agreements (pid INTEGER NOT NULL, type TEXT NOT NULL, version INTEGER NOT NULL, "
+                                   "country TEXT NOT NULL, signed_date TEXT NOT NULL, PRIMARY KEY (pid, type, version, country), "
+                                   "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
             sqlCmds.emplace_back("COMMIT;");
             break;
     }

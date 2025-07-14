@@ -268,6 +268,20 @@ int main(int argc, char** argv) {
                 }
             }
 
+            if (!acc::init(logger)) {
+                accountsDB->close();
+                httpServer->stop();
+                if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+
             acc::registerRoutes(httpServer, settingsMgr, certManager, accountsDB);
         }
 

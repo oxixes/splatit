@@ -1,0 +1,9108 @@
+{
+  "AD": {
+    "en": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, París"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Parigi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Andorra",
+        "name": "マドリード、パリ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Parijs"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Andorra",
+        "name": "Мадрид, Париж"
+      }
+    ]
+  },
+  "AE": {
+    "en": [
+      {
+        "area": "Asia/Dubai",
+        "name": "Abu Dhabi, Muscat"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Dubai",
+        "name": "Abu Dabi, Mascate"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Dubai",
+        "name": "Abou Dabi, Mascate"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Dubai",
+        "name": "アブダビ、マスカット"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Dubai",
+        "name": "Abu Dhabi, Mascate"
+      }
+    ]
+  },
+  "AF": {
+    "ja": [
+      {
+        "area": "Asia/Kabul",
+        "name": "カブール"
+      }
+    ]
+  },
+  "AG": {
+    "en": [
+      {
+        "area": "America/Antigua",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Antigua",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Antigua",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Antigua",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Antigua",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "AI": {
+    "en": [
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Anguilla",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Anguilla",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Anguilla",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "AL": {
+    "en": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Tirane",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Tirane",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "AM": {
+    "ja": [
+      {
+        "area": "Asia/Yerevan",
+        "name": "エレバン"
+      }
+    ]
+  },
+  "AO": {
+    "en": [
+      {
+        "area": "Africa/Luanda",
+        "name": "West Central Africa"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Luanda",
+        "name": "West-Zentralafrika"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Luanda",
+        "name": "África Occidental y Central"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Luanda",
+        "name": "Afrique centrale de l'ouest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Luanda",
+        "name": "Africa centro-occidentale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Luanda",
+        "name": "西中央アフリカ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Luanda",
+        "name": "West-Centraal Afrika"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Luanda",
+        "name": "África Central e Ocidental"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Luanda",
+        "name": "Западная и Центральная Африка"
+      }
+    ]
+  },
+  "AR": {
+    "en": [
+      {
+        "area": "America/Argentina/Buenos_Aires",
+        "name": "Buenos Aires"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Argentina/Buenos_Aires",
+        "name": "Buenos Aires"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Argentina/Buenos_Aires",
+        "name": "Buenos Aires"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Argentina/Buenos_Aires",
+        "name": "ブエノスアイレス"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Argentina/Buenos_Aires",
+        "name": "Buenos Aires"
+      }
+    ]
+  },
+  "AS": {
+    "ja": [
+      {
+        "area": "Pacific/Pago_Pago",
+        "name": "ミッドウェー島、サモア"
+      }
+    ]
+  },
+  "AT": {
+    "en": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Stockholm, Vienna"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Stockholm, Wien"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Stockholm, Vienne"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Stoccolma, Vienna"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Vienna",
+        "name": "ストックホルム、ウィーン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Stockholm, Wenen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Vienna",
+        "name": "Стокгольм, Вена"
+      }
+    ]
+  },
+  "AU": {
+    "en": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Cocos Islands"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Christmas Island"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaide"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sydney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Norfolk Island"
+      }
+    ],
+    "de": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Kokosinseln"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Weihnachtsinsel"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaide"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sydney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Norfolkinsel"
+      }
+    ],
+    "es": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Islas Cocos"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Isla Christmas"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaida"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sídney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Isla Norfolk"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Îles Cocos"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Île Christmas"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, île Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adélaïde"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Île Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sydney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Île Norfolk"
+      }
+    ],
+    "it": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Isole Cocos"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Isola del Natale"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaide"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sidney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Isola Norfolk"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Indian/Cocos",
+        "name": "ココス諸島"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "クリスマス島"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "パース"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "ユークラ"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "ダーウィン"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "ブリズベン、リンデマン"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "アデレード"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "ロードハウ"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "キャンベラ、メルボルン、シドニー"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "ノーフォーク"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Cocoseilanden"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Christmaseiland"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaide"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Canberra, Melbourne, Sydney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Norfolk"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Ilhas dos Cocos"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Ilha do Natal"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Perth"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Eucla"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Darwin"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Brisbane, Lindeman"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Adelaide"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Lord Howe"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Camberra, Melbourne, Sydney"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Ilha Norfolk"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Indian/Cocos",
+        "name": "Кокосовые острова"
+      },
+      {
+        "area": "Indian/Christmas",
+        "name": "Остров Рождества"
+      },
+      {
+        "area": "Australia/Perth",
+        "name": "Перт"
+      },
+      {
+        "area": "Australia/Eucla",
+        "name": "Юкла"
+      },
+      {
+        "area": "Australia/Darwin",
+        "name": "Дарвин"
+      },
+      {
+        "area": "Australia/Brisbane",
+        "name": "Брисбен, Линдман"
+      },
+      {
+        "area": "Australia/Adelaide",
+        "name": "Аделаида"
+      },
+      {
+        "area": "Australia/Lord_Howe",
+        "name": "Лорд-Хау"
+      },
+      {
+        "area": "Australia/Melbourne",
+        "name": "Канберра, Мельбурн, Сидней"
+      },
+      {
+        "area": "Pacific/Norfolk",
+        "name": "Остров Норфолк"
+      }
+    ]
+  },
+  "AW": {
+    "en": [
+      {
+        "area": "America/Aruba",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Aruba",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Aruba",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Aruba",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Aruba",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "AZ": {
+    "en": [
+      {
+        "area": "Asia/Baku",
+        "name": "Baku"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Baku",
+        "name": "Baku"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Baku",
+        "name": "Bakú"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Baku",
+        "name": "Bakou"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Baku",
+        "name": "Baku"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Baku",
+        "name": "バク"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Baku",
+        "name": "Bakoe"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Baku",
+        "name": "Baku"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Baku",
+        "name": "Баку"
+      }
+    ]
+  },
+  "BA": {
+    "en": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajevo, Warsaw, Zagreb"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajewo, Warschau, Zagreb"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajevo, Varsovia, Zagreb"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajevo, Varsovie, Zagreb"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajevo, Varsavia, Zagabria"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "サラエボ、ワルシャワ、ザグレブ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Sarajevo, Warschau, Zagreb"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Saraievo, Varsóvia, Zagrebe"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Sarajevo",
+        "name": "Сараево, Варшава, Загреб"
+      }
+    ]
+  },
+  "BB": {
+    "en": [
+      {
+        "area": "America/Barbados",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Barbados",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Barbados",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Barbados",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Barbados",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "BD": {
+    "ja": [
+      {
+        "area": "Asia/Dhaka",
+        "name": "アスタナ、ダッカ"
+      }
+    ]
+  },
+  "BE": {
+    "en": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Brussels, Copenhagen"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Brüssel, Kopenhagen"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Bruselas, Copenhague"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Bruxelles, Copenhague"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Bruxelles, Copenhagen"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Brussels",
+        "name": "ブリュッセル、コペンハーゲン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Brussel, Kopenhagen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Bruxelas, Copenhaga"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Brussels",
+        "name": "Брюссель, Копенгаген"
+      }
+    ]
+  },
+  "BG": {
+    "en": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofia, Tallinn, Wilna"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofía, Tallin, Vilna"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Sofia",
+        "name": "ソフィア、タリン、ビリニュス"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Sofia",
+        "name": "Sófia, Taline, Vílnius"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Sofia",
+        "name": "София, Таллинн, Вильнюс"
+      }
+    ]
+  },
+  "BH": {
+    "en": [
+      {
+        "area": "Asia/Bahrain",
+        "name": "Kuwait, Riyadh"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Bahrain",
+        "name": "Kuwait, Riad"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Bahrain",
+        "name": "Koweït, Riyad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Bahrain",
+        "name": "クウェート、リヤド"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Bahrain",
+        "name": "Kuwait, Riade"
+      }
+    ]
+  },
+  "BJ": {
+    "ja": [
+      {
+        "area": "Africa/Porto-Novo",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "BM": {
+    "en": [
+      {
+        "area": "Atlantic/Bermuda",
+        "name": "Bermuda"
+      }
+    ],
+    "es": [
+      {
+        "area": "Atlantic/Bermuda",
+        "name": "Bermudas"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Atlantic/Bermuda",
+        "name": "Bermudes"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Atlantic/Bermuda",
+        "name": "バミューダ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Atlantic/Bermuda",
+        "name": "Bermudas"
+      }
+    ]
+  },
+  "BO": {
+    "en": [
+      {
+        "area": "America/La_Paz",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/La_Paz",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/La_Paz",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/La_Paz",
+        "name": "ジョージタウン、ラパス、サンフアン"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/La_Paz",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ]
+  },
+  "BR": {
+    "en": [
+      {
+        "area": "America/Boa_Vista",
+        "name": "Boa Vista, Manaus, Rio Branco"
+      },
+      {
+        "area": "America/Araguaina",
+        "name": "Brasilia"
+      },
+      {
+        "area": "America/Campo_Grande",
+        "name": "Campo Grande, Cuiaba"
+      },
+      {
+        "area": "America/Noronha",
+        "name": "Fernando de Noronha"
+      },
+      {
+        "area": "America/Sao_Paulo",
+        "name": "São Paulo"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Boa_Vista",
+        "name": "Boa Vista, Manaus, Rio Branco"
+      },
+      {
+        "area": "America/Araguaina",
+        "name": "Brasilia"
+      },
+      {
+        "area": "America/Campo_Grande",
+        "name": "Campo Grande, Cuiaba"
+      },
+      {
+        "area": "America/Noronha",
+        "name": "Fernando de Noronha"
+      },
+      {
+        "area": "America/Sao_Paulo",
+        "name": "Sao Paulo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Boa_Vista",
+        "name": "Boa Vista, Manaus, Rio Branco"
+      },
+      {
+        "area": "America/Araguaina",
+        "name": "Brasilia"
+      },
+      {
+        "area": "America/Campo_Grande",
+        "name": "Campo Grande, Cuiabá"
+      },
+      {
+        "area": "America/Noronha",
+        "name": "Fernando de Noronha"
+      },
+      {
+        "area": "America/Sao_Paulo",
+        "name": "São Paulo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Boa_Vista",
+        "name": "ボアビスタ、マナウス、リオ・ブランコ"
+      },
+      {
+        "area": "America/Araguaina",
+        "name": "ブラジリア"
+      },
+      {
+        "area": "America/Campo_Grande",
+        "name": "カンポグランデ、クイアバ"
+      },
+      {
+        "area": "America/Noronha",
+        "name": "フェルナンド・デ・ノローニャ"
+      },
+      {
+        "area": "America/Sao_Paulo",
+        "name": "サンパウロ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Boa_Vista",
+        "name": "Boa Vista, Manaus, Rio Branco"
+      },
+      {
+        "area": "America/Araguaina",
+        "name": "Brasília"
+      },
+      {
+        "area": "America/Campo_Grande",
+        "name": "Campo Grande, Cuiabá"
+      },
+      {
+        "area": "America/Noronha",
+        "name": "Fernando de Noronha"
+      },
+      {
+        "area": "America/Sao_Paulo",
+        "name": "São Paulo"
+      }
+    ]
+  },
+  "BS": {
+    "en": [
+      {
+        "area": "America/Nassau",
+        "name": "Eastern Time (US &amp; Canada)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Nassau",
+        "name": "Horario del Este (EE. UU. y Canadá)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Nassau",
+        "name": "Heure de l'Est (É.-U. et Canada)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Nassau",
+        "name": "東部標準時（米国およびカナダ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Nassau",
+        "name": "Costa Leste (EUA e Canadá)"
+      }
+    ]
+  },
+  "BW": {
+    "en": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "ルサカ、ハラレ、ハボローネ、マプト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Lusaca, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Gaborone",
+        "name": "Лусака, Хараре, Габороне, Мапуту"
+      }
+    ]
+  },
+  "BY": {
+    "ja": [
+      {
+        "area": "Europe/Minsk",
+        "name": "ミンスク"
+      }
+    ]
+  },
+  "BZ": {
+    "en": [
+      {
+        "area": "America/Belize",
+        "name": "Belize"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Belize",
+        "name": "Belice"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Belize",
+        "name": "Bélize"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Belize",
+        "name": "ベリーズ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Belize",
+        "name": "Belize"
+      }
+    ]
+  },
+  "CA": {
+    "en": [
+      {
+        "area": "America/Dawson",
+        "name": "Pacific Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Cambridge_Bay",
+        "name": "Mountain Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Dawson_Creek",
+        "name": "Dawson Creek"
+      },
+      {
+        "area": "America/Rainy_River",
+        "name": "Central Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Regina",
+        "name": "Saskatchewan"
+      },
+      {
+        "area": "America/Atikokan",
+        "name": "Atikokan, Resolute"
+      },
+      {
+        "area": "America/Iqaluit",
+        "name": "Eastern Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Blanc-Sablon",
+        "name": "Blanc Sablon"
+      },
+      {
+        "area": "America/Glace_Bay",
+        "name": "Atlantic Time (Canada)"
+      },
+      {
+        "area": "America/St_Johns",
+        "name": "Newfoundland"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Dawson",
+        "name": "Horario del Pacífico (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Cambridge_Bay",
+        "name": "Horario de Montaña (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Dawson_Creek",
+        "name": "Dawson Creek"
+      },
+      {
+        "area": "America/Rainy_River",
+        "name": "Horario del Centro (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Regina",
+        "name": "Saskatchewan"
+      },
+      {
+        "area": "America/Atikokan",
+        "name": "Atikokan, Resolute"
+      },
+      {
+        "area": "America/Iqaluit",
+        "name": "Horario del Este (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Blanc-Sablon",
+        "name": "Blanc Sablon"
+      },
+      {
+        "area": "America/Glace_Bay",
+        "name": "Horario del Atlántico (Canadá)"
+      },
+      {
+        "area": "America/St_Johns",
+        "name": "Terranova"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Dawson",
+        "name": "Heure du Pacifique (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Cambridge_Bay",
+        "name": "Heure des Rocheuses (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Dawson_Creek",
+        "name": "Dawson Creek"
+      },
+      {
+        "area": "America/Rainy_River",
+        "name": "Heure du Centre (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Regina",
+        "name": "Saskatchewan"
+      },
+      {
+        "area": "America/Atikokan",
+        "name": "Atikokan, Resolute"
+      },
+      {
+        "area": "America/Iqaluit",
+        "name": "Heure de l'Est (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Blanc-Sablon",
+        "name": "Blanc-Sablon"
+      },
+      {
+        "area": "America/Glace_Bay",
+        "name": "Atlantique (Canada)"
+      },
+      {
+        "area": "America/St_Johns",
+        "name": "Terre-Neuve"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Dawson",
+        "name": "太平洋標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Cambridge_Bay",
+        "name": "山地標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Dawson_Creek",
+        "name": "ドーソンクリーク"
+      },
+      {
+        "area": "America/Rainy_River",
+        "name": "中央標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Regina",
+        "name": "サスカチュワン"
+      },
+      {
+        "area": "America/Atikokan",
+        "name": "アチコナン、レゾリュート"
+      },
+      {
+        "area": "America/Iqaluit",
+        "name": "東部標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Blanc-Sablon",
+        "name": "ブラン・サブロン"
+      },
+      {
+        "area": "America/Glace_Bay",
+        "name": "大西洋標準時（カナダ）"
+      },
+      {
+        "area": "America/St_Johns",
+        "name": "ニューファンドランド"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Dawson",
+        "name": "Costa Pacífica (EUA e Canadá)"
+      },
+      {
+        "area": "America/Cambridge_Bay",
+        "name": "Montanhas Rochosas (EUA e Canadá)"
+      },
+      {
+        "area": "America/Dawson_Creek",
+        "name": "Dawson Creek"
+      },
+      {
+        "area": "America/Rainy_River",
+        "name": "Região Central (EUA e Canadá)"
+      },
+      {
+        "area": "America/Regina",
+        "name": "Saskatchewan"
+      },
+      {
+        "area": "America/Atikokan",
+        "name": "Atikokan, Resolute"
+      },
+      {
+        "area": "America/Iqaluit",
+        "name": "Costa Leste (EUA e Canadá)"
+      },
+      {
+        "area": "America/Blanc-Sablon",
+        "name": "Blanc Sablon"
+      },
+      {
+        "area": "America/Glace_Bay",
+        "name": "Atlântico (Canadá)"
+      },
+      {
+        "area": "America/St_Johns",
+        "name": "Terranova"
+      }
+    ]
+  },
+  "CD": {
+    "ja": [
+      {
+        "area": "Africa/Kinshasa",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "CF": {
+    "ja": [
+      {
+        "area": "Africa/Bangui",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "CG": {
+    "ja": [
+      {
+        "area": "Africa/Brazzaville",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "CH": {
+    "en": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Zurich",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Zurich",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "CL": {
+    "en": [
+      {
+        "area": "Pacific/Easter",
+        "name": "Easter"
+      },
+      {
+        "area": "America/Santiago",
+        "name": "Santiago"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Easter",
+        "name": "Isla de Pascua"
+      },
+      {
+        "area": "America/Santiago",
+        "name": "Santiago"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Easter",
+        "name": "Île de Pâques"
+      },
+      {
+        "area": "America/Santiago",
+        "name": "Santiago"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Easter",
+        "name": "イースター島"
+      },
+      {
+        "area": "America/Santiago",
+        "name": "サンティアゴ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Easter",
+        "name": "Ilha de Páscoa"
+      },
+      {
+        "area": "America/Santiago",
+        "name": "Santiago"
+      }
+    ]
+  },
+  "CM": {
+    "ja": [
+      {
+        "area": "Africa/Douala",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "CN": {
+    "en": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Beijing, Chongqing, Urumqi"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Peking, Chongqing, Urumqi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Pekín, Chongqing, Urumqi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Pékin, Chongqing, Urumqi"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Pechino, Chongqing, Urumqi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "北京、重慶、ウルムチ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Peking, Chongqing, Ürümqi"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Pequim, Chongqing, Urumqi"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Chongqing",
+        "name": "Пекин, Чунцин, Урумчи"
+      }
+    ]
+  },
+  "CO": {
+    "en": [
+      {
+        "area": "America/Bogota",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Bogota",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Bogota",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Bogota",
+        "name": "ボゴタ、リマ、キト"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Bogota",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ]
+  },
+  "CR": {
+    "en": [
+      {
+        "area": "America/Costa_Rica",
+        "name": "Central America"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Costa_Rica",
+        "name": "Centroamérica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Costa_Rica",
+        "name": "Amérique centrale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Costa_Rica",
+        "name": "中央アメリカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Costa_Rica",
+        "name": "América Central"
+      }
+    ]
+  },
+  "CU": {
+    "ja": [
+      {
+        "area": "America/Havana",
+        "name": "ハバナ、ポルトープランス"
+      }
+    ]
+  },
+  "CV": {
+    "ja": [
+      {
+        "area": "Atlantic/Cape_Verde",
+        "name": "カーボベルデ諸島"
+      }
+    ]
+  },
+  "CY": {
+    "en": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athens, Bucharest, Istanbul"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athen, Bukarest, Istanbul"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atenas, Bucarest, Estambul"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athènes, Bucarest, Istanbul"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atene, Bucarest, Istanbul"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "アテネ、ブカレスト、イスタンブール"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athene, Boekarest, Istanboel"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atenas, Bucareste, Istambul"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Nicosia",
+        "name": "Афины, Бухарест, Стамбул"
+      }
+    ]
+  },
+  "CZ": {
+    "en": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Prague"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Prag"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Prague"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Prague",
+        "name": "ブラチスラバ、プラハ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Praag"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Prague",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Prague",
+        "name": "Братислава, Прага"
+      }
+    ]
+  },
+  "DE": {
+    "en": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Berlin",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Berlin",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "DJ": {
+    "en": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Dschibuti, Nairobi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Yibuti, Nairobi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Gibuti, Nairobi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "アスマラ、ジブチ、ナイロビ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Asmara, Jibuti, Nairóbi"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Djibouti",
+        "name": "Асмэра, Джибути, Найроби"
+      }
+    ]
+  },
+  "DK": {
+    "en": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Faroe Islands"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Brussels, Copenhagen"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Färöer "
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Brüssel, Kopenhagen"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Islas Feroe"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Bruselas, Copenhague"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Thule",
+        "name": "Thulé"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Îles Féroé"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Bruxelles, Copenhague"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Isole Fær Øer"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Bruxelles, Copenhagen"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Thule",
+        "name": "トゥーレ"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "ゴッドホープ"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "スコレスビスン"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "フェロー諸島"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "ブリュッセル、コペンハーゲン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Faeröer"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Brussel, Kopenhagen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Ilhas Faroé"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Bruxelas, Copenhaga"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Thule",
+        "name": "Туле"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Нуук"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Иттокортоормиит"
+      },
+      {
+        "area": "Atlantic/Faroe",
+        "name": "Фарерские острова"
+      },
+      {
+        "area": "Europe/Copenhagen",
+        "name": "Брюссель, Копенгаген"
+      }
+    ]
+  },
+  "DM": {
+    "en": [
+      {
+        "area": "America/Dominica",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Dominica",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Dominica",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Dominica",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Dominica",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "DO": {
+    "en": [
+      {
+        "area": "America/Santo_Domingo",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Santo_Domingo",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Santo_Domingo",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Santo_Domingo",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Santo_Domingo",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "EC": {
+    "en": [
+      {
+        "area": "Pacific/Galapagos",
+        "name": "Galapagos"
+      },
+      {
+        "area": "America/Guayaquil",
+        "name": "Guayaquil"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Galapagos",
+        "name": "Galápagos"
+      },
+      {
+        "area": "America/Guayaquil",
+        "name": "Guayaquil"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Galapagos",
+        "name": "Galapagos"
+      },
+      {
+        "area": "America/Guayaquil",
+        "name": "Guayaquil"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Galapagos",
+        "name": "ガラパゴス諸島"
+      },
+      {
+        "area": "America/Guayaquil",
+        "name": "グアヤキル"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Galapagos",
+        "name": "Galápagos"
+      },
+      {
+        "area": "America/Guayaquil",
+        "name": "Guaiaquil"
+      }
+    ]
+  },
+  "EE": {
+    "en": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofia, Tallinn, Wilna"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofía, Tallin, Vilna"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "ソフィア、タリン、ビリニュス"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "Sófia, Taline, Vílnius"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Tallinn",
+        "name": "София, Таллинн, Вильнюс"
+      }
+    ]
+  },
+  "EG": {
+    "en": [
+      {
+        "area": "Africa/Cairo",
+        "name": "Cairo"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Cairo",
+        "name": "El Cairo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Cairo",
+        "name": "Le Caire"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Cairo",
+        "name": "カイロ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Cairo",
+        "name": "Cairo"
+      }
+    ]
+  },
+  "ER": {
+    "en": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Dschibuti, Nairobi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Yibuti, Nairobi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Gibuti, Nairobi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Asmara",
+        "name": "アスマラ、ジブチ、ナイロビ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Asmara, Jibuti, Nairóbi"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Asmara",
+        "name": "Асмэра, Джибути, Найроби"
+      }
+    ]
+  },
+  "ES": {
+    "en": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublin, Lisbon, London"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "de": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublin, Lissabon, London"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "es": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublín, Lisboa, Londres"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, París"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublin, Lisbonne, Londres"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "it": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublino, Lisbona, Londra"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Parigi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "ダブリン、リスボン、ロンドン"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "マドリード、パリ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublin, Lissabon, Londen"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Parijs"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Dublim, Lisboa, Londres"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Atlantic/Canary",
+        "name": "Дублин, Лиссабон, Лондон"
+      },
+      {
+        "area": "Europe/Madrid",
+        "name": "Мадрид, Париж"
+      }
+    ]
+  },
+  "FI": {
+    "en": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrado"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "ヘルシンキ、カリーニングラード"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Helsínquia, Caliningrado"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Helsinki",
+        "name": "Хельсинки, Калининград"
+      }
+    ]
+  },
+  "FJ": {
+    "ja": [
+      {
+        "area": "Pacific/Fiji",
+        "name": "フィジー、マーシャル諸島"
+      }
+    ]
+  },
+  "FR": {
+    "en": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahiti, French Polynesia"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Marquesas Islands"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Gambier Islands"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Clipperton Island"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Time (Caribbean)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Réunion"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Kerguelen Islands"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Nouméa"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis "
+      }
+    ],
+    "de": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahiti, Französisch-Polynesien"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Marquesas-Inseln"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Gambierinseln"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Clipperton-Insel"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Standard Time (Karibik)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "La Réunion"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Nouméa"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis-Inseln"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahití, Polinesia Francesa"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Islas Marquesas"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Islas Gambier"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Isla Clipperton"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Horario del Atlántico (Caribe)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Cayena"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, París"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Reunión"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Islas Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Numea"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis "
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahiti, Polynésie française"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Îles Marquises"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Îles Gambier"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Île Clipperton"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Atlantique (Caraïbes)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "La Réunion"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Îles Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Nouméa"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis "
+      }
+    ],
+    "it": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahiti, Polinesia Francese"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Isole Marchesi"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Isole Gambier"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Isola Clipperton"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Orario standard atlantico (Caraibi)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Caienna"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Parigi"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Riunione"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Isole Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Nouméa"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "タヒチ、フランス領ポリネシア"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "マルキーズ諸島"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "ガンビエ諸島"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "クリッパートン島"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "大西洋標準時（カリブ）"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "カイエンヌ"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "マドリード、パリ"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "マヨット"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "レユニオン"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "ケルゲレン諸島"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "ヌメア"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "ウォリス"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Tahiti, Frans-Polynesië"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Marquesaseilanden"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Gambiereilanden"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Clipperton"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Standard Time (Caraïben)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Parijs"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Mayotte"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Réunion"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Nouméa"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis "
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Taiti, Polinésia Francesa"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Ilhas Marquesas"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Ilhas Gambier"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Ilha Clipperton"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Atlântico (Caribe)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Caiena"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Maiote"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Reunião"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Ilhas Kerguelen"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Numeá"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Wallis"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Pacific/Tahiti",
+        "name": "Таити, Французская Полинезия"
+      },
+      {
+        "area": "Pacific/Marquesas",
+        "name": "Маркизские острова"
+      },
+      {
+        "area": "Pacific/Gambier",
+        "name": "Острова Гамбье"
+      },
+      {
+        "area": "America/Tijuana",
+        "name": "Остров Клиппертон"
+      },
+      {
+        "area": "America/Martinique",
+        "name": "Атлантическое время (Вест-Индия)"
+      },
+      {
+        "area": "America/Cayenne",
+        "name": "Кайенна"
+      },
+      {
+        "area": "Europe/Paris",
+        "name": "Мадрид, Париж"
+      },
+      {
+        "area": "Indian/Mayotte",
+        "name": "Майотта"
+      },
+      {
+        "area": "Indian/Reunion",
+        "name": "Реюньон"
+      },
+      {
+        "area": "Indian/Kerguelen",
+        "name": "Острова Кергелен"
+      },
+      {
+        "area": "Pacific/Noumea",
+        "name": "Нумеа"
+      },
+      {
+        "area": "Pacific/Wallis",
+        "name": "Уоллис"
+      }
+    ]
+  },
+  "GA": {
+    "ja": [
+      {
+        "area": "Africa/Libreville",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "GB": {
+    "en": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Pitcairn Islands"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantic Time (Caribbean)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Time (US &amp; Canada)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "South Georgia"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublin, Lisbon, London"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athens, Bucharest, Istanbul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Chagos Archipelago"
+      }
+    ],
+    "de": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Pitcairninseln"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantic Standard Time (Karibik)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Standard Time (USA/Kanada)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Südgeorgien"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublin, Lissabon, London"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athen, Bukarest, Istanbul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Chagos-Archipel"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Islas Pitcairn"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Horario del Atlántico (Caribe)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Horario del Este (EE. UU. y Canadá)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Georgia del Sur"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublín, Lisboa, Londres"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, París"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atenas, Bucarest, Estambul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Archipiélago de Chagos"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Îles Pitcairn"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantique (Caraïbes)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Heure de l'Est (É.-U. et Canada)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Géorgie du Sud"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublin, Lisbonne, Londres"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athènes, Bucarest, Istanbul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Archipel des Chagos"
+      }
+    ],
+    "it": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Isole Pitcairn"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Orario standard atlantico (Caraibi)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Orario Costa Orientale (USA e Canada)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Georgia del Sud"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublino, Lisbona, Londra"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Parigi"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atene, Bucarest, Istanbul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Isole Chagos"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "ピトケアン諸島"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "大西洋標準時（カリブ）"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "東部標準時（米国およびカナダ）"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "サウスジョージア島"
+      },
+      {
+        "area": "Europe/London",
+        "name": "ダブリン、リスボン、ロンドン"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "マドリード、パリ"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "アテネ、ブカレスト、イスタンブール"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "チャゴス諸島"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Pitcairneilanden"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Atlantic Standard Time (Caraïben)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Standard Time (VS/Canada)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Zuid-Georgia"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublin, Lissabon, Londen"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Parijs"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Athene, Boekarest, Istanboel"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Chagosarchipel"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Ilhas Pitcairn"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Atlântico (Caribe)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Costa Leste (EUA e Canadá)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Geórgia do Sul"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Dublim, Lisboa, Londres"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Atenas, Bucareste, Istambul"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Arquipélago de Chagos"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Pacific/Pitcairn",
+        "name": "Острова Питкэрн"
+      },
+      {
+        "area": "America/Anguilla",
+        "name": "Атлантическое время (Вест-Индия)"
+      },
+      {
+        "area": "America/Grand_Turk",
+        "name": "Восточное время (США и Канада)"
+      },
+      {
+        "area": "Atlantic/South_Georgia",
+        "name": "Южная Георгия"
+      },
+      {
+        "area": "Europe/London",
+        "name": "Дублин, Лиссабон, Лондон"
+      },
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Мадрид, Париж"
+      },
+      {
+        "area": "Asia/Nicosia",
+        "name": "Афины, Бухарест, Стамбул"
+      },
+      {
+        "area": "Indian/Chagos",
+        "name": "Архипелаг Чагос"
+      }
+    ]
+  },
+  "GD": {
+    "en": [
+      {
+        "area": "America/Grenada",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Grenada",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Grenada",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Grenada",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Grenada",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "GF": {
+    "en": [
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Cayenne",
+        "name": "Cayena"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Cayenne",
+        "name": "Caienna"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Cayenne",
+        "name": "カイエンヌ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Cayenne",
+        "name": "Cayenne"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Cayenne",
+        "name": "Caiena"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Cayenne",
+        "name": "Кайенна"
+      }
+    ]
+  },
+  "GG": {
+    "en": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublin, Lisbon, London"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublin, Lissabon, London"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublín, Lisboa, Londres"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublin, Lisbonne, Londres"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublino, Lisbona, Londra"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "ダブリン、リスボン、ロンドン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublin, Lissabon, Londen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Dublim, Lisboa, Londres"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Guernsey",
+        "name": "Дублин, Лиссабон, Лондон"
+      }
+    ]
+  },
+  "GH": {
+    "en": [
+      {
+        "area": "Africa/Accra",
+        "name": "Coordinated Universal Time"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Accra",
+        "name": "Koordinierte Weltzeit (UTC)"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Accra",
+        "name": "Tiempo universal coordinado"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Accra",
+        "name": "Temps universel coordonné"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Accra",
+        "name": "Tempo coordinato universale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Accra",
+        "name": "協定世界時"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Accra",
+        "name": "Gecoördineerde universele tijd (UTC)"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Accra",
+        "name": "Hora Universal Coordenada"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Accra",
+        "name": "Всемирное координированное время"
+      }
+    ]
+  },
+  "GI": {
+    "en": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, París"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Parigi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "マドリード、パリ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Parijs"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Gibraltar",
+        "name": "Мадрид, Париж"
+      }
+    ]
+  },
+  "GL": {
+    "en": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Thule",
+        "name": "Thulé"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Thule",
+        "name": "トゥーレ"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "ゴッドホープ"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "スコレスビスン"
+      },
+      {
+        "area": "America/Danmarkshavn",
+        "name": "デンマークシャウン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Thule",
+        "name": "Thule"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Nuuk"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Ittoqqortoormiit"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Thule",
+        "name": "Туле"
+      },
+      {
+        "area": "America/Godthab",
+        "name": "Нуук"
+      },
+      {
+        "area": "America/Scoresbysund",
+        "name": "Иттокортоормиит"
+      }
+    ]
+  },
+  "GP": {
+    "en": [
+      {
+        "area": "America/Guadeloupe",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Guadeloupe",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Guadeloupe",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Guadeloupe",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Guadeloupe",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "GQ": {
+    "ja": [
+      {
+        "area": "Africa/Malabo",
+        "name": "西中央アフリカ"
+      }
+    ]
+  },
+  "GR": {
+    "en": [
+      {
+        "area": "Europe/Athens",
+        "name": "Athens, Bucharest, Istanbul"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Athens",
+        "name": "Athen, Bukarest, Istanbul"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Athens",
+        "name": "Atenas, Bucarest, Estambul"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Athens",
+        "name": "Athènes, Bucarest, Istanbul"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Athens",
+        "name": "Atene, Bucarest, Istanbul"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Athens",
+        "name": "アテネ、ブカレスト、イスタンブール"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Athens",
+        "name": "Athene, Boekarest, Istanboel"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Athens",
+        "name": "Atenas, Bucareste, Istambul"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Athens",
+        "name": "Афины, Бухарест, Стамбул"
+      }
+    ]
+  },
+  "GT": {
+    "en": [
+      {
+        "area": "America/Guatemala",
+        "name": "Central America"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Guatemala",
+        "name": "Centroamérica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Guatemala",
+        "name": "Amérique centrale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Guatemala",
+        "name": "中央アメリカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Guatemala",
+        "name": "América Central"
+      }
+    ]
+  },
+  "GU": {
+    "en": [
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Port Moresby"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Puerto Moresby"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Port Moresby"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Guam",
+        "name": "グアム、ポートモレスビー"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Porto Moresby"
+      }
+    ]
+  },
+  "GY": {
+    "en": [
+      {
+        "area": "America/Guyana",
+        "name": "Guyana"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Guyana",
+        "name": "Guyana"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Guyana",
+        "name": "Guyana"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Guyana",
+        "name": "ガイアナ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Guyana",
+        "name": "Guiana"
+      }
+    ]
+  },
+  "HK": {
+    "en": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hongkong, Makassar"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "香港、マカッサル"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hongkong, Makassar"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Hong Kong, Macáçar"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Hong_Kong",
+        "name": "Гонконг, Макасар"
+      }
+    ]
+  },
+  "HN": {
+    "en": [
+      {
+        "area": "America/Tegucigalpa",
+        "name": "Central America"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Tegucigalpa",
+        "name": "Centroamérica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Tegucigalpa",
+        "name": "Amérique centrale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Tegucigalpa",
+        "name": "中央アメリカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Tegucigalpa",
+        "name": "América Central"
+      }
+    ]
+  },
+  "HR": {
+    "en": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajevo, Warsaw, Zagreb"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajewo, Warschau, Zagreb"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajevo, Varsovia, Zagreb"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajevo, Varsovie, Zagreb"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajevo, Varsavia, Zagabria"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "サラエボ、ワルシャワ、ザグレブ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Sarajevo, Warschau, Zagreb"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Saraievo, Varsóvia, Zagrebe"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Zagreb",
+        "name": "Сараево, Варшава, Загреб"
+      }
+    ]
+  },
+  "HT": {
+    "en": [
+      {
+        "area": "America/Port-au-Prince",
+        "name": "Havana, Port-au-Prince"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Port-au-Prince",
+        "name": "La Habana, Puerto Príncipe"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Port-au-Prince",
+        "name": "La Havane, Port-au-Prince"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Port-au-Prince",
+        "name": "ハバナ、ポルトープランス"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Port-au-Prince",
+        "name": "Havana, Porto Príncipe"
+      }
+    ]
+  },
+  "HU": {
+    "en": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrad, Budapest"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Budapest",
+        "name": "ベオグラード、ブダペスト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrado, Boedapest"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Belgrado, Budapeste"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Budapest",
+        "name": "Белград, Будапешт"
+      }
+    ]
+  },
+  "ID": {
+    "en": [
+      {
+        "area": "Asia/Jakarta",
+        "name": "Bangkok, Hanoi, Pontianak, Jakarta"
+      },
+      {
+        "area": "Asia/Makassar",
+        "name": "Hong Kong, Makassar"
+      },
+      {
+        "area": "Asia/Jayapura",
+        "name": "Jayapura"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Jakarta",
+        "name": "Bangkok, Hanói, Pontianak, Yakarta"
+      },
+      {
+        "area": "Asia/Makassar",
+        "name": "Hong Kong, Makassar"
+      },
+      {
+        "area": "Asia/Jayapura",
+        "name": "Jayapura"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Jakarta",
+        "name": "Bangkok, Hanoï, Pontianak, Jakarta"
+      },
+      {
+        "area": "Asia/Makassar",
+        "name": "Hong Kong, Makassar"
+      },
+      {
+        "area": "Asia/Jayapura",
+        "name": "Jayapura"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Jakarta",
+        "name": "バンコク、ハノイ、ジャカルタ"
+      },
+      {
+        "area": "Asia/Makassar",
+        "name": "香港、マカッサル"
+      },
+      {
+        "area": "Asia/Jayapura",
+        "name": "ジャヤプラ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Jakarta",
+        "name": "Bangkok, Hanoi, Pontianak, Jacarta"
+      },
+      {
+        "area": "Asia/Makassar",
+        "name": "Hong Kong, Macáçar"
+      },
+      {
+        "area": "Asia/Jayapura",
+        "name": "Jayapura"
+      }
+    ]
+  },
+  "IE": {
+    "en": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublin, Lisbon, London"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublin, Lissabon, London"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublín, Lisboa, Londres"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublin, Lisbonne, Londres"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublino, Lisbona, Londra"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Dublin",
+        "name": "ダブリン、リスボン、ロンドン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublin, Lissabon, Londen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Dublim, Lisboa, Londres"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Dublin",
+        "name": "Дублин, Лиссабон, Лондон"
+      }
+    ]
+  },
+  "IL": {
+    "ja": [
+      {
+        "area": "Asia/Jerusalem",
+        "name": "エルサレム"
+      }
+    ]
+  },
+  "IM": {
+    "en": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublin, Lisbon, London"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublin, Lissabon, London"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublín, Lisboa, Londres"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublin, Lisbonne, Londres"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublino, Lisbona, Londra"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "ダブリン、リスボン、ロンドン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublin, Lissabon, Londen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Dublim, Lisboa, Londres"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Isle_of_Man",
+        "name": "Дублин, Лиссабон, Лондон"
+      }
+    ]
+  },
+  "IN": {
+    "en": [
+      {
+        "area": "Asia/Kolkata",
+        "name": "Calcutta, Mumbai, New Delhi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Kolkata",
+        "name": "Calcuta, Bombay, Nueva Delhi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Kolkata",
+        "name": "Calcutta, Mumbai, New Delhi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Kolkata",
+        "name": "コルカタ、ムンバイ、ニューデリー"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Kolkata",
+        "name": "Calcutá, Mumbai, Nova Deli"
+      }
+    ]
+  },
+  "IQ": {
+    "ja": [
+      {
+        "area": "Asia/Baghdad",
+        "name": "バグダッド"
+      }
+    ]
+  },
+  "IR": {
+    "ja": [
+      {
+        "area": "Asia/Tehran",
+        "name": "テヘラン"
+      }
+    ]
+  },
+  "IS": {
+    "en": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reykjavik"
+      }
+    ],
+    "de": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reykjavik"
+      }
+    ],
+    "es": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reikiavik"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reykjavik"
+      }
+    ],
+    "it": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reykjavík"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "モンロビア、レイキャビク"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monrovia, Reykjavik"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Monróvia, Reiquiavique"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Atlantic/Reykjavik",
+        "name": "Монровия, Рейкьявик"
+      }
+    ]
+  },
+  "IT": {
+    "en": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Rome",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Rome",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Rome",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Rome",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "JE": {
+    "en": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublin, Lisbon, London"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublin, Lissabon, London"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublín, Lisboa, Londres"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublin, Lisbonne, Londres"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublino, Lisbona, Londra"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Jersey",
+        "name": "ダブリン、リスボン、ロンドン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublin, Lissabon, Londen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Dublim, Lisboa, Londres"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Jersey",
+        "name": "Дублин, Лиссабон, Лондон"
+      }
+    ]
+  },
+  "JM": {
+    "en": [
+      {
+        "area": "America/Jamaica",
+        "name": "Cayman, Jamaica"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Jamaica",
+        "name": "Islas Caimán, Jamaica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Jamaica",
+        "name": "Îles Caïmans, Jamaïque"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Jamaica",
+        "name": "ケイマン、ジャマイカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Jamaica",
+        "name": "Ilhas Caimã, Jamaica"
+      }
+    ]
+  },
+  "JO": {
+    "en": [
+      {
+        "area": "Asia/Amman",
+        "name": "Amman"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Amman",
+        "name": "Amán"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Amman",
+        "name": "Amman"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Amman",
+        "name": "アンマン"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Amman",
+        "name": "Amã"
+      }
+    ]
+  },
+  "JP": {
+    "en": [
+      {
+        "area": "Asia/Tokyo",
+        "name": "Osaka, Sapporo, Tokyo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Tokyo",
+        "name": "大阪、札幌、東京"
+      }
+    ]
+  },
+  "KE": {
+    "ja": [
+      {
+        "area": "Africa/Nairobi",
+        "name": "アスマラ、ジブチ、ナイロビ"
+      }
+    ]
+  },
+  "KN": {
+    "en": [
+      {
+        "area": "America/St_Kitts",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/St_Kitts",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/St_Kitts",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/St_Kitts",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/St_Kitts",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "KR": {
+    "en": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seoul"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seoul"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seúl"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Séoul"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seul"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Seoul",
+        "name": "ソウル"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seoul"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Seul"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Seoul",
+        "name": "Сеул"
+      }
+    ]
+  },
+  "KW": {
+    "en": [
+      {
+        "area": "Asia/Kuwait",
+        "name": "Kuwait, Riyadh"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Kuwait",
+        "name": "Kuwait, Riad"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Kuwait",
+        "name": "Koweït, Riyad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Kuwait",
+        "name": "クウェート、リヤド"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Kuwait",
+        "name": "Kuwait, Riade"
+      }
+    ]
+  },
+  "KY": {
+    "en": [
+      {
+        "area": "America/Cayman",
+        "name": "Cayman, Jamaica"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Cayman",
+        "name": "Islas Caimán, Jamaica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Cayman",
+        "name": "Îles Caïmans, Jamaïque"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Cayman",
+        "name": "ケイマン、ジャマイカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Cayman",
+        "name": "Ilhas Caimã, Jamaica"
+      }
+    ]
+  },
+  "KZ": {
+    "ja": [
+      {
+        "area": "Asia/Aqtau",
+        "name": "アクトベ、オラル"
+      },
+      {
+        "area": "Asia/Almaty",
+        "name": "アルマティ"
+      }
+    ]
+  },
+  "LB": {
+    "ja": [
+      {
+        "area": "Asia/Beirut",
+        "name": "ベイルート"
+      }
+    ]
+  },
+  "LC": {
+    "en": [
+      {
+        "area": "America/St_Lucia",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/St_Lucia",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/St_Lucia",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/St_Lucia",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/St_Lucia",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "LI": {
+    "en": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Stockholm, Vienna"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Stockholm, Wien"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Stockholm, Vienne"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Stoccolma, Vienna"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "ストックホルム、ウィーン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Stockholm, Wenen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Vaduz",
+        "name": "Стокгольм, Вена"
+      }
+    ]
+  },
+  "LK": {
+    "ja": [
+      {
+        "area": "Asia/Colombo",
+        "name": "スリジャヤワルデネプラ"
+      }
+    ]
+  },
+  "LR": {
+    "ja": [
+      {
+        "area": "Africa/Monrovia",
+        "name": "モンロビア、レイキャビク"
+      }
+    ]
+  },
+  "LS": {
+    "en": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburgo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Maseru",
+        "name": "マセル、ムババーネ、ヨハネスブルグ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Maseru, Mebabane, Joanesburgo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Maseru",
+        "name": "Масеру, Мбабане, Йоханнесбург"
+      }
+    ]
+  },
+  "LT": {
+    "en": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofia, Tallinn, Wilna"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofía, Tallin, Vilna"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "ソフィア、タリン、ビリニュス"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sofia, Tallinn, Vilnius"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "Sófia, Taline, Vílnius"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Vilnius",
+        "name": "София, Таллинн, Вильнюс"
+      }
+    ]
+  },
+  "LU": {
+    "en": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Brussels, Copenhagen"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Brüssel, Kopenhagen"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Bruselas, Copenhague"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Bruxelles, Copenhague"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Bruxelles, Copenhagen"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "ブリュッセル、コペンハーゲン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Brussel, Kopenhagen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Bruxelas, Copenhaga"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Luxembourg",
+        "name": "Брюссель, Копенгаген"
+      }
+    ]
+  },
+  "LV": {
+    "en": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrado"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Riga",
+        "name": "ヘルシンキ、カリーニングラード"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsinki, Kaliningrad"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Riga",
+        "name": "Helsínquia, Caliningrado"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Riga",
+        "name": "Хельсинки, Калининград"
+      }
+    ]
+  },
+  "MA": {
+    "ja": [
+      {
+        "area": "Africa/Casablanca",
+        "name": "カサブランカ"
+      }
+    ]
+  },
+  "MC": {
+    "en": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, París"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Parigi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Monaco",
+        "name": "マドリード、パリ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Parijs"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Madrid, Paris"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Monaco",
+        "name": "Мадрид, Париж"
+      }
+    ]
+  },
+  "ME": {
+    "en": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrad, Budapest"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "ベオグラード、ブダペスト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrado, Boedapest"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Belgrado, Budapeste"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Podgorica",
+        "name": "Белград, Будапешт"
+      }
+    ]
+  },
+  "MK": {
+    "en": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajevo, Warsaw, Zagreb"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajewo, Warschau, Zagreb"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajevo, Varsovia, Zagreb"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajevo, Varsovie, Zagreb"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajevo, Varsavia, Zagabria"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Skopje",
+        "name": "サラエボ、ワルシャワ、ザグレブ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Sarajevo, Warschau, Zagreb"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Saraievo, Varsóvia, Zagrebe"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Skopje",
+        "name": "Сараево, Варшава, Загреб"
+      }
+    ]
+  },
+  "ML": {
+    "en": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Coordinated Universal Time"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Koordinierte Weltzeit (UTC)"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Tiempo universal coordinado"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Temps universel coordonné"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Tempo coordinato universale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Bamako",
+        "name": "協定世界時"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Gecoördineerde universele tijd (UTC)"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Hora Universal Coordenada"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Bamako",
+        "name": "Всемирное координированное время"
+      }
+    ]
+  },
+  "MM": {
+    "ja": [
+      {
+        "area": "Asia/Rangoon",
+        "name": "ヤンゴン（ラングーン）"
+      }
+    ]
+  },
+  "MN": {
+    "ja": [
+      {
+        "area": "Asia/Hovd",
+        "name": "ホブド"
+      },
+      {
+        "area": "Asia/Choibalsan",
+        "name": "ウランバートル"
+      }
+    ]
+  },
+  "MO": {
+    "en": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hongkong, Makassar"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hong Kong, Makassar"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Macau",
+        "name": "香港、マカッサル"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hongkong, Makassar"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Macau",
+        "name": "Hong Kong, Macáçar"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Macau",
+        "name": "Гонконг, Макасар"
+      }
+    ]
+  },
+  "MQ": {
+    "en": [
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Standard Time (Karibik)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Martinique",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Martinique",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Martinique",
+        "name": "Orario standard atlantico (Caraibi)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Martinique",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Martinique",
+        "name": "Atlantic Standard Time (Caraïben)"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Martinique",
+        "name": "Atlântico (Caribe)"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Martinique",
+        "name": "Атлантическое время (Вест-Индия)"
+      }
+    ]
+  },
+  "MR": {
+    "en": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Coordinated Universal Time"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Koordinierte Weltzeit (UTC)"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Tiempo universal coordinado"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Temps universel coordonné"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Tempo coordinato universale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "協定世界時"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Gecoördineerde universele tijd (UTC)"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Hora Universal Coordenada"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Nouakchott",
+        "name": "Всемирное координированное время"
+      }
+    ]
+  },
+  "MS": {
+    "en": [
+      {
+        "area": "America/Montserrat",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Montserrat",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Montserrat",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Montserrat",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Montserrat",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "MT": {
+    "en": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Malta",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Malta",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Malta",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Malta",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "MX": {
+    "en": [
+      {
+        "area": "America/Santa_Isabel",
+        "name": "Tijuana, Baja California"
+      },
+      {
+        "area": "America/Chihuahua",
+        "name": "Chihuahua, La Paz, Mazatlan"
+      },
+      {
+        "area": "America/Hermosillo",
+        "name": "Hermosillo"
+      },
+      {
+        "area": "America/Mexico_City",
+        "name": "Guadalajara, Mexico City"
+      },
+      {
+        "area": "America/Monterrey",
+        "name": "Monterrey"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Santa_Isabel",
+        "name": "Tijuana, Baja California"
+      },
+      {
+        "area": "America/Chihuahua",
+        "name": "Chihuahua, La Paz, Mazatlán"
+      },
+      {
+        "area": "America/Hermosillo",
+        "name": "Hermosillo"
+      },
+      {
+        "area": "America/Mexico_City",
+        "name": "Guadalajara, Ciudad de México"
+      },
+      {
+        "area": "America/Monterrey",
+        "name": "Monterrey"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Santa_Isabel",
+        "name": "Tijuana, Basse-Californie"
+      },
+      {
+        "area": "America/Chihuahua",
+        "name": "Chihuahua, La Paz, Mazatlán"
+      },
+      {
+        "area": "America/Hermosillo",
+        "name": "Hermosillo"
+      },
+      {
+        "area": "America/Mexico_City",
+        "name": "Guadalajara, Mexico"
+      },
+      {
+        "area": "America/Monterrey",
+        "name": "Monterrey"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Santa_Isabel",
+        "name": "ティフアナ、バハ・カリフォルニア"
+      },
+      {
+        "area": "America/Chihuahua",
+        "name": "チワワ、ラパス、マサトラン"
+      },
+      {
+        "area": "America/Hermosillo",
+        "name": "エルモシヨ"
+      },
+      {
+        "area": "America/Mexico_City",
+        "name": "グアダラハラ、メキシコシティ"
+      },
+      {
+        "area": "America/Monterrey",
+        "name": "モンテレイ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Santa_Isabel",
+        "name": "Tijuana, Baja California"
+      },
+      {
+        "area": "America/Chihuahua",
+        "name": "Chiuaua, La Paz, Mazatlán"
+      },
+      {
+        "area": "America/Hermosillo",
+        "name": "Hermosillo"
+      },
+      {
+        "area": "America/Mexico_City",
+        "name": "Guadalajara, Cidade do México"
+      },
+      {
+        "area": "America/Monterrey",
+        "name": "Monterrey"
+      }
+    ]
+  },
+  "MY": {
+    "en": [
+      {
+        "area": "Asia/Kuala_Lumpur",
+        "name": "Kuala Lumpur, Kuching, Singapore"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Kuala_Lumpur",
+        "name": "Kuala Lumpur, Kuching, Singapur"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Kuala_Lumpur",
+        "name": "Kuala Lumpur, Kuching, Singapour"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Kuala_Lumpur",
+        "name": "クアラルンプール、シンガポール"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Kuala_Lumpur",
+        "name": "Kuala Lumpur, Kuching, Singapura"
+      }
+    ]
+  },
+  "MZ": {
+    "en": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Maputo",
+        "name": "ルサカ、ハラレ、ハボローネ、マプト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Lusaca, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Maputo",
+        "name": "Лусака, Хараре, Габороне, Мапуту"
+      }
+    ]
+  },
+  "NA": {
+    "en": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhuk"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "ウィントフック"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Windhoek"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Windhoek",
+        "name": "Виндхук"
+      }
+    ]
+  },
+  "NE": {
+    "en": [
+      {
+        "area": "Africa/Niamey",
+        "name": "West Central Africa"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Niamey",
+        "name": "West-Zentralafrika"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Niamey",
+        "name": "África Occidental y Central"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Niamey",
+        "name": "Afrique centrale de l'ouest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Niamey",
+        "name": "Africa centro-occidentale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Niamey",
+        "name": "西中央アフリカ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Niamey",
+        "name": "West-Centraal Afrika"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Niamey",
+        "name": "África Central e Ocidental"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Niamey",
+        "name": "Западная и Центральная Африка"
+      }
+    ]
+  },
+  "NG": {
+    "en": [
+      {
+        "area": "Africa/Lagos",
+        "name": "West Central Africa"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Lagos",
+        "name": "West-Zentralafrika"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Lagos",
+        "name": "África Occidental y Central"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Lagos",
+        "name": "Afrique centrale de l'ouest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Lagos",
+        "name": "Africa centro-occidentale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Lagos",
+        "name": "西中央アフリカ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Lagos",
+        "name": "West-Centraal Afrika"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Lagos",
+        "name": "África Central e Ocidental"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Lagos",
+        "name": "Западная и Центральная Африка"
+      }
+    ]
+  },
+  "NI": {
+    "en": [
+      {
+        "area": "America/Managua",
+        "name": "Central America"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Managua",
+        "name": "Centroamérica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Managua",
+        "name": "Amérique centrale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Managua",
+        "name": "中央アメリカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Managua",
+        "name": "América Central"
+      }
+    ]
+  },
+  "NL": {
+    "en": [
+      {
+        "area": "America/Curacao",
+        "name": "Atlantic Time (Caribbean)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Curacao",
+        "name": "Atlantic Standard Time (Karibik)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Curacao",
+        "name": "Horario del Atlántico (Caribe)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Curacao",
+        "name": "Atlantique (Caraïbes)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Curacao",
+        "name": "Orario standard atlantico (Caraibi)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Curacao",
+        "name": "大西洋標準時（カリブ）"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Curacao",
+        "name": "Atlantic Standard Time (Caraïben)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Curacao",
+        "name": "Atlântico (Caribe)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Curacao",
+        "name": "Атлантическое время (Вест-Индия)"
+      },
+      {
+        "area": "Europe/Amsterdam",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "NO": {
+    "en": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Stockholm, Vienna"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Stockholm, Wien"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Stockholm, Vienne"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Stoccolma, Vienna"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Oslo",
+        "name": "ストックホルム、ウィーン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Stockholm, Wenen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Oslo",
+        "name": "Стокгольм, Вена"
+      }
+    ]
+  },
+  "NP": {
+    "ja": [
+      {
+        "area": "Asia/Kathmandu",
+        "name": "カトマンズ"
+      }
+    ]
+  },
+  "NZ": {
+    "en": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Chatham"
+      }
+    ],
+    "de": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Chatham"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Islas Chatham"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Îles Chatham"
+      }
+    ],
+    "it": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Isole Chatham"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Niue",
+        "name": "ニウエ"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "ラロトンガ"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "オークランド、ウェリントン"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "ファカオフォ島"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "チャサム"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niue"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Chatham"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Niuê"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Rarotonga"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Auckland, Wellington"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Fakaofo"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Chatham"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Pacific/Niue",
+        "name": "Ниуэ"
+      },
+      {
+        "area": "Pacific/Rarotonga",
+        "name": "Раротонга"
+      },
+      {
+        "area": "Pacific/Auckland",
+        "name": "Окленд, Веллингтон"
+      },
+      {
+        "area": "Pacific/Fakaofo",
+        "name": "Факаофо"
+      },
+      {
+        "area": "Pacific/Chatham",
+        "name": "Чатем"
+      }
+    ]
+  },
+  "OM": {
+    "en": [
+      {
+        "area": "Asia/Muscat",
+        "name": "Abu Dhabi, Muscat"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Muscat",
+        "name": "Abu Dabi, Mascate"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Muscat",
+        "name": "Abou Dabi, Mascate"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Muscat",
+        "name": "アブダビ、マスカット"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Muscat",
+        "name": "Abu Dhabi, Mascate"
+      }
+    ]
+  },
+  "PA": {
+    "en": [
+      {
+        "area": "America/Panama",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Panama",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Panama",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Panama",
+        "name": "ボゴタ、リマ、キト"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Panama",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ]
+  },
+  "PE": {
+    "en": [
+      {
+        "area": "America/Lima",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Lima",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Lima",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Lima",
+        "name": "ボゴタ、リマ、キト"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Lima",
+        "name": "Bogotá, Lima, Quito"
+      }
+    ]
+  },
+  "PG": {
+    "ja": [
+      {
+        "area": "Pacific/Port_Moresby",
+        "name": "グアム、ポートモレスビー"
+      }
+    ]
+  },
+  "PH": {
+    "en": [
+      {
+        "area": "Asia/Manila",
+        "name": "Manila"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Manila",
+        "name": "Manila"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Manila",
+        "name": "Manille"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Manila",
+        "name": "マニラ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Manila",
+        "name": "Manila"
+      }
+    ]
+  },
+  "PK": {
+    "ja": [
+      {
+        "area": "Asia/Karachi",
+        "name": "イスラマバード、カラチ"
+      }
+    ]
+  },
+  "PL": {
+    "en": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajevo, Warsaw, Zagreb"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajewo, Warschau, Zagreb"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajevo, Varsovia, Zagreb"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajevo, Varsovie, Zagreb"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajevo, Varsavia, Zagabria"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "サラエボ、ワルシャワ、ザグレブ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Sarajevo, Warschau, Zagreb"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Saraievo, Varsóvia, Zagrebe"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Warsaw",
+        "name": "Сараево, Варшава, Загреб"
+      }
+    ]
+  },
+  "PR": {
+    "en": [
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Puerto_Rico",
+        "name": "ジョージタウン、ラパス、サンフアン"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      }
+    ]
+  },
+  "PT": {
+    "en": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Azores"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublin, Lisbon, London"
+      }
+    ],
+    "de": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Azoren"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublin, Lissabon, London"
+      }
+    ],
+    "es": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Azores"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublín, Lisboa, Londres"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Açores"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublin, Lisbonne, Londres"
+      }
+    ],
+    "it": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Azzorre"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublino, Lisbona, Londra"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "アゾレス諸島"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "ダブリン、リスボン、ロンドン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Azoren"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublin, Lissabon, Londen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Açores"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Dublim, Lisboa, Londres"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Atlantic/Azores",
+        "name": "Азорские острова"
+      },
+      {
+        "area": "Atlantic/Madeira",
+        "name": "Дублин, Лиссабон, Лондон"
+      }
+    ]
+  },
+  "PY": {
+    "en": [
+      {
+        "area": "America/Asuncion",
+        "name": "Asunción"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Asuncion",
+        "name": "Asunción"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Asuncion",
+        "name": "Asunción"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Asuncion",
+        "name": "アスンシオン"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Asuncion",
+        "name": "Assunção"
+      }
+    ]
+  },
+  "QA": {
+    "en": [
+      {
+        "area": "Asia/Qatar",
+        "name": "Kuwait, Riyadh"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Qatar",
+        "name": "Kuwait, Riad"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Qatar",
+        "name": "Koweït, Riyad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Qatar",
+        "name": "クウェート、リヤド"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Qatar",
+        "name": "Kuwait, Riade"
+      }
+    ]
+  },
+  "RO": {
+    "en": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Athens, Bucharest, Istanbul"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Athen, Bukarest, Istanbul"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Atenas, Bucarest, Estambul"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Athènes, Bucarest, Istanbul"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Atene, Bucarest, Istanbul"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "アテネ、ブカレスト、イスタンブール"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Athene, Boekarest, Istanboel"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Atenas, Bucareste, Istambul"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Bucharest",
+        "name": "Афины, Бухарест, Стамбул"
+      }
+    ]
+  },
+  "RS": {
+    "en": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrad, Budapest"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "ベオグラード、ブダペスト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrado, Boedapest"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Belgrado, Budapeste"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Belgrade",
+        "name": "Белград, Будапешт"
+      }
+    ]
+  },
+  "RU": {
+    "en": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrad"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moscow, St Petersburg"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Udmurtia"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Yekaterinburg"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnoyarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokuznetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Yakutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sakhalin, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr, Kamchatka"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrad"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moskau, St. Petersburg"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Udmurtien"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Jekaterinburg"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Nowosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnojarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Nowokusnetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Jakutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sachalin, Wladiwostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr, Kamtschatka"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrado"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moscú, San Petersburgo"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Udmurtia"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Ekaterimburgo"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnoyarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokuznetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Yakutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sajalín, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anádyr, Kamchatka"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrad"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moscou, Saint-Pétersbourg"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Oudmourtie"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Iekaterinbourg"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnoïarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokouznetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkoutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Iakoutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sakhaline, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr, Kamchatka"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrad"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Mosca, San Pietroburgo"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Udmurtia"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Ekaterinburg"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnojarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokuzneck"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Jakutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sachalin, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr', Kamčatka"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "ヘルシンキ、カリーニングラード"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "モスクワ、サンクトペテルブルグ"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "サマーラ、ウドムルト"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "エカテリンブルグ"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "ノボシビルスク、オムスク"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "クラスノヤルスク"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "ノボクズネツク"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "イルクーツク"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "ヤクーツク"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "サハリン、ウラジオストク"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "スレドネコリムスク"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "アナディリ、カムチャッカ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsinki, Kaliningrad"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moskou, Sint-Petersburg"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Oedmoertië"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Jekaterinenburg"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnojarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokoeznetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkoetsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Jakoetsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sachalin, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr, Kamtsjatka"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Helsínquia, Caliningrado"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Moscovo, São Petersburgo"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Samara, Udmurtia"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Ecaterimburgo"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Novosibirsk, Omsk"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Krasnoyarsk"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Novokuznetsk"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Irkutsk"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Yakutsk"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Sacalina, Vladivostok"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Srednekolymsk"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Anadyr, Kamchatka"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Kaliningrad",
+        "name": "Хельсинки, Калининград"
+      },
+      {
+        "area": "Europe/Moscow",
+        "name": "Москва, Санкт-Петербург"
+      },
+      {
+        "area": "Europe/Samara",
+        "name": "Самара, Удмуртия"
+      },
+      {
+        "area": "Asia/Yekaterinburg",
+        "name": "Екатеринбург"
+      },
+      {
+        "area": "Asia/Novosibirsk",
+        "name": "Новосибирск, Омск"
+      },
+      {
+        "area": "Asia/Krasnoyarsk",
+        "name": "Красноярск"
+      },
+      {
+        "area": "Asia/Novokuznetsk",
+        "name": "Новокузнецк"
+      },
+      {
+        "area": "Asia/Irkutsk",
+        "name": "Иркутск"
+      },
+      {
+        "area": "Asia/Yakutsk",
+        "name": "Якутск"
+      },
+      {
+        "area": "Asia/Sakhalin",
+        "name": "Сахалин, Владивосток"
+      },
+      {
+        "area": "Asia/Srednekolymsk",
+        "name": "Среднеколымск"
+      },
+      {
+        "area": "Asia/Anadyr",
+        "name": "Анадырь, Камчатка"
+      }
+    ]
+  },
+  "SA": {
+    "en": [
+      {
+        "area": "Asia/Riyadh",
+        "name": "Kuwait, Riyadh"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Riyadh",
+        "name": "Kuwait, Riad"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Riyadh",
+        "name": "Koweït, Riyad"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Riyadh",
+        "name": "クウェート、リヤド"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Riyadh",
+        "name": "Kuwait, Riade"
+      }
+    ]
+  },
+  "SD": {
+    "en": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Dschibuti, Nairobi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Yibuti, Nairobi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Gibuti, Nairobi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "アスマラ、ジブチ、ナイロビ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Asmara, Jibuti, Nairóbi"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Khartoum",
+        "name": "Асмэра, Джибути, Найроби"
+      }
+    ]
+  },
+  "SE": {
+    "en": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Stockholm, Vienna"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Stockholm, Wien"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Stockholm, Vienne"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Stoccolma, Vienna"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "ストックホルム、ウィーン"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Stockholm, Wenen"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Estocolmo, Viena"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Stockholm",
+        "name": "Стокгольм, Вена"
+      }
+    ]
+  },
+  "SG": {
+    "en": [
+      {
+        "area": "Asia/Singapore",
+        "name": "Kuala Lumpur, Kuching, Singapore"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Singapore",
+        "name": "Kuala Lumpur, Kuching, Singapur"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Singapore",
+        "name": "Kuala Lumpur, Kuching, Singapour"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Singapore",
+        "name": "クアラルンプール、シンガポール"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Singapore",
+        "name": "Kuala Lumpur, Kuching, Singapura"
+      }
+    ]
+  },
+  "SI": {
+    "en": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrad, Budapest"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrade, Budapest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrado, Budapest"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "ベオグラード、ブダペスト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrado, Boedapest"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Belgrado, Budapeste"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Ljubljana",
+        "name": "Белград, Будапешт"
+      }
+    ]
+  },
+  "SK": {
+    "en": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Prague"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Prag"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Prague"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "ブラチスラバ、プラハ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Praag"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Bratislava, Praga"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Bratislava",
+        "name": "Братислава, Прага"
+      }
+    ]
+  },
+  "SM": {
+    "en": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/San_Marino",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "SO": {
+    "en": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Dschibuti, Nairobi"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Yibuti, Nairobi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Gibuti, Nairobi"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "アスマラ、ジブチ、ナイロビ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Djibouti, Nairobi"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Asmara, Jibuti, Nairóbi"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Mogadishu",
+        "name": "Асмэра, Джибути, Найроби"
+      }
+    ]
+  },
+  "SR": {
+    "en": [
+      {
+        "area": "America/Paramaribo",
+        "name": "Paramaribo"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Paramaribo",
+        "name": "Paramaribo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Paramaribo",
+        "name": "Paramaribo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Paramaribo",
+        "name": "パラマリボ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Paramaribo",
+        "name": "Paramaribo"
+      }
+    ]
+  },
+  "SV": {
+    "en": [
+      {
+        "area": "America/El_Salvador",
+        "name": "Central America"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/El_Salvador",
+        "name": "Centroamérica"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/El_Salvador",
+        "name": "Amérique centrale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/El_Salvador",
+        "name": "中央アメリカ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/El_Salvador",
+        "name": "América Central"
+      }
+    ]
+  },
+  "SY": {
+    "en": [
+      {
+        "area": "Asia/Damascus",
+        "name": "Damascus"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Damascus",
+        "name": "Damasco"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Damascus",
+        "name": "Damas"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Damascus",
+        "name": "ダマスカス"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Damascus",
+        "name": "Damascus"
+      }
+    ]
+  },
+  "SZ": {
+    "en": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburgo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "マセル、ムババーネ、ヨハネスブルグ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Maseru, Mebabane, Joanesburgo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Mbabane",
+        "name": "Масеру, Мбабане, Йоханнесбург"
+      }
+    ]
+  },
+  "TC": {
+    "en": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Time (US &amp; Canada)"
+      }
+    ],
+    "de": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Standard Time (USA/Kanada)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Horario del Este (EE. UU. y Canadá)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Heure de l'Est (É.-U. et Canada)"
+      }
+    ],
+    "it": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Orario Costa Orientale (USA e Canada)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "東部標準時（米国およびカナダ）"
+      }
+    ],
+    "nl": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Eastern Standard Time (VS/Canada)"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Costa Leste (EUA e Canadá)"
+      }
+    ],
+    "ru": [
+      {
+        "area": "America/Grand_Turk",
+        "name": "Восточное время (США и Канада)"
+      }
+    ]
+  },
+  "TD": {
+    "en": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "West Central Africa"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "West-Zentralafrika"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "África Occidental y Central"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "Afrique centrale de l'ouest"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "Africa centro-occidentale"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "西中央アフリカ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "West-Centraal Afrika"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "África Central e Ocidental"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Ndjamena",
+        "name": "Западная и Центральная Африка"
+      }
+    ]
+  },
+  "TH": {
+    "en": [
+      {
+        "area": "Asia/Bangkok",
+        "name": "Bangkok, Hanoi, Pontianak, Jakarta"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Bangkok",
+        "name": "Bangkok, Hanói, Pontianak, Yakarta"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Bangkok",
+        "name": "Bangkok, Hanoï, Pontianak, Jakarta"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Bangkok",
+        "name": "バンコク、ハノイ、ジャカルタ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Bangkok",
+        "name": "Bangkok, Hanoi, Pontianak, Jacarta"
+      }
+    ]
+  },
+  "TO": {
+    "ja": [
+      {
+        "area": "Pacific/Tongatapu",
+        "name": "ヌクアロファ"
+      }
+    ]
+  },
+  "TR": {
+    "en": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Athens, Bucharest, Istanbul"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Athen, Bukarest, Istanbul"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Atenas, Bucarest, Estambul"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Athènes, Bucarest, Istanbul"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Atene, Bucarest, Istanbul"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "アテネ、ブカレスト、イスタンブール"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Athene, Boekarest, Istanboel"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Atenas, Bucareste, Istambul"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Istanbul",
+        "name": "Афины, Бухарест, Стамбул"
+      }
+    ]
+  },
+  "TT": {
+    "en": [
+      {
+        "area": "America/Port_of_Spain",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Port_of_Spain",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Port_of_Spain",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Port_of_Spain",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Port_of_Spain",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "TW": {
+    "en": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "de": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "es": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipéi"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "it": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Asia/Taipei",
+        "name": "台北"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Taipei"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Asia/Taipei",
+        "name": "Тайбэй"
+      }
+    ]
+  },
+  "UA": {
+    "ja": [
+      {
+        "area": "Europe/Kiev",
+        "name": "ヘルシンキ、カリーニングラード"
+      }
+    ]
+  },
+  "UM": {
+    "en": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Midway Island, Samoa"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Islas Midway, Samoa"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Îles Midway, Samoa"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Midway",
+        "name": "ミッドウェー島、サモア"
+      },
+      {
+        "area": "Pacific/Johnston",
+        "name": "ハワイ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Atol de Midway, Samoa Ocidental"
+      }
+    ]
+  },
+  "US": {
+    "en": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Midway Island, Samoa"
+      },
+      {
+        "area": "America/Adak",
+        "name": "Adak"
+      },
+      {
+        "area": "Pacific/Honolulu",
+        "name": "Hawaii"
+      },
+      {
+        "area": "America/Anchorage",
+        "name": "Alaska"
+      },
+      {
+        "area": "America/Los_Angeles",
+        "name": "Pacific Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Boise",
+        "name": "Mountain Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Phoenix",
+        "name": "Arizona"
+      },
+      {
+        "area": "America/Chicago",
+        "name": "Central Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Indiana/Knox",
+        "name": "Indiana (Central)"
+      },
+      {
+        "area": "America/Indiana/Indianapolis",
+        "name": "Indiana (East)"
+      },
+      {
+        "area": "America/New_York",
+        "name": "Eastern Time (US &amp; Canada)"
+      },
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      },
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Port Moresby"
+      },
+      {
+        "area": "Pacific/Wake",
+        "name": "Wake Island"
+      }
+    ],
+    "es": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Islas Midway, Samoa"
+      },
+      {
+        "area": "America/Adak",
+        "name": "Adak"
+      },
+      {
+        "area": "Pacific/Honolulu",
+        "name": "Hawái"
+      },
+      {
+        "area": "America/Anchorage",
+        "name": "Alaska"
+      },
+      {
+        "area": "America/Los_Angeles",
+        "name": "Horario del Pacífico (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Boise",
+        "name": "Horario de Montaña (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Phoenix",
+        "name": "Arizona"
+      },
+      {
+        "area": "America/Chicago",
+        "name": "Horario del Centro (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Indiana/Knox",
+        "name": "Indiana (Horario del Centro)"
+      },
+      {
+        "area": "America/Indiana/Indianapolis",
+        "name": "Indiana (Horario del Este)"
+      },
+      {
+        "area": "America/New_York",
+        "name": "Horario del Este (EE. UU. y Canadá)"
+      },
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      },
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Puerto Moresby"
+      },
+      {
+        "area": "Pacific/Wake",
+        "name": "Isla Wake"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Îles Midway, Samoa"
+      },
+      {
+        "area": "America/Adak",
+        "name": "Île Adak"
+      },
+      {
+        "area": "Pacific/Honolulu",
+        "name": "Hawaï"
+      },
+      {
+        "area": "America/Anchorage",
+        "name": "Alaska"
+      },
+      {
+        "area": "America/Los_Angeles",
+        "name": "Heure du Pacifique (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Boise",
+        "name": "Heure des Rocheuses (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Phoenix",
+        "name": "Arizona"
+      },
+      {
+        "area": "America/Chicago",
+        "name": "Heure du Centre (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Indiana/Knox",
+        "name": "Indiana (Centre)"
+      },
+      {
+        "area": "America/Indiana/Indianapolis",
+        "name": "Indiana (Est)"
+      },
+      {
+        "area": "America/New_York",
+        "name": "Heure de l'Est (É.-U. et Canada)"
+      },
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      },
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Port Moresby"
+      },
+      {
+        "area": "Pacific/Wake",
+        "name": "Île Wake"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Pacific/Midway",
+        "name": "ミッドウェー島、サモア"
+      },
+      {
+        "area": "America/Adak",
+        "name": "アダック島"
+      },
+      {
+        "area": "Pacific/Honolulu",
+        "name": "ハワイ"
+      },
+      {
+        "area": "America/Anchorage",
+        "name": "アラスカ"
+      },
+      {
+        "area": "America/Los_Angeles",
+        "name": "太平洋標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Boise",
+        "name": "山地標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Phoenix",
+        "name": "アリゾナ"
+      },
+      {
+        "area": "America/Chicago",
+        "name": "中央標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Indiana/Knox",
+        "name": "インディアナ中部"
+      },
+      {
+        "area": "America/Indiana/Indianapolis",
+        "name": "インディアナ東部"
+      },
+      {
+        "area": "America/New_York",
+        "name": "東部標準時（米国およびカナダ）"
+      },
+      {
+        "area": "America/Puerto_Rico",
+        "name": "ジョージタウン、ラパス、サンフアン"
+      },
+      {
+        "area": "Pacific/Guam",
+        "name": "グアム、ポートモレスビー"
+      },
+      {
+        "area": "Pacific/Wake",
+        "name": "ウェーク島"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Pacific/Midway",
+        "name": "Atol de Midway, Samoa Ocidental"
+      },
+      {
+        "area": "America/Adak",
+        "name": "Adak"
+      },
+      {
+        "area": "Pacific/Honolulu",
+        "name": "Havaí"
+      },
+      {
+        "area": "America/Anchorage",
+        "name": "Alasca"
+      },
+      {
+        "area": "America/Los_Angeles",
+        "name": "Costa Pacífica (EUA e Canadá)"
+      },
+      {
+        "area": "America/Boise",
+        "name": "Montanhas Rochosas (EUA e Canadá)"
+      },
+      {
+        "area": "America/Phoenix",
+        "name": "Arizona"
+      },
+      {
+        "area": "America/Chicago",
+        "name": "Região Central (EUA e Canadá)"
+      },
+      {
+        "area": "America/Indiana/Knox",
+        "name": "Indiana (Região Central)"
+      },
+      {
+        "area": "America/Indiana/Indianapolis",
+        "name": "Indiana (Costa Leste)"
+      },
+      {
+        "area": "America/New_York",
+        "name": "Costa Leste (EUA e Canadá)"
+      },
+      {
+        "area": "America/Puerto_Rico",
+        "name": "Georgetown, La Paz, San Juan"
+      },
+      {
+        "area": "Pacific/Guam",
+        "name": "Guam, Porto Moresby"
+      },
+      {
+        "area": "Pacific/Wake",
+        "name": "Ilhas Wake"
+      }
+    ]
+  },
+  "UY": {
+    "en": [
+      {
+        "area": "America/Montevideo",
+        "name": "Montevideo"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Montevideo",
+        "name": "Montevideo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Montevideo",
+        "name": "Montevideo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Montevideo",
+        "name": "モンテビデオ"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Montevideo",
+        "name": "Montevidéu"
+      }
+    ]
+  },
+  "UZ": {
+    "ja": [
+      {
+        "area": "Asia/Tashkent",
+        "name": "タシュケント"
+      }
+    ]
+  },
+  "VA": {
+    "en": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "de": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amsterdam, Berlin, Rom"
+      }
+    ],
+    "es": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Ámsterdam, Berlín, Roma"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amsterdam, Berlin, Rome"
+      }
+    ],
+    "it": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amsterdam, Berlino, Roma"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Europe/Vatican",
+        "name": "アムステルダム、ベルリン、ローマ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amsterdam, Berlijn, Rome"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Amesterdão, Berlim, Roma"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Europe/Vatican",
+        "name": "Амстердам, Берлин, Рим"
+      }
+    ]
+  },
+  "VC": {
+    "en": [
+      {
+        "area": "America/St_Vincent",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/St_Vincent",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/St_Vincent",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/St_Vincent",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/St_Vincent",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "VE": {
+    "en": [
+      {
+        "area": "America/Caracas",
+        "name": "Caracas"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Caracas",
+        "name": "Caracas"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Caracas",
+        "name": "Caracas"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Caracas",
+        "name": "カラカス"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Caracas",
+        "name": "Caracas"
+      }
+    ]
+  },
+  "VG": {
+    "en": [
+      {
+        "area": "America/Tortola",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/Tortola",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/Tortola",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/Tortola",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/Tortola",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "VI": {
+    "en": [
+      {
+        "area": "America/St_Thomas",
+        "name": "Atlantic Time (Caribbean)"
+      }
+    ],
+    "es": [
+      {
+        "area": "America/St_Thomas",
+        "name": "Horario del Atlántico (Caribe)"
+      }
+    ],
+    "fr": [
+      {
+        "area": "America/St_Thomas",
+        "name": "Atlantique (Caraïbes)"
+      }
+    ],
+    "ja": [
+      {
+        "area": "America/St_Thomas",
+        "name": "大西洋標準時（カリブ）"
+      }
+    ],
+    "pt": [
+      {
+        "area": "America/St_Thomas",
+        "name": "Atlântico (Caribe)"
+      }
+    ]
+  },
+  "VN": {
+    "ja": [
+      {
+        "area": "Asia/Ho_Chi_Minh",
+        "name": "バンコク、ハノイ、ジャカルタ"
+      }
+    ]
+  },
+  "YE": {
+    "ja": [
+      {
+        "area": "Asia/Aden",
+        "name": "クウェート、リヤド"
+      }
+    ]
+  },
+  "ZA": {
+    "en": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburgo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "マセル、ムババーネ、ヨハネスブルグ"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mbabane, Johannesburg"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Maseru, Mebabane, Joanesburgo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Johannesburg",
+        "name": "Масеру, Мбабане, Йоханнесбург"
+      }
+    ]
+  },
+  "ZM": {
+    "en": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "ルサカ、ハラレ、ハボローネ、マプト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Lusaca, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Lusaka",
+        "name": "Лусака, Хараре, Габороне, Мапуту"
+      }
+    ]
+  },
+  "ZW": {
+    "en": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "de": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "es": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "fr": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "it": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ja": [
+      {
+        "area": "Africa/Harare",
+        "name": "ルサカ、ハラレ、ハボローネ、マプト"
+      }
+    ],
+    "nl": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaka, Harare, Gaborone, Maputo"
+      }
+    ],
+    "pt": [
+      {
+        "area": "Africa/Harare",
+        "name": "Lusaca, Harare, Gaborone, Maputo"
+      }
+    ],
+    "ru": [
+      {
+        "area": "Africa/Harare",
+        "name": "Лусака, Хараре, Габороне, Мапуту"
+      }
+    ]
+  }
+}

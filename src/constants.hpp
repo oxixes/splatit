@@ -24,7 +24,7 @@
 #define US_TITLE_ID "0005000010176900"
 #define JP_TITLE_ID "0005000010162b00"
 
-#define FRIENDS_SERVER_BUILD "branch:origin/feature/45925_FixAutoReconnect build:3_10_11_2006_0"
+#define FRIENDS_SERVER_BUILD "branch:origin/project/nfs build:3_10_27_2006_0"
 #define SPLATOON_SERVER_BUILD "branch:origin/project/wup-agmj build:3_8_15_2004_0"
 
 #define BOSS_AES_KEY {0x39, 0x70, 0x57, 0x35, 0x58, 0x70, 0x34, 0x58, 0x37, 0x41, 0x7A, 0x30, 0x71, 0x5A, 0x70, 0x74};

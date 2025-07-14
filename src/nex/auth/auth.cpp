@@ -7,9 +7,6 @@
 #include "../types/common/rvConnectionData.hpp"
 #include "../types/auth/authenticationInfo.hpp"
 #include "authUtils.hpp"
-#include "../../constants.hpp"
-#include "../types/friendsSecure/NNAInfo.hpp"
-#include "../types/friendsSecure/nintendoPresenceV2.hpp"
 #include "../types/friendsSecure/comment.hpp"
 
 namespace nex::rmc {
@@ -29,14 +26,14 @@ AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup,
 
 void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> username) {
     // Check if username is a number
-    bool validUsername = std::all_of(username->begin(), username->end(), ::isdigit);
+    bool validUsername = std::ranges::all_of(*username, isdigit);
 
     // We convert the username, which is really the PID as a string, to an integer
-    uint32_t pid;
+    uint32_t pid = 0;
     if (validUsername) {
         try {
             pid = std::stoi(*username);
-        } catch (const std::out_of_range& e) {
+        } catch ([[maybe_unused]] const std::out_of_range& e) {
             validUsername = false;
         }
     }
@@ -51,7 +48,7 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
     if (validUsername) {
         auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
         db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
-            ->setContext(std::pair<ClientInfo, Request>(client, req))
+            ->setContext(std::pair(client, req))
             .then([username = std::move(username),
                     client, pid, req, res, this](std::any&& resultsAny) mutable {
 
@@ -124,7 +121,7 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
             sendMsg(client, res, params);
         });
     } else {
-        logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + (std::string) *username);
+        logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + static_cast<std::string>(*username));
 
         std::vector<T_ptr> params(5);
         std::unique_ptr<Result> retval = std::make_unique<Result>();
@@ -138,7 +135,6 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
         params[4] = std::make_unique<String>();
 
         sendMsg(client, res, params);
-        return;
     }
 }
 
@@ -165,17 +161,17 @@ void AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> us
     }
 
     // Check if username is a number
-    bool validUsername = std::all_of(username->begin(), username->end(), ::isdigit);
+    bool validUsername = std::ranges::all_of(*username, isdigit);
 
     // We convert the username, which is really the PID as a string, to an integer
     if (validUsername) {
         try {
             client.pid = std::stoi(*username);
-        } catch (const std::out_of_range& e) {}
+        } catch ([[maybe_unused]] const std::out_of_range& e) {}
     }
 
     std::string token = info.authToken;
-    if (!utils::checkJWT(token, base64JWTKey, SPLATOON_SERVER_ID, client, logger, logGroup)) {
+    if (!utils::checkJWT(token, base64JWTKey, serverId, client, logger, logGroup)) {
         logger->log(Logger::level::INFO, logGroup, "Invalid JWT token from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
 

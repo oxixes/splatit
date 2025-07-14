@@ -10,7 +10,7 @@ struct MoveOnlyCallable {
 };
 
 template<typename F>
-struct MoveOnlyCallableImpl : MoveOnlyCallable {
+struct MoveOnlyCallableImpl final : MoveOnlyCallable {
     F func;
     explicit MoveOnlyCallableImpl(F&& f) : func(std::move(f)) {}
     void operator()(std::any&& val) override { func(std::move(val)); }
@@ -71,7 +71,7 @@ public:
     using Callback = std::unique_ptr<MoveOnlyCallable>;
 
     explicit PromiseAll(std::vector<std::shared_ptr<Promise>> promises)
-            : promises(std::move(promises)), resolvedCount(0), results(this->promises.size()) {
+            : promises(std::move(promises)), results(this->promises.size()), resolvedCount(0) {
         auto self = this->shared_from_this();
         for (size_t i = 0; i < promises.size(); ++i) {
             if (context.has_value()) {

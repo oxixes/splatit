@@ -19,7 +19,7 @@ std::unique_ptr<Command> Database::craftVoidCommand(const std::string& command) 
         .resultTypes = {}
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GENERIC, std::any(cmd));
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GENERIC, std::any(cmd));
 
     return dbCommand;
 }
@@ -29,7 +29,7 @@ std::unique_ptr<Command> Database::craftGetUserByPIDCommand(uint32_t pid) {
         .pid = pid
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_PID,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_BY_PID,
                                                std::any(query));
 
     return dbCommand;
@@ -40,7 +40,7 @@ std::unique_ptr<Command> Database::craftGetUserByUsernameCommand(const std::stri
         .username = username
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_BY_USERNAME,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_BY_USERNAME,
                                                std::any(query));
 
     return dbCommand;
@@ -51,7 +51,7 @@ std::unique_ptr<Command> Database::craftGetGameServerAccessCommand(uint32_t pid)
         .pid = pid,
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_GAME_SERVER_ACCESS,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_GAME_SERVER_ACCESS,
                                                std::any(query));
 
     return dbCommand;
@@ -63,7 +63,7 @@ std::unique_ptr<Command> Database::craftInsertGameServerAccessCommand(uint32_t p
         .password = password
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::INSERT_GAME_SERVER_ACCESS,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_GAME_SERVER_ACCESS,
                                                std::any(data));
 
     return dbCommand;
@@ -74,7 +74,7 @@ std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
             .pid = pid
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_INFO,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_INFO,
                                                std::any(query));
 
     return dbCommand;
@@ -96,7 +96,7 @@ std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, bool
         .lastOnline = lastOnline
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::INSERT_USER_INFO,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_USER_INFO,
                                                std::any(data));
 
     return dbCommand;
@@ -120,7 +120,7 @@ std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std:
         .lastOnline = lastOnline
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::UPDATE_USER_INFO,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::UPDATE_USER_INFO,
                                                std::any(update));
 
     return dbCommand;
@@ -131,7 +131,7 @@ std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
             .pid = pid
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_FRIENDS_INFO,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_FRIENDS_INFO,
                                                std::any(query));
 
     return dbCommand;
@@ -142,7 +142,7 @@ std::unique_ptr<Command> Database::craftGetUserProfileCommand(uint32_t pid) {
             .pid = pid
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_USER_PROFILE,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_PROFILE,
                                                std::any(query));
 
     return dbCommand;
@@ -154,7 +154,22 @@ std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid,
             .deviceId = deviceId
     };
 
-    auto dbCommand = std::make_unique<Command>(db::DBCommandType::GET_DEVICE_ATTRIBUTES,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_DEVICE_ATTRIBUTES,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetAgreementCommand(const std::string& type, const std::string& country,
+                                                            const std::string& language, const std::optional<int> version) {
+    DBGetAgreementQuery query {
+        .type = type,
+        .country = country,
+        .language = language,
+        .version = version
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_AGREEMENT,
                                                std::any(query));
 
     return dbCommand;
@@ -162,13 +177,13 @@ std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid,
 
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
-        auto* db = new sqlite3Database(std::move(logger), config["path"].get<std::string>());
-        return std::shared_ptr<Database>((Database*) db);
-    } else {
-        logger->log(Logger::level::FAILURE, Logger::group::DB, "Database type " +
-                                                               config["type"].get<std::string>() + " is not supported.");
-        return nullptr;
+        auto* db = new sqlite3Database(logger, config["path"].get<std::string>());
+        return std::shared_ptr<Database>(static_cast<Database *>(db));
     }
+
+    logger->log(Logger::level::FAILURE, Logger::group::DB, "Database type " +
+                                                           config["type"].get<std::string>() + " is not supported.");
+    return nullptr;
 }
 
 std::shared_ptr<Promise> Database::runCommand(std::unique_ptr<Command> command,
@@ -257,6 +272,14 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::GET_DEVICE_ATTRIBUTES:
             // Get device attributes commands need the PID of the user to get (to get the attributes of the linked account).
             if (command->data.type() != typeid(DBDeviceAttributesQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_AGREEMENT:
+            // Get agreement commands need the type, country, language, and optionally the version of the agreement (latest if not specified).
+            if (command->data.type() != typeid(DBGetAgreementQuery)) {
                 return false;
             }
 
