@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "../exceptions.hpp"
+#include "../socket/sslSocket.hpp"
 
 namespace http {
 
@@ -12,6 +13,7 @@ Server::Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketMan
     this->socketMgr = std::move(socketMgr);
     this->keepAliveTimeout = keepAliveTimeout;
     this->mainSocketID = 0;
+    this->scheduler = std::make_shared<async::Scheduler>(queueCV);
 
     std::shared_ptr<sock::TCPSocket> socket;
     if (ssl) {
@@ -25,7 +27,7 @@ Server::Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketMan
     socket->setsockopt(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     struct sockaddr_in address = util::ipv4ToSockAddr(listenDir);
-    socket->bind((struct sockaddr*)&address, sizeof(address));
+    socket->bind(reinterpret_cast<struct sockaddr*>(&address), sizeof(address));
 
     mainSocket = socket;
 }
@@ -128,7 +130,7 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
             queueCV->notify_one();
             lock.unlock();
 
-            buffer.erase(buffer.begin(), buffer.begin() + (ssize_t) length);
+            buffer.erase(buffer.begin(), buffer.begin() + (std::ptrdiff_t) length);
             finish = false;
         } catch (NotCompleteException& e) {
             // Do nothing, wait for more data
@@ -155,20 +157,20 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
 void Server::serverThread() {
     while (true) {
         std::unique_lock lock(*queueMutex);
-        queueCV->wait(lock, [this] { return !requestsQueue.empty() || !promisesQueue->empty() || shouldStop; });
+        queueCV->wait(lock, [this] { return !requestsQueue.empty() || scheduler->hasTasks() || shouldStop; });
 
         if (shouldStop) return;
 
-        while (!promisesQueue->empty() && !shouldStop) {
-            auto promise = std::move(promisesQueue->front());
-            promisesQueue->pop();
+        lock.unlock();
+        while (scheduler->hasTasks() && !shouldStop) {
+            auto task = scheduler->getTask();
+            if (!task) break;
 
-            lock.unlock();
             try {
-                promise->resolve();
+                async::Scheduler::run(task);
             } catch (const std::exception& e) {
-                if (promise->hasContext()) {
-                    auto context = std::move(promise->getContext<std::pair<uint32_t, std::shared_ptr<Request>>>());
+                if (task->getContext().has_value()) {
+                    auto context = std::move(std::any_cast<std::pair<uint32_t, std::shared_ptr<Request>>>(task->getContext()));
                     std::unique_lock clientsLock(clientsMutex);
                     sock::IPv4Addr clientDir = clients[context.first];
                     clientsLock.unlock();
@@ -178,8 +180,8 @@ void Server::serverThread() {
                 logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while resolving a promise: " +
                                                                             std::string(e.what()));
             }
-            lock.lock();
         }
+        lock.lock();
 
         if (shouldStop) break;
 
@@ -188,14 +190,14 @@ void Server::serverThread() {
             requestsQueue.pop();
             lock.unlock();
 
-            std::function<void(Server*, std::unique_ptr<Context>)> handler = nullptr;
+            std::function<async::Task<void>(Server*, std::unique_ptr<Context>)> handler = nullptr;
 
             std::unique_lock routesLock(routesMutex);
             if (request.second->hasHeader("host")) {
-                if (routes.find(request.second->getHeader("host")[0]) != routes.end()
-                    && routes[request.second->getHeader("host")[0]].find(request.second->getPath()) != routes[request.second->getHeader("host")[0]].end()) {
+                if (routes.contains(request.second->getHeader("host")[0])
+                    && routes[request.second->getHeader("host")[0]].contains(request.second->getPath())) {
                     handler = routes[request.second->getHeader("host")[0]][request.second->getPath()];
-                } else if (regexRoutes.find(request.second->getHeader("host")[0]) != regexRoutes.end()) {
+                } else if (regexRoutes.contains(request.second->getHeader("host")[0])) {
                     for (auto& route : regexRoutes[request.second->getHeader("host")[0]]) {
                         if (std::regex_match(request.second->getPath(), route.first)) {
                             handler = route.second;
@@ -222,9 +224,12 @@ void Server::serverThread() {
                 sendError(request.first, HTTP_STATUS_NOT_FOUND, request.second, clientDir);
             } else {
                 try {
-                    std::unique_ptr<Context> context = std::make_unique<Context>(logger, clientDir, request.first, std::move(request.second), 0,
-                                                                                 promisesQueue, queueMutex, queueCV);
-                    handler(this, std::move(context));
+                    std::unique_ptr<Context> context = std::make_unique<Context>(logger, clientDir, request.first, request.second, 0,
+                                                                                 scheduler);
+                    auto task = std::move(handler(this, std::move(context)));
+                    task.setScheduler(scheduler);
+                    task.setContext(std::make_pair(request.first, request.second));
+                    scheduler->schedule(std::move(task));
                 } catch (std::exception& e) {
                     logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "Error while handling request: " + std::string(e.what()));
                     sendError(request.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, request.second, clientDir);
@@ -255,15 +260,18 @@ std::unique_ptr<Response> Server::getError(Version version, int status) {
 void Server::sendError(uint32_t sockId, int status, const std::shared_ptr<Request>& request, sock::IPv4Addr client) {
     std::unique_lock lock(routesMutex);
 
-    if (!request->hasHeader("host") || errorPages.find(request->getHeader("host")[0]) == errorPages.end()) {
+    if (!request->hasHeader("host") || !errorPages.contains(request->getHeader("host")[0])) {
         auto response = std::move(getError(request->getVersion(), status));
         socketMgr->send(sockId, std::move(response->serialize()));
         socketMgr->close(sockId);
     } else {
         std::unique_ptr<Context> context = std::make_unique<Context>(logger, client, sockId, request, status,
-                                                                     promisesQueue, queueMutex, queueCV);
+                                                                     scheduler);
         lock.unlock();
-        errorPages[request->getHeader("host")[0]](this, std::move(context));
+        auto task = std::move(errorPages[request->getHeader("host")[0]](this, std::move(context)));
+        task.setScheduler(scheduler);
+        task.setContext(std::make_pair(sockId, request));
+        scheduler->schedule(std::move(task));
     }
 }
 
@@ -297,29 +305,29 @@ void Server::stop() {
 
     std::unique_lock requestsQueueLock(*queueMutex);
     requestsQueue = std::queue<std::pair<uint32_t, std::shared_ptr<Request>>>();
-    promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
+    scheduler->clear();
 
     mainSocket = nullptr;
 }
 
-void Server::registerRoute(const std::string& host, const std::string& path, std::function<void(
+void Server::registerRoute(const std::string& host, const std::string& path, std::function<async::Task<void>(
         Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
-    if (routes.find(host) == routes.end()) {
-        routes[host] = std::unordered_map<std::string, std::function<void(Server*, std::shared_ptr<Context>)>>();
+    if (!routes.contains(host)) {
+        routes[host] = std::unordered_map<std::string, std::function<async::Task<void>(Server*, std::shared_ptr<Context>)>>();
     }
 
     routes[host][path] = std::move(func);
 }
 
-void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<void(
+void Server::registerRegexRoute(const std::string& host, const std::string& path, std::function<async::Task<void>(
         Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
 
     std::regex regexPath(path);
 
-    if (regexRoutes.find(host) == regexRoutes.end()) {
-        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<void(Server*, std::shared_ptr<Context>)>>>();
+    if (!regexRoutes.contains(host)) {
+        regexRoutes[host] = std::vector<std::pair<std::regex, std::function<async::Task<void>(Server*, std::shared_ptr<Context>)>>>();
     }
 
     regexRoutes[host].emplace_back(std::move(regexPath), std::move(func));
@@ -330,13 +338,13 @@ void Server::unregisterHost(const std::string& host) {
     routes.erase(host);
 }
 
-void Server::registerErrorPage(const std::string& host, std::function<void(
+void Server::registerErrorPage(const std::string& host, std::function<async::Task<void>(
         Server*, std::shared_ptr<Context>)> func) {
     std::unique_lock lock(routesMutex);
     errorPages[host] = std::move(func);
 }
 
-void Server::sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) {
+void Server::sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) const {
     socketMgr->send(context->clientSockId, std::move(response->serialize()));
     if (!keepAlive) socketMgr->close(context->clientSockId);
 }

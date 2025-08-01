@@ -356,7 +356,7 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
                 size_t size = packet->decode(data);
                 processPacket(addr, std::move(packet), data);
 
-                data.erase(data.begin(), data.begin() + (ssize_t) size);
+                data.erase(data.begin(), data.begin() + (std::ptrdiff_t) size);
             } else {
                 auto packet = std::make_shared<PacketV1>();
                 packet->accessKey = accessKey;
@@ -364,7 +364,7 @@ void Server::onData(sock::IPv4Addr addr, std::vector<uint8_t> data) {
                 size_t size = packet->decode(data);
                 processPacket(addr, std::move(packet), data);
 
-                data.erase(data.begin(), data.begin() + (ssize_t) size);
+                data.erase(data.begin(), data.begin() + (std::ptrdiff_t) size);
             }
         }
     } catch (const MalformedException& e) {

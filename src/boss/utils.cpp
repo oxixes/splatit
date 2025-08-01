@@ -4,6 +4,8 @@
 #include "../util/util.hpp"
 #include "../constants.hpp"
 
+#include <algorithm>
+
 namespace boss {
 
 json bossManifest;

@@ -9,7 +9,6 @@
 #include "../types/friendsSecure/NNAInfo.hpp"
 #include "../types/friendsSecure/nintendoPresenceV2.hpp"
 #include "../types/common/datetime.hpp"
-#include "../types/friendsSecure/friendInfo.hpp"
 #include "../types/friendsSecure/nintendoNotificationEvent.hpp"
 
 namespace nex::rmc {
@@ -26,13 +25,13 @@ public:
     ~FriendsSecureRMC() override = default;
 
 private:
-    void registerEx(ClientInfo client, Request req, std::unique_ptr<List<StationURL>> urls,
+    async::Task<void> registerEx(ClientInfo client, Request req, std::unique_ptr<List<StationURL>> urls,
                     std::unique_ptr<AnyDataHolder> data);
-    void updateAndGetAllInformation(ClientInfo client, Request req, std::unique_ptr<NNAInfo> nnaInfo,
+    async::Task<void> updateAndGetAllInformation(ClientInfo client, Request req, std::unique_ptr<NNAInfo> nnaInfo,
                                     std::unique_ptr<NintendoPresenceV2> presence, std::unique_ptr<Datetime> birthdate);
-    void updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence);
+    async::Task<void> updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence);
 
-    void onDisconnect(prudp::PRUDPAddress address) override;
+    async::Task<void> onDisconnect(prudp::PRUDPAddress address) override;
 
     void sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender, const AnyDataHolder& data);
 

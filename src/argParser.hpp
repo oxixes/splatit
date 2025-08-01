@@ -1,9 +1,9 @@
 #ifndef SPLATOON_SERVER_ARGPARSER_HPP
 #define SPLATOON_SERVER_ARGPARSER_HPP
 
-#include <getopt.h>
 #include <iostream>
 #include <memory>
+#include <getopt.h>
 
 #include "logger.hpp"
 

@@ -10,6 +10,9 @@
 #include <iostream>
 
 #include "tools.hpp"
+
+#include <random>
+
 #include "../util/util.hpp"
 #include "../constants.hpp"
 
@@ -313,8 +316,8 @@ bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
         return false;
     }
 
-    std::vector<uint8_t> signedData(jwt.begin(), jwt.begin() + (ssize_t) jwt.find_last_of('.'));
-    std::vector<uint8_t> signature = base64UrlDecode(jwt.substr((ssize_t) jwt.find_last_of('.') + 1));
+    std::vector<uint8_t> signedData(jwt.begin(), jwt.begin() + (std::ptrdiff_t) jwt.find_last_of('.'));
+    std::vector<uint8_t> signature = base64UrlDecode(jwt.substr((std::ptrdiff_t) jwt.find_last_of('.') + 1));
 
     std::vector<uint8_t> expectedSignature = HMAC_SHA256(base64Decode(base64Key), signedData);
 
@@ -323,12 +326,31 @@ bool verifyJWT(const std::string& base64Key, const std::string& jwt) {
 
 std::vector<uint8_t> genKey(size_t size) {
     std::vector<uint8_t> key(size);
-    int result = RAND_priv_bytes(key.data(), (int) key.size());
+    int result = RAND_priv_bytes(key.data(), static_cast<int>(key.size()));
     if (result != 1) {
         throw std::runtime_error("Failed to generate key: " + util::getOpenSSLError());
     }
 
     return key;
+}
+
+std::string genRandomString(size_t size, const std::string& charset) {
+    if (charset.empty()) {
+        throw std::invalid_argument("Charset cannot be empty");
+    }
+
+    std::string result;
+    result.reserve(size);
+
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution distribution(0, static_cast<int>(charset.size() - 1));
+
+    for (size_t i = 0; i < size; ++i) {
+        result += charset[distribution(generator)];
+    }
+
+    return result;
 }
 
 std::string genNintendoPasswordHash(uint32_t pid, const std::string& password) {
@@ -356,7 +378,7 @@ std::string genNintendoPasswordHash(uint32_t pid, const std::string& password) {
 
 std::string genSalt() {
     std::vector<uint8_t> salt(32);
-    int result = RAND_priv_bytes(salt.data(), (int) salt.size());
+    int result = RAND_priv_bytes(salt.data(), static_cast<int>(salt.size()));
     if (result != 1) {
         throw std::runtime_error("Failed to generate salt: " + util::getOpenSSLError());
     }

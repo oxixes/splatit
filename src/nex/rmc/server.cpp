@@ -4,14 +4,16 @@
 
 namespace nex::rmc {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) { }
+Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {
+    this->scheduler = std::make_shared<async::Scheduler>(queueCV);
+}
 
 void Server::registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, uint8_t listenPort, int workerCount) {
     server->registerRMCServer(listenPort,
-                              [this, workerCount]() { start(workerCount); },
-                              [this]() { stop(); },
-                              [this](prudp::PRUDPAddress addr, uint32_t pid) { onConnect(addr, pid); },
-                              [this](prudp::PRUDPAddress addr) { onDisconnect(addr); },
+                              [this, workerCount] { start(workerCount); },
+                              [this] { stop(); },
+                              [this](prudp::PRUDPAddress addr, uint32_t pid) { scheduleOnConnect(addr, pid); },
+                              [this](prudp::PRUDPAddress addr) { scheduleOnDisconnect(addr); },
                               [this](prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t substreamId,
                                        std::vector<uint8_t> data) { onData(addr, minor_version, substreamId, std::move(data)); });
 
@@ -20,15 +22,15 @@ void Server::registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, u
     };
 }
 
-void Server::onConnect(prudp::PRUDPAddress address, uint32_t pid) {
-    if (shouldStop) return;
+async::Task<void> Server::onConnect(prudp::PRUDPAddress address, uint32_t pid) {
+    if (shouldStop) co_return;
 
     std::unique_lock lock(pidMapMutex);
     pidMap[address] = pid;
 }
 
-void Server::onDisconnect(prudp::PRUDPAddress address) {
-    if (shouldStop) return;
+async::Task<void> Server::onDisconnect(prudp::PRUDPAddress address) {
+    if (shouldStop) co_return;
 
     std::unique_lock lock(pidMapMutex);
     pidMap.erase(address);
@@ -87,7 +89,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
         std::stringstream ss;
         ss << "Data: ";
         for (auto byte : data) {
-            ss << std::setw(2) << std::setfill('0') << std::hex << (int) byte;
+            ss << std::setw(2) << std::setfill('0') << std::hex << static_cast<int>(byte);
         }
 
         logger->log(Logger::level::DEBUG, logGroup, ss.str());
@@ -131,23 +133,35 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
     }
 }
 
+void Server::scheduleOnConnect(prudp::PRUDPAddress address, uint32_t pid) {
+    auto task = std::move(onConnect(address, pid));
+    task.setScheduler(scheduler);
+    scheduler->schedule(std::move(task));
+}
+
+void Server::scheduleOnDisconnect(prudp::PRUDPAddress address) {
+    auto task = std::move(onDisconnect(address));
+    task.setScheduler(scheduler);
+    scheduler->schedule(std::move(task));
+}
+
 void Server::serverThread() {
     while (true) {
         std::unique_lock lock(*queueMutex);
-        queueCV->wait(lock, [this] { return !requestsQueue.empty() || !promisesQueue->empty() || shouldStop; });
+        queueCV->wait(lock, [this] { return !requestsQueue.empty() || scheduler->hasTasks() || shouldStop; });
 
         if (shouldStop) break;
 
-        while (!promisesQueue->empty() && !shouldStop) {
-            auto promise = std::move(promisesQueue->front());
-            promisesQueue->pop();
+        lock.unlock();
+        while (scheduler->hasTasks() && !shouldStop) {
+            auto task = scheduler->getTask();
+            if (!task) break;
 
-            lock.unlock();
             try {
-                promise->resolve();
+                async::Scheduler::run(task);
             } catch (const std::exception& e) {
-                if (promise->hasContext()) {
-                    auto context = std::move(promise->getContext<std::pair<ClientInfo, Request>>());
+                if (task->getContext().has_value()) {
+                    auto context = std::any_cast<std::pair<ClientInfo, Request>>(task->getContext());
                     logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
                                                                   "(protocol id: " +
                                                                   std::to_string(context.second.protocolId) + ", extended protocol id: " +
@@ -156,43 +170,32 @@ void Server::serverThread() {
                                                                   std::string(e.what()));
                     sendMsg(context.first, createError(context.second, Error::CORE__EXCEPTION), {});
                 } else {
-                    logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while resolving a promise: " +
+                    logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while running a task: " +
                                                                   std::string(e.what()));
                 }
             }
-            lock.lock();
         }
+        lock.lock();
 
         if (shouldStop) break;
 
         while (!requestsQueue.empty() && !shouldStop) {
-            auto reqInfo= std::move(requestsQueue.front());
+            auto reqInfo = std::move(requestsQueue.front());
             requestsQueue.pop();
 
-            lock.unlock();
             auto callId = std::tuple(reqInfo.request.protocolId, reqInfo.request.extendedProtocolId,
                                      reqInfo.request.methodId);
             auto call = calls.find(callId);
 
             // This should never happen, as only existing request are added to the queue, but we check anyway
             if (call == calls.end()) {
-                lock.lock();
                 continue;
             }
 
-            try {
-                call->second.callback(reqInfo.client, reqInfo.request, std::move(reqInfo.params));
-            } catch (const std::exception& e) {
-                logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
-                                                              "(protocol id: " +
-                                                              std::to_string(reqInfo.request.protocolId) + ", extended protocol id: " +
-                                                              std::to_string(reqInfo.request.extendedProtocolId) + ", method id: " +
-                                                              std::to_string(reqInfo.request.methodId) + "): " +
-                                                              std::string(e.what()));
-
-                sendMsg(reqInfo.client, createError(reqInfo.request, Error::CORE__EXCEPTION), {});
-            }
-            lock.lock();
+            auto task = std::move(call->second.callback(reqInfo.client, reqInfo.request, std::move(reqInfo.params)));
+            task.setContext(std::make_pair(reqInfo.client, reqInfo.request));
+            task.setScheduler(scheduler);
+            scheduler->schedule(std::move(task));
         }
 
         if (shouldStop) break;
@@ -224,7 +227,7 @@ void Server::stop() {
 
     std::unique_lock queueLock(*queueMutex);
     requestsQueue = std::queue<RequestInfo>(); // Clear the queue
-    promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>(); // Reset the promises queue
+    scheduler->clear();
 }
 
 Response Server::createError(const Request& req, Error error) {
@@ -238,5 +241,11 @@ Response Server::createError(const Request& req, Error error) {
 
     return res;
 }
+
+void Server::scheduleArbitraryFunction(async::Task<void>&& task) const {
+    task.setScheduler(scheduler);
+    scheduler->schedule(std::move(task));
+}
+
 
 } // namespace nex::rmc

@@ -129,8 +129,8 @@ void Response::parseHTTPBody(const std::vector<uint8_t>& data, size_t headerLeng
     if (headers.find("transfer-encoding") != headers.end() && finalTransferEncoding == "chunked") {
         parseChunked(data, headers, length, headerLength, body);
     } else {
-        body.insert(body.end(), data.begin() + (ssize_t) headerLength, data.begin()
-            + (ssize_t) headerLength + (ssize_t) length);
+        body.insert(body.end(), data.begin() + static_cast<std::ptrdiff_t>(headerLength), data.begin()
+            + static_cast<std::ptrdiff_t>(headerLength) + static_cast<std::ptrdiff_t>(length));
     }
 }
 

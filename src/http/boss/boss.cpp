@@ -2,20 +2,24 @@
 
 #include <pugixml.hpp>
 
+#include "../../util/util.hpp"
+
 namespace boss {
+
+using namespace async;
 
 /*
  * Handler for GET https://npts.app.<domain>/p01/tasksheet/1/<titleId>/<tasksheetId>
  * Returns the appropiate tasksheet requested, based on the title id (which game)
  * and tasksheet id.
  */
-void p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                   const std::string& titleId, const std::string& tasksheetId,
-                   const std::shared_ptr<SettingsManager>& settingsMgr) {
+Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                         const std::string& titleId, const std::string& tasksheetId,
+                         const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     json tasksheetManifest = bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId];
@@ -40,7 +44,7 @@ void p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
 
             std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
             srv->sendResponse(std::move(ctx), std::move(res), false);
-            return;
+            co_return;
         }
 
         pugi::xml_node fileNode = files.append_child("File");
@@ -95,13 +99,13 @@ void p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
  * Returns the requested file. These URLs are obtained from the tasksheets returned by
  * p01_tasksheet.
  */
-void p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
-              const std::string& tasksheetId, const std::string& fileHash,
-              const std::shared_ptr<SettingsManager>& settingsMgr) {
+Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
+                    const std::string& tasksheetId, const std::string& fileHash,
+                    const std::shared_ptr<SettingsManager>& settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     fs::path filePath = settingsMgr->getBOSSPath() / bossManifest["tasksheets"][titleId]["tasksheets"][tasksheetId]["files"][fileHash]["path"];
@@ -109,7 +113,7 @@ void p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::
     if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     std::ifstream file(filePath, std::ios::binary);
@@ -145,11 +149,11 @@ void p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::
  * Handler for GET https://nppl.app.<domain>/p01/policylist/<console type>/<major version>/<country>
  * Returns the requested policy list.
  */
-void p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx) {
+Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     // Get the country
@@ -157,14 +161,14 @@ void p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx) {
     if (country.size() != 2) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     if (bossManifest["policyLists"].find(country) == bossManifest["policyLists"].end() &&
         bossManifest["policyLists"].find(bossManifest["backupPolicyCountry"]) == bossManifest["policyLists"].end()) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
-        return;
+        co_return;
     }
 
     json policyList = bossManifest["policyLists"].find(country) != bossManifest["policyLists"].end() ?
@@ -255,9 +259,10 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
         return p01_policylist(srv, std::move(ctx));
     });
 
-    std::function errorHandler = [](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+    std::function errorHandler = [](http::Server* srv, std::shared_ptr<http::Context> ctx) -> Task<void> {
         std::unique_ptr<http::Response> res = getError(ctx->status, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     };
 
     server->registerErrorPage("npts.app." + domain, errorHandler);

@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "google-explicit-constructor"
-
 #ifndef SPLATOON_SERVER_DATETIME_HPP
 #define SPLATOON_SERVER_DATETIME_HPP
 
@@ -102,5 +99,3 @@ namespace nex::rmc {
 } // namespace nex::rmc
 
 #endif //SPLATOON_SERVER_DATETIME_HPP
-
-#pragma clang diagnostic pop

@@ -7,9 +7,10 @@
 #include "../types/common/rvConnectionData.hpp"
 #include "../types/auth/authenticationInfo.hpp"
 #include "authUtils.hpp"
-#include "../types/friendsSecure/comment.hpp"
 
 namespace nex::rmc {
+
+using namespace async;
 
 AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<db::Database> db,
                  sock::IPv4Addr secureAddr, std::string serverId, std::vector<uint8_t> secureServerKey,
@@ -24,7 +25,7 @@ AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup,
     REGISTER_CALL(AuthRMC::requestTicket, 10, 3);
 }
 
-void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> username) {
+Task<void> AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> username) {
     // Check if username is a number
     bool validUsername = std::ranges::all_of(*username, isdigit);
 
@@ -45,82 +46,7 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
     res.methodId = req.methodId;
     res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
-    if (validUsername) {
-        auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
-        db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
-            ->setContext(std::pair(client, req))
-            .then([username = std::move(username),
-                    client, pid, req, res, this](std::any&& resultsAny) mutable {
-
-            std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
-
-            if (result->getStatus() != db::DBResultStatus::SUCCESS) {
-                logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(pid)
-                                                           + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                           + std::to_string(client.address.address.port));
-
-                sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-                return;
-            }
-
-            std::string userPasswd;
-            if (result->hasData()) userPasswd = result->getData<db::DBGameServerAccessData>().password;
-
-            bool validUsername = !userPasswd.empty();
-            if (!validUsername) {
-                logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + (std::string) *username);
-
-                std::vector<T_ptr> params(5);
-                std::unique_ptr<Result> retval = std::make_unique<Result>();
-                retval->code = Error::RENDEZ_VOUS__INVALID_USERNAME;
-                retval->success = false;
-                params[0] = std::move(retval);
-
-                params[1] = std::make_unique<PID>();
-                params[2] = std::make_unique<Buffer>();
-                params[3] = std::make_unique<RVConnectionData>(client.minorVersion);
-                params[4] = std::make_unique<String>();
-
-                sendMsg(client, res, params);
-                return;
-            }
-
-            logger->log(Logger::level::INFO, logGroup, "User with PID " + std::to_string(pid) + " requested a ticket successfully.");
-
-            // At this point, the user exists and we have the info we need to send them a ticket, so we do that
-            std::vector<T_ptr> params(5);
-            std::unique_ptr<Result> retval = std::make_unique<Result>();
-            retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
-            retval->success = true;
-
-            params[0] = std::move(retval);
-            params[1] = std::make_unique<PID>(0, pid);
-
-            std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
-            auto ticketData = prudp::kerberos::generateTicket(pid, userPasswdVec,
-                                                              2, secureServerKey, friends);
-
-            params[2] = std::make_unique<Buffer>(std::move(ticketData));
-
-            StationURL secureUrl;
-            secureUrl.proto = Protocol::PRUDPS;
-            secureUrl.ip = secureAddr;
-            secureUrl.port = secureAddr.port;
-            secureUrl.stream = 0xA;
-            secureUrl.sid = 1;
-            secureUrl.CID = 1;
-            secureUrl.type = 2;
-            secureUrl.PID = 2;
-
-            std::unique_ptr<RVConnectionData> connectionData = std::make_unique<RVConnectionData>(client.minorVersion);
-            connectionData->urlRegularProtocols = std::move(secureUrl);
-
-            params[3] = std::move(connectionData);
-            params[4] = std::make_unique<String>(build);
-
-            sendMsg(client, res, params);
-        });
-    } else {
+    if (!validUsername) {
         logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + static_cast<std::string>(*username));
 
         std::vector<T_ptr> params(5);
@@ -136,16 +62,85 @@ void AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> user
 
         sendMsg(client, res, params);
     }
+
+    auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
+    db::Result result = co_await spawn(scheduler, db->runCommand(std::move(dbCmd)));
+
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    std::string userPasswd;
+    if (result.hasData()) userPasswd = result.getData<db::DBGameServerAccessData>().password;
+
+    validUsername = !userPasswd.empty();
+    if (!validUsername) {
+        logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + static_cast<std::string>(*username));
+
+        std::vector<T_ptr> params(5);
+        auto retval = std::make_unique<Result>();
+        retval->code = Error::RENDEZ_VOUS__INVALID_USERNAME;
+        retval->success = false;
+        params[0] = std::move(retval);
+
+        params[1] = std::make_unique<PID>();
+        params[2] = std::make_unique<Buffer>();
+        params[3] = std::make_unique<RVConnectionData>(client.minorVersion);
+        params[4] = std::make_unique<String>();
+
+        sendMsg(client, res, params);
+        co_return;
+    }
+
+    logger->log(Logger::level::INFO, logGroup, "User with PID " + std::to_string(pid) + " requested a ticket successfully.");
+
+    // At this point, the user exists and we have the info we need to send them a ticket, so we do that
+    std::vector<T_ptr> params(5);
+    std::unique_ptr<Result> retval = std::make_unique<Result>();
+    retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
+    retval->success = true;
+
+    params[0] = std::move(retval);
+    params[1] = std::make_unique<PID>(0, pid);
+
+    std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
+    auto ticketData = prudp::kerberos::generateTicket(pid, userPasswdVec,
+                                                      2, secureServerKey, friends);
+
+    params[2] = std::make_unique<Buffer>(std::move(ticketData));
+
+    StationURL secureUrl;
+    secureUrl.proto = Protocol::PRUDPS;
+    secureUrl.ip = secureAddr;
+    secureUrl.port = secureAddr.port;
+    secureUrl.stream = 0xA;
+    secureUrl.sid = 1;
+    secureUrl.CID = 1;
+    secureUrl.type = 2;
+    secureUrl.PID = 2;
+
+    std::unique_ptr<RVConnectionData> connectionData = std::make_unique<RVConnectionData>(client.minorVersion);
+    connectionData->urlRegularProtocols = std::move(secureUrl);
+
+    params[3] = std::move(connectionData);
+    params[4] = std::make_unique<String>(build);
+
+    sendMsg(client, res, params);
 }
 
-void AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo) {
+Task<void> AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo) {
     if (authInfo->getType() != "AuthenticationInfo") {
         logger->log(Logger::level::WARN, logGroup, "Invalid data type for loginEx: " + authInfo->getType()
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
 
         sendMsg(client, createError(req, Error::CORE__INVALID_ARGUMENT), {});
-        return;
+        co_return;
     }
 
     AuthenticationInfo info(client.minorVersion);
@@ -157,14 +152,12 @@ void AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> us
                                                    + std::to_string(client.address.address.port));
 
         sendMsg(client, createError(req, Error::CORE__INVALID_ARGUMENT), {});
-        return;
+        co_return;
     }
 
     // Check if username is a number
-    bool validUsername = std::ranges::all_of(*username, isdigit);
-
     // We convert the username, which is really the PID as a string, to an integer
-    if (validUsername) {
+    if (std::ranges::all_of(*username, isdigit)) {
         try {
             client.pid = std::stoi(*username);
         } catch ([[maybe_unused]] const std::out_of_range& e) {}
@@ -183,7 +176,7 @@ void AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> us
         res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
         std::vector<T_ptr> params(5);
-        std::unique_ptr<Result> retval = std::make_unique<Result>();
+        auto retval = std::make_unique<Result>();
         retval->code = Error::CORE__ACCESS_DENIED;
         retval->success = false;
 
@@ -194,18 +187,16 @@ void AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<String> us
         params[4] = std::make_unique<String>();
 
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
 
     // Since the token is valid, we can just call login
-    login(client, req, std::move(username));
+    co_await login(client, req, std::move(username));
 }
 
-void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID> idSource, std::unique_ptr<PID> idTarget) {
+Task<void> AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID> idSource, std::unique_ptr<PID> idTarget) {
     bool validPid = true;
-    if (*idTarget != (uint32_t) 2) validPid = false; // 2 is the PID of the secure server
-
-    std::string userPasswd;
+    if (*idTarget != static_cast<uint32_t>(2)) validPid = false; // 2 is the PID of the secure server
 
     Response res;
     res.protocolId = req.protocolId;
@@ -214,63 +205,7 @@ void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID>
     res.methodId = req.methodId;
     res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
-    if (validPid) {
-        auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource);
-        db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
-            ->setContext(std::pair<ClientInfo, Request>(client, req))
-            .then([idSource = std::move(idSource),
-                    idTarget = std::move(idTarget),
-                    client, req, res, this](std::any&& resultsAny) mutable {
-
-            std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
-
-            if (result->getStatus() != db::DBResultStatus::SUCCESS) {
-                logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(*idSource)
-                                                           + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                           + std::to_string(client.address.address.port));
-
-                sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
-                return;
-            }
-
-            std::string userPasswd;
-            if (result->hasData()) userPasswd = result->getData<db::DBGameServerAccessData>().password;
-
-            bool validPid = !userPasswd.empty();
-            if (!validPid) {
-                logger->log(Logger::level::INFO, logGroup, "Invalid PID tried to request a ticket: "
-                                                           + std::to_string(*idSource) + ", target: " + std::to_string(*idTarget));
-
-                std::vector<T_ptr> params(2);
-                std::unique_ptr<Result> retval = std::make_unique<Result>();
-                retval->code = Error::CORE__ACCESS_DENIED;
-                retval->success = false;
-                params[0] = std::move(retval);
-                params[1] = std::make_unique<Buffer>();
-
-                sendMsg(client, res, params);
-                return;
-            }
-
-            logger->log(Logger::level::INFO, logGroup, "User with PID " + std::to_string(*idSource) + " requested a ticket successfully.");
-
-            // At this point, the user exists and we have the info we need to send them a ticket, so we do that
-            std::vector<T_ptr> params(2);
-            std::unique_ptr<Result> retval = std::make_unique<Result>();
-            retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
-            retval->success = true;
-
-            params[0] = std::move(retval);;
-
-            std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
-            auto ticketData = prudp::kerberos::generateTicket(*idSource, userPasswdVec,
-                                                              2, secureServerKey, friends);
-
-            params[1] = std::make_unique<Buffer>(ticketData);
-
-            sendMsg(client, res, params);
-        });
-    } else {
+    if (!validPid) {
         logger->log(Logger::level::INFO, logGroup, "Invalid PID tried to request a ticket, source: "
                                                    + std::to_string(*idSource) + ", target: " + std::to_string(*idTarget));
 
@@ -282,50 +217,81 @@ void AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_ptr<PID>
         params[1] = std::make_unique<Buffer>();
 
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
+
+    auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource);
+    db::Result result = co_await spawn(scheduler, db->runCommand(std::move(dbCmd)));
+
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(*idSource)
+                                                           + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                           + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    std::string userPasswd;
+    if (result.hasData()) userPasswd = result.getData<db::DBGameServerAccessData>().password;
+
+    validPid = !userPasswd.empty();
+    if (!validPid) {
+        logger->log(Logger::level::INFO, logGroup, "Invalid PID tried to request a ticket: "
+                                                   + std::to_string(*idSource) + ", target: " + std::to_string(*idTarget));
+
+        std::vector<T_ptr> params(2);
+        auto retval = std::make_unique<Result>();
+        retval->code = Error::CORE__ACCESS_DENIED;
+        retval->success = false;
+        params[0] = std::move(retval);
+        params[1] = std::make_unique<Buffer>();
+
+        sendMsg(client, res, params);
+        co_return;
+    }
+
+    logger->log(Logger::level::INFO, logGroup, "User with PID " + std::to_string(*idSource) + " requested a ticket successfully.");
+
+    // At this point, the user exists and we have the info we need to send them a ticket, so we do that
+    std::vector<T_ptr> params(2);
+    auto retval = std::make_unique<Result>();
+    retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
+    retval->success = true;
+
+    params[0] = std::move(retval);;
+
+    std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
+    auto ticketData = prudp::kerberos::generateTicket(*idSource, userPasswdVec,
+                                                      2, secureServerKey, friends);
+
+    params[1] = std::make_unique<Buffer>(ticketData);
+
+    sendMsg(client, res, params);
 }
 
-std::shared_ptr<Promise> AuthRMC::getOrRegisterUserPassword(uint32_t pid) {
-    std::shared_ptr<Promise> resultPromise = std::make_shared<Promise>();
-
+Task<std::optional<std::string>> AuthRMC::getOrRegisterUserPassword(uint32_t pid) const {
     auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
-    db->runCommand(std::move(dbCmd), queueMutex, queueCV, promisesQueue)
-        ->then([pid, resultPromise, this](std::any&& resultsAny) {
+    const db::Result result = co_await spawn(scheduler, db->runCommand(std::move(dbCmd)));
 
-        std::unique_ptr<db::Result> result = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) co_return std::nullopt;
 
-        if (result->getStatus() != db::DBResultStatus::SUCCESS) {
-            resultPromise->setResolveValue(std::move(std::optional<std::string>(std::nullopt)));
-            resultPromise->resolve();
-            return;
-        }
+    if (result.hasData()) {
+        co_return std::make_optional(result.getData<db::DBGameServerAccessData>().password);
+    }
 
-        if (result->hasData()) {
-            resultPromise->setResolveValue(std::move(std::optional(result->getData<db::DBGameServerAccessData>().password)));
-            resultPromise->resolve();
-        } else {
-            logger->log(Logger::level::INFO, logGroup, "Registering new user password for PID " + std::to_string(pid));
+    logger->log(Logger::level::INFO, logGroup, "Registering new user password for PID " + std::to_string(pid));
 
-            // Generate a new password for the user
-            std::string newPassword = utils::generateUserPassword();
-            auto insertCmd = db::Database::craftInsertGameServerAccessCommand(pid, newPassword);
-            db->runCommand(std::move(insertCmd), queueMutex, queueCV, promisesQueue)
-                ->then([resultPromise, newPassword](std::any&& resultsAny) {
+    // Generate a new password for the user
+    const std::string newPassword = utils::generateUserPassword();
+    auto insertCmd = db::Database::craftInsertGameServerAccessCommand(pid, newPassword);
+    const db::Result insertResult = co_await spawn(scheduler, db->runCommand(std::move(insertCmd)));
 
-                std::unique_ptr<db::Result> insertResult = std::make_unique<db::Result>(std::move(std::any_cast<db::Result>(std::move(resultsAny))));
+    if (insertResult.getStatus() == db::DBResultStatus::SUCCESS) {
+        co_return std::make_optional(newPassword);
+    }
 
-                if (insertResult->getStatus() == db::DBResultStatus::SUCCESS) {
-                    resultPromise->setResolveValue(std::move(std::optional(newPassword)));
-                } else {
-                    resultPromise->setResolveValue(std::move(std::optional<std::string>(std::nullopt)));
-                }
-                resultPromise->resolve();
-            });
-        }
-    });
-
-    return resultPromise;
+    co_return std::nullopt;
 }
 
 } // namespace nex::rmc

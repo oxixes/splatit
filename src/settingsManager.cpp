@@ -201,7 +201,9 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                             {
                                 {"address", "127.0.0.1:1201"},
                                 {"grpcAddress", "127.0.0.1:1999"}
-                            },
+                            }
+                        }},
+                        {"10162B00", {
                             {
                                 {"address", "127.0.0.1:1203"},
                                 {"grpcAddress", "127.0.0.1:1999"}
@@ -210,7 +212,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     }},
                     {"db", {
                         {"type", "SQLite3"},
-                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+                        {"path", (dataDirAbsPath/fs::path("account.db")).string()}
                     }},
                     {"allowRealWiiU", true},
                     {"allowGeneratedWiiU", true},
@@ -231,7 +233,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
             {"grpc", {
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
-                    {"port", 1299},
+                    {"port", 1999},
                     {"reflection", false}
             }},
             {"friendsAuth", {
@@ -245,7 +247,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     }},
                     {"db", {
                         {"type", "SQLite3"},
-                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+                        {"path", (dataDirAbsPath/fs::path("friendsAuth.db")).string()}
                     }}
             }},
             {"splatoonAuth", {
@@ -259,7 +261,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    }},
                    {"db", {
                        {"type", "SQLite3"},
-                       {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+                       {"path", (dataDirAbsPath/fs::path("splatoonAuth.db")).string()}
                    }}
             }},
             {"friendsSecure", {
@@ -269,7 +271,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"workerCount", 3},
                     {"db", {
                         {"type", "SQLite3"},
-                        {"path", (dataDirAbsPath/fs::path("db.db")).string()}
+                        {"path", (dataDirAbsPath/fs::path("friendsSecure.db")).string()}
                     }}
             }},
             {"splatoonSecure", {

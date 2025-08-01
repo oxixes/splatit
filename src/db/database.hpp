@@ -8,13 +8,12 @@
 #include <mutex>
 #include <condition_variable>
 #include <optional>
-#include <thread>
 
 #include <nlohmann/json.hpp>
 
 #include "../logger.hpp"
 #include "dbTypes.hpp"
-#include "../util/promise.hpp"
+#include "../util/task.hpp"
 
 using json = nlohmann::json;
 
@@ -36,7 +35,7 @@ enum class DBVersion {
     INITIAL
 };
 
-const DBVersion CURRENT_VERSION = DBVersion::INITIAL;
+constexpr DBVersion CURRENT_VERSION = DBVersion::INITIAL;
 
 enum class DBCommandType {
     GENERIC,
@@ -50,7 +49,22 @@ enum class DBCommandType {
     GET_FRIENDS_INFO,
     GET_USER_PROFILE,
     GET_DEVICE_ATTRIBUTES,
-    GET_AGREEMENT
+    GET_AGREEMENT,
+    GET_DEVICE,
+    GET_LATEST_PID,
+    GET_OWNERSHIP,
+    GET_LATEST_OWNERSHIP,
+    HAS_ACTIVE_OWNERSHIP,
+    INSERT_OR_UPDATE_DEVICE,
+    INSERT_OR_UPDATE_USER_AGREEMENT,
+    INSERT_OR_UPDATE_MII,
+    INSERT_OR_UPDATE_EMAIL,
+    INSERT_USER_PROFILE,
+    INSERT_OR_UPDATE_DEVICE_ATTRIBUTES,
+    INSERT_OR_UPDATE_OWNERSHIP,
+    UPDATE_USER_PROFILE,
+    DELETE_MII,
+    DELETE_EMAIL
 };
 
 enum class DBResultStatus {
@@ -67,6 +81,10 @@ struct DBGenericCommand {
     std::vector<DBDataType> bindTypes;
     std::vector<std::shared_ptr<DBData>> bindData;
     std::vector<DBDataType> resultTypes;
+};
+
+struct DBIdQuery {
+    int64_t id;
 };
 
 struct DBPidQuery {
@@ -102,6 +120,104 @@ struct DBGetAgreementQuery {
     std::string country;
     std::string language;
     std::optional<int> version;
+};
+
+struct DBOwnershipQuery {
+    uint32_t pid;
+    uint32_t deviceId;
+};
+
+struct DBDeviceInsertOrUpdateQuery {
+    uint32_t deviceId;
+    std::string language;
+    uint32_t platformId;
+    uint32_t region;
+    std::string serialNumber;
+    std::string systemVersion;
+    std::string type;
+    std::string updatedBy;
+    datetime_t lastUpdated;
+};
+
+struct DBUserAgreementInsertOrUpdateQuery {
+    uint32_t pid;
+    std::string type;
+    int version;
+    std::string country;
+    datetime_t signedAt;
+};
+
+struct DBMiiInsertOrUpdateQuery {
+    std::optional<int64_t> miiId;
+    std::string hash;
+    std::string name;
+    bool primary;
+    std::string data;
+};
+
+struct DBEmailInsertOrUpdateQuery {
+    std::optional<int64_t> emailId;
+    std::string email;
+    bool parent;
+    bool primary;
+    bool reachable;
+    std::string type;
+    std::string updatedBy;
+    bool validated;
+    datetime_t validatedAt;
+};
+
+struct DBUserProfileInsertQuery {
+    uint32_t pid;
+    std::string username;
+    std::string password;
+    int64_t emailId;
+    int64_t miiId;
+    bool gender;
+    int64_t region;
+    std::string tz;
+    std::string language;
+    bool active;
+    bool marketing;
+    bool offDevice;
+    std::string birthdate;
+    std::string country;
+    datetime_t created;
+    datetime_t updated;
+};
+
+struct DBUserProfileUpdateQuery {
+    uint32_t pid{};
+    std::optional<std::string> username;
+    std::optional<std::string> password;
+    std::optional<int64_t> emailId;
+    std::optional<int64_t> miiId;
+    std::optional<bool> gender;
+    std::optional<int64_t> region;
+    std::optional<std::string> tz;
+    std::optional<std::string> language;
+    std::optional<bool> active;
+    std::optional<bool> marketing;
+    std::optional<bool> offDevice;
+    std::optional<std::string> birthdate;
+    std::optional<std::string> country;
+    std::optional<datetime_t> created;
+    std::optional<datetime_t> updated;
+};
+
+struct DBDeviceAttributesInsertOrUpdateQuery {
+    uint32_t deviceId;
+    uint32_t pid;
+    std::string name;
+    std::string value;
+    datetime_t createdDate;
+};
+
+struct DBOwnershipInsertOrUpdateQuery {
+    uint32_t pid;
+    uint32_t deviceId;
+    std::string status;
+    datetime_t lastUpdated;
 };
 
 struct DBGenericResult {
@@ -195,13 +311,32 @@ struct DBAgreementData {
     std::string subText;
 };
 
+struct DBDeviceData {
+    uint32_t deviceId;
+    std::string language;
+    uint32_t platformId;
+    uint32_t region;
+    std::string serialNumber;
+    std::string systemVersion;
+    std::string type;
+    std::string updatedBy;
+    datetime_t lastUpdated;
+};
+
+struct DBOwnershipData {
+    uint32_t pid;
+    uint32_t deviceId;
+    std::string status;
+    datetime_t lastUpdated;
+};
+
 class Result {
 protected:
     std::any data;
     DBResultStatus status;
 
 public:
-    explicit Result(DBResultStatus status, std::any data) {
+    Result(const DBResultStatus status, std::any&& data) {
         this->status = status;
         this->data = std::move(data);
     }
@@ -231,9 +366,8 @@ public:
 
 class Command {
 protected:
-    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = nullptr;
-    std::shared_ptr<std::mutex> promisesMutex = nullptr;
-    std::shared_ptr<std::condition_variable> promisesCV = nullptr;
+    async::Task<Result>::promise_type* promise;
+    std::shared_ptr<Database> db;
     DBCommandType type;
     std::any data;
 
@@ -247,32 +381,35 @@ public:
     }
 };
 
-class Database {
+class Database : public std::enable_shared_from_this<Database> {
 protected:
     explicit Database(std::shared_ptr<Logger::Logger> logger, DBType type, DBVersion version);
 
     std::shared_ptr<Logger::Logger> logger;
 
-    std::queue<std::pair<std::unique_ptr<Command>, std::shared_ptr<Promise>>> commandQueue;
-    std::mutex commandQueueMutex;
+    std::shared_ptr<std::queue<std::unique_ptr<Command>>> commandQueue =
+        std::make_shared<std::queue<std::unique_ptr<Command>>>();
+    std::shared_ptr<std::mutex> commandQueueMutex = std::make_shared<std::mutex>();
 
     DBType dbType;
     DBVersion dbVersion;
 
-    std::atomic<bool> shouldStop = false;
+    std::shared_ptr<std::atomic<bool>> shouldStop = std::make_shared<std::atomic<bool>>(false);
 
     static bool verifyCommandArgs(const std::unique_ptr<Command>& command);
 public:
     virtual ~Database() = default;
+    virtual std::shared_ptr<Database> createSession() = 0;
 
     virtual bool init() = 0;
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual std::shared_ptr<Promise> queueCommand(std::unique_ptr<Command> command,
-                                                  std::shared_ptr<std::mutex> promisesMutex,
-                                                  std::shared_ptr<std::condition_variable> promisesCV,
-                                                  std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue) = 0;
+    virtual async::Task<Result> startTransaction() = 0;
+    virtual async::Task<Result> commitTransaction() = 0;
+    virtual async::Task<Result> rollbackTransaction() = 0;
+
+    virtual async::Task<Result> queueCommand(std::unique_ptr<Command> command) = 0;
     virtual void processQueue() = 0;
     virtual void waitForQueue() = 0;
 
@@ -299,13 +436,65 @@ public:
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
     static std::unique_ptr<Command> craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                              const std::string& language, std::optional<int> version = std::nullopt);
+    static std::unique_ptr<Command> craftGetDeviceCommand(uint32_t deviceId);
+    static std::unique_ptr<Command> craftGetLatestPidCommand();
+    static std::unique_ptr<Command> craftGetOwnershipCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftGetLatestOwnershipCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftInsertOrUpdateDeviceCommand(uint32_t deviceId, const std::string& language,
+                                                                     uint32_t platformId, uint32_t region,
+                                                                     const std::string& serialNumber,
+                                                                     const std::string& systemVersion,
+                                                                     const std::string& type,
+                                                                     const std::string& updatedBy,
+                                                                     datetime_t lastUpdated);
+    static std::unique_ptr<Command> craftInsertOrUpdateUserAgreementCommand(uint32_t pid, const std::string& type,
+                                                                            int version, const std::string& country,
+                                                                            datetime_t signedAt);
+    static std::unique_ptr<Command> craftInsertOrUpdateMiiCommand(std::optional<int64_t> miiId,
+                                                                  const std::string& hash, const std::string& name,
+                                                                  bool primary, const std::string& data);
+    static std::unique_ptr<Command> craftInsertOrUpdateEmailCommand(std::optional<int64_t> emailId,
+                                                                    const std::string& email, bool parent,
+                                                                    bool primary, bool reachable,
+                                                                    const std::string& type,
+                                                                    const std::string& updatedBy,
+                                                                    bool validated, datetime_t validatedAt);
+    static std::unique_ptr<Command> craftInsertProfileCommand(uint32_t pid, const std::string& username,
+                                                              const std::string& password, int64_t emailId,
+                                                              int64_t miiId, bool gender, int64_t region,
+                                                              const std::string& tz, const std::string& language,
+                                                              bool active, bool marketing, bool offDevice,
+                                                              const std::string& birthdate, const std::string& country,
+                                                              datetime_t created, datetime_t updated);
+    static std::unique_ptr<Command> craftInsertOrUpdateDeviceAttributesCommand(uint32_t deviceId, uint32_t pid,
+                                                                               const std::string& name,
+                                                                               const std::string& value,
+                                                                               datetime_t createdDate);
+    static std::unique_ptr<Command> craftInsertOrUpdateOwnershipCommand(uint32_t pid, uint32_t deviceId,
+                                                                        const std::string& status,
+                                                                        datetime_t lastUpdated);
+    static std::unique_ptr<Command> craftUpdateUserProfileCommand(uint32_t pid, std::optional<std::string> username,
+                                                                  std::optional<std::string> password,
+                                                                  std::optional<int64_t> emailId,
+                                                                  std::optional<int64_t> miiId,
+                                                                  std::optional<bool> gender,
+                                                                  std::optional<int64_t> region,
+                                                                  std::optional<std::string> tz,
+                                                                  std::optional<std::string> language,
+                                                                  std::optional<bool> active,
+                                                                  std::optional<bool> marketing,
+                                                                  std::optional<bool> offDevice,
+                                                                  std::optional<std::string> birthdate,
+                                                                  std::optional<std::string> country,
+                                                                  std::optional<datetime_t> created,
+                                                                  std::optional<datetime_t> updated);
+    static std::unique_ptr<Command> craftDeleteMiiCommand(int64_t miiId);
+    static std::unique_ptr<Command> craftDeleteEmailCommand(int64_t emailId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 
-    std::shared_ptr<Promise> runCommand(std::unique_ptr<Command> command,
-                                        std::shared_ptr<std::mutex> promisesMutex,
-                                        std::shared_ptr<std::condition_variable> promisesCV,
-                                        std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue);
+    async::Task<Result> runCommand(std::unique_ptr<Command> command);
 
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;

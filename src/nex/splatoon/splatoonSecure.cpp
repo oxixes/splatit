@@ -9,6 +9,8 @@
 
 namespace nex::rmc {
 
+using namespace async;
+
 SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db) :
                                         Server(std::move(logger)), db(std::move(db)) {
     logGroup = Logger::group::SPLATOON_SECURE;
@@ -48,9 +50,9 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     REGISTER_CALL(SplatoonSecureRMC::uploadCompetitionRankingScore, 112, 18);
 }
 
-void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req,
-                                                  std::unique_ptr<List<StationURL>> targets,
-                                                  std::unique_ptr<StationURL> probe) {
+Task<void> SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req,
+                                                        std::unique_ptr<List<StationURL>> targets,
+                                                        std::unique_ptr<StationURL> probe) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -63,7 +65,7 @@ void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req
             res.success = false;
             res.error = Error::CORE__INVALID_ARGUMENT;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         std::unique_lock clientsLock(registeredClientsMutex);
@@ -73,7 +75,7 @@ void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         ClientInfo targetClientInfo = targetClientInfoIt->second.client;
@@ -95,10 +97,10 @@ void SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Request req
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req,
-                                                 std::unique_ptr<UInt32> cid,
-                                                 std::unique_ptr<Bool> result,
-                                                 std::unique_ptr<UInt32> rtt) {
+Task<void> SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req,
+                                                       std::unique_ptr<UInt32> cid,
+                                                       std::unique_ptr<Bool> result,
+                                                       std::unique_ptr<UInt32> rtt) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -109,12 +111,13 @@ void SplatoonSecureRMC::reportNatTraversalResult(ClientInfo client, Request req,
     logger->log(Logger::level::DEBUG, logGroup, "Received NAT traversal result from " + std::to_string(client.pid) + ", success: " + std::to_string(*result) + ".");
 
     sendMsg(client, res, {});
+    co_return;
 }
 
-void SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req,
-                                            std::unique_ptr<UInt32> mapping,
-                                            std::unique_ptr<UInt32> filtering,
-                                            std::unique_ptr<UInt32> rtt) {
+Task<void> SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req,
+                                                  std::unique_ptr<UInt32> mapping,
+                                                  std::unique_ptr<UInt32> filtering,
+                                                  std::unique_ptr<UInt32> rtt) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -129,7 +132,7 @@ void SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     clientIt->second.lastReportedNATProperties = {*mapping, *filtering, *rtt};
@@ -137,8 +140,8 @@ void SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::secure_register(ClientInfo client, Request req,
-                                        std::unique_ptr<List<StationURL>> urls) {
+Task<void> SplatoonSecureRMC::secure_register(ClientInfo client, Request req,
+                                              std::unique_ptr<List<StationURL>> urls) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -160,7 +163,7 @@ void SplatoonSecureRMC::secure_register(ClientInfo client, Request req,
         params[2] = std::make_unique<StationURL>();
 
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
 
     std::unique_ptr<StationURL> urlPublic = std::make_unique<StationURL>();
@@ -198,9 +201,9 @@ void SplatoonSecureRMC::secure_register(ClientInfo client, Request req,
     registeredClients[client.pid] = std::move(clientInfo);
 }
 
-void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
-                                   std::unique_ptr<StationURL> oldUrl,
-                                   std::unique_ptr<StationURL> newUrl) {
+Task<void> SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
+                                         std::unique_ptr<StationURL> oldUrl,
+                                         std::unique_ptr<StationURL> newUrl) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -215,7 +218,7 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     auto& clientInfo = clientInfoIt->second;
@@ -223,7 +226,7 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
     const auto urlIt = std::ranges::find(clientInfo.urls, *oldUrl);
     if (urlIt == clientInfo.urls.end()) {
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     *urlIt = *newUrl;
@@ -231,9 +234,9 @@ void SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
-                                   std::unique_ptr<UInt32> id,
-                                   std::unique_ptr<qBuffer> report) {
+Task<void> SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
+                                         std::unique_ptr<UInt32> id,
+                                         std::unique_ptr<qBuffer> report) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -254,10 +257,11 @@ void SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
     std::cout << "Report: " << reportStr << std::endl;
 
     sendMsg(client, res, {});
+    co_return;
 }
 
-void SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req,
-                                            std::unique_ptr<UInt32> gId) {
+Task<void> SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req,
+                                                  std::unique_ptr<UInt32> gId) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -272,7 +276,7 @@ void SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req,
     if (sessionIt == matchmakeSessions.end() || sessionIt->second.session->ownerPid != client.pid) {
         params[0] = std::make_unique<Bool>(0, false);
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
 
     unregisterGathering_internal(*gId, client.pid);
@@ -281,8 +285,8 @@ void SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req,
     sendMsg(client, res, params);
 }
 
-void SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
-                                       std::unique_ptr<UInt32> id) {
+Task<void> SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
+                                             std::unique_ptr<UInt32> id) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -304,7 +308,7 @@ void SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
         params[1] = std::move(data);
 
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
 
     params[0] = std::make_unique<Bool>(0, true);
@@ -318,8 +322,8 @@ void SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
     sendMsg(client, res, params);
 }
 
-void SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req,
-                                       std::unique_ptr<UInt32> gId) {
+Task<void> SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req,
+                                             std::unique_ptr<UInt32> gId) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -335,7 +339,7 @@ void SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, params);
-        return;
+        co_return;
     }
 
     auto& sessionInfo = sessionIt->second;
@@ -361,9 +365,9 @@ void SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req,
     sendMsg(client, res, params);
 }
 
-void SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
-                                          std::unique_ptr<UInt32> gId,
-                                          std::unique_ptr<Bool> migrateOwner) {
+Task<void> SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
+                                                std::unique_ptr<UInt32> gId,
+                                                std::unique_ptr<Bool> migrateOwner) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -379,7 +383,7 @@ void SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     auto& sessionInfo = sessionIt->second;
@@ -388,7 +392,7 @@ void SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     sessionInfo.session->hostPid = client.pid;
@@ -414,10 +418,10 @@ void SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
     }
 }
 
-void SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req,
-                                                  std::unique_ptr<UInt32> gId,
-                                                  std::unique_ptr<List<PID>> potentialNewOwners,
-                                                  std::unique_ptr<Bool> participantsOnly) {
+Task<void> SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req,
+                                                        std::unique_ptr<UInt32> gId,
+                                                        std::unique_ptr<List<PID>> potentialNewOwners,
+                                                        std::unique_ptr<Bool> participantsOnly) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -433,7 +437,7 @@ void SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     auto& sessionInfo = sessionIt->second;
@@ -442,7 +446,7 @@ void SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     std::set<uint32_t> consideredOwners;
@@ -463,7 +467,7 @@ void SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_VOID; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     uint32_t newOwnerPid = *consideredOwners.begin();
@@ -482,9 +486,9 @@ void SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Request req
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::endParticipation(ClientInfo client, Request req,
-                                         std::unique_ptr<UInt32> gId,
-                                         std::unique_ptr<String> msg) {
+Task<void> SplatoonSecureRMC::endParticipation(ClientInfo client, Request req,
+                                               std::unique_ptr<UInt32> gId,
+                                               std::unique_ptr<String> msg) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -499,7 +503,7 @@ void SplatoonSecureRMC::endParticipation(ClientInfo client, Request req,
     if (sessionIt == matchmakeSessions.end() || !sessionIt->second.players.contains(client.pid)) {
         params[0] = std::make_unique<Bool>(0, false);
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     removePlayerFromSession(*gId, client.pid, *msg);
@@ -507,8 +511,8 @@ void SplatoonSecureRMC::endParticipation(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req,
-                                           std::unique_ptr<UInt32> gId) {
+Task<void> SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req,
+                                                 std::unique_ptr<UInt32> gId) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -523,14 +527,14 @@ void SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (sessionIt->second.session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     sessionIt->second.session->openParticipation = false;
@@ -538,8 +542,8 @@ void SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::openParticipation(ClientInfo client, Request req,
-                                          std::unique_ptr<UInt32> gId) {
+Task<void> SplatoonSecureRMC::openParticipation(ClientInfo client, Request req,
+                                                std::unique_ptr<UInt32> gId) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -554,14 +558,14 @@ void SplatoonSecureRMC::openParticipation(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (sessionIt->second.session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     sessionIt->second.session->openParticipation = true;
@@ -569,10 +573,10 @@ void SplatoonSecureRMC::openParticipation(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request req,
-                                                   std::unique_ptr<UInt32> gId,
-                                                   std::unique_ptr<UInt32> attribIndex,
-                                                   std::unique_ptr<UInt32> newValue) {
+Task<void> SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request req,
+                                                         std::unique_ptr<UInt32> gId,
+                                                         std::unique_ptr<UInt32> attribIndex,
+                                                         std::unique_ptr<UInt32> newValue) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -587,14 +591,14 @@ void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request re
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (sessionIt->second.session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (*attribIndex < static_cast<uint32_t>(sessionIt->second.session->attributes.size())) {
@@ -605,8 +609,8 @@ void SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Request re
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req,
-                                           std::unique_ptr<List<PID>> pids) {
+Task<void> SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req,
+                                                 std::unique_ptr<List<PID>> pids) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -634,11 +638,12 @@ void SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req,
     params[0] = std::move(sessions);
 
     sendMsg(client, res, params);
+    co_return;
 }
 
-void SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req,
-                                            std::unique_ptr<UInt32> gId,
-                                            std::unique_ptr<UInt8> score) {
+Task<void> SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req,
+                                                  std::unique_ptr<UInt32> gId,
+                                                  std::unique_ptr<UInt8> score) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -653,14 +658,14 @@ void SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req,
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (sessionIt->second.session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     sessionIt->second.session->progressScore = *score;
@@ -668,8 +673,8 @@ void SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req,
     sendMsg(client, res, {});
 }
 
-void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Request req,
-                                                        std::unique_ptr<CreateMatchmakeSessionParam> param) {
+Task<void> SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Request req,
+                                                              std::unique_ptr<CreateMatchmakeSessionParam> param) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -685,14 +690,14 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (static_cast<uint32_t>(param->srcMatchmakeSession.maxParticipants) < param->additionalParticipants.size() + 1) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_FULL; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     logger->log(Logger::level::DEBUG, logGroup, "Creating matchmake session with " + std::to_string(param->additionalParticipants.size()) + " additional participants.");
@@ -714,7 +719,7 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         playerPids.push_back(pid);
@@ -749,8 +754,8 @@ void SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client, Reque
     }
 }
 
-void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request req,
-                                                      std::unique_ptr<JoinMatchmakeSessionParam> param) {
+Task<void> SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request req,
+                                                            std::unique_ptr<JoinMatchmakeSessionParam> param) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -765,7 +770,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     auto sessionIt = matchmakeSessions.find(param->gid);
@@ -773,7 +778,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     auto&[session, players] = sessionIt->second;
@@ -782,21 +787,21 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_FULL;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (!session->openParticipation) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__SESSION_CLOSED;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (session->userPasswordEnabled && param->userPassword != session->userPassword) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__MATCHMAKE_SESSION_USER_PASSWORD_UNMATCH;
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     std::vector<uint32_t> playerPids;
@@ -807,7 +812,7 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         playerPids.push_back(pid);
@@ -848,8 +853,8 @@ void SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, Request
     }
 }
 
-void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Request req,
-                                                        std::unique_ptr<AutoMatchmakeParam> param) {
+Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Request req,
+                                                              std::unique_ptr<AutoMatchmakeParam> param) {
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -865,7 +870,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
-        return;
+        co_return;
     }
 
     if (param->gidForParitipationCheck != UInt32(0)) {
@@ -875,7 +880,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             res.success = false;
             res.error = Error::RENDEZ_VOUS__INVALID_GID;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         auto& sessionInfo = sessionIt->second;
@@ -883,7 +888,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             res.success = false;
             res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
     }
 
@@ -894,7 +899,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
 
         bool foundGathering = false;
@@ -912,7 +917,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             res.success = false;
             res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
     }
 
@@ -1009,7 +1014,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
             if (filter(val)) {
                 uint32_t sessionExp = val.session->attributes[1];
                 uint32_t userExp = param->srcMatchmakeSession.attributes[1];
-                validSessions.emplace(abs(static_cast<int64_t>(sessionExp) - userExp), val);
+                validSessions.emplace(static_cast<uint32_t>(abs(static_cast<int64_t>(sessionExp) - userExp)), val);
             }
         } catch (const std::logic_error& e) {
             res.success = false;
@@ -1020,7 +1025,7 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
                         std::string(e.what()));
 
             sendMsg(client, res, {});
-            return;
+            co_return;
         }
     }
 
@@ -1101,9 +1106,8 @@ void SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client, Reque
 //    }
 }
 
-void SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Request req,
-                                                   std::unique_ptr<CompetitionRankingGetParam> param)
-{
+Task<void> SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Request req,
+                                                         std::unique_ptr<CompetitionRankingGetParam> param) {
     // TODO We don't know yet what this should return, so for debugging purposes, we'll just return a dummy value.
     logger->log(Logger::level::DEBUG, logGroup, "getCompetitionRankingScore called with param: " + param->toString());
 
@@ -1155,10 +1159,11 @@ void SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Request re
     logger->log(Logger::level::DEBUG, logGroup, "Returning dummy competition ranking score for client " + std::to_string(client.pid) + ": " + scores->toString());
 
     sendMsg(client, res, params);
+    co_return;
 }
 
-void SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, Request req,
-                                                      std::unique_ptr<CompetitionRankingUploadScoreParam> param) {
+Task<void> SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, Request req,
+                                                            std::unique_ptr<CompetitionRankingUploadScoreParam> param) {
     logger->log(Logger::level::DEBUG, logGroup, "UploadCompetitionRankingScore called with param: " + param->toString());
 
     Response res;
@@ -1172,9 +1177,10 @@ void SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, Request
     params[0] = std::make_unique<Bool>(client.minorVersion, true);
 
     sendMsg(client, res, params);
+    co_return;
 }
 
-void SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
+Task<void> SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     std::unique_lock sessionsMutex(matchmakeSessionsMutex);
     std::unique_lock clientLock(registeredClientsMutex);
     std::unique_lock pidMapLock(pidMapMutex);
@@ -1190,6 +1196,7 @@ void SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
 
     clientLock.unlock();
     Server::onDisconnect(address);
+    co_return;
 }
 
 uint32_t SplatoonSecureRMC::getNewGatheringId() {

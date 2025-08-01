@@ -3,6 +3,14 @@ project(splatoon_server)
 
 set(CMAKE_CXX_STANDARD 20)
 
+if(MSVC)
+    add_definitions(-D_WIN32_WINNT=0x0A00)
+    add_definitions(-DNOMINMAX)
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
+endif()
+
 add_executable(splatoon_server)
 
 # Libraries setup
@@ -20,9 +28,13 @@ target_link_libraries(splatoon_server PRIVATE pugixml::pugixml)
 find_package(SQLite3 REQUIRED)
 target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 
+find_package(unofficial-getopt-win32 REQUIRED)
+target_link_libraries(splatoon_server PRIVATE unofficial::getopt-win32::getopt)
+
 add_subdirectory(lib/json-schema-validator)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)
 
+# TODO Automate downloading windows zones file on windows
 find_package(date CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE date::date date::date-tz)
 

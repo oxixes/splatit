@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "google-explicit-constructor"
-
 #ifndef SPLATOON_SERVER_STRING_HPP
 #define SPLATOON_SERVER_STRING_HPP
 
@@ -71,5 +68,3 @@ namespace nex::rmc {
 } // namespace nex::rmc
 
 #endif //SPLATOON_SERVER_STRING_HPP
-
-#pragma clang diagnostic pop

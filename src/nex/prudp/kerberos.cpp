@@ -36,9 +36,9 @@ void decryptConnectRequest(const std::vector<uint8_t>& ticket, const std::vector
 
     // We process the ticket data first
     if (ticketData.size() < 16) throw std::runtime_error("Ticket data is too short");
-    std::vector<uint8_t> ticketDataNoMac(ticketData.begin(), ticketData.begin() + (ssize_t) ticketData.size() - 16);
+    std::vector<uint8_t> ticketDataNoMac(ticketData.begin(), ticketData.begin() + (std::ptrdiff_t) ticketData.size() - 16);
     std::vector<uint8_t> mac = crypto::HMAC_MD5(targetKey, ticketDataNoMac);
-    std::vector<uint8_t> ticketMac(ticketData.begin() + (ssize_t) ticketData.size() - 16, ticketData.end());
+    std::vector<uint8_t> ticketMac(ticketData.begin() + (std::ptrdiff_t) ticketData.size() - 16, ticketData.end());
     if (mac != ticketMac) throw std::runtime_error("Ticket MAC is invalid");
 
     ARC4 arc4(targetKey);
@@ -59,9 +59,9 @@ void decryptConnectRequest(const std::vector<uint8_t>& ticket, const std::vector
 
     // Now we process the request data
     if (requestData.size() < 16) throw std::runtime_error("Request data is too short");
-    std::vector<uint8_t> requestDataNoMac(requestData.begin(), requestData.begin() + (ssize_t) requestData.size() - 16);
+    std::vector<uint8_t> requestDataNoMac(requestData.begin(), requestData.begin() + (std::ptrdiff_t) requestData.size() - 16);
     mac = crypto::HMAC_MD5(outSessionKey, requestDataNoMac);
-    std::vector<uint8_t> requestMac(requestData.begin() + (ssize_t) requestData.size() - 16, requestData.end());
+    std::vector<uint8_t> requestMac(requestData.begin() + (std::ptrdiff_t) requestData.size() - 16, requestData.end());
     if (mac != requestMac) throw std::runtime_error("Request MAC is invalid");
 
     arc4 = ARC4(outSessionKey);

@@ -44,6 +44,8 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
             sqlCmds.emplace_back("CREATE TABLE user_agreements (pid INTEGER NOT NULL, type TEXT NOT NULL, version INTEGER NOT NULL, "
                                    "country TEXT NOT NULL, signed_date TEXT NOT NULL, PRIMARY KEY (pid, type, version, country), "
                                    "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_active_user ON ownerships(pid) WHERE status = 'ACTIVE';");
             sqlCmds.emplace_back("COMMIT;");
             break;
     }

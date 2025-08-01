@@ -18,9 +18,9 @@ byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterF
     std::shared_ptr<byaml::StringNode> datetime = std::make_shared<byaml::StringNode>(nowStr);
     std::shared_ptr<byaml::BoolNode> disconnectByMemoryHash = std::make_shared<byaml::BoolNode>(DISCONNECT_BY_MEMORY_HASH);
 
-    std::vector<uint32_t> maps = (std::vector<uint32_t>) MAPS;
-    std::vector<std::string> rules = (std::vector<std::string>) RULES;
-    std::vector<uint32_t> weaponSets = (std::vector<uint32_t>) WEAPON_SETS;
+    std::vector<uint32_t> maps = MAPS;
+    std::vector<std::string> rules = RULES;
+    std::vector<uint32_t> weaponSets = WEAPON_SETS;
 
     std::vector<std::shared_ptr<byaml::Node>> mapsFirstAppearance;
     for (uint32_t map : maps) {

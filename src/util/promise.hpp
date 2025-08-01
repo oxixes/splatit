@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <any>
+#include <memory>
+#include <iostream>
 
 struct MoveOnlyCallable {
     virtual void operator()(std::any&&) = 0;
@@ -19,8 +21,6 @@ struct MoveOnlyCallableImpl final : MoveOnlyCallable {
 class Promise {
 public:
     using Callback = std::unique_ptr<MoveOnlyCallable>;
-
-    Promise() = default;
 
     template<typename F>
     void then(F&& then) {
@@ -70,30 +70,18 @@ class PromiseAll : public std::enable_shared_from_this<PromiseAll> {
 public:
     using Callback = std::unique_ptr<MoveOnlyCallable>;
 
-    explicit PromiseAll(std::vector<std::shared_ptr<Promise>> promises)
-            : promises(std::move(promises)), results(this->promises.size()), resolvedCount(0) {
-        auto self = this->shared_from_this();
-        for (size_t i = 0; i < promises.size(); ++i) {
-            if (context.has_value()) {
-                promises[i]->setContext(context);
-            }
+    static std::shared_ptr<PromiseAll> create(std::vector<std::shared_ptr<Promise>> promises) {
+        auto instance = std::shared_ptr<PromiseAll>(new PromiseAll(std::move(promises)));
+        instance->initializePromises();
 
-            promises[i]->then([self, i](std::any&& val) {
-                self->results[i] = std::move(val);
-                if (++self->resolvedCount == self->promises.size()) {
-                    self->resolved = true;
-                    if (self->callback) {
-                        (*self->callback)(std::move(self->results));
-                    }
-                }
-            });
-        }
+        return instance;
     }
 
     template<typename F>
     void then(F&& then) {
         callback = std::make_unique<MoveOnlyCallableImpl<F>>(std::forward<F>(then));
         if (resolved && callback) {
+            promises.clear();
             (*callback)(std::move(results));
         }
     }
@@ -101,6 +89,10 @@ public:
     template<typename U>
     PromiseAll& setContext(U&& ctx) {
         context = std::forward<U>(ctx);
+
+        for (auto& promise : promises) {
+            promise->setContext(context);
+        }
         return *this;
     }
 
@@ -110,13 +102,31 @@ public:
     }
 
 private:
+    explicit PromiseAll(std::vector<std::shared_ptr<Promise>> promises)
+            : promises(std::move(promises)), results(this->promises.size()), resolvedCount(0) {}
+
+    void initializePromises() {
+        auto self = this->shared_from_this();
+        for (size_t i = 0; i < promises.size(); ++i) {
+            promises[i]->then([self, i](std::any&& val) {
+                self->results[i] = std::move(val);
+                if (++self->resolvedCount == self->promises.size()) {
+                    self->resolved = true;
+                    if (self->callback) {
+                        self->promises.clear();
+                        (*self->callback)(std::move(self->results));
+                    }
+                }
+            });
+        }
+    }
+
     std::vector<std::shared_ptr<Promise>> promises;
     std::vector<std::any> results;
     size_t resolvedCount;
     Callback callback;
 
     bool resolved = false;
-
     std::any context;
 };
 

@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <cstring>
+#include <algorithm>
 
 namespace boss::bfres {
 

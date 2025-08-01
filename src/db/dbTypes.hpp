@@ -11,7 +11,8 @@ enum class DBDataType {
     INTEGER,
     STRING,
     BLOB,
-    DATETIME
+    DATETIME,
+    NULL_T
 };
 
 class DBData {
@@ -49,6 +50,11 @@ typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
 class DBDateTime : public DBData {
 public:
     explicit DBDateTime(datetime_t data) : DBData(data, DBDataType::DATETIME) {}
+};
+
+class DBNull : public DBData {
+public:
+    explicit DBNull() : DBData(nullptr, DBDataType::NULL_T) {}
 };
 
 

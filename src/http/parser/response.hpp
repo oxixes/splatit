@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <span>
+#include <memory>
 
 #include "common.hpp"
 #include "status_codes.hpp"

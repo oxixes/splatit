@@ -4,6 +4,21 @@
 
 namespace grpcimpl::auth::v1 {
 
+using namespace async;
+
+Task<void> completeGetGameServerCredentials(grpc::ServerUnaryReactor* reactor, GetGameServerCredentialsResponse* reply,
+                                            const GetGameServerCredentialsRequest* request, std::shared_ptr<nex::rmc::AuthRMC> authRMC) {
+    std::optional<std::string> password = co_await authRMC->getOrRegisterUserPassword(request->pid());
+    if (password.has_value()) {
+        reply->set_success(true);
+        reply->set_password(*password);
+    } else {
+        reply->set_success(false);
+    }
+
+    reactor->Finish(grpc::Status::OK);
+}
+
 grpc::ServerUnaryReactor* AuthServiceImpl::GetGameServerCredentials(grpc::CallbackServerContext* context,
                                                                     const GetGameServerCredentialsRequest* request,
                                                                     GetGameServerCredentialsResponse* reply) {
@@ -25,19 +40,8 @@ grpc::ServerUnaryReactor* AuthServiceImpl::GetGameServerCredentials(grpc::Callba
         reply->set_success(false);
         reactor->Finish(grpc::Status::OK);
     } else {
-        authRMC->getOrRegisterUserPassword(request->pid())->then([reply, reactor](std::any&& passwordAny) {
-
-            auto password = std::any_cast<std::optional<std::string>>(passwordAny);
-
-            if (password.has_value()) {
-                reply->set_success(true);
-                reply->set_password(*password);
-            } else {
-                reply->set_success(false);
-            }
-
-            reactor->Finish(grpc::Status::OK);
-        });
+        // Schedule the task to complete the request
+        authRMC->scheduleArbitraryFunction(completeGetGameServerCredentials(reactor, reply, request, authRMC));
     }
 
     return reactor;

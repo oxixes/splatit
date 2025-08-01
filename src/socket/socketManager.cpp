@@ -266,7 +266,8 @@ uint64_t SocketManager::process(uint64_t ms) {
             std::chrono::system_clock::now().time_since_epoch()).count();
 
     socketsLock.lock();
-    for (auto socket = sockets.begin(); socket != sockets.end(); socket++) {
+    std::vector<uint32_t> socketsToClose;
+    for (auto socket = sockets.begin(); socket != sockets.end();) {
         // Check for keep alive timeouts
         if (socket->second.keepAliveTimeout > 0 && socket->second.keepAliveTimeout < now) {
             if (socket->second.type == SocketType::TCP_CONN) {
@@ -277,6 +278,8 @@ uint64_t SocketManager::process(uint64_t ms) {
         } else if (socket->second.keepAliveTimeout > 0 && socket->second.keepAliveTimeout - now < nextTimeout) {
             nextTimeout = socket->second.keepAliveTimeout - now;
         }
+
+        if (socket != sockets.end()) ++socket;
     }
 
     // Check for previously not closed sockets because of data in the send buffer and sockets that haven't been closed
@@ -384,7 +387,7 @@ void SocketManager::send(uint32_t socketId) {
 
     if (send(socketId, socketInfo->tcpSendBuffer)) {
         socketInfo->tcpSendBuffer.erase(socketInfo->tcpSendBuffer.begin(),
-                                        socketInfo->tcpSendBuffer.begin() + (ssize_t) oldSize);
+                                        socketInfo->tcpSendBuffer.begin() + (std::ptrdiff_t) oldSize);
     }
 }
 

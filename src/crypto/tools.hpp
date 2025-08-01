@@ -36,8 +36,10 @@ std::string signJWT(const std::string& base64Key, const json& payload);
 bool verifyJWT(const std::string& base64Key, const std::string& jwt);
 
 std::vector<uint8_t> genKey(size_t size = 32);
+std::string genRandomString(size_t size = 32, const std::string& charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
 std::string genNintendoPasswordHash(uint32_t pid, const std::string& password);
+std::string genSalt();
 std::string hashPassword(const std::string& password, const std::string& salt = "");
 bool verifyPassword(const std::string& password, const std::string& hash);
 

@@ -16,12 +16,12 @@ public:
                      std::string build, std::string base64JWTKey, bool friends);
     ~AuthRMC() override = default;
 
-    std::shared_ptr<Promise> getOrRegisterUserPassword(uint32_t pid);
+    async::Task<std::optional<std::string>> getOrRegisterUserPassword(uint32_t pid) const;
 
 private:
-    void login(ClientInfo client, Request req, std::unique_ptr<String> username);
-    void loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo);
-    void requestTicket(ClientInfo client, Request req, std::unique_ptr<PID> idSource, std::unique_ptr<PID> idTarget);
+    async::Task<void> login(ClientInfo client, Request req, std::unique_ptr<String> username);
+    async::Task<void> loginEx(ClientInfo client, Request req, std::unique_ptr<String> username, std::unique_ptr<AnyDataHolder> authInfo);
+    async::Task<void> requestTicket(ClientInfo client, Request req, std::unique_ptr<PID> idSource, std::unique_ptr<PID> idTarget);
 
     std::shared_ptr<db::Database> db;
     sock::IPv4Addr secureAddr;

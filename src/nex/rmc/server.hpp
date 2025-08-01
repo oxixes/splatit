@@ -11,7 +11,8 @@
 #include "request.hpp"
 #include "response.hpp"
 #include "../../util/util.hpp"
-#include "../../db/database.hpp"
+#include "../../util/task.hpp"
+#include "../../util/scheduler.hpp"
 
 namespace nex::rmc {
 
@@ -23,7 +24,7 @@ struct ClientInfo {
 };
 
 struct CallInfo {
-    std::function<void(ClientInfo, Request, std::vector<T_ptr>)> callback;
+    std::function<async::Task<void>(ClientInfo, Request, std::vector<T_ptr>)> callback;
     std::function<std::vector<T_ptr>(uint8_t minorVersion, std::span<const uint8_t> data)> parser;
 };
 
@@ -68,6 +69,7 @@ public:
     virtual ~Server() = default;
 
     void registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, uint8_t listenPort, int workerCount);
+    void scheduleArbitraryFunction(async::Task<void>&& task) const;
 
 protected:
     explicit Server(std::shared_ptr<Logger::Logger> logger);
@@ -104,8 +106,8 @@ protected:
         sendData(client.address, std::move(messageData), client.substreamId);
     }
 
-    virtual void onConnect(prudp::PRUDPAddress address, uint32_t pid);
-    virtual void onDisconnect(prudp::PRUDPAddress address);
+    virtual async::Task<void> onConnect(prudp::PRUDPAddress address, uint32_t pid);
+    virtual async::Task<void> onDisconnect(prudp::PRUDPAddress address);
 
     static Response createError(const Request& req, Error error);
 
@@ -117,7 +119,7 @@ protected:
     std::unordered_map<prudp::PRUDPAddress, uint32_t> pidMap;
     std::recursive_mutex pidMapMutex;
 
-    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
+    std::shared_ptr<async::Scheduler> scheduler;
     std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
 
     std::shared_ptr<std::condition_variable> queueCV = std::make_shared<std::condition_variable>();
@@ -133,7 +135,7 @@ private:
     void registerCall(T* self, F callback, std::index_sequence<I ...> sequence, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
         auto func = [this, self, callback, sequence](ClientInfo client, Request req,
                 std::vector<T_ptr> params) {
-            call_callback<T, F,
+            return call_callback<T, F,
                     typename function_traits<
                             typename std::decay<F>::type>::template arg<I + 2>::type...
             >(self, callback, client, std::move(req), params, sequence);
@@ -155,6 +157,8 @@ private:
     void stop();
 
     void onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t substreamId, std::vector<uint8_t> data);
+    void scheduleOnConnect(prudp::PRUDPAddress address, uint32_t pid);
+    void scheduleOnDisconnect(prudp::PRUDPAddress address);
 
     template <typename Msg> requires (std::is_base_of_v<Msg, Request> || std::is_base_of_v<Msg, Response>)
     void logMsg(const Msg& msg, prudp::PRUDPAddress addr, bool incoming) {

@@ -1,5 +1,7 @@
 #include "migrations.hpp"
 
+#include "../../util/taskSync.hpp"
+
 namespace db::migrations {
 
 // We store all migrations in an array, so we can iterate over them
@@ -78,39 +80,14 @@ DBVersion getVersionFromString(const std::string& str) {
 
 bool runVoidCommandsSync(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db,
                          const std::vector<std::string>& commands, const std::string& rollbackCommand) {
-    std::shared_ptr<std::mutex> queueMutex = std::make_shared<std::mutex>();
-    std::shared_ptr<std::queue<std::shared_ptr<Promise>>> promisesQueue = std::make_shared<std::queue<std::shared_ptr<Promise>>>();
-
     for (auto & sqlCmd : commands) {
-        std::unique_ptr<Result> result = nullptr;
-
         std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmd);
-        db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::any&& resAny) {
-            result = std::move(std::make_unique<Result>(std::move(std::any_cast<Result>(resAny))));
-        });
-        db->processQueue();
-        db->waitForQueue();
+        Result result = async::runTaskSync(db->runCommand(std::move(command)));
 
-        std::unique_lock lock(*queueMutex);
-        if (!promisesQueue->empty()) {
-            promisesQueue->front()->resolve();
-            promisesQueue->pop();
-        }
-        lock.unlock();
-
-        if (result == nullptr) {
-            logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to get result for command: " + sqlCmd);
-            return false;
-        }
-
-        if (result->getStatus() != DBResultStatus::SUCCESS) {
+        if (result.getStatus() != DBResultStatus::SUCCESS) {
             // Rollback transaction
             command = Database::craftVoidCommand(rollbackCommand);
-            db->queueCommand(std::move(command), queueMutex, nullptr, promisesQueue)->then([&result](std::any&& resAny){
-                result = std::move(std::make_unique<Result>(std::move(std::any_cast<Result>(resAny))));
-            });
-            db->processQueue();
-            db->waitForQueue();
+            async::runTaskSync(db->runCommand(std::move(command)));
 
             logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to execute command: " + sqlCmd);
             return false;

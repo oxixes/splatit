@@ -11,6 +11,7 @@
 #include "../parser/response.hpp"
 #include "../parser/request.hpp"
 #include "../server.hpp"
+#include "../../util/task.hpp"
 
 using json = nlohmann::json;
 using json_validator = nlohmann::json_schema::json_validator;
@@ -20,13 +21,13 @@ namespace boss {
 
 extern json bossManifest; // Defined in /boss/utils.cpp
 
-void p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                   const std::string& titleId, const std::string& tasksheetId,
-                   const std::shared_ptr<SettingsManager>& settingsMgr);
-void p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
-              const std::string& tasksheetId, const std::string& fileHash,
-              const std::shared_ptr<SettingsManager>& settingsMgr);
-void p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx);
+async::Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                const std::string& titleId, const std::string& tasksheetId,
+                                const std::shared_ptr<SettingsManager>& settingsMgr);
+async::Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
+                           const std::string& tasksheetId, const std::string& fileHash,
+                           const std::shared_ptr<SettingsManager>& settingsMgr);
+async::Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx);
 
 std::unique_ptr<http::Response> getError(int status, http::Version version);
 
