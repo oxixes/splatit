@@ -9,9 +9,9 @@ void Scheduler::schedule(Task<void>&& task) {
     cv->notify_one();
 }
 
-void Scheduler::schedule_coroutine(std::coroutine_handle<> h) {
+void Scheduler::schedule_coroutine(std::coroutine_handle<> h, std::shared_ptr<void> keep_alive) {
     std::lock_guard lock(queueMutex);
-    handles.push(h);
+    handles.emplace(h, keep_alive);
     cv->notify_one();
 }
 
@@ -27,11 +27,12 @@ std::unique_ptr<Task<void>> Scheduler::getTask() {
     Task<void> task{nullptr};
 
     if (!handles.empty()) {
-        std::coroutine_handle<> h = handles.front();
+        std::pair<std::coroutine_handle<>, std::shared_ptr<void>> handle = handles.front();
         handles.pop();
 
         // Convert the coroutine handle to a Task<void>
-        task = Task<void>{Task<void>::handle_type::from_address(h.address())};
+        task = Task<void>{Task<void>::handle_type::from_address(handle.first.address())};
+        task.setContext(handle.second);
     } else if (!queue.empty()) {
         task = std::move(queue.front());
         queue.pop();

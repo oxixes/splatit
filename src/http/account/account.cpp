@@ -109,10 +109,10 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
 
         // At this point, the username is found and the password is correct
         crypto::AccountToken token {
-                .pid = userData.pid,
-                .deviceId = deviceId,
-                .expiration = static_cast<uint64_t>(time(nullptr)) + 3600,
-                .key = crypto::base64Decode(settingsManager->getTokenKey())
+            .pid = userData.pid,
+            .deviceId = deviceId,
+            .expiration = static_cast<uint64_t>(time(nullptr)) + 3600,
+            .key = crypto::base64Decode(settingsManager->getTokenKey())
         };
 
         ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " logged in successfully.");

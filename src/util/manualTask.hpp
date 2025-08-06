@@ -30,7 +30,7 @@ public:
     void await_suspend(std::coroutine_handle<> awaiting) noexcept {
         state->continuation = awaiting;
         if (state->scheduler && state->result.has_value()) {
-            state->scheduler->schedule_coroutine(state->continuation);
+            state->scheduler->schedule_coroutine(state->continuation, state);
         }
     }
 
@@ -41,7 +41,7 @@ public:
     void complete(T&& value) {
         state->result = std::move(value);
         if (state->continuation && state->scheduler) {
-            state->scheduler->schedule_coroutine(state->continuation);
+            state->scheduler->schedule_coroutine(state->continuation, state);
         }
     }
 
@@ -50,7 +50,12 @@ private:
         std::shared_ptr<Scheduler> scheduler;
         std::coroutine_handle<> continuation;
         std::optional<T> result;
-        State(std::shared_ptr<Scheduler> s) : scheduler(std::move(s)), continuation(nullptr) {}
+        explicit State(std::shared_ptr<Scheduler> s) : scheduler(std::move(s)), continuation(nullptr) {
+            std::cout << "Created state " << this << " for ManualTask" << std::endl;
+        }
+        ~State() {
+            std::cout << "Destroyed state " << this << " for ManualTask" << std::endl;
+        }
     };
 
     std::shared_ptr<State> state;
