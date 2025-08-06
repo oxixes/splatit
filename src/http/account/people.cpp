@@ -217,7 +217,7 @@ Task<void> v1_api_people_nnid(http::Server* srv, std::shared_ptr<http::Context> 
     }
 
     std::unique_ptr<db::Command> cmd = db::Database::craftGetUserByUsernameCommand(nnid);
-    db::Result userResults = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+    db::Result userResults = co_await db->runCommand(ctx->scheduler, std::move(cmd));
 
     if (userResults.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
@@ -450,27 +450,27 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
 
     std::shared_ptr<db::Database> session = db->createSession();
 
-    if ((co_await spawn(ctx->scheduler, session->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->startTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
     std::unique_ptr<db::Command> updateDevCmd = db::Database::craftInsertOrUpdateDeviceCommand(deviceIdNum, language, 1,
             region, serialNumber, systemVersion, "RETAIL", "USER", lastUpdated);
-    db::Result deviceResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(updateDevCmd)));
+    db::Result deviceResults = co_await session->runCommand(ctx->scheduler, std::move(updateDevCmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     std::unique_ptr<db::Command> userExistsCmd = db::Database::craftGetUserByUsernameCommand(doc->child("person").child_value("user_id"));
-    db::Result existingUserResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(userExistsCmd)));
+    db::Result existingUserResults = co_await session->runCommand(ctx->scheduler, std::move(userExistsCmd));
     if (existingUserResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     if (existingUserResults.hasData()) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         res = createError(ctx->request->getVersion(), 100, "Account ID already exists", "", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -499,14 +499,14 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     // And finally we can also get the latest pid to get a new one for the user
     std::unique_ptr<db::Command> pidCmd = db::Database::craftGetLatestPidCommand();
 
-    db::Result emailResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(emailCmd)));
-    db::Result miiResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(miiCmd)));
-    db::Result pidResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(pidCmd)));
+    db::Result emailResults = co_await session->runCommand(ctx->scheduler, std::move(emailCmd));
+    db::Result miiResults = co_await session->runCommand(ctx->scheduler, std::move(miiCmd));
+    db::Result pidResults = co_await session->runCommand(ctx->scheduler, std::move(pidCmd));
 
     if (emailResults.getStatus() != db::DBResultStatus::SUCCESS ||
         miiResults.getStatus() != db::DBResultStatus::SUCCESS ||
         pidResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
@@ -526,7 +526,7 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
 
     // Compilers don't like co_await inside a catch
     if (error) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         res = createError(ctx->request->getVersion(), 2001, "Internal server error", "", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -553,9 +553,9 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         created,
         created); // created and updated are the same for now
 
-    db::Result profileResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(profileCmd)));
+    db::Result profileResults = co_await session->runCommand(ctx->scheduler, std::move(profileCmd));
     if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
@@ -574,9 +574,9 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         "ACTIVE",
         now);
 
-    std::vector<Task<db::Result>> tasks;
-    tasks.push_back(spawn(ctx->scheduler, session->runCommand(std::move(agreementCmd))));
-    tasks.push_back(spawn(ctx->scheduler, session->runCommand(std::move(ownershipCmd))));
+    std::vector<ManualTask<db::Result>> tasks;
+    tasks.push_back(session->runCommand(ctx->scheduler, std::move(agreementCmd)));
+    tasks.push_back(session->runCommand(ctx->scheduler, std::move(ownershipCmd)));
 
     for (const auto& attr : doc->child("person").child("device_attributes").children("device_attribute")) {
         std::unique_ptr<db::Command> deviceAttrCmd = db::Database::craftInsertOrUpdateDeviceAttributesCommand(
@@ -585,17 +585,17 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
             attr.child_value("name"),
             attr.child_value("value"),
             now);
-        tasks.push_back(spawn(ctx->scheduler, session->runCommand(std::move(deviceAttrCmd))));
+        tasks.push_back(session->runCommand(ctx->scheduler, std::move(deviceAttrCmd)));
     }
 
     for (std::vector<db::Result> results = co_await waitForAll(std::move(tasks)); const auto& result : results) {
         if (result.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
     }
 
-    if ((co_await spawn(ctx->scheduler, session->commitTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->commitTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
@@ -771,7 +771,7 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
         }
 
         auto session = db->createSession();
-        if ((co_await spawn(ctx->scheduler, session->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+        if ((co_await session->startTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
             throw std::runtime_error("Database error");
         }
 
@@ -787,22 +787,22 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             true, // validated - we set the email as validated for now, but FIXME actually validate the email
             db::datetime_t());
 
-        auto currentDataResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(currentDataCmd)));
+        auto currentDataResults = co_await session->runCommand(ctx->scheduler, std::move(currentDataCmd));
         if (currentDataResults.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
 
         if (!currentDataResults.hasData()) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             res = createError(ctx->request->getVersion(), 130, "Account not found", "", HTTP_STATUS_NOT_FOUND);
             srv->sendResponse(std::move(ctx), std::move(res), false);
             co_return;
         }
 
-        auto emailResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(emailCmd)));
+        auto emailResults = co_await session->runCommand(ctx->scheduler, std::move(emailCmd));
         if (emailResults.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
 
@@ -826,19 +826,19 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             std::nullopt, // created
             std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
 
-        db::Result results = co_await spawn(ctx->scheduler, session->runCommand(std::move(cmd)));
+        db::Result results = co_await session->runCommand(ctx->scheduler, std::move(cmd));
         if (results.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
 
         std::unique_ptr<db::Command> deleteEmailCmd = db::Database::craftDeleteEmailCommand(oldEmailId);
-        if ((co_await spawn(ctx->scheduler, session->runCommand(std::move(deleteEmailCmd)))).getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        if ((co_await session->runCommand(ctx->scheduler, std::move(deleteEmailCmd))).getStatus() != db::DBResultStatus::SUCCESS) {
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
 
-        if ((co_await spawn(ctx->scheduler, session->commitTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+        if ((co_await session->commitTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
             throw std::runtime_error("Database error");
         }
 
@@ -863,7 +863,7 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             std::nullopt, // created
             std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
 
-        if ((co_await spawn(ctx->scheduler, db->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+        if ((co_await db->runCommand(ctx->scheduler, std::move(cmd))).getStatus() != db::DBResultStatus::SUCCESS) {
             throw std::runtime_error("Database error");
         }
 
@@ -901,7 +901,7 @@ Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Cont
     }
 
     std::unique_ptr<db::Command> cmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
-    db::Result profileResults = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+    db::Result profileResults = co_await db->runCommand(ctx->scheduler, std::move(cmd));
     if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -983,21 +983,21 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
     }
 
     auto session = db->createSession();
-    if ((co_await spawn(ctx->scheduler, session->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->startTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
     std::string miiHash = crypto::genRandomString(13, "abcdefghijklmnopqrstuvwxyz0123456789");
 
     std::unique_ptr<db::Command> currentDataCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
-    db::Result currentDataResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(currentDataCmd)));
+    db::Result currentDataResults = co_await session->runCommand(ctx->scheduler, std::move(currentDataCmd));
     if (currentDataResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     if (!currentDataResults.hasData()) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         res = createError(ctx->request->getVersion(), 130, "Account not found", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1009,9 +1009,9 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
         doc->child("mii").child_value("name"),
         std::string(doc->child("mii").child_value("primary")) == "Y",
         doc->child("mii").child_value("data"));
-    db::Result miiResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(miiCmd)));
+    db::Result miiResults = co_await session->runCommand(ctx->scheduler, std::move(miiCmd));
     if (miiResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
@@ -1036,18 +1036,18 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
         std::nullopt, // created
         std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
 
-    if ((co_await spawn(ctx->scheduler, session->runCommand(std::move(cmd)))).getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+    if ((co_await session->runCommand(ctx->scheduler, std::move(cmd))).getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     auto deleteMiiCmd = db::Database::craftDeleteMiiCommand(oldMiiId);
-    if ((co_await spawn(ctx->scheduler, session->runCommand(std::move(deleteMiiCmd)))).getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+    if ((co_await session->runCommand(ctx->scheduler, std::move(deleteMiiCmd))).getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
-    if ((co_await spawn(ctx->scheduler, session->commitTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->commitTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
@@ -1101,25 +1101,25 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
     }
 
     auto session = db->createSession();
-    if ((co_await spawn(ctx->scheduler, session->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->startTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
     auto ownershipCmd = db::Database::craftGetOwnershipCommand(accountToken.pid, accountToken.deviceId);
-    auto ownershipResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(ownershipCmd)));
+    auto ownershipResults = co_await session->runCommand(ctx->scheduler, std::move(ownershipCmd));
     if (ownershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     if (!ownershipResults.hasData() || ownershipResults.getData<db::DBOwnershipData>().status != "ACTIVE") {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
-        std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 104, "Device not linked to this account", "", HTTP_STATUS_BAD_REQUEST);
+        co_await session->rollbackTransaction(ctx->scheduler);
+        res = createError(ctx->request->getVersion(), 104, "Device not linked to this account", "", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
 
-    std::vector<Task<db::Result>> tasks;
+    std::vector<ManualTask<db::Result>> tasks;
     for (const auto& attribute : doc->child("device_attributes").children("device_attribute")) {
         auto cmd = db::Database::craftInsertOrUpdateDeviceAttributesCommand(
             accountToken.deviceId,
@@ -1128,12 +1128,12 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
             attribute.child_value("value"),
             std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
 
-        tasks.push_back(spawn(ctx->scheduler, session->runCommand(std::move(cmd))));
+        tasks.push_back(session->runCommand(ctx->scheduler, std::move(cmd)));
     }
 
     if (tasks.empty()) {
         // Return 200 OK if no attributes were provided
-        co_await spawn(ctx->scheduler, session->commitTransaction());
+        co_await session->commitTransaction(ctx->scheduler);
         res = prepareResponse(ctx->request->getVersion(), HTTP_STATUS_OK);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1142,12 +1142,12 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
     std::vector<db::Result> results = co_await waitForAll(std::move(tasks));
     for (const auto& result : results) {
         if (result.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
     }
 
-    if ((co_await spawn(ctx->scheduler, session->commitTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->commitTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
@@ -1176,7 +1176,7 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await spawn(ctx->scheduler, checkHashedBasicAuth(db, ctx));
+    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
     if (!pid.has_value()) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1206,7 +1206,7 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
         doc->child("agreement").child_value("country"),
         std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // signedAt
 
-    db::Result results = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+    db::Result results = co_await db->runCommand(ctx->scheduler, std::move(cmd));
     if (results.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -1249,7 +1249,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
     }
 
     std::unique_ptr<db::Command> profileCmd = db::Database::craftGetUserProfileCommand(pid.value());
-    db::Result profileResults = co_await spawn(ctx->scheduler, db->runCommand(std::move(profileCmd)));
+    db::Result profileResults = co_await db->runCommand(ctx->scheduler, std::move(profileCmd));
     if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -1261,7 +1261,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
     }
 
     auto ownershipCmd = db::Database::craftGetLatestOwnershipCommand(pid.value());
-    db::Result ownershipResults = co_await spawn(ctx->scheduler, db->runCommand(std::move(ownershipCmd)));
+    db::Result ownershipResults = co_await db->runCommand(ctx->scheduler, std::move(ownershipCmd));
     if (ownershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -1277,7 +1277,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
     auto ownershipData = ownershipResults.getData<db::DBOwnershipData>();
 
     std::unique_ptr<db::Command> devAttrsCmd = db::Database::craftGetDeviceAttributesCommand(pid.value(), ownershipData.deviceId);
-    db::Result deviceResults = co_await spawn(ctx->scheduler, db->runCommand(std::move(devAttrsCmd)));
+    db::Result deviceResults = co_await db->runCommand(ctx->scheduler, std::move(devAttrsCmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -1419,14 +1419,14 @@ Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<htt
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await spawn(ctx->scheduler, checkHashedBasicAuth(db, ctx));
+    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
     if (!pid.has_value()) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
 
-    co_await spawn(ctx->scheduler, v1_api_people_me_profile(srv, std::move(ctx), db, settingsManager, certManager, pid));
+    co_await v1_api_people_me_profile(srv, std::move(ctx), db, settingsManager, certManager, pid);
 }
 
 /*
@@ -1450,7 +1450,7 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await spawn(ctx->scheduler, checkHashedBasicAuth(db, ctx));
+    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
     if (!pid.has_value()) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1474,20 +1474,20 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
     }
 
     auto session = db->createSession();
-    if ((co_await spawn(ctx->scheduler, session->startTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->startTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
     // Check if the user already has a device linked
     auto ownershipCmd = db::Database::craftHasActiveOwnershipCommand(*pid);
-    auto ownershipResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(ownershipCmd)));
+    auto ownershipResults = co_await session->runCommand(ctx->scheduler, std::move(ownershipCmd));
     if (ownershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
     if (ownershipResults.hasData() && ownershipResults.getData<bool>()) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         res = createError(ctx->request->getVersion(), 115, "Device already linked to this account", "", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1495,7 +1495,7 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
 
     // Insert the device
     if (const std::string country = ctx->request->getHeader("x-nintendo-country")[0]; !ctx->request->hasHeader("accept-language") || !timezones[country].contains(ctx->request->getHeader("accept-language")[0])) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         res = createError(ctx->request->getVersion(), 2, "Bad request header", "Accept-Language", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1520,9 +1520,9 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         "RETAIL",
         "USER",
         lastUpdated);
-    db::Result deviceResults = co_await spawn(ctx->scheduler, session->runCommand(std::move(cmd)));
+    db::Result deviceResults = co_await session->runCommand(ctx->scheduler, std::move(cmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
@@ -1532,12 +1532,12 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         deviceIdNum,
         "ACTIVE",
         std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
-    if ((co_await spawn(ctx->scheduler, session->runCommand(std::move(insertOwnershipCmd)))).getStatus() != db::DBResultStatus::SUCCESS) {
-        co_await spawn(ctx->scheduler, session->rollbackTransaction());
+    if ((co_await session->runCommand(ctx->scheduler, std::move(insertOwnershipCmd))).getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction(ctx->scheduler);
         throw std::runtime_error("Database error");
     }
 
-    std::vector<Task<db::Result>> tasks;
+    std::vector<ManualTask<db::Result>> tasks;
     for (const auto& attribute : doc->child("device_attributes").children("device_attribute")) {
         auto devAttrCmd = db::Database::craftInsertOrUpdateDeviceAttributesCommand(
             deviceIdNum,
@@ -1546,22 +1546,22 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
             attribute.child_value("value"),
             std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
 
-        tasks.push_back(spawn(ctx->scheduler, session->runCommand(std::move(devAttrCmd))));
+        tasks.push_back(session->runCommand(ctx->scheduler, std::move(devAttrCmd)));
     }
 
     std::vector<db::Result> results = co_await waitForAll(std::move(tasks));
     for (const auto& result : results) {
         if (result.getStatus() != db::DBResultStatus::SUCCESS) {
-            co_await spawn(ctx->scheduler, session->rollbackTransaction());
+            co_await session->rollbackTransaction(ctx->scheduler);
             throw std::runtime_error("Database error");
         }
     }
 
-    if ((co_await spawn(ctx->scheduler, session->commitTransaction())).getStatus() != db::DBResultStatus::SUCCESS) {
+    if ((co_await session->commitTransaction(ctx->scheduler)).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
 
-    co_await spawn(ctx->scheduler, v1_api_people_me_profile(srv, std::move(ctx), db, settingsManager, certManager, pid));
+    co_await v1_api_people_me_profile(srv, std::move(ctx), db, settingsManager, certManager, pid);
 }
 
 } // namespace acc

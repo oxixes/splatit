@@ -63,7 +63,8 @@ private:
 
 // Adaptation using corutines and not promises
 template <typename Stub, typename Method, typename Request, typename Response>
-async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(const std::unique_ptr<Stub>& stub,
+async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(std::shared_ptr<async::Scheduler> scheduler,
+                                                                          const std::unique_ptr<Stub>& stub,
                                                                           Method method,
                                                                           std::shared_ptr<Request> request,
                                                                           int timeoutMs = 0) {
@@ -74,16 +75,16 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(const 
         context->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeoutMs));
     }
 
-    auto [task, promise] = async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>>::createManual();
+    auto task = std::make_shared<async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>>>(scheduler);
 
     (stub->async()->*method)(context.get(), request.get(), response.get(),
-        [promise = std::move(promise), context = std::move(context), response = std::move(response), _req = std::move(request)]
+        [task, context = std::move(context), response = std::move(response), _req = std::move(request)]
         (grpc::Status status) mutable {
             // Resolve the promise with the response and status
-            promise->complete(std::move(std::make_pair(std::move(response), status)));
+            task->complete(std::move(std::make_pair(std::move(response), status)));
         });
 
-    return std::move(task);
+    return *task;
 }
 
 } // namespace grpcimpl

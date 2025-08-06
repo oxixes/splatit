@@ -28,8 +28,10 @@ target_link_libraries(splatoon_server PRIVATE pugixml::pugixml)
 find_package(SQLite3 REQUIRED)
 target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
 
+if(MSVC)
 find_package(unofficial-getopt-win32 REQUIRED)
 target_link_libraries(splatoon_server PRIVATE unofficial::getopt-win32::getopt)
+endif()
 
 add_subdirectory(lib/json-schema-validator)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)

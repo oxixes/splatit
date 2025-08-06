@@ -34,12 +34,12 @@ public:
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type {
-        std::optional<T> value;
         std::exception_ptr exception;
         std::any context;
         std::coroutine_handle<> continuation = nullptr;
         std::shared_ptr<Scheduler> scheduler = nullptr;
         std::atomic<bool> isCompleted{false};
+        std::optional<T> value;
 
         Task get_return_object() {
             return Task{handle_type::from_promise(*this)};
@@ -59,29 +59,20 @@ public:
 
         void unhandled_exception() { exception = std::current_exception(); }
 
-        void complete(T&& v);
-        void setException(const std::exception_ptr& ex);
-
         void setScheduler(std::shared_ptr<Scheduler> s);
     };
 
-    explicit Task(handle_type h) : coro(h)
-    {
-        std::cout << "Creating task " << this << " with coro " << coro.address() << std::endl;
-    }
+    explicit Task(handle_type h) : coro(h) {}
     Task(Task&& other) noexcept : coro(other.coro)
     {
         other.coro = nullptr;
-        std::cout << "Moving task " << this << " with coro " << coro.address() << std::endl;
     }
     ~Task() {
-        std::cout << "Destroying task " << this << " with coro " << coro.address() << std::endl;
         if (coro) coro.destroy();
     }
 
     Task& operator=(Task&& other) noexcept {
         if (this != &other) {
-            std::cout << "A Destroying coro " << coro.address() << std::endl;
             if (coro) coro.destroy();
             coro = other.coro;
             other.coro = nullptr;
@@ -94,10 +85,7 @@ public:
         explicit Awaiter(handle_type h) : coro(h) {}
         bool await_ready() { return coro.done(); }
 
-        void await_suspend(std::coroutine_handle<> awaiting) {
-            coro.promise().continuation = awaiting;
-        }
-
+        void await_suspend(std::coroutine_handle<> awaiting);
 
         T await_resume() {
             if (coro.promise().exception)
@@ -119,26 +107,8 @@ public:
     [[nodiscard]] bool done() const { return coro.done(); }
     [[nodiscard]] bool hasException() const { return coro.promise().exception != nullptr; }
     [[nodiscard]] std::exception_ptr getException() const { return coro.promise().exception; }
-    void setException(const std::exception_ptr& ex) const { coro.promise().setException(ex); }
     void setScheduler(std::shared_ptr<Scheduler> s) const { coro.promise().setScheduler(std::move(s)); }
-    void complete(T&& v) const
-    {
-        coro.promise().complete(std::move(v));
-        std::cout << "Completing task " << this << " with coro " << coro.address() << std::endl;
-    }
     std::optional<T> result() const { return coro.promise().value; }
-
-    // Factory method to create a Task manually (instead of using co_await)
-    static std::pair<Task, promise_type*> createManual() {
-        auto* p = new promise_type();
-        auto h = handle_type::from_promise(*p);
-        auto sp = std::shared_ptr<promise_type>(p, [](promise_type* ptr) {
-            std::cout << "A Destroying coro " << ptr << std::endl;
-            // handle_type::from_promise(*ptr).destroy();
-        });
-        std::cout << "Creating manual task " << h.address() << std::endl;
-        return { Task{h}, p };
-    }
 
     handle_type coro;
 };
@@ -176,9 +146,6 @@ public:
 
         void unhandled_exception() { exception = std::current_exception(); }
 
-        void complete();
-        void setException(const std::exception_ptr& ex);
-
         void setScheduler(std::shared_ptr<Scheduler> s);
     };
 
@@ -202,9 +169,7 @@ public:
         explicit Awaiter(handle_type h) : coro(h) {}
         bool await_ready() { return coro.done(); }
 
-        void await_suspend(std::coroutine_handle<> awaiting) {
-            coro.promise().continuation = awaiting;
-        }
+        void await_suspend(std::coroutine_handle<> awaiting);
 
         void await_resume() {
             if (coro.promise().exception)
@@ -225,40 +190,16 @@ public:
     [[nodiscard]] bool done() const { return coro.done(); }
     [[nodiscard]] bool hasException() const { return coro.promise().exception != nullptr; }
     [[nodiscard]] std::exception_ptr getException() const { return coro.promise().exception; }
-    void setException(const std::exception_ptr& ex) const { coro.promise().setException(ex); }
     void setScheduler(std::shared_ptr<Scheduler> s) const { coro.promise().setScheduler(std::move(s)); }
-    void complete() const { coro.promise().complete(); }
-
-    static std::pair<Task, std::shared_ptr<promise_type>> createManual() {
-        auto* p = new promise_type();
-        auto h = handle_type::from_promise(*p);
-        auto sp = std::shared_ptr<promise_type>(p, [](promise_type* ptr) {
-            handle_type::from_promise(*ptr).destroy();
-        });
-        return { Task{h}, sp };
-    }
 
     handle_type coro;
 };
 
-
-
-template <typename T>
+/* template <typename T>
 Task<T> spawn(std::shared_ptr<Scheduler> scheduler, Task<T>&& task) {
     task.setScheduler(std::move(scheduler));
     return std::move(task);
-}
-
-template <typename T>
-Task<std::vector<T>> waitForAll(std::vector<Task<T>>&& tasks) {
-    std::vector<T> results;
-    results.reserve(tasks.size());
-    for (auto& task : tasks) {
-        results.push_back(std::move(co_await task));
-    }
-
-    co_return std::move(results);
-}
+} */
 
 } // namespace async
 
@@ -274,31 +215,22 @@ void Task<T>::promise_type::FinalAwaiter::await_suspend(handle_type h) noexcept 
 }
 
 template <typename T>
-void Task<T>::promise_type::complete(T&& v) {
-    value = std::move(v);
-    if (continuation && scheduler) {
-        scheduler->schedule_coroutine(continuation);
-    }
-
-    isCompleted = true;
-}
-
-template <typename T>
-void Task<T>::promise_type::setException(const std::exception_ptr& ex) {
-    exception = ex;
-    if (continuation && scheduler) {
-        scheduler->schedule_coroutine(continuation);
-    }
-
-    isCompleted = true;
-}
-
-template <typename T>
 void Task<T>::promise_type::setScheduler(std::shared_ptr<Scheduler> s) {
     scheduler = std::move(s);
-    if (continuation && scheduler && isCompleted) {
+    if (continuation && scheduler) {
         scheduler->schedule_coroutine(continuation);
     }
+}
+
+template <typename T>
+void Task<T>::Awaiter::await_suspend(std::coroutine_handle<> awaiting) {
+    // This assumes the type of the awaiting coroutine is Task<T>. It may not be, but we only get the scheduler
+    // which should have the same offset in the promise_type. In case of modification, one should ensure that this
+    // remains valid.
+    auto& prom = std::coroutine_handle<promise_type>::from_address(awaiting.address()).promise();
+    coro.promise().setScheduler(prom.scheduler);
+    coro.promise().continuation = awaiting;
+    coro.promise().scheduler->schedule_coroutine(coro);
 }
 
 } // namespace async

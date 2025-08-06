@@ -13,6 +13,7 @@ Task<void> v1_api_admin_time(const http::Server* srv, std::shared_ptr<http::Cont
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = prepareResponse(ctx->request->getVersion());
@@ -34,6 +35,7 @@ Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Cont
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
@@ -65,7 +67,7 @@ Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Cont
         co_return;
     }
 
-    std::vector<Task<db::Result>> promises;
+    std::vector<ManualTask<db::Result>> tasks;
     for (const auto& id : input) {
         std::unique_ptr<db::Command> cmd;
         if (inputType == "pid") {
@@ -91,10 +93,10 @@ Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Cont
             cmd = db::Database::craftGetUserByUsernameCommand(id);
         }
 
-        promises.push_back(std::move(spawn(ctx->scheduler, db->runCommand(std::move(cmd)))));
+        tasks.push_back(std::move(db->runCommand(ctx->scheduler, std::move(cmd))));
     }
 
-    auto results = co_await spawn(ctx->scheduler, waitForAll(std::move(promises)));
+    auto results = co_await waitForAll(std::move(tasks));
 
     pugi::xml_document doc;
     pugi::xml_node mapped_ids = doc.append_child("mapped_ids");

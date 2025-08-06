@@ -6,6 +6,7 @@ target_sources(splatoon_server PRIVATE
         promise.hpp
         task.hpp
         task.cpp
+        manualTask.hpp
         taskSync.hpp
         scheduler.hpp
         scheduler.cpp)

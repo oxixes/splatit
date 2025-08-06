@@ -1,3 +1,4 @@
+#include "task.hpp"
 #include "scheduler.hpp"
 
 namespace async {

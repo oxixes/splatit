@@ -32,6 +32,7 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
@@ -72,7 +73,7 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
         std::string userId = bodyMap["user_id"];
 
         std::unique_ptr<db::Command> cmd = db::Database::craftGetUserByUsernameCommand(userId);
-        db::Result results = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+        db::Result results = co_await db->runCommand(ctx->scheduler, std::move(cmd));
 
         if (results.getStatus() != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
@@ -197,6 +198,7 @@ Task<void> mii_image(http::Server* srv, std::shared_ptr<http::Context> ctx,
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::string type =ctx->request->getPath();
@@ -410,7 +412,7 @@ Task<std::optional<uint32_t>> checkHashedBasicAuth(const std::shared_ptr<db::Dat
 
     // Get the user by username
     auto cmd = db::Database::craftGetUserByUsernameCommand(username);
-    db::Result res = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+    db::Result res = co_await db->runCommand(ctx->scheduler, std::move(cmd));
 
     if (res.getStatus() != db::DBResultStatus::SUCCESS || !res.hasData()) {
         co_return std::nullopt; // Database error or user not found

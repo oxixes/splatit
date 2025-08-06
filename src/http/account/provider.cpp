@@ -19,6 +19,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
@@ -69,7 +70,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
     auto stub = grpcimpl::auth::v1::AuthService::NewStub(channel);
 
     std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status> response =
-        co_await async::spawn(ctx->scheduler, grpcimpl::callAsync<
+        co_await grpcimpl::callAsync<
             grpcimpl::auth::v1::AuthService::Stub,
             void (grpcimpl::auth::v1::AuthService::Stub::async::*)(
                 grpc::ClientContext*,
@@ -80,11 +81,12 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
             grpcimpl::auth::v1::GetGameServerCredentialsRequest,
             grpcimpl::auth::v1::GetGameServerCredentialsResponse
         >(
+            ctx->scheduler,
             stub,
             &grpcimpl::auth::v1::AuthService::Stub::async::GetGameServerCredentials,
             std::move(request),
             settingsManager->getAccountsgRPCRequestTimeout()
-        ));
+        );
 
     if (!response.second.ok()) {
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
@@ -146,6 +148,7 @@ Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<h
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);

@@ -81,7 +81,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
     }
 
     auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
-    const db::Result getUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(getUserInfoCmd)));
+    const db::Result getUserInfoResult = co_await db->runCommand(scheduler, std::move(getUserInfoCmd));
 
     if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
@@ -108,7 +108,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
                 comment.encode(),
                 std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
 
-        db::Result insertUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(insertUserInfoCmd)));
+        db::Result insertUserInfoResult = co_await db->runCommand(scheduler, std::move(insertUserInfoCmd));
         if (insertUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to insert user info for " + std::to_string(client.pid)
                                                        + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -119,7 +119,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         }
     } else {
         auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
-        const db::Result friendsInfoResult = co_await spawn(scheduler, db->runCommand(std::move(getFriendsInfoCmd)));
+        const db::Result friendsInfoResult = co_await db->runCommand(scheduler, std::move(getFriendsInfoCmd));
         if (friendsInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to get friends info for " + std::to_string(client.pid)
                                                        + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -183,10 +183,10 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
     registeredClientsLock.unlock();
 
     auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
-    const db::Result getUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(getUserInfoCmd)));
+    const db::Result getUserInfoResult = co_await db->runCommand(scheduler, std::move(getUserInfoCmd));
 
     auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
-    const db::Result friendsInfoResult = co_await spawn(scheduler, db->runCommand(std::move(getFriendsInfoCmd)));
+    const db::Result friendsInfoResult = co_await db->runCommand(scheduler, std::move(getFriendsInfoCmd));
 
     if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS || friendsInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
@@ -209,7 +209,7 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
                                                                       std::nullopt, std::move(nnaInfo->encode()),
                                                                       std::move(presence->encode()),
                                                                       std::nullopt, lastOnline);
-    const db::Result updateUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(updateUserInfoCmd)));
+    const db::Result updateUserInfoResult = co_await db->runCommand(scheduler, std::move(updateUserInfoCmd));
     if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -308,7 +308,7 @@ Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std:
                                                                       std::nullopt, std::nullopt,
                                                                       std::move(presence->encode()),
                                                                       std::nullopt, std::nullopt);
-    const db::Result updateUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(updateUserInfoCmd)));
+    const db::Result updateUserInfoResult = co_await db->runCommand(scheduler, std::move(updateUserInfoCmd));
 
     if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
@@ -377,7 +377,7 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
                                                                           std::nullopt,
                                                                           std::move(presence.encode()),
                                                                           std::nullopt, lastOnline);
-        db::Result updateUserInfoResult = co_await spawn(scheduler, db->runCommand(std::move(updateUserInfoCmd)));
+        db::Result updateUserInfoResult = co_await db->runCommand(scheduler, std::move(updateUserInfoCmd));
 
         if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(clientIt->second.client.pid)
@@ -403,7 +403,7 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     }
     registeredClientsLock.unlock();
 
-    co_await spawn(scheduler, Server::onDisconnect(address));
+    co_await Server::onDisconnect(address);
 }
 
 } // namespace nex::rmc

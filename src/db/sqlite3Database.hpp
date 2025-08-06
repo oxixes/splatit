@@ -28,11 +28,11 @@ public:
     bool run() override;
     void close() override;
 
-    async::Task<Result> startTransaction() override;
-    async::Task<Result> commitTransaction() override;
-    async::Task<Result> rollbackTransaction() override;
+    async::ManualTask<Result> startTransaction(std::shared_ptr<async::Scheduler> scheduler) override;
+    async::ManualTask<Result> commitTransaction(std::shared_ptr<async::Scheduler> scheduler) override;
+    async::ManualTask<Result> rollbackTransaction(std::shared_ptr<async::Scheduler> scheduler) override;
 
-    async::Task<Result> queueCommand(std::unique_ptr<Command> command) override;
+    async::ManualTask<Result> queueCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command) override;
     void processQueue() override;
     void waitForQueue() override;
 

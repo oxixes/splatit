@@ -80,14 +80,18 @@ DBVersion getVersionFromString(const std::string& str) {
 
 bool runVoidCommandsSync(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db,
                          const std::vector<std::string>& commands, const std::string& rollbackCommand) {
+    // Set up a scheduler to run the coroutines
+    auto cv = std::make_shared<std::condition_variable>();
+    auto scheduler = std::make_shared<async::Scheduler>(cv);
+
     for (auto & sqlCmd : commands) {
         std::unique_ptr<Command> command = Database::craftVoidCommand(sqlCmd);
-        Result result = async::runTaskSync(db->runCommand(std::move(command)));
+        Result result = async::runManualTaskSync(scheduler, db->runCommand(scheduler, std::move(command)));
 
         if (result.getStatus() != DBResultStatus::SUCCESS) {
             // Rollback transaction
             command = Database::craftVoidCommand(rollbackCommand);
-            async::runTaskSync(db->runCommand(std::move(command)));
+            async::runManualTaskSync(scheduler, db->runCommand(scheduler, std::move(command)));
 
             logger->log(Logger::level::FAILURE, Logger::group::DB, "Failed to execute command: " + sqlCmd);
             return false;

@@ -5,6 +5,7 @@
 #include <queue>
 #include <condition_variable>
 #include <regex>
+#include <thread>
 
 #include "../logger.hpp"
 #include "../socket/socketManager.hpp"

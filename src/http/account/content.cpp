@@ -18,6 +18,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
@@ -63,7 +64,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
     }
 
     std::unique_ptr<db::Command> cmd = db::Database::craftGetAgreementCommand(type, country, language, versionInt);
-    db::Result results = co_await spawn(ctx->scheduler, db->runCommand(std::move(cmd)));
+    db::Result results = co_await db->runCommand(ctx->scheduler, std::move(cmd));
 
     if (results.getStatus() != db::DBResultStatus::SUCCESS) {
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT, "Database error while getting agreement");
@@ -221,6 +222,7 @@ Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Con
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     std::unique_ptr<http::Response> res;

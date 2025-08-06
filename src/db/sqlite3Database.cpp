@@ -119,45 +119,45 @@ bool sqlite3Database::run() {
     return true;
 }
 
-async::Task<Result> sqlite3Database::queueCommand(std::unique_ptr<Command> command) {
-    if (*shouldStop) return async::Task<Result>::createManual().first;
+async::ManualTask<Result> sqlite3Database::queueCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command) {
+    if (*shouldStop) return async::ManualTask<Result>(nullptr);
 
-    auto [task, promise] = async::Task<Result>::createManual();
+    auto task = std::make_shared<async::ManualTask<Result>>(scheduler);
 
-    command->promise = std::move(promise);
+    command->task = task;
     command->db = this->shared_from_this();
 
     std::unique_lock lock(*commandQueueMutex);
     commandQueue->emplace(std::move(command));
 
-    return std::move(task);
+    return *task;
 }
 
-async::Task<Result> sqlite3Database::startTransaction() {
+async::ManualTask<Result> sqlite3Database::startTransaction(std::shared_ptr<async::Scheduler> scheduler) {
     auto command = craftVoidCommand("BEGIN TRANSACTION;");
-    auto task = std::move(queueCommand(std::move(command)));
+    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
 
     processQueue();
 
     return std::move(task);
 }
 
-async::Task<Result> sqlite3Database::commitTransaction() {
+async::ManualTask<Result> sqlite3Database::commitTransaction(std::shared_ptr<async::Scheduler> scheduler) {
     auto command = craftVoidCommand("COMMIT TRANSACTION;");
-    auto task = std::move(queueCommand(std::move(command)));
+    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
 
     processQueue();
 
     return std::move(task);
 }
 
-async::Task<Result> sqlite3Database::rollbackTransaction() {
+async::ManualTask<Result> sqlite3Database::rollbackTransaction(std::shared_ptr<async::Scheduler> scheduler) {
     auto command = craftVoidCommand("ROLLBACK TRANSACTION;");
-    auto promise = std::move(queueCommand(std::move(command)));
+    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
 
     processQueue();
 
-    return std::move(promise);
+    return std::move(task);
 }
 
 void sqlite3Database::processQueue() {
@@ -1452,7 +1452,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
     push_results:
     auto result = Result(resultStatus, std::move(resultsData));
-    command->promise->complete(std::move(result));
+    command->task->complete(std::move(result));
 }
 
 bool sqlite3Database::craftStatement(const std::string& command, sqlite3_stmt** outStatement) const {

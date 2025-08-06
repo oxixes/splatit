@@ -5,6 +5,7 @@
 #include <memory>
 #include <queue>
 #include <condition_variable>
+#include <thread>
 
 #include "../prudp/server.hpp"
 #include "types.hpp"
