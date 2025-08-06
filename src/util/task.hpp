@@ -150,9 +150,12 @@ public:
     };
 
     explicit Task(handle_type h) : coro(h) {}
-    Task(Task&& other) noexcept : coro(other.coro) { other.coro = nullptr; }
+    Task(Task&& other) noexcept : coro(other.coro) {
+        other.coro = nullptr;
+        keepAlive = std::move(other.keepAlive);
+    }
     ~Task() {
-        if (coro) coro.destroy();
+        if (coro && coro.done()) coro.destroy();
     }
 
     Task& operator=(Task&& other) noexcept {
@@ -191,8 +194,10 @@ public:
     [[nodiscard]] bool hasException() const { return coro.promise().exception != nullptr; }
     [[nodiscard]] std::exception_ptr getException() const { return coro.promise().exception; }
     void setScheduler(std::shared_ptr<Scheduler> s) const { coro.promise().setScheduler(std::move(s)); }
+    void setKeepAlive(std::shared_ptr<void> keep_alive) { this->keepAlive = std::move(keep_alive); }
 
     handle_type coro;
+    std::shared_ptr<void> keepAlive;
 };
 
 /* template <typename T>

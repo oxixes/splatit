@@ -27,12 +27,12 @@ std::unique_ptr<Task<void>> Scheduler::getTask() {
     Task<void> task{nullptr};
 
     if (!handles.empty()) {
-        std::pair<std::coroutine_handle<>, std::shared_ptr<void>> handle = handles.front();
+        std::pair<std::coroutine_handle<>, std::shared_ptr<void>> handle = std::move(handles.front());
         handles.pop();
 
         // Convert the coroutine handle to a Task<void>
         task = Task<void>{Task<void>::handle_type::from_address(handle.first.address())};
-        task.setContext(handle.second);
+        task.setKeepAlive(handle.second);
     } else if (!queue.empty()) {
         task = std::move(queue.front());
         queue.pop();
