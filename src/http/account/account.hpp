@@ -27,9 +27,9 @@ extern json timezones;
 
 async::Task<void> v1_api_admin_time(const http::Server* srv, std::shared_ptr<http::Context> ctx);
 async::Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                          const std::shared_ptr<db::Database>& db,
-                                          const std::shared_ptr<SettingsManager>& settingsManager,
-                                          const std::shared_ptr<CertManager>& certManager);
+                                          std::shared_ptr<db::Database> db,
+                                          std::shared_ptr<SettingsManager> settingsManager,
+                                          std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                           std::shared_ptr<db::Database> db,
@@ -37,54 +37,54 @@ async::Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<htt
                                           std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                            const std::shared_ptr<db::Database>& db,
-                                            const std::shared_ptr<SettingsManager>& settingsManager,
-                                            const std::shared_ptr<CertManager>& certManager);
+                                            std::shared_ptr<db::Database> db,
+                                            std::shared_ptr<SettingsManager> settingsManager,
+                                            std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_nnid(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                     const std::string& nnid,
-                                     const std::shared_ptr<db::Database>& db,
-                                     const std::shared_ptr<SettingsManager>& settingsManager,
-                                     const std::shared_ptr<CertManager>& certManager);
+                                     std::string nnid,
+                                     std::shared_ptr<db::Database> db,
+                                     std::shared_ptr<SettingsManager> settingsManager,
+                                     std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                const std::shared_ptr<db::Database>& db,
-                                const std::shared_ptr<SettingsManager>& settingsManager,
-                                const std::shared_ptr<CertManager>& certManager);
+                                std::shared_ptr<db::Database> db,
+                                std::shared_ptr<SettingsManager> settingsManager,
+                                std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                   const std::shared_ptr<db::Database>& db,
-                                   const std::shared_ptr<SettingsManager>& settingsManager,
-                                   const std::shared_ptr<CertManager>& certManager);
+                                   std::shared_ptr<db::Database> db,
+                                   std::shared_ptr<SettingsManager> settingsManager,
+                                   std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                          const std::shared_ptr<db::Database>& db,
-                                          const std::shared_ptr<SettingsManager>& settingsManager,
-                                          const std::shared_ptr<CertManager>& certManager);
+                                          std::shared_ptr<db::Database> db,
+                                          std::shared_ptr<SettingsManager> settingsManager,
+                                          std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                                const std::shared_ptr<db::Database>& db,
-                                                const std::shared_ptr<SettingsManager>& settingsManager,
-                                                const std::shared_ptr<CertManager>& certManager);
+                                                std::shared_ptr<db::Database> db,
+                                                std::shared_ptr<SettingsManager> settingsManager,
+                                                std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                                              const std::shared_ptr<db::Database>& db,
-                                                              const std::shared_ptr<SettingsManager>& settingsManager,
-                                                              const std::shared_ptr<CertManager>& certManager);
+                                                              std::shared_ptr<db::Database> db,
+                                                              std::shared_ptr<SettingsManager> settingsManager,
+                                                              std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                              const std::shared_ptr<db::Database>& db,
-                                              const std::shared_ptr<SettingsManager>& settingsManager,
-                                              const std::shared_ptr<CertManager>& certManager);
+                                              std::shared_ptr<db::Database> db,
+                                              std::shared_ptr<SettingsManager> settingsManager,
+                                              std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                           const std::shared_ptr<db::Database>& db,
-                                           const std::shared_ptr<SettingsManager>& settingsManager,
-                                           const std::shared_ptr<CertManager>& certManager,
+                                           std::shared_ptr<db::Database> db,
+                                           std::shared_ptr<SettingsManager> settingsManager,
+                                           std::shared_ptr<CertManager> certManager,
                                            std::optional<uint32_t> pid);
 
 async::Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                                 const std::shared_ptr<db::Database>& db,
+                                                 std::shared_ptr<db::Database> db,
                                                  std::shared_ptr<SettingsManager> settingsManager,
                                                  std::shared_ptr<CertManager> certManager);
 
@@ -94,25 +94,25 @@ async::Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_p
                                                 std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                                   const std::shared_ptr<db::Database>& db,
-                                                   const std::shared_ptr<SettingsManager>& settingsManager,
-                                                   const std::shared_ptr<CertManager>& certManager);
+                                                   std::shared_ptr<db::Database> db,
+                                                   std::shared_ptr<SettingsManager> settingsManager,
+                                                   std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                            const std::string& type, const std::string& country, const std::string& version,
-                                            const std::shared_ptr<db::Database>& db,
-                                            const std::shared_ptr<SettingsManager>& settingsManager,
-                                            const std::shared_ptr<CertManager>& certManager);
+                                            std::string type, std::string country, std::string version,
+                                            std::shared_ptr<db::Database> db,
+                                            std::shared_ptr<SettingsManager> settingsManager,
+                                            std::shared_ptr<CertManager> certManager);
 
 async::Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                           const std::string& country, const std::string& language,
-                                           const std::shared_ptr<SettingsManager>& settingsManager,
-                                           const std::shared_ptr<CertManager>& certManager);
+                                           std::string country, std::string language,
+                                           std::shared_ptr<SettingsManager> settingsManager,
+                                           std::shared_ptr<CertManager> certManager);
 
 async::Task<void> mii_image(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                            const std::shared_ptr<db::Database>& db,
-                            const std::shared_ptr<SettingsManager>& settingsManager,
-                            const std::shared_ptr<CertManager>& certManager);
+                            std::shared_ptr<db::Database> db,
+                            std::shared_ptr<SettingsManager> settingsManager,
+                            std::shared_ptr<CertManager> certManager);
 
 std::unique_ptr<http::Response> createError(http::Version version, int code, const std::string& message, const std::string& cause, int httpStatus);
 
@@ -124,8 +124,8 @@ std::unique_ptr<http::Response> prepareResponse(http::Version version, pugi::xml
 bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey, std::string& deviceId);
 bool checkOauthToken(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
                      crypto::AccountToken& token);
-async::Task<std::optional<uint32_t>> checkHashedBasicAuth(const std::shared_ptr<db::Database>& db,
-                                                          const std::shared_ptr<http::Context>& ctx);
+async::Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database> db,
+                                                          std::shared_ptr<http::Context> ctx);
 
 bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
                         const std::shared_ptr<CertManager>& certManager, std::unique_ptr<http::Response>& resOut,

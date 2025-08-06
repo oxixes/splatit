@@ -22,11 +22,11 @@ namespace boss {
 extern json bossManifest; // Defined in /boss/utils.cpp
 
 async::Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                const std::string& titleId, const std::string& tasksheetId,
-                                const std::shared_ptr<SettingsManager>& settingsMgr);
-async::Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
-                           const std::string& tasksheetId, const std::string& fileHash,
-                           const std::shared_ptr<SettingsManager>& settingsMgr);
+                                std::string titleId, std::string tasksheetId,
+                                std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, std::string titleId,
+                           std::string tasksheetId, std::string fileHash,
+                           std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx);
 
 std::unique_ptr<http::Response> getError(int status, http::Version version);

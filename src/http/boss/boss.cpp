@@ -14,8 +14,8 @@ using namespace async;
  * and tasksheet id.
  */
 Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                         const std::string& titleId, const std::string& tasksheetId,
-                         const std::shared_ptr<SettingsManager>& settingsMgr) {
+                         std::string titleId, std::string tasksheetId,
+                         std::shared_ptr<SettingsManager> settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -99,9 +99,9 @@ Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
  * Returns the requested file. These URLs are obtained from the tasksheets returned by
  * p01_tasksheet.
  */
-Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, const std::string& titleId,
-                    const std::string& tasksheetId, const std::string& fileHash,
-                    const std::shared_ptr<SettingsManager>& settingsMgr) {
+Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, std::string titleId,
+                    std::string tasksheetId, std::string fileHash,
+                    std::shared_ptr<SettingsManager> settingsMgr) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_METHOD_NOT_ALLOWED, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);

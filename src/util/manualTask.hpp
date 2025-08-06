@@ -23,11 +23,14 @@ namespace async {
 template <typename T>
 class ManualTask {
 public:
-    explicit ManualTask(std::shared_ptr<Scheduler> scheduler) : state(std::make_shared<State>(std::move(scheduler))) {}
+    explicit ManualTask() : state(std::make_shared<State>()) {}
 
     bool await_ready() noexcept { return false; }
 
     void await_suspend(std::coroutine_handle<> awaiting) noexcept {
+        auto& prom = std::coroutine_handle<Task<void>::promise_type>::from_address(awaiting.address()).promise();
+        state->scheduler = prom.scheduler;
+
         state->continuation = awaiting;
         if (state->scheduler && state->result.has_value()) {
             state->scheduler->schedule_coroutine(state->continuation, state);
@@ -41,8 +44,7 @@ public:
     void complete(T&& value) {
         state->result = std::move(value);
         if (state->continuation && state->scheduler) {
-            // state->scheduler->schedule_coroutine(state->continuation, state);
-            state->continuation.resume();
+            state->scheduler->schedule_coroutine(state->continuation, state);
         }
     }
 
@@ -51,7 +53,6 @@ private:
         std::shared_ptr<Scheduler> scheduler;
         std::coroutine_handle<> continuation;
         std::optional<T> result;
-        explicit State(std::shared_ptr<Scheduler> s) : scheduler(std::move(s)), continuation(nullptr) {}
     };
 
     std::shared_ptr<State> state;

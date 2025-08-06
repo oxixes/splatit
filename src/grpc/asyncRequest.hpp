@@ -63,8 +63,7 @@ private:
 
 // Adaptation using corutines and not promises
 template <typename Stub, typename Method, typename Request, typename Response>
-async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(std::shared_ptr<async::Scheduler> scheduler,
-                                                                          const std::unique_ptr<Stub>& stub,
+async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(const std::unique_ptr<Stub>& stub,
                                                                           Method method,
                                                                           std::shared_ptr<Request> request,
                                                                           int timeoutMs = 0) {
@@ -75,7 +74,7 @@ async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(
         context->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeoutMs));
     }
 
-    auto task = std::make_shared<async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>>>(scheduler);
+    auto task = std::make_shared<async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>>>();
 
     (stub->async()->*method)(context.get(), request.get(), response.get(),
         [task, context = std::move(context), response = std::move(response), _req = std::move(request)]

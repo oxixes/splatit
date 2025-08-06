@@ -11,10 +11,10 @@ using namespace async;
  * Obtains the EULA for the given type and country and version.
  */
 Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                     const std::string& type, const std::string& country, const std::string& version,
-                                     const std::shared_ptr<db::Database>& db,
-                                     const std::shared_ptr<SettingsManager>& settingsManager,
-                                     const std::shared_ptr<CertManager>& certManager) {
+                                     std::string type, std::string country, std::string version,
+                                     std::shared_ptr<db::Database> db,
+                                     std::shared_ptr<SettingsManager> settingsManager,
+                                     std::shared_ptr<CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -64,7 +64,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
     }
 
     std::unique_ptr<db::Command> cmd = db::Database::craftGetAgreementCommand(type, country, language, versionInt);
-    db::Result results = co_await db->runCommand(ctx->scheduler, std::move(cmd));
+    db::Result results = co_await db->runCommand(std::move(cmd));
 
     if (results.getStatus() != db::DBResultStatus::SUCCESS) {
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT, "Database error while getting agreement");
@@ -216,9 +216,9 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
  * Obtains the available time zones for the given country in the specified language.
  */
 Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                   const std::string& country, const std::string& language,
-                                   const std::shared_ptr<SettingsManager>& settingsManager,
-                                   const std::shared_ptr<CertManager>& certManager) {
+                                    std::string country, std::string language,
+                                    std::shared_ptr<SettingsManager> settingsManager,
+                                    std::shared_ptr<CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);

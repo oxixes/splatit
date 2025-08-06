@@ -34,10 +34,11 @@ public:
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type {
+        bool dontDestroy = false; // Used to prevent destruction of the coroutine handle
+        std::shared_ptr<Scheduler> scheduler = nullptr;
         std::exception_ptr exception;
         std::any context;
         std::coroutine_handle<> continuation = nullptr;
-        std::shared_ptr<Scheduler> scheduler = nullptr;
         std::atomic<bool> isCompleted{false};
         std::optional<T> value;
 
@@ -63,12 +64,14 @@ public:
     };
 
     explicit Task(handle_type h) : coro(h) {}
-    Task(Task&& other) noexcept : coro(other.coro)
-    {
+    Task(Task&& other) noexcept : coro(other.coro) {
         other.coro = nullptr;
+        coroDestroyed = std::move(other.coroDestroyed);
     }
     ~Task() {
-        if (coro) coro.destroy();
+        if (!*coroDestroyed && coro && coro.done() && !coro.promise().dontDestroy) {
+            coro.destroy();
+        }
     }
 
     Task& operator=(Task&& other) noexcept {
@@ -82,19 +85,31 @@ public:
 
     struct Awaiter {
         handle_type coro;
-        explicit Awaiter(handle_type h) : coro(h) {}
+        std::shared_ptr<std::atomic<bool>> coroDestroyed;
+
+        Awaiter(handle_type h, std::shared_ptr<std::atomic<bool>> coroDestroyed) : coro(h), coroDestroyed(std::move(coroDestroyed)) {}
         bool await_ready() { return coro.done(); }
 
         void await_suspend(std::coroutine_handle<> awaiting);
 
         T await_resume() {
-            if (coro.promise().exception)
-                std::rethrow_exception(coro.promise().exception);
-            return std::move(*coro.promise().value);
+            if (coro.promise().exception) {
+                const std::exception_ptr exception = coro.promise().exception;
+                *coroDestroyed = true;
+                coro.destroy();
+                std::rethrow_exception(exception);
+            }
+            T val = std::move(*coro.promise().value);
+            *coroDestroyed = true;
+            coro.destroy();
+            return std::move(val);
         }
     };
 
-    auto operator co_await() { return Awaiter{coro}; }
+    auto operator co_await() {
+        coro.promise().dontDestroy = true;
+        return Awaiter{coro, coroDestroyed};
+    }
 
     void setContext(std::any&& v) {
         coro.promise().context = std::move(v);
@@ -111,6 +126,7 @@ public:
     std::optional<T> result() const { return coro.promise().value; }
 
     handle_type coro;
+    std::shared_ptr<std::atomic<bool>> coroDestroyed = std::make_shared<std::atomic<bool>>(false);
 };
 
 // Specialization for void return type
@@ -122,10 +138,11 @@ public:
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type {
+        bool dontDestroy = false; // Used to prevent destruction of the coroutine handle
+        std::shared_ptr<Scheduler> scheduler = nullptr;
         std::exception_ptr exception;
         std::any context;
         std::coroutine_handle<> continuation = nullptr;
-        std::shared_ptr<Scheduler> scheduler = nullptr;
         std::atomic<bool> isCompleted{false};
 
         Task get_return_object() {
@@ -155,7 +172,9 @@ public:
         keepAlive = std::move(other.keepAlive);
     }
     ~Task() {
-        if (coro && coro.done()) coro.destroy();
+        if (coro && coro.done() && !coro.promise().dontDestroy) {
+            coro.destroy();
+        }
     }
 
     Task& operator=(Task&& other) noexcept {
@@ -169,18 +188,28 @@ public:
 
     struct Awaiter {
         handle_type coro;
-        explicit Awaiter(handle_type h) : coro(h) {}
+        std::shared_ptr<std::atomic<bool>> coroDestroyed;
+
+        explicit Awaiter(handle_type h, std::shared_ptr<std::atomic<bool>> coroDestroyed) : coro(h), coroDestroyed(std::move(coroDestroyed)) {}
         bool await_ready() { return coro.done(); }
 
         void await_suspend(std::coroutine_handle<> awaiting);
 
         void await_resume() {
-            if (coro.promise().exception)
-                std::rethrow_exception(coro.promise().exception);
+            coro.promise().dontDestroy = true;
+            if (coro.promise().exception) {
+                const std::exception_ptr exception = coro.promise().exception;
+                *coroDestroyed = true;
+                coro.destroy();
+                std::rethrow_exception(exception);
+            }
         }
     };
 
-    auto operator co_await() const { return Awaiter{coro}; }
+    auto operator co_await() const {
+        coro.promise().dontDestroy = true;
+        return Awaiter{coro, coroDestroyed};
+    }
 
     void setContext(std::any&& v) const {
         coro.promise().context = std::move(v);
@@ -198,6 +227,7 @@ public:
 
     handle_type coro;
     std::shared_ptr<void> keepAlive;
+    std::shared_ptr<std::atomic<bool>> coroDestroyed = std::make_shared<std::atomic<bool>>(false);
 };
 
 /* template <typename T>

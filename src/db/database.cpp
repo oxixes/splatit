@@ -444,10 +444,10 @@ std::shared_ptr<Database> Database::createDatabase(const json& config, const std
     return nullptr;
 }
 
-async::ManualTask<Result> Database::runCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command) {
-    if (*shouldStop) return async::ManualTask<Result>(nullptr);
+async::ManualTask<Result> Database::runCommand(std::unique_ptr<Command> command) {
+    if (*shouldStop) return async::ManualTask<Result>();
 
-    auto task = queueCommand(std::move(scheduler), std::move(command));
+    auto task = queueCommand(std::move(command));
 
     processQueue();
 

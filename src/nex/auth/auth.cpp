@@ -64,7 +64,7 @@ Task<void> AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String
     }
 
     auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
-    db::Result result = co_await db->runCommand(scheduler, std::move(dbCmd));
+    db::Result result = co_await db->runCommand(std::move(dbCmd));
 
     if (result.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(pid)
@@ -221,7 +221,7 @@ Task<void> AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_pt
     }
 
     auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource);
-    db::Result result = co_await db->runCommand(scheduler, std::move(dbCmd));
+    db::Result result = co_await db->runCommand(std::move(dbCmd));
 
     if (result.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user access for PID " + std::to_string(*idSource)
@@ -272,7 +272,7 @@ Task<void> AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_pt
 
 Task<std::optional<std::string>> AuthRMC::getOrRegisterUserPassword(uint32_t pid) const {
     auto dbCmd = db::Database::craftGetGameServerAccessCommand(pid);
-    const db::Result result = co_await db->runCommand(scheduler, std::move(dbCmd));
+    const db::Result result = co_await db->runCommand(std::move(dbCmd));
 
     if (result.getStatus() != db::DBResultStatus::SUCCESS) co_return std::nullopt;
 
@@ -285,7 +285,7 @@ Task<std::optional<std::string>> AuthRMC::getOrRegisterUserPassword(uint32_t pid
     // Generate a new password for the user
     const std::string newPassword = utils::generateUserPassword();
     auto insertCmd = db::Database::craftInsertGameServerAccessCommand(pid, newPassword);
-    const db::Result insertResult = co_await db->runCommand(scheduler, std::move(insertCmd));
+    const db::Result insertResult = co_await db->runCommand(std::move(insertCmd));
 
     if (insertResult.getStatus() == db::DBResultStatus::SUCCESS) {
         co_return std::make_optional(newPassword);

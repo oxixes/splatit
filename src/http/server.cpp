@@ -177,7 +177,7 @@ void Server::serverThread() {
                     sendError(context.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, context.second, clientDir);
                 }
 
-                logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while resolving a promise: " +
+                logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while running a request handler: " +
                                                                             std::string(e.what()));
             }
         }

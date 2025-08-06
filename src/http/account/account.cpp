@@ -73,7 +73,7 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
         std::string userId = bodyMap["user_id"];
 
         std::unique_ptr<db::Command> cmd = db::Database::craftGetUserByUsernameCommand(userId);
-        db::Result results = co_await db->runCommand(ctx->scheduler, std::move(cmd));
+        db::Result results = co_await db->runCommand(std::move(cmd));
 
         if (results.getStatus() != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
@@ -191,9 +191,9 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
  * Obtains the image of the Mii with the given id.
  */
 Task<void> mii_image(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                     const std::shared_ptr<db::Database>& db,
-                     const std::shared_ptr<SettingsManager>& settingsManager,
-                     const std::shared_ptr<CertManager>& certManager) {
+                     std::shared_ptr<db::Database> db,
+                     std::shared_ptr<SettingsManager> settingsManager,
+                     std::shared_ptr<CertManager> certManager) {
 
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
@@ -378,8 +378,8 @@ bool checkOauthToken(const std::shared_ptr<http::Request>& req, const std::share
     return true;
 }
 
-Task<std::optional<uint32_t>> checkHashedBasicAuth(const std::shared_ptr<db::Database>& db,
-                                                   const std::shared_ptr<http::Context>& ctx) {
+Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database> db,
+                                                   std::shared_ptr<http::Context> ctx) {
     if (!ctx->request->hasHeader("authorization")) {
         co_return std::nullopt;
     }
@@ -412,7 +412,7 @@ Task<std::optional<uint32_t>> checkHashedBasicAuth(const std::shared_ptr<db::Dat
 
     // Get the user by username
     auto cmd = db::Database::craftGetUserByUsernameCommand(username);
-    db::Result res = co_await db->runCommand(ctx->scheduler, std::move(cmd));
+    db::Result res = co_await db->runCommand(std::move(cmd));
 
     if (res.getStatus() != db::DBResultStatus::SUCCESS || !res.hasData()) {
         co_return std::nullopt; // Database error or user not found

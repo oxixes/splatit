@@ -13,9 +13,9 @@ using namespace async;
  * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
  */
 Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                    const std::shared_ptr<db::Database>& db,
-                                    const std::shared_ptr<SettingsManager>& settingsManager,
-                                    const std::shared_ptr<CertManager>& certManager) {
+                                    std::shared_ptr<db::Database> db,
+                                    std::shared_ptr<SettingsManager> settingsManager,
+                                    std::shared_ptr<CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -81,7 +81,6 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
             grpcimpl::auth::v1::GetGameServerCredentialsRequest,
             grpcimpl::auth::v1::GetGameServerCredentialsResponse
         >(
-            ctx->scheduler,
             stub,
             &grpcimpl::auth::v1::AuthService::Stub::async::GetGameServerCredentials,
             std::move(request),
@@ -142,9 +141,9 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
  * Currently only returns a maintenance error.
  */
 Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                            const std::shared_ptr<db::Database>& db,
-                                            const std::shared_ptr<SettingsManager>& settingsManager,
-                                            const std::shared_ptr<CertManager>& certManager) {
+                                            std::shared_ptr<db::Database> db,
+                                            std::shared_ptr<SettingsManager> settingsManager,
+                                            std::shared_ptr<CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);

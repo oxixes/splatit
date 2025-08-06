@@ -408,11 +408,11 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual async::ManualTask<Result> startTransaction(std::shared_ptr<async::Scheduler> scheduler) = 0;
-    virtual async::ManualTask<Result> commitTransaction(std::shared_ptr<async::Scheduler> scheduler) = 0;
-    virtual async::ManualTask<Result> rollbackTransaction(std::shared_ptr<async::Scheduler> scheduler) = 0;
+    virtual async::ManualTask<Result> startTransaction() = 0;
+    virtual async::ManualTask<Result> commitTransaction() = 0;
+    virtual async::ManualTask<Result> rollbackTransaction() = 0;
 
-    virtual async::ManualTask<Result> queueCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command) = 0;
+    virtual async::ManualTask<Result> queueCommand(std::unique_ptr<Command> command) = 0;
     virtual void processQueue() = 0;
     virtual void waitForQueue() = 0;
 
@@ -497,7 +497,7 @@ public:
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 
-    async::ManualTask<Result> runCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command);
+    async::ManualTask<Result> runCommand(std::unique_ptr<Command> command);
 
     [[nodiscard]] DBType getType() const;
     [[nodiscard]] DBVersion getVersion() const;

@@ -119,10 +119,10 @@ bool sqlite3Database::run() {
     return true;
 }
 
-async::ManualTask<Result> sqlite3Database::queueCommand(std::shared_ptr<async::Scheduler> scheduler, std::unique_ptr<Command> command) {
-    if (*shouldStop) return async::ManualTask<Result>(nullptr);
+async::ManualTask<Result> sqlite3Database::queueCommand(std::unique_ptr<Command> command) {
+    if (*shouldStop) return async::ManualTask<Result>();
 
-    auto task = std::make_shared<async::ManualTask<Result>>(scheduler);
+    auto task = std::make_shared<async::ManualTask<Result>>();
 
     command->task = task;
     command->db = this->shared_from_this();
@@ -133,27 +133,27 @@ async::ManualTask<Result> sqlite3Database::queueCommand(std::shared_ptr<async::S
     return *task;
 }
 
-async::ManualTask<Result> sqlite3Database::startTransaction(std::shared_ptr<async::Scheduler> scheduler) {
+async::ManualTask<Result> sqlite3Database::startTransaction() {
     auto command = craftVoidCommand("BEGIN TRANSACTION;");
-    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
+    auto task = std::move(queueCommand(std::move(command)));
 
     processQueue();
 
     return std::move(task);
 }
 
-async::ManualTask<Result> sqlite3Database::commitTransaction(std::shared_ptr<async::Scheduler> scheduler) {
+async::ManualTask<Result> sqlite3Database::commitTransaction() {
     auto command = craftVoidCommand("COMMIT TRANSACTION;");
-    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
+    auto task = std::move(queueCommand(std::move(command)));
 
     processQueue();
 
     return std::move(task);
 }
 
-async::ManualTask<Result> sqlite3Database::rollbackTransaction(std::shared_ptr<async::Scheduler> scheduler) {
+async::ManualTask<Result> sqlite3Database::rollbackTransaction() {
     auto command = craftVoidCommand("ROLLBACK TRANSACTION;");
-    auto task = std::move(queueCommand(std::move(scheduler), std::move(command)));
+    auto task = std::move(queueCommand(std::move(command)));
 
     processQueue();
 
@@ -966,7 +966,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         if (!returnedData->empty()) {
             // The result is a count of active ownerships, so we can just return the first value
-            uint32_t count = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data));
+            auto count = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data));
             resultsData = count > 0;
         } else {
             resultsData = false; // No active ownerships found
