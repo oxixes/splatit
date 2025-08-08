@@ -1,5 +1,8 @@
 #include "account.hpp"
 
+#include <mailio/message.hpp>
+#include <mailio/smtp.hpp>
+
 namespace acc {
 
 using namespace async;
@@ -79,10 +82,14 @@ Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Cont
                 co_return;
             }
 
-            int pid;
+            uint32_t pid;
             try {
-                pid = std::stoi(id);
+                pid = std::stoul(id);
             } catch ([[maybe_unused]] const std::out_of_range &e) {
+                res = createError(ctx->request->getVersion(), 1, "input format is invalid", "input", HTTP_STATUS_BAD_REQUEST);
+                srv->sendResponse(std::move(ctx), std::move(res), false);
+                co_return;
+            } catch ([[maybe_unused]] const std::invalid_argument &e) {
                 res = createError(ctx->request->getVersion(), 1, "input format is invalid", "input", HTTP_STATUS_BAD_REQUEST);
                 srv->sendResponse(std::move(ctx), std::move(res), false);
                 co_return;

@@ -81,8 +81,11 @@ public:
     [[nodiscard]] std::string getNEXTokenKey() const;
 
     [[nodiscard]] std::map<std::string, std::vector<std::pair<std::string, std::string>>> getGameServerHosts() const;
-    [[nodiscard]] int getAccountsgRPCRequestTimeout();
-    [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize();
+    [[nodiscard]] int getAccountsgRPCRequestTimeout() const;
+    [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize() const;
+
+    [[nodiscard]] bool isAccountsEmailEnabled() const;
+    [[nodiscard]] json getAccountsEmailSettings() const;
 
 private:
     json settings;

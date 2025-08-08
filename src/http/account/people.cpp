@@ -59,29 +59,6 @@ bool checkAgreement(const pugi::xml_node& agreement) {
     return true;
 }
 
-bool checkEmailAddress(const std::string& address) {
-    // Check that address is a valid email
-    if (address.empty() || address.find('@') == std::string::npos) {
-        return false;
-    }
-
-    // Check that address is not too long
-    if (address.length() > 256) {
-        return false;
-    }
-
-    // Check that address does not contain invalid characters
-    if (!std::ranges::all_of(address, [](const char c) {
-        return std::isalnum(c) || c == '@' || c == '.' || c == '-' || c == '_';
-    })) {
-            return false;
-    }
-
-    // TODO Maybe in the future check connecting to the domain
-
-    return true;
-}
-
 bool checkEmail(const pugi::xml_node& email) {
     if (email.empty()) return false; // Email node must not be empty
 
@@ -455,7 +432,7 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     }
 
     std::unique_ptr<db::Command> updateDevCmd = db::Database::craftInsertOrUpdateDeviceCommand(deviceIdNum, language, 1,
-            region, serialNumber, systemVersion, "RETAIL", "USER", lastUpdated);
+            region, serialNumber, systemVersion, "RETAIL", "USER", "ACTIVE", lastUpdated);
     db::Result deviceResults = co_await session->runCommand(std::move(updateDevCmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
         co_await session->rollbackTransaction();
@@ -476,6 +453,8 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         co_return;
     }
 
+    std::string validationCode = crypto::genRandomString(6, "0123456789");
+
     // After the device is in the database, we can insert the email
     std::unique_ptr<db::Command> emailCmd = db::Database::craftInsertOrUpdateEmailCommand(std::nullopt,
         doc->child("person").child("email").child_value("address"),
@@ -484,8 +463,9 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         true, // reachable
         doc->child("person").child("email").child_value("type"),
         "USER",
-        true, // validated. For now, we set the email as validated, but FIXME actually validate the email
-        db::datetime_t());
+        !settingsManager->isAccountsEmailEnabled(),
+        db::datetime_t(),
+        validationCode);
 
     // We can insert the mii as well
     // For the hash, we'll generate a random string of 13 characters for now, as we don't know how that is generated
@@ -599,6 +579,24 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         throw std::runtime_error("Database error");
     }
 
+    mailio::message msg;
+    msg.add_recipient(mailio::mail_address("", doc->child("person").child("email").child_value("address")));
+    msg.subject("SplatIt Account Created");
+    msg.content("Hello, " + std::string(doc->child("person").child_value("user_id")) + "!\r\n\r\n"
+                "Your SplatIt account has been created successfully!\r\n"
+                "The code to validate your email is: " + validationCode + "\r\n\r\n"
+                "Enter the code in the console in order to validate your email. Link validation is not available yet.\r\n\r\n"
+                "If you did not create this account, please ignore this email.\r\n\r\n"
+                "Thank you for using SplatIt!");
+
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+        "Sending account creation email to " + std::string(doc->child("person").child("email").child_value("address")) + " for user " +
+        std::string(doc->child("person").child_value("user_id")) + ".");
+    sendEmail(ctx->logger, settingsManager, msg);
+
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+        "User " + std::string(doc->child("person").child_value("user_id")) + " created with pid " + std::to_string(pid) + ".");
+
     // Prepare the response
     pugi::xml_document responseDoc;
     pugi::xml_node personNode = responseDoc.append_child("person");
@@ -630,7 +628,7 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -775,6 +773,8 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             throw std::runtime_error("Database error");
         }
 
+        std::string validationCode = crypto::genRandomString(6, "0123456789");
+
         auto currentDataCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
         auto emailCmd = db::Database::craftInsertOrUpdateEmailCommand(
             std::nullopt, // emailId
@@ -784,8 +784,9 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             true, // reachable
             doc->child("person").child("email").child_value("type"),
             "USER",
-            true, // validated - we set the email as validated for now, but FIXME actually validate the email
-            db::datetime_t());
+            !settingsManager->isAccountsEmailEnabled(),
+            db::datetime_t(),
+            validationCode);
 
         auto currentDataResults = co_await session->runCommand(std::move(currentDataCmd));
         if (currentDataResults.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -842,6 +843,25 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
             throw std::runtime_error("Database error");
         }
 
+        mailio::message msg;
+        msg.add_recipient(mailio::mail_address("", doc->child("person").child("email").child_value("address")));
+        msg.subject("SplatIt Email Updated");
+        msg.content("Hello, " + currentDataResults.getData<db::DBUserProfileData>().username + "!\r\n\r\n"
+                    "Your SplatIt account email has been updated successfully!\r\n"
+                    "The code to validate your email is: " + validationCode + "\r\n\r\n"
+                    "Enter the code in the console in order to validate your email. Link validation is not available yet.\r\n\r\n"
+                    "If you don't have an SplatIt account, please ignore this email.\r\n\r\n"
+                    "Thank you for using SplatIt!");
+
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+            "Sending email update email to " + std::string(doc->child("person").child("email").child_value("address")) + " for user " +
+            currentDataResults.getData<db::DBUserProfileData>().username + ".");
+        if (!sendEmail(ctx->logger, settingsManager, msg)) {
+            res = createError(ctx->request->getVersion(), 1031, "Failed to send email", "", HTTP_STATUS_BAD_REQUEST);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
         res = prepareResponse(ctx->request->getVersion(), HTTP_STATUS_OK);
         srv->sendResponse(std::move(ctx), std::move(res), false);
     } else {
@@ -894,7 +914,7 @@ Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Cont
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -961,7 +981,7 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1077,7 +1097,7 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -1211,6 +1231,11 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
         throw std::runtime_error("Database error");
     }
 
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                          "User agreement of type '" + std::string(doc->child("agreement").child_value("type")) +
+                          "' with version " + doc->child("agreement").child_value("version") +
+                          " signed by user with PID " + std::to_string(*pid));
+
     res = prepareResponse(ctx->request->getVersion(), HTTP_STATUS_OK);
     srv->sendResponse(std::move(ctx), std::move(res), false);
 }
@@ -1239,7 +1264,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
         }
 
         crypto::AccountToken accountToken;
-        if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+        if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
             res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
             srv->sendResponse(std::move(ctx), std::move(res), false);
             co_return;
@@ -1430,6 +1455,84 @@ Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<htt
 }
 
 /*
+ * Handler for GET https://account.<domain>/v1/api/people/@me/devices
+ * Obtains the devices linked to the logged-in user.
+ * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
+ */
+Task<void> v1_api_people_me_devices_get(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                        std::shared_ptr<db::Database> db,
+                                        std::shared_ptr<SettingsManager> settingsManager,
+                                        std::shared_ptr<CertManager> certManager) {
+    if (ctx->request->getMethod() != http::Method::M_GET) {
+        std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    crypto::AccountToken accountToken;
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
+        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto ownershipsCmd = db::Database::craftGetLatestOwnershipCommand(accountToken.pid);
+    auto ownershipsResults = co_await db->runCommand(std::move(ownershipsCmd));
+    if (ownershipsResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    pugi::xml_document doc;
+    pugi::xml_node devicesNode = doc.append_child("devices");
+
+    if (ownershipsResults.hasData() && ownershipsResults.getData<db::DBOwnershipData>().status == "ACTIVE") {
+        auto ownership = ownershipsResults.getData<db::DBOwnershipData>();
+
+        auto deviceCmd = db::Database::craftGetDeviceCommand(ownership.deviceId);
+        auto deviceResults = co_await db->runCommand(std::move(deviceCmd));
+        if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
+            throw std::runtime_error("Database error");
+        }
+
+        if (!deviceResults.hasData()) {
+            ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                              "Device with ID " + std::to_string(ownership.deviceId) + " not found for PID " + std::to_string(accountToken.pid) +
+                              "although it has an active ownership. This should NOT happen under normal circumstances.");
+            res = createError(ctx->request->getVersion(), 2001, "Internal server error", "", HTTP_STATUS_NOT_FOUND);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
+        auto deviceData = deviceResults.getData<db::DBDeviceData>();
+
+        pugi::xml_node ownershipNode = devicesNode.append_child("device");
+        ownershipNode.append_child("device_id").text().set(std::to_string(deviceData.deviceId).c_str());
+        ownershipNode.append_child("language").text().set(deviceData.language.c_str(), deviceData.language.length());
+        ownershipNode.append_child("pid").text().set(std::to_string(accountToken.pid).c_str());
+        ownershipNode.append_child("platform_id").text().set(std::to_string(deviceData.platformId).c_str());
+        ownershipNode.append_child("region").text().set(std::to_string(deviceData.region).c_str());
+        ownershipNode.append_child("serial_number").text().set(deviceData.serialNumber.c_str(), deviceData.serialNumber.length());
+        ownershipNode.append_child("system_version").text().set(deviceData.systemVersion.c_str(), deviceData.systemVersion.length());
+        ownershipNode.append_child("type").text().set(deviceData.type.c_str(), deviceData.type.length());
+        ownershipNode.append_child("updated_by").text().set(deviceData.updatedBy.c_str(), deviceData.updatedBy.length());
+        ownershipNode.append_child("status").text().set(deviceData.status.c_str(), deviceData.status.length());
+
+        // Get updated date in ISO 8601 format
+        std::string updatedDate = util::getDateISO8601(deviceData.lastUpdated);
+        ownershipNode.append_child("updated").text().set(updatedDate.c_str(), updatedDate.length());
+    }
+
+    res = prepareResponse(ctx->request->getVersion(), doc);
+    srv->sendResponse(std::move(ctx), std::move(res), false);
+}
+
+/*
  * Handler for POST https://account.<domain>/v1/api/people/@me/devices
  * Links a device to the logged-in user.
  * Requires authentication with a HashedBasic Authentication header.
@@ -1517,8 +1620,9 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         region,
         serialNumber,
         systemVersion,
-        "RETAIL",
-        "USER",
+        "RETAIL", // type
+        "USER", // updatedBy
+        "ACTIVE", // status
         lastUpdated);
     db::Result deviceResults = co_await session->runCommand(std::move(cmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1561,7 +1665,182 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         throw std::runtime_error("Database error");
     }
 
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+              "Device with ID " + std::to_string(deviceIdNum) + " linked to account with PID " + std::to_string(*pid));
+
     co_await v1_api_people_me_profile(srv, std::move(ctx), db, settingsManager, certManager, pid);
+}
+
+/*
+ * Handler for PUT https://account.<domain>/v1/api/people/@me/devices/@current/inactive
+ * Unlinks the device from the logged-in user.
+ * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate
+ */
+Task<void> v1_api_people_me_devices_current_inactive(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                                       std::shared_ptr<db::Database> db,
+                                                       std::shared_ptr<SettingsManager> settingsManager,
+                                                       std::shared_ptr<CertManager> certManager) {
+    if (ctx->request->getMethod() != http::Method::M_PUT) {
+        std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    crypto::AccountToken accountToken;
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
+        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto session = db->createSession();
+    if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    auto ownershipCmd = db::Database::craftGetOwnershipCommand(accountToken.pid, accountToken.deviceId);
+    auto ownershipResults = co_await session->runCommand(std::move(ownershipCmd));
+    if (ownershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    if (!ownershipResults.hasData() || ownershipResults.getData<db::DBOwnershipData>().status != "ACTIVE") {
+        co_await session->rollbackTransaction();
+        res = createError(ctx->request->getVersion(), 113, "Device not linked to this account", "", HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto updateOwnershipCmd = db::Database::craftInsertOrUpdateOwnershipCommand(
+        accountToken.pid,
+        accountToken.deviceId,
+        "INACTIVE",
+        std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())); // updated
+    auto updateOwnershipResults = co_await session->runCommand(std::move(updateOwnershipCmd));
+    if (updateOwnershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+              "Device with ID " + std::to_string(accountToken.deviceId) + " unlinked from account with PID " + std::to_string(accountToken.pid));
+
+    res = prepareResponse(ctx->request->getVersion(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), false);
+}
+
+/*
+ * Handler for POST https://account.<domain>/v1/api/people/@me/deletion
+ * Deletes the account of the logged-in user.
+ * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate
+ */
+Task<void> v1_api_people_me_deletion(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                       std::shared_ptr<db::Database> db,
+                                       std::shared_ptr<SettingsManager> settingsManager,
+                                       std::shared_ptr<CertManager> certManager) {
+    if (ctx->request->getMethod() != http::Method::M_POST) {
+        std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
+    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    crypto::AccountToken accountToken;
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
+        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto session = db->createSession();
+    if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    // Get the current profile
+    auto profileCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
+    auto profileResults = co_await session->runCommand(std::move(profileCmd));
+    if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    if (!profileResults.hasData()) {
+        co_await session->rollbackTransaction();
+        res = createError(ctx->request->getVersion(), 130, "Account not found", "", HTTP_STATUS_NOT_FOUND);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto userProfile = profileResults.getData<db::DBUserProfileData>();
+
+    auto deleteOwnershipsCmd = db::Database::craftDeleteUserOwnershipsCommand(accountToken.pid);
+    db::Result deleteOwnershipsResults = co_await session->runCommand(std::move(deleteOwnershipsCmd));
+    if (deleteOwnershipsResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto deleteUserAgreementsCmd = db::Database::craftDeleteUserAgreementsCommand(accountToken.pid);
+    db::Result deleteUserAgreementsResults = co_await session->runCommand(std::move(deleteUserAgreementsCmd));
+    if (deleteUserAgreementsResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto deleteUserDeviceAttributesCmd = db::Database::craftDeleteUserDeviceAttributesCommand(accountToken.pid);
+    db::Result deleteUserDeviceAttributesResults = co_await session->runCommand(std::move(deleteUserDeviceAttributesCmd));
+    if (deleteUserDeviceAttributesResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto deleteUserCmd = db::Database::craftDeleteUserCommand(accountToken.pid);
+    db::Result deleteUserResults = co_await session->runCommand(std::move(deleteUserCmd));
+    if (deleteUserResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto deleteMiiCmd = db::Database::craftDeleteMiiCommand(userProfile.miiId);
+    db::Result deleteMiiResults = co_await session->runCommand(std::move(deleteMiiCmd));
+    if (deleteMiiResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto deleteEmailCmd = db::Database::craftDeleteEmailCommand(userProfile.emailId);
+    db::Result deleteEmailResults = co_await session->runCommand(std::move(deleteEmailCmd));
+    if (deleteEmailResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                          "User " + userProfile.username + " (PID " + std::to_string(accountToken.pid) + ") has been deleted successfully.");
+
+    res = prepareResponse(ctx->request->getVersion(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
 } // namespace acc

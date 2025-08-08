@@ -49,6 +49,8 @@ enum class DBCommandType {
     UPDATE_USER_INFO,
     GET_FRIENDS_INFO,
     GET_USER_PROFILE,
+    GET_USER_MII,
+    GET_USER_EMAIL,
     GET_DEVICE_ATTRIBUTES,
     GET_AGREEMENT,
     GET_DEVICE,
@@ -56,6 +58,8 @@ enum class DBCommandType {
     GET_OWNERSHIP,
     GET_LATEST_OWNERSHIP,
     HAS_ACTIVE_OWNERSHIP,
+    GET_OWNERSHIPS,
+    INACTIVATE_DEVICE_OWNERSHIPS,
     INSERT_OR_UPDATE_DEVICE,
     INSERT_OR_UPDATE_USER_AGREEMENT,
     INSERT_OR_UPDATE_MII,
@@ -65,7 +69,11 @@ enum class DBCommandType {
     INSERT_OR_UPDATE_OWNERSHIP,
     UPDATE_USER_PROFILE,
     DELETE_MII,
-    DELETE_EMAIL
+    DELETE_EMAIL,
+    DELETE_USER,
+    DELETE_USER_OWNERSHIPS,
+    DELETE_USER_AGREEMENTS,
+    DELETE_USER_DEVICE_ATTRIBUTES
 };
 
 enum class DBResultStatus {
@@ -137,6 +145,7 @@ struct DBDeviceInsertOrUpdateQuery {
     std::string systemVersion;
     std::string type;
     std::string updatedBy;
+    std::string status;
     datetime_t lastUpdated;
 };
 
@@ -166,6 +175,7 @@ struct DBEmailInsertOrUpdateQuery {
     std::string updatedBy;
     bool validated;
     datetime_t validatedAt;
+    std::string validationCode;
 };
 
 struct DBUserProfileInsertQuery {
@@ -283,10 +293,33 @@ struct DBUserProfileData {
     std::string emailUpdatedBy;
     bool emailValidated;
     datetime_t emailValidatedDate;
+    std::string emailValidationCode;
     std::string miiName;
     std::string miiData;
     bool miiPrimary;
     std::string miiHash;
+};
+
+struct DBUserMii {
+    std::string username;
+    int64_t miiId;
+    std::string miiName;
+    std::string miiData;
+    bool miiPrimary;
+    std::string miiHash;
+};
+
+struct DBUserEmail {
+    int64_t emailId;
+    std::string email;
+    bool emailParent;
+    bool emailPrimary;
+    bool emailReachable;
+    std::string emailType;
+    std::string emailUpdatedBy;
+    bool emailValidated;
+    datetime_t emailValidatedDate;
+    std::string emailValidationCode;
 };
 
 struct DBDeviceAttributeData {
@@ -321,6 +354,7 @@ struct DBDeviceData {
     std::string systemVersion;
     std::string type;
     std::string updatedBy;
+    std::string status;
     datetime_t lastUpdated;
 };
 
@@ -386,7 +420,7 @@ public:
 
 class Database : public std::enable_shared_from_this<Database> {
 protected:
-    explicit Database(std::shared_ptr<Logger::Logger> logger, DBType type, DBVersion version);
+    Database(std::shared_ptr<Logger::Logger> logger, DBType type, DBVersion version);
 
     std::shared_ptr<Logger::Logger> logger;
 
@@ -436,6 +470,8 @@ public:
                                                                std::optional<datetime_t> lastOnline);
     static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetUserMiiCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetUserEmailCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
     static std::unique_ptr<Command> craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                              const std::string& language, std::optional<int> version = std::nullopt);
@@ -444,12 +480,15 @@ public:
     static std::unique_ptr<Command> craftGetOwnershipCommand(uint32_t pid, uint32_t deviceId);
     static std::unique_ptr<Command> craftGetLatestOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetOwnershipsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftInactivateDeviceOwnershipsCommand(uint32_t deviceId);
     static std::unique_ptr<Command> craftInsertOrUpdateDeviceCommand(uint32_t deviceId, const std::string& language,
                                                                      uint32_t platformId, uint32_t region,
                                                                      const std::string& serialNumber,
                                                                      const std::string& systemVersion,
                                                                      const std::string& type,
                                                                      const std::string& updatedBy,
+                                                                     const std::string& status,
                                                                      datetime_t lastUpdated);
     static std::unique_ptr<Command> craftInsertOrUpdateUserAgreementCommand(uint32_t pid, const std::string& type,
                                                                             int version, const std::string& country,
@@ -462,7 +501,8 @@ public:
                                                                     bool primary, bool reachable,
                                                                     const std::string& type,
                                                                     const std::string& updatedBy,
-                                                                    bool validated, datetime_t validatedAt);
+                                                                    bool validated, datetime_t validatedAt,
+                                                                    const std::string& validationCode);
     static std::unique_ptr<Command> craftInsertProfileCommand(uint32_t pid, const std::string& username,
                                                               const std::string& password, int64_t emailId,
                                                               int64_t miiId, bool gender, int64_t region,
@@ -494,6 +534,10 @@ public:
                                                                   std::optional<datetime_t> updated);
     static std::unique_ptr<Command> craftDeleteMiiCommand(int64_t miiId);
     static std::unique_ptr<Command> craftDeleteEmailCommand(int64_t emailId);
+    static std::unique_ptr<Command> craftDeleteUserCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteUserOwnershipsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteUserAgreementsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteUserDeviceAttributesCommand(uint32_t pid);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <auth.grpc.pb.h>
 #include <date/tz.h>
+#include <mailio/smtp.hpp>
 
 // TODO Replace use of time_t with date EVERYWHERE. I write this here because it's the first time I use date in the project.
 
@@ -55,16 +56,22 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
 
     std::string body(ctx->request->getBody().begin(), ctx->request->getBody().end());
     std::unordered_map<std::string, std::string> bodyMap;
-    http::parseQuery(body, bodyMap);
+    try {
+        http::parseQuery(body, bodyMap);
+    } catch (const std::exception&) {
+        res = createError(ctx->request->getVersion(), 2, "Malformed request", "", HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
 
-    if (bodyMap.find("grant_type") == bodyMap.end() || (bodyMap["grant_type"] != "password" && bodyMap["grant_type"] != "refresh_token")) {
+    if (!bodyMap.contains("grant_type") || (bodyMap["grant_type"] != "password" && bodyMap["grant_type"] != "refresh_token")) {
         res = createError(ctx->request->getVersion(), 4, "Invalid Grant Type", "grant_type", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
 
     if (bodyMap["grant_type"] == "password") {
-        if (bodyMap.find("user_id") == bodyMap.end() || bodyMap.find("password") == bodyMap.end()) {
+        if (!bodyMap.contains("user_id") || !bodyMap.contains("password")) {
             res = createError(ctx->request->getVersion(), 3, "Request parameters missing", "", HTTP_STATUS_BAD_REQUEST);
             srv->sendResponse(std::move(ctx), std::move(res), false);
             co_return;
@@ -103,6 +110,20 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
             ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " tried to log in with "
                                                                                              "invalid password (client " + util::ipv4ToString(ctx->client) + ").");
             res = createError(ctx->request->getVersion(), 106, "Invalid account ID or password", "", HTTP_STATUS_FORBIDDEN);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
+        auto ownershipCmd = db::Database::craftGetOwnershipCommand(userData.pid, deviceId);
+        const db::Result ownershipResults = co_await db->runCommand(std::move(ownershipCmd));
+        if (ownershipResults.getStatus() != db::DBResultStatus::SUCCESS) {
+            throw std::runtime_error("Database error");
+        }
+
+        if (!ownershipResults.hasData() || ownershipResults.getData<db::DBOwnershipData>().status != "ACTIVE") {
+            ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userId + " tried to log in with "
+                             "unowned device (client " + util::ipv4ToString(ctx->client) + ", deviceId " + std::to_string(deviceId) + ").");
+            res = createError(ctx->request->getVersion(), 104, "Device is not linked to this account", "", HTTP_STATUS_BAD_REQUEST);
             srv->sendResponse(std::move(ctx), std::move(res), false);
             co_return;
         }
@@ -356,26 +377,32 @@ bool checkDeviceCert(const std::string& cert, EVP_PKEY* pubKey, std::string& dev
     return verified;
 }
 
-bool checkOauthToken(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                     crypto::AccountToken& token) {
+Task<bool> checkOauthToken(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
+                           const std::shared_ptr<db::Database>& db, crypto::AccountToken& token) {
     if (!req->hasHeader("authorization")) {
-        return false;
+        co_return false;
     }
 
     std::string tokenStr = req->getHeader("authorization")[0];
 
     if (tokenStr.substr(0, 7) != "Bearer ") {
-        return false;
+        co_return false;
     }
 
     tokenStr = tokenStr.substr(7);
     token.key = crypto::base64Decode(settingsManager->getTokenKey());
 
     if (!crypto::parseAccountToken(tokenStr, token) || time(nullptr) > token.expiration) {
-        return false;
+        co_return false;
     }
 
-    return true;
+    auto cmd = db::Database::craftGetOwnershipCommand(token.pid, token.deviceId);
+    const db::Result res = co_await db->runCommand(std::move(cmd));
+    if (res.getStatus() != db::DBResultStatus::SUCCESS || !res.hasData() || res.getData<db::DBOwnershipData>().status != "ACTIVE") {
+        co_return false; // Database error or ownership not found
+    }
+
+    co_return true;
 }
 
 Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database> db,
@@ -532,6 +559,77 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
     return true;
 }
 
+bool checkEmailAddress(const std::string& address) {
+    // Check that address is a valid email
+    if (address.empty() || address.find('@') == std::string::npos) {
+        return false;
+    }
+
+    // Check that address is not too long
+    if (address.length() > 256) {
+        return false;
+    }
+
+    std::regex emailRegex(R"(^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$)");
+    if (!std::regex_match(address, emailRegex)) {
+        return false; // Invalid email format
+    }
+
+    // TODO Maybe in the future check connecting to the domain
+
+    return true;
+}
+
+bool sendEmail(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsManager,
+               mailio::message& msg) {
+    if (!settingsManager->isAccountsEmailEnabled()) {
+        return true; // Email sending is disabled, so we don't send anything
+    }
+
+    std::string smtpServer = settingsManager->getAccountsEmailSettings()["host"].get<std::string>();
+    unsigned short smtpPort = settingsManager->getAccountsEmailSettings()["port"].get<unsigned short>();
+    std::string smtpUser = settingsManager->getAccountsEmailSettings()["username"].get<std::string>();
+    std::string smtpPassword = settingsManager->getAccountsEmailSettings()["password"].get<std::string>();
+    std::string smtpFrom = settingsManager->getAccountsEmailSettings()["sender"].get<std::string>();
+    uint64_t sendTimeout = settingsManager->getAccountsEmailSettings()["sendTimeout"].get<uint64_t>();
+
+    msg.from(mailio::mail_address("SplatIt", smtpFrom));
+
+    try {
+        if (settingsManager->getAccountsEmailSettings()["secure"].get<bool>()) {
+            auto authMethod = mailio::smtps::auth_method_t::START_TLS;
+            if (settingsManager->getAccountsEmailSettings()["authMethod"] == "none") {
+                authMethod = mailio::smtps::auth_method_t::NONE;
+            } else if (settingsManager->getAccountsEmailSettings()["authMethod"] == "login") {
+                authMethod = mailio::smtps::auth_method_t::LOGIN;
+            }
+
+            mailio::smtps conn(smtpServer, smtpPort, std::chrono::milliseconds(sendTimeout));
+            conn.authenticate(smtpUser, smtpPassword, authMethod);
+            conn.submit(msg);
+        } else {
+            auto authMethod = mailio::smtp::auth_method_t::LOGIN;
+            if (settingsManager->getAccountsEmailSettings()["authMethod"] == "none") {
+                authMethod = mailio::smtp::auth_method_t::NONE;
+            }
+
+            mailio::smtp conn(smtpServer, smtpPort, std::chrono::milliseconds(sendTimeout));
+            conn.authenticate(smtpUser, smtpPassword, authMethod);
+            conn.submit(msg);
+        }
+    } catch (const mailio::smtp_error& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                    "Failed to send email: " + std::string(e.what()));
+        return false;
+    } catch (const std::exception& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                    "An error occurred while sending email: " + std::string(e.what()));
+        return false;
+    }
+
+    return true;
+}
+
 bool init(const std::shared_ptr<Logger::Logger>& logger) {
     fs::path timezonesFilePath = fs::path("timezones.json");
     if (!fs::exists(timezonesFilePath) || !fs::is_regular_file(timezonesFilePath)) {
@@ -578,6 +676,16 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
     server->registerRoute("account." + domain, "/v1/api/provider/nex_token/@me",
                           [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                               return v1_api_provider_nex_token(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/api/devices/@current/status",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_devices_current_status(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/api/devices/@current/inactivate",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_devices_current_inactivate(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRoute("account." + domain, "/v1/api/people/@me/profile",
@@ -627,7 +735,21 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
 
     server->registerRoute("account." + domain, "/v1/api/people/@me/devices",
                           [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              if (ctx->request->getMethod() == http::Method::M_GET) {
+                                  return v1_api_people_me_devices_get(srv, std::move(ctx), db, settingsMgr, certMgr);
+                              }
+
                               return v1_api_people_me_devices_post(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/api/people/@me/devices/@current/inactive",
+                              [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                  return v1_api_people_me_devices_current_inactive(srv, std::move(ctx), db, settingsMgr, certMgr);
+                              });
+
+    server->registerRoute("account." + domain, "/v1/api/people/@me/deletion",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_people_me_deletion(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
     server->registerRegexRoute("account." + domain, R"(^/v1/api/content/agreements/([A-Za-z\-]+)/([A-Z]{2})/(\d{4}|@latest)$)",
@@ -668,6 +790,67 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                    const std::string nnid = match[1];
 
                                    return v1_api_people_nnid(srv, std::move(ctx), nnid, db, settingsMgr, certMgr);
+                               });
+
+    server->registerRoute("account." + domain, "/v1/api/miis",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_miis(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/api/support/validate/email",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_support_validate_email(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRegexRoute("account." + domain, R"(^/v1/api/support/email_confirmation/([0-9]+)/([0-9]{6})$)",
+                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                   const std::regex re(R"(^/v1/api/support/email_confirmation/([0-9]+)/([0-9]{6})$)");
+                                   std::smatch match;
+                                   const std::string path = ctx->request->getPath();
+                                   std::regex_match(path, match, re);
+                                   const std::string pid = match[1];
+                                   const std::string code = match[2];
+
+                                   return v1_api_support_email_confirmation(srv, std::move(ctx), pid, code, db, settingsMgr, certMgr);
+                               });
+
+    server->registerRegexRoute("account." + domain, R"(^/v1/api/support/forgotten_password/([0-9]+)$)",
+                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                   const std::regex re(R"(^/v1/api/support/forgotten_password/([0-9]+)$)");
+                                   std::smatch match;
+                                   const std::string path = ctx->request->getPath();
+                                   std::regex_match(path, match, re);
+                                   const std::string pid = match[1];
+
+                                   return v1_api_support_forgotten_password(srv, std::move(ctx), pid, db, settingsMgr, certMgr);
+                               });
+
+    server->registerRoute("account." + domain, "/v1/api/support/resend_confirmation",
+                          [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_support_resend_confirmation(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRegexRoute("account." + domain, R"(^/v1/api/support/send_confirmation/pin/([A-Za-z0-9._%+-]+[(%40)|@][A-Za-z0-9.-]+\.[A-Za-z]{2,})$)",
+                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                   const std::regex re(R"(^/v1/api/support/send_confirmation/pin/([A-Za-z0-9._%+-]+[(%40)|@][A-Za-z0-9.-]+\.[A-Za-z]{2,})$)");
+                                   std::smatch match;
+                                   const std::string path = ctx->request->getPath();
+                                   std::regex_match(path, match, re);
+                                   const std::string email = match[1];
+
+                                   return v1_api_support_send_confirmation_pin(srv, std::move(ctx), email, db, settingsMgr, certMgr);
+                               });
+
+    server->registerRegexRoute("account." + domain, R"(^/v1/api/support/send_forgotten/pin/([A-Za-z0-9._%+-]+[(%40)|@][A-Za-z0-9.-]+\.[A-Za-z]{2,})/([0-9]{5})$)",
+                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                   const std::regex re(R"(^/v1/api/support/send_forgotten/pin/([A-Za-z0-9._%+-]+[(%40)|@][A-Za-z0-9.-]+\.[A-Za-z]{2,})/([0-9]{5})$)");
+                                   std::smatch match;
+                                   const std::string path = ctx->request->getPath();
+                                   std::regex_match(path, match, re);
+                                   const std::string email = match[1];
+                                   const std::string pin = match[2];
+
+                                   return v1_api_support_send_forgotten_pin(srv, std::move(ctx), email, pin, db, settingsMgr, certMgr);
                                });
 
     constexpr std::array<std::string_view, 7> miiTypes = {"normal_face", "frustrated_face", "happy_face", "like_face",

@@ -44,7 +44,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -157,7 +157,7 @@ Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<h
     }
 
     crypto::AccountToken accountToken;
-    if (!checkOauthToken(ctx->request, settingsManager, accountToken)) {
+    if (!co_await checkOauthToken(ctx->request, settingsManager, db, accountToken)) {
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;

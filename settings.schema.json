@@ -541,6 +541,57 @@
             "required": ["host", "port", "user", "password", "name"]
           }
         },
+        "email": {
+          "description": "Email settings for account verification and password reset",
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "Enable or disable email functionality. If disabled, all emails will be automatically marked as verified.",
+              "type": "boolean"
+            },
+            "host": {
+              "description": "SMTP server host",
+              "type": "string"
+            },
+            "port": {
+              "description": "SMTP server port",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "authMethod": {
+              "description": "Authentication method for the SMTP server",
+              "type": "string",
+              "enum": ["none", "login", "starttls"]
+            },
+            "username": {
+              "description": "Username for SMTP authentication",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password for SMTP authentication",
+              "type": "string"
+            },
+            "sender": {
+              "description": "Email address to use as the sender",
+              "type": "string"
+            },
+            "sendTimeout": {
+              "description": "Timeout for sending emails (in milliseconds)",
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "if": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          },
+          "then": {
+            "required": ["host", "port", "authMethod", "username", "password", "sender", "sendTimeout"]
+          },
+          "required": ["enabled"]
+        },
         "grpcRequestTimeout": {
           "description": "Timeout for gRPC requests (in milliseconds)",
           "type": "integer",

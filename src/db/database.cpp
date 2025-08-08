@@ -148,6 +148,28 @@ std::unique_ptr<Command> Database::craftGetUserProfileCommand(uint32_t pid) {
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetUserMiiCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_MII,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetUserEmailCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_EMAIL,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId) {
     DBDeviceAttributesQuery query {
             .pid = pid,
@@ -224,12 +246,35 @@ std::unique_ptr<Command> Database::craftHasActiveOwnershipCommand(uint32_t pid) 
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetOwnershipsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_OWNERSHIPS,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInactivateDeviceOwnershipsCommand(uint32_t deviceId) {
+    DBIdQuery query {
+        .id = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftInsertOrUpdateDeviceCommand(uint32_t deviceId, const std::string& language,
                                                                     uint32_t platformId, uint32_t region,
                                                                     const std::string& serialNumber,
                                                                     const std::string& systemVersion,
                                                                     const std::string& type,
                                                                     const std::string& updatedBy,
+                                                                    const std::string& status,
                                                                     datetime_t lastUpdated) {
     DBDeviceInsertOrUpdateQuery query {
         .deviceId = deviceId,
@@ -240,6 +285,7 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateDeviceCommand(uint32_t dev
         .systemVersion = systemVersion,
         .type = type,
         .updatedBy = updatedBy,
+        .status = status,
         .lastUpdated = lastUpdated
     };
 
@@ -289,7 +335,8 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateEmailCommand(std::optional
                                                                    const std::string& type,
                                                                    const std::string& updatedBy,
                                                                    bool validated,
-                                                                   datetime_t validatedAt) {
+                                                                   datetime_t validatedAt,
+                                                                   const std::string& validationCode) {
     DBEmailInsertOrUpdateQuery query {
         .emailId = emailId,
         .email = email,
@@ -299,7 +346,8 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateEmailCommand(std::optional
         .type = type,
         .updatedBy = updatedBy,
         .validated = validated,
-        .validatedAt = validatedAt
+        .validatedAt = validatedAt,
+        .validationCode = validationCode
     };
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_EMAIL,
@@ -432,6 +480,41 @@ std::unique_ptr<Command> Database::craftDeleteEmailCommand(int64_t emailId) {
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftDeleteUserCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserOwnershipsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_OWNERSHIPS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserAgreementsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_AGREEMENTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserDeviceAttributesCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_DEVICE_ATTRIBUTES, std::any(query));
+    return dbCommand;
+}
 
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
@@ -478,8 +561,15 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::GET_USER_INFO: // Gets the user friend information by PID.
         case DBCommandType::GET_FRIENDS_INFO: // Gets the friends information of a user by PID.
         case DBCommandType::GET_USER_PROFILE: // Gets the user profile information by PID.
+        case DBCommandType::GET_USER_MII: // Gets the Mii of a user by PID.
+        case DBCommandType::GET_USER_EMAIL: // Gets the email of a user by PID.
         case DBCommandType::GET_LATEST_OWNERSHIP: // Gets the latest ownership of a device by PID.
         case DBCommandType::HAS_ACTIVE_OWNERSHIP: // Checks if a user has an active ownership of a device by PID.
+        case DBCommandType::GET_OWNERSHIPS: // Gets the ownerships of a user by PID.
+        case DBCommandType::DELETE_USER: // Deletes a user and all of their related data by PID.
+        case DBCommandType::DELETE_USER_OWNERSHIPS: // Deletes all ownerships of a user by PID.
+        case DBCommandType::DELETE_USER_AGREEMENTS: // Deletes all user agreements by PID.
+        case DBCommandType::DELETE_USER_DEVICE_ATTRIBUTES: // Deletes all device attributes of a user by PID.
             if (command->data.type() != typeid(DBPidQuery)) {
                 return false;
             }
@@ -489,6 +579,7 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::DELETE_MII: // Deletes a Mii by its ID.
         case DBCommandType::DELETE_EMAIL: // Deletes an email by its ID.
         case DBCommandType::GET_DEVICE: // Gets a device by its ID.
+        case DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS:
             if (command->data.type() != typeid(DBIdQuery)) {
                 return false;
             }

@@ -12,7 +12,7 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
             sqlCmds.emplace_back("CREATE TABLE emails (id INTEGER, address TEXT NOT NULL, parent INTEGER NOT NULL,"
                                  "'primary' INTEGER NOT NULL, reachable INTEGER NOT NULL, type TEXT NOT NULL,"
                                  "updated_by TEXT NOT NULL, validated INTEGER NOT NULL, validated_date TEXT,"
-                                 "PRIMARY KEY (id));");
+                                 "validation_code TEXT, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE miis (id INTEGER, hash TEXT NOT NULL, name TEXT NOT NULL,"
                                  "'primary' INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE users (pid INTEGER, username TEXT NOT NULL, password TEXT NOT NULL,"
@@ -25,8 +25,8 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                  "FOREIGN KEY (mii_id) REFERENCES miis(id) ON UPDATE CASCADE ON DELETE RESTRICT);");
             sqlCmds.emplace_back("CREATE TABLE devices (id INTEGER, language TEXT NOT NULL, platform_id INTEGER NOT NULL,"
                                  "region INTEGER NOT NULL, serial_num TEXT NOT NULL, system_ver TEXT NOT NULL,"
-                                 "type TEXT NOT NULL, updated_by TEXT NOT NULL, last_updated TEXT NOT NULL,"
-                                 "PRIMARY KEY (id));");
+                                 "type TEXT NOT NULL, updated_by TEXT NOT NULL, status TEXT NOT NULL,"
+                                 "last_updated TEXT NOT NULL, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE device_attributes (device_id INTEGER NOT NULL, pid INTEGER NOT NULL,"
                                  "name TEXT NOT NULL, value TEXT NOT NULL, created_date TEXT NOT NULL,"
                                  "PRIMARY KEY (device_id, pid, name), FOREIGN KEY (device_id) REFERENCES devices(id) "

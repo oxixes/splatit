@@ -214,6 +214,9 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                         {"type", "SQLite3"},
                         {"path", (dataDirAbsPath/fs::path("account.db")).string()}
                     }},
+                    {"email", {
+                        {"enabled", false}
+                    }},
                     {"allowRealWiiU", true},
                     {"allowGeneratedWiiU", true},
                     {"grpcRequestTimeout", 3000}, // in milliseconds
@@ -525,10 +528,18 @@ std::map<std::string, std::vector<std::pair<std::string, std::string>>> Settings
     return std::move(hosts);
 }
 
-int SettingsManager::getAccountsgRPCRequestTimeout() {
+int SettingsManager::getAccountsgRPCRequestTimeout() const {
     return settings["accounts"]["grpcRequestTimeout"];
 }
 
-int SettingsManager::getAccountsgRPCConnectionPoolMaxSize() {
+int SettingsManager::getAccountsgRPCConnectionPoolMaxSize() const {
     return settings["accounts"]["grpcConnectionPoolMaxSize"];
+}
+
+bool SettingsManager::isAccountsEmailEnabled() const {
+    return settings["accounts"]["email"]["enabled"].get<bool>();
+}
+
+json SettingsManager::getAccountsEmailSettings() const {
+    return settings["accounts"]["email"];
 }

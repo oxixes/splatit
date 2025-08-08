@@ -61,6 +61,8 @@ private:
     sqlite3_stmt* insertUserInfoStatement = nullptr;
     sqlite3_stmt* getFriendsInfoStatement = nullptr;
     sqlite3_stmt* getUserProfileStatement = nullptr;
+    sqlite3_stmt* getUserMiiStatement = nullptr;
+    sqlite3_stmt* getUserEmailStatement = nullptr;
     sqlite3_stmt* getDeviceAttributesStatement = nullptr;
     sqlite3_stmt* getAgreementStatement = nullptr;
     sqlite3_stmt* getDeviceStatement = nullptr;
@@ -68,6 +70,8 @@ private:
     sqlite3_stmt* getOwnershipStatement = nullptr;
     sqlite3_stmt* getLatestOwnershipStatement = nullptr;
     sqlite3_stmt* hasActiveOwnershipStatement = nullptr;
+    sqlite3_stmt* getOwnershipsStatement = nullptr;
+    sqlite3_stmt* inactivateDeviceOwnershipsStatement = nullptr;
     sqlite3_stmt* getLatestAgreementStatement = nullptr;
     sqlite3_stmt* insertOrUpdateDeviceStatement = nullptr;
     sqlite3_stmt* insertOrUpdateUserAgreementStatement = nullptr;
@@ -78,6 +82,10 @@ private:
     sqlite3_stmt* insertOrUpdateOwnershipStatement = nullptr;
     sqlite3_stmt* deleteMiiStatement = nullptr;
     sqlite3_stmt* deleteEmailStatement = nullptr;
+    sqlite3_stmt* deleteUserStatement = nullptr;
+    sqlite3_stmt* deleteUserOwnershipsStatement = nullptr;
+    sqlite3_stmt* deleteUserAgreementsStatement = nullptr;
+    sqlite3_stmt* deleteUserDeviceAttributesStatement = nullptr;
 
     bool isSession = false;
 
