@@ -80,13 +80,15 @@ std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, bool showOnline, bool showPlaying,
+std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, const std::string& username,
+                                                              bool showOnline, bool showPlaying,
                                                               bool blockRequests, const std::vector<uint8_t>& nnaInfo,
                                                               const std::vector<uint8_t>& presence,
                                                               const std::vector<uint8_t>& comment,
                                                               datetime_t lastOnline) {
     DBUserInfoData data {
         .pid = pid,
+        .username = username,
         .showPresence = showOnline,
         .showPlaying = showPlaying,
         .blockRequests = blockRequests,
@@ -102,7 +104,8 @@ std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, bool
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
+std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std::optional<std::string> username,
+                                                              std::optional<bool> showOnline,
                                                               std::optional<bool> showPlaying,
                                                               std::optional<bool> blockRequests,
                                                               std::optional<std::vector<uint8_t>> nnaInfo,
@@ -111,6 +114,7 @@ std::unique_ptr<Command> Database::craftUpdateUserInfoCommand(uint32_t pid, std:
                                                               std::optional<datetime_t> lastOnline) {
     DBUserInfoUpdate update {
         .pid = pid,
+        .username = std::move(username),
         .showPresence = showOnline,
         .showPlaying = showPlaying,
         .blockRequests = blockRequests,
@@ -516,6 +520,16 @@ std::unique_ptr<Command> Database::craftDeleteUserDeviceAttributesCommand(uint32
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid) {
+    DBFriendDeleteQuery query {
+        .pid = pid,
+        .friendPid = friendPid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_FRIEND, std::any(query));
+    return dbCommand;
+}
+
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(logger, config["path"].get<std::string>());
@@ -718,6 +732,14 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::UPDATE_USER_PROFILE:
             // Updates a user profile in the database.
             if (command->data.type() != typeid(DBUserProfileUpdateQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_FRIEND:
+            // Deletes a friendship between two users.
+            if (command->data.type() != typeid(DBFriendDeleteQuery)) {
                 return false;
             }
 

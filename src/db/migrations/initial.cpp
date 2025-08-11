@@ -92,7 +92,7 @@ bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, co
             sqlCmds.emplace_back("BEGIN TRANSACTION;");
             sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
             sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
-            sqlCmds.emplace_back("CREATE TABLE user_info (pid INTEGER NOT NULL, show_presence INTEGER NOT NULL DEFAULT (1), "
+            sqlCmds.emplace_back("CREATE TABLE user_info (pid INTEGER NOT NULL, username TEXT NOT NULL, show_presence INTEGER NOT NULL DEFAULT (1), "
                                  "show_playing INTEGER NOT NULL DEFAULT (1), block_requests INTEGER NOT NULL DEFAULT (0), "
                                  "nna_info BLOB NOT NULL, presence BLOB NOT NULL, comment BLOB NOT NULL, last_online TEXT NOT NULL, "
                                  "PRIMARY KEY (pid));");

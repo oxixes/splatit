@@ -26,6 +26,53 @@ AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup,
 }
 
 Task<void> AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String> username) {
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.callId = req.callId;
+    res.methodId = req.methodId;
+    res.success = true; // The game expects a "successful" response with an error in the %retval% field
+
+    if (friends && *username == "guest") {
+        logger->log(Logger::level::INFO, logGroup, "Guest login requested from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        std::vector<T_ptr> params(5);
+        std::unique_ptr<Result> retval = std::make_unique<Result>();
+        retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
+        retval->success = true;
+
+        params[0] = std::move(retval);
+        params[1] = std::make_unique<PID>(0, 100); // Guest PID is 100
+
+        std::string userPasswd = "MMQea3n!fsik"; // Default password for guest users
+
+        std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
+        auto ticketData = prudp::kerberos::generateTicket(100, userPasswdVec,
+                                                          2, secureServerKey, friends);
+
+        params[2] = std::make_unique<Buffer>(std::move(ticketData));
+
+        StationURL secureUrl;
+        secureUrl.proto = Protocol::PRUDPS;
+        secureUrl.ip = secureAddr;
+        secureUrl.port = secureAddr.port;
+        secureUrl.stream = 0xA;
+        secureUrl.sid = 1;
+        secureUrl.CID = 1;
+        secureUrl.type = 2;
+        secureUrl.PID = 2;
+
+        std::unique_ptr<RVConnectionData> connectionData = std::make_unique<RVConnectionData>(client.minorVersion);
+        connectionData->urlRegularProtocols = std::move(secureUrl);
+
+        params[3] = std::move(connectionData);
+        params[4] = std::make_unique<String>(build);
+
+        sendMsg(client, res, params);
+        co_return;
+    }
+
     // Check if username is a number
     bool validUsername = std::ranges::all_of(*username, isdigit);
 
@@ -33,18 +80,11 @@ Task<void> AuthRMC::login(ClientInfo client, Request req, std::unique_ptr<String
     uint32_t pid = 0;
     if (validUsername) {
         try {
-            pid = std::stoi(*username);
+            pid = std::stoul(*username);
         } catch ([[maybe_unused]] const std::out_of_range& e) {
             validUsername = false;
         }
     }
-
-    Response res;
-    res.protocolId = req.protocolId;
-    res.extendedProtocolId = req.extendedProtocolId;
-    res.callId = req.callId;
-    res.methodId = req.methodId;
-    res.success = true; // The game expects a "successful" response with an error in the %retval% field
 
     if (!validUsername) {
         logger->log(Logger::level::INFO, logGroup, "Invalid username tried to log in: " + static_cast<std::string>(*username));
@@ -164,7 +204,8 @@ Task<void> AuthRMC::loginEx(ClientInfo client, Request req, std::unique_ptr<Stri
     }
 
     std::string token = info.authToken;
-    if (!utils::checkJWT(token, base64JWTKey, serverId, client, logger, logGroup)) {
+    std::string _username;
+    if (!utils::checkJWT(token, base64JWTKey, serverId, client, logger, logGroup, _username)) {
         logger->log(Logger::level::INFO, logGroup, "Invalid JWT token from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
 
@@ -220,6 +261,28 @@ Task<void> AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_pt
         co_return;
     }
 
+    if (friends && *idSource == static_cast<uint32_t>(100)) {
+        logger->log(Logger::level::INFO, logGroup, "Guest user requested a ticket successfully.");
+
+        // Guest users are allowed to request tickets, so we generate a ticket for them
+        std::vector<T_ptr> params(2);
+        auto retval = std::make_unique<Result>();
+        retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
+        retval->success = true;
+
+        params[0] = std::move(retval);
+
+        std::string userPasswd = "MMQea3n!fsik"; // Default password for guest users
+        std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
+        auto ticketData = prudp::kerberos::generateTicket(*idSource, userPasswdVec,
+                                                          2, secureServerKey, friends);
+
+        params[1] = std::make_unique<Buffer>(ticketData);
+
+        sendMsg(client, res, params);
+        co_return;
+    }
+
     auto dbCmd = db::Database::craftGetGameServerAccessCommand(*idSource);
     db::Result result = co_await db->runCommand(std::move(dbCmd));
 
@@ -259,7 +322,7 @@ Task<void> AuthRMC::requestTicket(ClientInfo client, Request req, std::unique_pt
     retval->code = Error::CORE__UNKNOWN; // This is the "error code" that the game uses when the ticket is valid
     retval->success = true;
 
-    params[0] = std::move(retval);;
+    params[0] = std::move(retval);
 
     std::vector<uint8_t> userPasswdVec(userPasswd.begin(), userPasswd.end());
     auto ticketData = prudp::kerberos::generateTicket(*idSource, userPasswdVec,

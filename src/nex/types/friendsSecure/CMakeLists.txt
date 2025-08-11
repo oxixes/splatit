@@ -12,4 +12,6 @@ target_sources(splatoon_server PRIVATE
         blacklistedPrincipal.hpp
         persistentNotification.hpp
         nintendoNotificationEvent.hpp
-        nintendoNotificationEventGeneral.hpp)
+        nintendoNotificationEventGeneral.hpp
+        nintendoCreateAccountData.hpp
+        principalRequestBlockSetting.hpp)

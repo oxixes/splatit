@@ -10,12 +10,28 @@
 #include "../types/friendsSecure/nintendoPresenceV2.hpp"
 #include "../types/common/datetime.hpp"
 #include "../types/friendsSecure/nintendoNotificationEvent.hpp"
+#include "../types/friendsSecure/principalPreference.hpp"
+#include "../types/friendsSecure/comment.hpp"
+
+#define FRIENDS_SETTING_STATUS 0
 
 namespace nex::rmc {
 
+struct UserPreference {
+    bool showOnline = true;
+    bool showPlaying = true;
+    bool blockFriendRequest = false;
+};
+
+struct UserData {
+    uint32_t pid{};
+    UserPreference preference;
+};
+
 struct FriendsRegisteredClientInfo {
     ClientInfo client;
-    std::vector<uint32_t> friends;
+    UserData userData;
+    std::vector<UserData> friends;
 };
 
 class FriendsSecureRMC : public Server {
@@ -25,11 +41,23 @@ public:
     ~FriendsSecureRMC() override = default;
 
 private:
+    async::Task<void> register_(ClientInfo client, Request req,
+                                std::unique_ptr<List<StationURL>> urls);
     async::Task<void> registerEx(ClientInfo client, Request req, std::unique_ptr<List<StationURL>> urls,
+                    std::unique_ptr<AnyDataHolder> data);
+    async::Task<void> nintendoCreateAccount(ClientInfo client, Request req, std::unique_ptr<String> principalName,
+                    std::unique_ptr<String> key, std::unique_ptr<UInt32> groups, std::unique_ptr<String> email,
                     std::unique_ptr<AnyDataHolder> data);
     async::Task<void> updateAndGetAllInformation(ClientInfo client, Request req, std::unique_ptr<NNAInfo> nnaInfo,
                                     std::unique_ptr<NintendoPresenceV2> presence, std::unique_ptr<Datetime> birthdate);
+    async::Task<void> removeFriend(ClientInfo client, Request req, std::unique_ptr<PID> pid);
     async::Task<void> updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence);
+    async::Task<void> updateMii(ClientInfo client, Request req, std::unique_ptr<MiiV2> mii);
+    async::Task<void> updateComment(ClientInfo client, Request req, std::unique_ptr<Comment> comment);
+    async::Task<void> updatePreference(ClientInfo client, Request req, std::unique_ptr<PrincipalPreference> preference);
+    async::Task<void> getBasicInfo(ClientInfo client, Request req, std::unique_ptr<List<PID>> pids);
+    async::Task<void> checkSettingStatus(ClientInfo client, Request req);
+    async::Task<void> getRequestBlockSettings(ClientInfo client, Request req, std::unique_ptr<List<PID>> pids);
 
     async::Task<void> onDisconnect(prudp::PRUDPAddress address) override;
 

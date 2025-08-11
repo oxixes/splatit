@@ -103,10 +103,23 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
         co_return;
     }
 
+    auto userInfoCmd = db::Database::craftGetUserByPIDCommand(accountToken.pid);
+    auto userInfoResult = co_await db->runCommand(std::move(userInfoCmd));
+    if (userInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (!userInfoResult.hasData()) {
+        res = createError(ctx->request->getVersion(), 130, "Account not found", "", HTTP_STATUS_NOT_FOUND);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
     json jwtPayload = {
             {"exp", time(nullptr) + 3600},
             {"iss", "account"},
             {"sub", accountToken.pid},
+            {"username", userInfoResult.getData<db::DBUserData>().username},
             {"game_server_id", gameServerId}
     };
 

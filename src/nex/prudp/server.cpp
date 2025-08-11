@@ -736,15 +736,15 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
             return false;
         }
 
-        if (it != clients.end() || (userPid != 0 && pidToAddr.contains(userPid)))
-            closeClientConnection((userPid != 0) ? pidToAddr.at(userPid) : prudpAddr);
+        if (it != clients.end() || (userPid != 0 && userPid != 100 && pidToAddr.contains(userPid)))
+            closeClientConnection(pidToAddr.contains(userPid) ? pidToAddr.at(userPid) : prudpAddr);
 
         timePoint now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
         timePoint nextPing = now + std::chrono::milliseconds(PING_INTERVAL);
 
         clients.insert({prudpAddr, {
                 PayloadEncoder(key, maxSubstreamId),
-                (reqv1 != nullptr) ? reqv1->minorVersion : (uint8_t) 0,
+                reqv1 != nullptr ? reqv1->minorVersion : static_cast<uint8_t>(0),
                 supportedFunctions,
                 initSeqIdUnreliable,
                 packet->remoteSignature,
@@ -759,7 +759,7 @@ bool Server::handlePacket(prudp::PRUDPAddress prudpAddr, const std::shared_ptr<P
                 nextPing
         }});
 
-        if (userPid != 0) pidToAddr.insert({userPid, prudpAddr});
+        if (userPid != 0 && userPid != 100) pidToAddr.insert({userPid, prudpAddr});
 
         auto rmcIt = registeredServers.find(packet->dstPort);
         if (rmcIt != registeredServers.end()) {

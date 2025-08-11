@@ -29,7 +29,7 @@ Task<void> v1_api_devices_current_status(http::Server* srv, std::shared_ptr<http
     db::Result result = co_await db->runCommand(std::move(cmd));
     if (result.getStatus() != db::DBResultStatus::SUCCESS) throw std::runtime_error("Database error");
 
-    std::string status = "INACTIVE";
+    std::string status = "ACTIVE";
     if (result.hasData()) {
         auto deviceData = result.getData<db::DBDeviceData>();
         status = deviceData.status;

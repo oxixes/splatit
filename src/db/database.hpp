@@ -73,7 +73,8 @@ enum class DBCommandType {
     DELETE_USER,
     DELETE_USER_OWNERSHIPS,
     DELETE_USER_AGREEMENTS,
-    DELETE_USER_DEVICE_ATTRIBUTES
+    DELETE_USER_DEVICE_ATTRIBUTES,
+    DELETE_FRIEND
 };
 
 enum class DBResultStatus {
@@ -110,6 +111,7 @@ struct DBGameServerAccessQuery {
 
 struct DBUserInfoUpdate {
     uint32_t pid{};
+    std::optional<std::string> username;
     std::optional<bool> showPresence;
     std::optional<bool> showPlaying;
     std::optional<bool> blockRequests;
@@ -231,6 +233,11 @@ struct DBOwnershipInsertOrUpdateQuery {
     datetime_t lastUpdated;
 };
 
+struct DBFriendDeleteQuery {
+    uint32_t pid;
+    uint32_t friendPid;
+};
+
 struct DBGenericResult {
     std::vector<std::vector<std::shared_ptr<DBData>>> data;
 };
@@ -248,6 +255,7 @@ struct DBGameServerAccessData {
 
 struct DBUserInfoData {
     uint32_t pid;
+    std::string username;
     bool showPresence;
     bool showPlaying;
     bool blockRequests;
@@ -456,12 +464,14 @@ public:
     static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid);
     static std::unique_ptr<Command> craftInsertGameServerAccessCommand(uint32_t pid, const std::string& password);
     static std::unique_ptr<Command> craftGetUserInfoCommand(uint32_t pid);
-    static std::unique_ptr<Command> craftInsertUserInfoCommand(uint32_t pid, bool showOnline, bool showPlaying,
+    static std::unique_ptr<Command> craftInsertUserInfoCommand(uint32_t pid, const std::string& username,
+                                                               bool showOnline, bool showPlaying,
                                                                bool blockRequests, const std::vector<uint8_t>& nnaInfo,
                                                                const std::vector<uint8_t>& presence,
                                                                const std::vector<uint8_t>& comment,
                                                                datetime_t lastOnline);
-    static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<bool> showOnline,
+    static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<std::string> username,
+                                                               std::optional<bool> showOnline,
                                                                std::optional<bool> showPlaying,
                                                                std::optional<bool> blockRequests,
                                                                std::optional<std::vector<uint8_t>> nnaInfo,
@@ -538,6 +548,7 @@ public:
     static std::unique_ptr<Command> craftDeleteUserOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserAgreementsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserDeviceAttributesCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

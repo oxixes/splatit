@@ -7,7 +7,7 @@
 namespace nex::rmc::utils {
 
     bool checkJWT(const std::string& jwtToken, const std::string& base64JWTKey, const std::string& serverId, const ClientInfo& client,
-                  const std::shared_ptr<Logger::Logger>& logger, Logger::group logGroup) {
+                  const std::shared_ptr<Logger::Logger>& logger, Logger::group logGroup, std::string& usernameOut) {
         if (!crypto::verifyJWT(base64JWTKey, jwtToken)) {
             logger->log(Logger::level::WARN, logGroup, "Invalid JWT token from " + util::ipv4ToString(client.address.address)
                                                        + ":" + std::to_string(client.address.address.port));
@@ -42,6 +42,7 @@ namespace nex::rmc::utils {
             return false;
         }
 
+        usernameOut = jwtJson["username"].get<std::string>();
         return true;
     }
 

@@ -1,5 +1,7 @@
 #include "friendsSecure.hpp"
 
+#include <utility>
+
 #include "../../crypto/tools.hpp"
 #include "../../constants.hpp"
 #include "../types/common/result.hpp"
@@ -11,8 +13,8 @@
 #include "../types/friendsSecure/nintendoNotificationEventGeneral.hpp"
 #include "../types/friendsSecure/comment.hpp"
 #include "../types/friendsSecure/friendInfo.hpp"
-
-#include <utility>
+#include "../types/friendsSecure/nintendoCreateAccountData.hpp"
+#include "../types/friendsSecure/principalRequestBlockSetting.hpp"
 
 namespace nex::rmc {
 
@@ -24,23 +26,95 @@ FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::
     logGroup = Logger::group::FRIENDS_SECURE;
 
     // Protocol 11 - Secure connection
+    REGISTER_CALL(FriendsSecureRMC::register_, 11, 1);
     REGISTER_CALL(FriendsSecureRMC::registerEx, 11, 4);
+
+    // Protocol 25 - Account Management
+    REGISTER_CALL(FriendsSecureRMC::nintendoCreateAccount, 25, 27);
 
     // Protocol 102 - Friends (Wii U)
     REGISTER_CALL(FriendsSecureRMC::updateAndGetAllInformation, 102, 1);
+    REGISTER_CALL(FriendsSecureRMC::removeFriend, 102, 4);
     REGISTER_CALL(FriendsSecureRMC::updatePresence, 102, 13);
+    REGISTER_CALL(FriendsSecureRMC::updateMii, 102, 14);
+    REGISTER_CALL(FriendsSecureRMC::updateComment, 102, 15);
+    REGISTER_CALL(FriendsSecureRMC::updatePreference, 102, 16);
+    REGISTER_CALL(FriendsSecureRMC::getBasicInfo, 102, 17);
+    REGISTER_CALL(FriendsSecureRMC::checkSettingStatus, 102, 19);
+    REGISTER_CALL(FriendsSecureRMC::getRequestBlockSettings, 102, 20);
+}
+
+Task<void> FriendsSecureRMC::register_(ClientInfo client,
+                                       Request req,
+                                       std::unique_ptr<List<StationURL>> urls) {
+    if (client.pid != 100) { // Regular users should use registerEx
+        logger->log(Logger::level::INFO, logGroup, "Non-guest user tried to register from "
+                                                   + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    std::unique_ptr<Result> retval = std::make_unique<Result>();
+    std::unique_ptr<UInt32> rvConnId = std::make_unique<UInt32>(0, 0);
+    std::unique_ptr<StationURL> clientPublicUrl = std::make_unique<StationURL>();
+
+    std::vector<T_ptr> params(3);
+
+    retval->code = Error::CORE__UNKNOWN;
+    retval->success = true;
+    std::unique_lock rvConnIdLock(rvConnIdMutex);
+    *rvConnId = nextRVConnId++;
+    rvConnIdLock.unlock();
+
+    clientPublicUrl->proto = Protocol::PRUDP;
+    clientPublicUrl->ip = client.address.address;
+    clientPublicUrl->port = client.address.address.port;
+    clientPublicUrl->natf = 0;
+    clientPublicUrl->natm = 0;
+    clientPublicUrl->pmp = 0;
+    clientPublicUrl->sid = 15;
+    clientPublicUrl->type = 3;
+    clientPublicUrl->upnp = 0;
+
+    params[0] = std::move(retval);
+    params[1] = std::move(rvConnId);
+    params[2] = std::move(clientPublicUrl);
+
+    sendMsg(client, res, params);
+
+    logger->log(Logger::level::INFO, logGroup, "Registered guest user from "
+                                               + util::ipv4ToString(client.address.address) + ":"
+                                               + std::to_string(client.address.address.port));
+    co_return;
 }
 
 Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
                                         Request req,
                                         std::unique_ptr<List<StationURL>> urls,
                                         std::unique_ptr<AnyDataHolder> data) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        logger->log(Logger::level::INFO, logGroup, "Guest user tried to registerEx from "
+                                                   + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
     if (data->getType() != "NintendoLoginData") {
         logger->log(Logger::level::WARN, logGroup, "Invalid data type for registerEx: " + data->getType()
                                 + " from " + util::ipv4ToString(client.address.address) + ":"
                                 + std::to_string(client.address.address.port));
 
         sendMsg(client, createError(req, Error::CORE__INVALID_ARGUMENT), {});
+        co_return;
     }
 
     Response res;
@@ -58,7 +132,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
 
     String jwtToken;
     try {
-        jwtToken = data->get<String>();
+        jwtToken = std::move(data->get<String>());
     } catch (const MalformedException& e) {
         logger->log(Logger::level::WARN, logGroup, "Malformed String in registerEx: " + std::string(e.what())
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
@@ -68,7 +142,8 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         co_return;
     }
 
-    if (!utils::checkJWT(jwtToken, base64JWTKey, FRIENDS_SERVER_ID, client, logger, logGroup)) {
+    std::string username;
+    if (!utils::checkJWT(jwtToken, base64JWTKey, FRIENDS_SERVER_ID, client, logger, logGroup, username)) {
         retval->code = Error::CORE__ACCESS_DENIED;
         retval->success = false;
 
@@ -94,6 +169,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
 
     std::vector<db::DBFriendInfoData> friendsInfo;
 
+    UserPreference pref;
     if (!getUserInfoResult.hasData()) {
         logger->log(Logger::level::INFO, logGroup, "User " + std::to_string(client.pid) + " was not found, registering");
 
@@ -101,8 +177,16 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         NintendoPresenceV2 presence(client.minorVersion);
         Comment comment(client.minorVersion);
 
+        pref = UserPreference{
+            true, // showOnline
+            true, // showPlaying
+            false // blockFriendRequest
+        };
+
         auto insertUserInfoCmd = db::Database::craftInsertUserInfoCommand(
-                client.pid, true, true, false,
+                client.pid,
+                username,
+                true, true, false,
                 nnaInfo.encode(),
                 presence.encode(),
                 comment.encode(),
@@ -118,6 +202,13 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
             co_return;
         }
     } else {
+        auto userData = getUserInfoResult.getData<db::DBUserInfoData>();
+        pref = UserPreference{
+            userData.showPresence,
+            userData.showPlaying,
+            userData.blockRequests
+        };
+
         auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
         const db::Result friendsInfoResult = co_await db->runCommand(std::move(getFriendsInfoCmd));
         if (friendsInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -132,10 +223,10 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         friendsInfo = friendsInfoResult.getData<std::vector<db::DBFriendInfoData>>();
     }
 
-    FriendsRegisteredClientInfo clientInfo{client, {}};
+    FriendsRegisteredClientInfo clientInfo{client, {client.pid, pref}, {}};
 
     for (auto& friendData : friendsInfo) {
-        clientInfo.friends.push_back(std::any_cast<uint32_t>(friendData.friendPid));
+        clientInfo.friends.push_back({friendData.friendPid, {friendData.showPresence, friendData.showPlaying, friendData.blockRequests}});
     }
 
     std::unique_lock registeredClientsLock(registeredClientsMutex);
@@ -168,10 +259,109 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
     sendMsg(client, res, params);
 }
 
+Task<void> FriendsSecureRMC::nintendoCreateAccount(ClientInfo client, Request req,
+                                                   std::unique_ptr<String> principalName,
+                                                   std::unique_ptr<String> key,
+                                                   std::unique_ptr<UInt32> groups,
+                                                   std::unique_ptr<String> email,
+                                                   std::unique_ptr<AnyDataHolder> data) {
+    if (data->getType() != "NintendoCreateAccountData") {
+        logger->log(Logger::level::WARN, logGroup, "Invalid data type for nintendoCreateAccount: " + data->getType()
+                                + " from " + util::ipv4ToString(client.address.address) + ":"
+                                + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::CORE__INVALID_ARGUMENT), {});
+        co_return;
+    }
+
+    NintendoCreateAccountData createData(client.minorVersion);
+    try {
+        createData = std::move(data->get<NintendoCreateAccountData>());
+    } catch (const MalformedException& e) {
+        logger->log(Logger::level::WARN, logGroup, "Malformed NintendoCreateAccountData in nintendoCreateAccount: " + std::string(e.what())
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::CORE__INVALID_ARGUMENT), {});
+        co_return;
+    }
+
+    client.pid = createData.nnaInfo.info.pid;
+
+    std::string username;
+    if (!utils::checkJWT(createData.nexToken, base64JWTKey, FRIENDS_SERVER_ID, client, logger, logGroup, username)) {
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
+
+    if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    if (getUserInfoResult.hasData()) {
+        logger->log(Logger::level::INFO, logGroup, "User " + std::to_string(client.pid) + " already exists, not creating account");
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__USERNAME_ALREADY_EXISTS), {});
+        co_return;
+    }
+
+    logger->log(Logger::level::INFO, logGroup, "Creating account for " + std::to_string(client.pid)
+                                               + " from " + util::ipv4ToString(client.address.address) + ":"
+                                               + std::to_string(client.address.address.port));
+
+    NintendoPresenceV2 presence(client.minorVersion);
+    Comment comment(client.minorVersion);
+
+    auto insertUserInfoCmd = db::Database::craftInsertUserInfoCommand(
+            client.pid,
+            username,
+            true, true, false,
+            createData.nnaInfo.encode(),
+            presence.encode(),
+            comment.encode(),
+            std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
+    auto insertUserInfoResult = co_await db->runCommand(std::move(insertUserInfoCmd));
+    if (insertUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to insert user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    std::vector<T_ptr> params(2);
+    params[0] = std::make_unique<PID>(client.minorVersion, client.pid);
+    params[1] = std::make_unique<String>(); // The PIDHMAC is useless in the Wii U, so we just send an empty String
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    sendMsg(client, res, params);
+}
+
+
 Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Request req,
                                                         std::unique_ptr<NNAInfo> nnaInfo,
                                                         std::unique_ptr<NintendoPresenceV2> presence,
                                                         std::unique_ptr<Datetime> birthdate) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
     std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
@@ -204,17 +394,16 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         co_return;
     }
 
+    presence->online = true; // For some reason the Wii U sends it as false, but the server stores it as true
+
     db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
-    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
+    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt,
+                                                                      std::nullopt, std::nullopt,
                                                                       std::nullopt, std::move(nnaInfo->encode()),
                                                                       std::move(presence->encode()),
                                                                       std::nullopt, lastOnline);
     const db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
     if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
-        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
-                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
-                                                   + std::to_string(client.address.address.port));
-
         sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
         co_return;
     }
@@ -274,26 +463,95 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
     bool miiChanged = nnaInfo->info.mii.encode() != dbUserData.info.mii.encode();
 
     // Send presence (any possibly mii change) update to connected friends
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
-    for (auto& friendPid : clientIt->second.friends) {
-        AnyDataHolder data;
-        presence->pid = client.pid;
-        presence->online = true;
-        data.set(*presence, "NintendoPresenceV2");
+    if (clientIt->second.userData.preference.showOnline || miiChanged) {
+        registeredClientsLock.lock();
+        clientIt = registeredClients.find(client.pid);
+        for (auto& friendData : clientIt->second.friends) {
+            AnyDataHolder data;
+            presence->pid = client.pid;
+            presence->online = true;
+            data.set(*presence, "NintendoPresenceV2");
 
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+            auto friendIt = registeredClients.find(friendData.pid);
+            if (friendIt == registeredClients.end()) continue;
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
-        if (miiChanged) {
-            data.set(*nnaInfo, "NNAInfo");
-            sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
+            if (clientIt->second.userData.preference.showOnline && clientIt->second.userData.preference.showPlaying) {
+                sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+            } else if (clientIt->second.userData.preference.showOnline) {
+                NintendoPresenceV2 presenceUpdate(client.minorVersion);
+                presenceUpdate.online = presence->online;
+                data.set(*presence, "NintendoPresenceV2");
+                sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+            }
+
+            if (miiChanged) {
+                data.set(*nnaInfo, "NNAInfo");
+                sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
+            }
         }
     }
 }
 
+Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::unique_ptr<PID> pid) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
+    auto clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    bool hasFriend = false;
+    for (auto& friendData : clientIt->second.friends) {
+        if (friendData.pid == *pid) {
+            hasFriend = true;
+            break;
+        }
+    }
+    registeredClientsLock.unlock();
+
+    if (!hasFriend) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to remove non-friend "
+                                                   + std::to_string(*pid));
+
+        sendMsg(client, createError(req, Error::FPD__NOT_FRIEND), {});
+        co_return;
+    }
+
+    auto deleteCmd = db::Database::craftDeleteFriendCommand(client.pid, *pid);
+    const db::Result deleteResult = co_await db->runCommand(std::move(deleteCmd));
+    if (deleteResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete friend " + std::to_string(*pid)
+                                                   + " for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    sendMsg(client, res, {});
+}
+
 Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
     std::unique_lock registeredClientsLock(registeredClientsMutex);
     auto clientIt = registeredClients.find(client.pid);
     if (clientIt == registeredClients.end()) {
@@ -304,7 +562,8 @@ Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std:
     }
     registeredClientsLock.unlock();
 
-    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt, std::nullopt,
+    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt,
+                                                                      std::nullopt, std::nullopt,
                                                                       std::nullopt, std::nullopt,
                                                                       std::move(presence->encode()),
                                                                       std::nullopt, std::nullopt);
@@ -331,17 +590,350 @@ Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std:
     registeredClientsLock.lock();
     clientIt = registeredClients.find(client.pid);
     // Send presence update to connected friends
-    for (auto& friendPid : clientIt->second.friends) {
+    for (auto& friendData : clientIt->second.friends) {
         AnyDataHolder data;
         presence->pid = client.pid;
         presence->online = true;
         data.set(*presence, "NintendoPresenceV2");
 
-        auto friendIt = registeredClients.find(friendPid);
+        auto friendIt = registeredClients.find(friendData.pid);
         if (friendIt == registeredClients.end()) continue;
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+        if (clientIt->second.userData.preference.showOnline && clientIt->second.userData.preference.showPlaying) {
+            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+        } else if (clientIt->second.userData.preference.showOnline) {
+            NintendoPresenceV2 presenceUpdate(client.minorVersion);
+            presenceUpdate.online = presence->online;
+            data.set(*presence, "NintendoPresenceV2");
+            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+        }
     }
+}
+
+Task<void> FriendsSecureRMC::updateMii(ClientInfo client, Request req, std::unique_ptr<MiiV2> mii) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
+    auto clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+    registeredClientsLock.unlock();
+
+    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
+    if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    if (!getUserInfoResult.hasData()) {
+        logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    auto userInfoData = getUserInfoResult.getData<db::DBUserInfoData>();
+    NNAInfo nnaInfo(client.minorVersion);
+    nnaInfo.decode(userInfoData.nnaInfo);
+
+    nnaInfo.info.mii = *mii;
+    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt,
+                                                                      std::nullopt, std::nullopt,
+                                                                      std::nullopt, std::move(nnaInfo.encode()),
+                                                                      std::nullopt, std::nullopt, std::nullopt);
+    const db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
+    if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    // Unknown datetime, we just send the current time for now
+    std::vector<T_ptr> params(1);
+    params[0] = std::make_unique<Datetime>(client.minorVersion, std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
+
+    sendMsg(client, res, params);
+
+    // Send Mii change notification to connected friends
+    registeredClientsLock.lock();
+    clientIt = registeredClients.find(client.pid);
+
+    AnyDataHolder notificationData;
+    notificationData.set(nnaInfo, "NNAInfo");
+
+    for (auto& friendData : clientIt->second.friends) {
+        auto friendIt = registeredClients.find(friendData.pid);
+        if (friendIt == registeredClients.end()) continue;
+
+        sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, notificationData);
+    }
+}
+
+Task<void> FriendsSecureRMC::updateComment(ClientInfo client, Request req, std::unique_ptr<Comment> comment) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
+    auto clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+    registeredClientsLock.unlock();
+
+    db::datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+    comment->lastModified = Datetime(client.minorVersion, now);
+
+    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(
+        client.pid, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+        std::nullopt, std::nullopt, comment->encode(), std::nullopt);
+    const db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
+    if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    std::vector<T_ptr> params(1);
+    params[0] = std::make_unique<Datetime>(client.minorVersion, now);
+
+    sendMsg(client, res, params);
+
+    // Send comment update notification to connected friends
+    registeredClientsLock.lock();
+    clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) co_return;
+    AnyDataHolder notificationData;
+    NintendoNotificationEventGeneral generalEvent(0);
+    generalEvent.u32_param = comment->unk1;
+    generalEvent.u64_param2.decode(Datetime(0, now).encode());
+    generalEvent.str_param = comment->message;
+    notificationData.set(generalEvent, "NintendoNotificationEventGeneral");
+
+    for (auto& friendData : clientIt->second.friends) {
+        auto friendIt = registeredClients.find(friendData.pid);
+        if (friendIt == registeredClients.end()) continue;
+
+        sendNotification(friendIt->second.client, NintendoNotificationType::COMMENT_CHANGED, client.pid, notificationData);
+    }
+}
+
+Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, std::unique_ptr<PrincipalPreference> preference) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
+    auto clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+    bool wasOnline = clientIt->second.userData.preference.showOnline;
+    registeredClientsLock.unlock();
+
+    auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(
+        client.pid, std::nullopt, preference->showOnline, preference->showPlaying, preference->blockFriendRequest,
+        std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+    const db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
+    if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    sendMsg(client, res, {});
+
+    if (wasOnline && !preference->showOnline) {
+        // Send offline notification to connected friends
+        registeredClientsLock.lock();
+        clientIt = registeredClients.find(client.pid);
+        if (clientIt == registeredClients.end()) co_return;
+
+        NintendoNotificationEventGeneral generalEvent(0);
+        generalEvent.u64_param2.decode(Datetime(0,
+            std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())).encode());
+
+        for (auto& friendData : clientIt->second.friends) {
+            AnyDataHolder data;
+            data.set(generalEvent, "NintendoNotificationEventGeneral");
+
+            auto friendIt = registeredClients.find(friendData.pid);
+            if (friendIt == registeredClients.end()) continue;
+
+            sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
+        }
+    }
+}
+
+Task<void> FriendsSecureRMC::getBasicInfo(ClientInfo client, Request req, std::unique_ptr<List<PID>> pids) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    if (pids->size() > 100) {
+        logger->log(Logger::level::WARN, logGroup, "Too many PIDs requested for get basic info: "
+                                                   + std::to_string(pids->size()) + " from "
+                                                   + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::FPD__OPERATION_NOT_ALLOWED), {});
+        co_return;
+    }
+
+    auto infos = std::make_unique<List<PrincipalBasicInfo>>(client.minorVersion);
+    for (const auto& pid : *pids) {
+        auto getBlockSettingCmd = db::Database::craftGetUserInfoCommand(pid);
+        const db::Result getBlockSettingResult = co_await db->runCommand(std::move(getBlockSettingCmd));
+        if (getBlockSettingResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        if (getBlockSettingResult.hasData()) {
+            auto userInfoData = getBlockSettingResult.getData<db::DBUserInfoData>();
+
+            PrincipalBasicInfo info(client.minorVersion);
+            NNAInfo nnaInfo(client.minorVersion);
+            nnaInfo.decode(userInfoData.nnaInfo);
+            infos->push_back(std::move(nnaInfo.info));
+        }
+    }
+
+    std::vector<T_ptr> params(1);
+    params[0] = std::move(infos);
+
+    sendMsg(client, res, params);
+}
+
+Task<void> FriendsSecureRMC::checkSettingStatus(ClientInfo client, Request req) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    std::vector<T_ptr> params(1);
+    params[0] = std::make_unique<UInt8>(client.minorVersion, FRIENDS_SETTING_STATUS);
+
+    sendMsg(client, res, params);
+    co_return;
+}
+
+Task<void> FriendsSecureRMC::getRequestBlockSettings(ClientInfo client, Request req, std::unique_ptr<List<PID>> pids) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    Response res;
+    res.protocolId = req.protocolId;
+    res.extendedProtocolId = req.extendedProtocolId;
+    res.methodId = req.methodId;
+    res.callId = req.callId;
+    res.success = true;
+
+    if (pids->size() > 100) {
+        logger->log(Logger::level::WARN, logGroup, "Too many PIDs requested for request block settings: "
+                                                   + std::to_string(pids->size()) + " from "
+                                                   + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::FPD__OPERATION_NOT_ALLOWED), {});
+        co_return;
+    }
+
+    auto settings = std::make_unique<List<PrincipalRequestBlockSetting>>(client.minorVersion);
+    for (const auto& pid : *pids) {
+        PrincipalRequestBlockSetting setting(client.minorVersion);
+        setting.pid = pid;
+
+        auto getBlockSettingCmd = db::Database::craftGetUserInfoCommand(pid);
+        const db::Result getBlockSettingResult = co_await db->runCommand(std::move(getBlockSettingCmd));
+        if (getBlockSettingResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        if (getBlockSettingResult.hasData()) {
+            auto userInfoData = getBlockSettingResult.getData<db::DBUserInfoData>();
+            setting.blocked = userInfoData.blockRequests;
+            settings->push_back(std::move(setting));
+        }
+    }
+
+    std::vector<T_ptr> params(1);
+    params[0] = std::move(settings);
+
+    sendMsg(client, res, params);
 }
 
 void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender,
@@ -374,7 +966,7 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
         db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
         auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(clientIt->second.client.pid, std::nullopt,
                                                                           std::nullopt, std::nullopt,
-                                                                          std::nullopt,
+                                                                          std::nullopt, std::nullopt,
                                                                           std::move(presence.encode()),
                                                                           std::nullopt, lastOnline);
         db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
@@ -385,18 +977,21 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
                                                        + std::to_string(clientIt->second.client.address.address.port));
         }
 
-        // Send presence update to connected friends
-        NintendoNotificationEventGeneral generalEvent(0);
-        generalEvent.u64_param2.decode(Datetime(0, lastOnline).encode());
+        if (clientIt->second.userData.preference.showOnline) {
+            // Send presence update to connected friends
+            NintendoNotificationEventGeneral generalEvent(0);
+            generalEvent.u64_param2.decode(Datetime(0, lastOnline).encode());
 
-        for (auto& friendPid : clientIt->second.friends) {
-            AnyDataHolder data;
-            data.set(generalEvent, "NintendoNotificationEventGeneral");
+            for (auto& friendData : clientIt->second.friends) {
+                AnyDataHolder data;
+                data.set(generalEvent, "NintendoNotificationEventGeneral");
 
-            auto friendIt = registeredClients.find(friendPid);
-            if (friendIt == registeredClients.end()) continue;
+                auto friendIt = registeredClients.find(friendData.pid);
+                if (friendIt == registeredClients.end()) continue;
 
-            sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
+
+                sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
+            }
         }
 
         registeredClients.erase(clientIt);

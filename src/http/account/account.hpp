@@ -110,7 +110,7 @@ async::Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_p
                                                 std::shared_ptr<SettingsManager> settingsManager,
                                                 std::shared_ptr<CertManager> certManager);
 
-async::Task<void> v1_api_people_me_devices_current_inactive(http::Server* srv, std::shared_ptr<http::Context> ctx,
+async::Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                                             std::shared_ptr<db::Database> db,
                                                             std::shared_ptr<SettingsManager> settingsManager,
                                                             std::shared_ptr<CertManager> certManager);

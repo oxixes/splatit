@@ -86,6 +86,7 @@ private:
     sqlite3_stmt* deleteUserOwnershipsStatement = nullptr;
     sqlite3_stmt* deleteUserAgreementsStatement = nullptr;
     sqlite3_stmt* deleteUserDeviceAttributesStatement = nullptr;
+    sqlite3_stmt* deleteFriendStatement = nullptr;
 
     bool isSession = false;
 

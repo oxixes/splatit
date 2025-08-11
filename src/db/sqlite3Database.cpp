@@ -380,7 +380,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlite3_clear_bindings(insertGameServerAccessStatement);
     } else if (command->type == DBCommandType::GET_USER_INFO) {
         if (getUserInfoStatement == nullptr) {
-            if (!craftStatement("SELECT * FROM user_info WHERE pid = ?;", &getUserInfoStatement)) {
+            if (!craftStatement("SELECT pid, username, show_presence, show_playing, block_requests, "
+                                "nna_info, presence, comment, last_online FROM user_info WHERE pid = ?;", &getUserInfoStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
             }
@@ -394,9 +395,9 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             goto push_results;
                       }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
-                                                   DBDataType::INTEGER, DBDataType::BLOB, DBDataType::BLOB,
-                                                   DBDataType::BLOB, DBDataType::DATETIME};
+        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
+                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::BLOB,
+                                                   DBDataType::BLOB, DBDataType::BLOB, DBDataType::DATETIME};
 
         if (!runStatement(getUserInfoStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -410,14 +411,15 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         if (!returnedData->empty()) {
             DBUserInfoData userInfoData {
-                .pid = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][0]->data),
-                .showPresence = (bool) std::any_cast<int64_t>((*returnedData)[0][1]->data),
-                .showPlaying = (bool) std::any_cast<int64_t>((*returnedData)[0][2]->data),
-                .blockRequests = (bool) std::any_cast<int64_t>((*returnedData)[0][3]->data),
-                .nnaInfo = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][4]->data),
-                .presence = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][5]->data),
-                .comment = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][6]->data),
-                .lastOnline = std::any_cast<datetime_t>((*returnedData)[0][7]->data)
+                .pid = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data)),
+                .username = std::any_cast<std::string>((*returnedData)[0][1]->data),
+                .showPresence = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][2]->data)),
+                .showPlaying = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][3]->data)),
+                .blockRequests = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][4]->data)),
+                .nnaInfo = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][5]->data),
+                .presence = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][6]->data),
+                .comment = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][7]->data),
+                .lastOnline = std::any_cast<datetime_t>((*returnedData)[0][8]->data)
             };
 
             resultsData = std::move(userInfoData);
@@ -499,6 +501,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         // Not all data needs to be updated, so we need to check which fields are being updated.
         // These are given by optionals, so we can just check if they have a value.
         std::string sqlCommand = "UPDATE user_info SET ";
+        if (updateData->username.has_value()) {
+            sqlCommand += "username = ?, ";
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(updateData->username.value()));
+        }
+
         if (updateData->showPresence.has_value()) {
             sqlCommand += "show_presence = ?, ";
             dataTypes.push_back(DBDataType::INTEGER);
@@ -545,7 +553,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
 
         dataTypes.push_back(DBDataType::INTEGER);
-        data.emplace_back(std::make_shared<DBInteger>((int64_t) updateData->pid));
+        data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->pid)));
 
         if (!craftStatement(sqlCommand, &statement)) {
             resultStatus = DBResultStatus::FAILURE_STMT;
@@ -567,7 +575,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlite3_finalize(statement);
     } else if (command->type == DBCommandType::INSERT_USER_INFO) {
         if (insertUserInfoStatement == nullptr) {
-            if (!craftStatement("INSERT INTO user_info (pid, show_presence, show_playing, block_requests, nna_info, presence, comment, last_online) "
+            if (!craftStatement("INSERT INTO user_info (pid, username, show_presence, show_playing, block_requests, nna_info, presence, comment, last_online) "
                                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);", &insertUserInfoStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
@@ -576,13 +584,14 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         auto* userInfoData = std::any_cast<DBUserInfoData>(&command->data);
 
-        if (!bindData(insertUserInfoStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
-                                                 DBDataType::INTEGER, DBDataType::BLOB, DBDataType::BLOB,
+        if (!bindData(insertUserInfoStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
+                                                 DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::BLOB, DBDataType::BLOB,
                                                  DBDataType::BLOB, DBDataType::DATETIME},
-                      {std::make_shared<DBInteger>((int64_t) userInfoData->pid),
-                       std::make_shared<DBInteger>((int64_t) userInfoData->showPresence),
-                       std::make_shared<DBInteger>((int64_t) userInfoData->showPlaying),
-                       std::make_shared<DBInteger>((int64_t) userInfoData->blockRequests),
+                      {std::make_shared<DBInteger>(static_cast<int64_t>(userInfoData->pid)),
+                          std::make_shared<DBString>(userInfoData->username),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(userInfoData->showPresence)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(userInfoData->showPlaying)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(userInfoData->blockRequests)),
                        std::make_shared<DBBlob>(userInfoData->nnaInfo),
                        std::make_shared<DBBlob>(userInfoData->presence),
                        std::make_shared<DBBlob>(userInfoData->comment),
@@ -1770,6 +1779,32 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(deleteUserDeviceAttributesStatement);
         sqlite3_clear_bindings(deleteUserDeviceAttributesStatement);
+    } else if (command->type == DBCommandType::DELETE_FRIEND) {
+        if (deleteFriendStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM friendships WHERE pid = ? AND friend_pid = ? OR "
+                                     "friend_pid = ? AND pid = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteFriendStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBFriendDeleteQuery>(&command->data);
+
+        if (!bindData(deleteFriendStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->friendPid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteFriendStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteFriendStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteFriendStatement);
+        sqlite3_clear_bindings(deleteFriendStatement);
     } else {
         logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Unknown command type: " + std::to_string(static_cast<int>(command->type)));

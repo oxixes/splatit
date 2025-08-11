@@ -344,6 +344,15 @@ std::unique_ptr<http::Response> prepareResponse(http::Version version, pugi::xml
     doc.save(ss);
 
     std::string body = ss.str();
+    // Replace " />" with "/>". The console does not like the space
+    const std::string from = " />";
+    const std::string to = "/>";
+    size_t pos = 0;
+    while ((pos = body.find(from, pos)) != std::string::npos) {
+        body.replace(pos, from.length(), to);
+        pos += to.length();
+    }
+
     std::vector<uint8_t> bodyVec(body.begin(), body.end());
 
     std::unique_ptr<http::Response> res = prepareResponse(version, httpStatus);
@@ -742,9 +751,9 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                               return v1_api_people_me_devices_post(srv, std::move(ctx), db, settingsMgr, certMgr);
                           });
 
-    server->registerRoute("account." + domain, "/v1/api/people/@me/devices/@current/inactive",
+    server->registerRoute("account." + domain, "/v1/api/people/@me/devices/@current/inactivate",
                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                                  return v1_api_people_me_devices_current_inactive(srv, std::move(ctx), db, settingsMgr, certMgr);
+                                  return v1_api_people_me_devices_current_inactivate(srv, std::move(ctx), db, settingsMgr, certMgr);
                               });
 
     server->registerRoute("account." + domain, "/v1/api/people/@me/deletion",

@@ -110,7 +110,7 @@ bool checkMii(const pugi::xml_node& mii) {
     }
 
     // Check that data is a valid base64 string
-    const std::string data = mii.child_value("data");
+    const std::string data = std::regex_replace(mii.child_value("data"), std::regex(R"(\r\n|\r|\n)"), "");
     try {
         auto decoded = crypto::base64Decode(data);
         if (decoded.size() != 96) {
@@ -470,11 +470,12 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     // We can insert the mii as well
     // For the hash, we'll generate a random string of 13 characters for now, as we don't know how that is generated
     std::string miiHash = crypto::genRandomString(13, "abcdefghijklmnopqrstuvwxyz0123456789");
+    std::string miiData = std::regex_replace(doc->child("person").child("mii").child_value("data"), std::regex(R"(\r\n|\r|\n)"), "");
     std::unique_ptr<db::Command> miiCmd = db::Database::craftInsertOrUpdateMiiCommand(std::nullopt,
         miiHash,
         doc->child("person").child("mii").child_value("name"),
         std::string(doc->child("person").child("mii").child_value("primary")) == "Y",
-        doc->child("person").child("mii").child_value("data"));
+        miiData);
 
     // And finally we can also get the latest pid to get a new one for the user
     std::unique_ptr<db::Command> pidCmd = db::Database::craftGetLatestPidCommand();
@@ -1008,6 +1009,7 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
     }
 
     std::string miiHash = crypto::genRandomString(13, "abcdefghijklmnopqrstuvwxyz0123456789");
+    std::string miiData = std::regex_replace(doc->child("mii").child_value("data"), std::regex(R"(\r\n|\r|\n)"), "");
 
     std::unique_ptr<db::Command> currentDataCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
     db::Result currentDataResults = co_await session->runCommand(std::move(currentDataCmd));
@@ -1028,7 +1030,7 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
         miiHash,
         doc->child("mii").child_value("name"),
         std::string(doc->child("mii").child_value("primary")) == "Y",
-        doc->child("mii").child_value("data"));
+        miiData);
     db::Result miiResults = co_await session->runCommand(std::move(miiCmd));
     if (miiResults.getStatus() != db::DBResultStatus::SUCCESS) {
         co_await session->rollbackTransaction();
@@ -1392,7 +1394,8 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
     }
 
     pugi::xml_node mii = person.append_child("mii");
-    mii.append_child("data").text().set(userProfile.miiData.c_str(), userProfile.miiData.length());
+    std::string miiDataFixed = std::regex_replace(userProfile.miiData, std::regex(R"(\r\n|\r|\n)"), "");
+    mii.append_child("data").text().set(miiDataFixed.c_str(), miiDataFixed.length());
 
     std::string miiStatus = "COMPLETED";
     mii.append_child("status").text().set(miiStatus.c_str(), miiStatus.length());
@@ -1672,11 +1675,11 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
 }
 
 /*
- * Handler for PUT https://account.<domain>/v1/api/people/@me/devices/@current/inactive
+ * Handler for PUT https://account.<domain>/v1/api/people/@me/devices/@current/inactivate
  * Unlinks the device from the logged-in user.
  * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate
  */
-Task<void> v1_api_people_me_devices_current_inactive(http::Server* srv, std::shared_ptr<http::Context> ctx,
+Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                                        std::shared_ptr<db::Database> db,
                                                        std::shared_ptr<SettingsManager> settingsManager,
                                                        std::shared_ptr<CertManager> certManager) {
@@ -1740,6 +1743,7 @@ Task<void> v1_api_people_me_devices_current_inactive(http::Server* srv, std::sha
     srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
+// TODO Delete friends server account (and in the future possibly in splatoon too)
 /*
  * Handler for POST https://account.<domain>/v1/api/people/@me/deletion
  * Deletes the account of the logged-in user.
