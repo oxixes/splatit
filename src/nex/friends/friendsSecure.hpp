@@ -50,6 +50,7 @@ private:
                     std::unique_ptr<AnyDataHolder> data);
     async::Task<void> updateAndGetAllInformation(ClientInfo client, Request req, std::unique_ptr<NNAInfo> nnaInfo,
                                     std::unique_ptr<NintendoPresenceV2> presence, std::unique_ptr<Datetime> birthdate);
+    async::Task<void> addFriend(ClientInfo client, Request req, std::unique_ptr<PID> pid);
     async::Task<void> removeFriend(ClientInfo client, Request req, std::unique_ptr<PID> pid);
     async::Task<void> updatePresence(ClientInfo client, Request req, std::unique_ptr<NintendoPresenceV2> presence);
     async::Task<void> updateMii(ClientInfo client, Request req, std::unique_ptr<MiiV2> mii);
@@ -62,6 +63,7 @@ private:
     async::Task<void> onDisconnect(prudp::PRUDPAddress address) override;
 
     void sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender, const AnyDataHolder& data);
+    async::Task<bool> cleanupExpiredFriendRequests(uint32_t pid) const;
 
     std::shared_ptr<db::Database> db;
     std::string base64JWTKey;

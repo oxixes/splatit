@@ -34,6 +34,7 @@ FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::
 
     // Protocol 102 - Friends (Wii U)
     REGISTER_CALL(FriendsSecureRMC::updateAndGetAllInformation, 102, 1);
+    REGISTER_CALL(FriendsSecureRMC::addFriend, 102, 2);
     REGISTER_CALL(FriendsSecureRMC::removeFriend, 102, 4);
     REGISTER_CALL(FriendsSecureRMC::updatePresence, 102, 13);
     REGISTER_CALL(FriendsSecureRMC::updateMii, 102, 14);
@@ -155,7 +156,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         co_return;
     }
 
-    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
     const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
 
     if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -294,7 +295,7 @@ Task<void> FriendsSecureRMC::nintendoCreateAccount(ClientInfo client, Request re
         co_return;
     }
 
-    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
     const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
 
     if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -372,13 +373,39 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
     }
     registeredClientsLock.unlock();
 
-    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
     const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
 
     auto getFriendsInfoCmd = db::Database::craftGetFriendsInfoCommand(client.pid);
     const db::Result friendsInfoResult = co_await db->runCommand(std::move(getFriendsInfoCmd));
 
-    if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS || friendsInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+    auto getSentFriendRequestsCmd = db::Database::craftGetSentFriendRequestsCommand(client.pid);
+    const db::Result sentFriendRequestsResult = co_await db->runCommand(std::move(getSentFriendRequestsCmd));
+
+    auto getReceivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(client.pid);
+    const db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(getReceivedFriendRequestsCmd));
+
+    auto getBlockedUsersCmd = db::Database::craftGetBlockedFriendsCommand(client.pid);
+    const db::Result blockedUsersResult = co_await db->runCommand(std::move(getBlockedUsersCmd));
+
+    auto getNotificationsCmd = db::Database::craftGetPersistentNotificationsCommand(client.pid);
+    const db::Result notificationsResult = co_await db->runCommand(std::move(getNotificationsCmd));
+
+    if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS
+        || friendsInfoResult.getStatus() != db::DBResultStatus::SUCCESS
+        || sentFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS
+        || receivedFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS
+        || blockedUsersResult.getStatus() != db::DBResultStatus::SUCCESS
+        || notificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
@@ -438,11 +465,78 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         friendList->push_back(std::move(friendInfo));
     }
 
+    auto year2000 = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(946684800));
+
     std::unique_ptr<List<FriendRequest>> sentFriendRequests = std::make_unique<List<FriendRequest>>(client.minorVersion);
+    for (auto& requestData : sentFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>()) {
+        FriendRequest request(client.minorVersion);
+
+        NNAInfo reqNNAInfo(client.minorVersion);
+        reqNNAInfo.decode(std::move(*requestData.nnaInfo));
+
+        FriendRequestMsg reqMsg(client.minorVersion);
+        reqMsg.decode(std::move(requestData.data));
+
+        request.principalBasicInfo = reqNNAInfo.info;
+        request.friendRequestMsg = reqMsg;
+
+        if (reqMsg.expiresOn > year2000)
+            request.friendRequestMsg.id = requestData.id;
+        request.sentOn = Datetime(0, requestData.createdAt);
+
+        sentFriendRequests->push_back(std::move(request));
+    }
+
     std::unique_ptr<List<FriendRequest>> receivedFriendRequests = std::make_unique<List<FriendRequest>>(client.minorVersion);
+    for (auto& requestData : receivedFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>()) {
+        FriendRequest request(client.minorVersion);
+
+        NNAInfo reqNNAInfo(client.minorVersion);
+        reqNNAInfo.decode(std::move(*requestData.nnaInfo));
+
+        FriendRequestMsg reqMsg(client.minorVersion);
+        reqMsg.decode(std::move(requestData.data));
+
+        if (reqMsg.expiresOn <= year2000) continue;
+
+        request.principalBasicInfo = reqNNAInfo.info;
+        request.friendRequestMsg = reqMsg;
+        request.friendRequestMsg.id = requestData.id;
+        request.sentOn = Datetime(0, requestData.createdAt);
+
+        receivedFriendRequests->push_back(std::move(request));
+    }
+
     std::unique_ptr<List<BlacklistedPrincipal>> blacklistedPrincipals = std::make_unique<List<BlacklistedPrincipal>>(client.minorVersion);
+    for (auto& blockedData : blockedUsersResult.getData<std::vector<db::DBBlockData>>()) {
+        BlacklistedPrincipal blockedPrincipal(client.minorVersion);
+
+        NNAInfo blockedNNAInfo(client.minorVersion);
+        blockedNNAInfo.decode(std::move(blockedData.nnaInfo));
+
+        GameKey blockedGameKey(client.minorVersion);
+        blockedGameKey.decode(std::move(blockedData.gameKey));
+
+        blockedPrincipal.principalBasicInfo = blockedNNAInfo.info;
+        blockedPrincipal.gameKey = std::move(blockedGameKey);
+        blockedPrincipal.blacklistedSince = Datetime(0, blockedData.createdAt);
+
+        blacklistedPrincipals->push_back(std::move(blockedPrincipal));
+    }
+
     std::unique_ptr<Bool> unk1 = std::make_unique<Bool>(client.minorVersion, false);
     std::unique_ptr<List<PersistentNotification>> notifications = std::make_unique<List<PersistentNotification>>(client.minorVersion);
+    for (auto& notificationData : notificationsResult.getData<std::vector<db::DBPersistentNotificationData>>()) {
+        PersistentNotification notification(client.minorVersion);
+
+        notification.unk1 = notificationData.value1;
+        notification.unk2 = notificationData.value2;
+        notification.unk3 = notificationData.value3;
+        notification.unk4 = notificationData.value4;
+        notification.unk5 = notificationData.text;
+
+        notifications->push_back(std::move(notification));
+    }
     std::unique_ptr<Bool> unk2 = std::make_unique<Bool>(client.minorVersion, false);
 
     std::vector<T_ptr> params(9);
@@ -488,6 +582,205 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
                 data.set(*nnaInfo, "NNAInfo");
                 sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
             }
+        }
+    }
+}
+
+Task<void> FriendsSecureRMC::addFriend(ClientInfo client, Request req, std::unique_ptr<PID> pid) {
+    if (client.pid == 100) { // Guest users are not allowed to register
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    std::unique_lock registeredClientsLock(registeredClientsMutex);
+    auto clientIt = registeredClients.find(client.pid);
+    if (clientIt == registeredClients.end()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+
+        sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
+        co_return;
+    }
+
+    if (clientIt->second.friends.size() >= 100) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add friend "
+                                                       + std::to_string(*pid) + " but friend list limit exceeded");
+        sendMsg(client, createError(req, Error::FPD__MY_FRIEND_LIST_LIMIT_EXCEED), {});
+        co_return;
+    }
+
+    for (auto& friendData : clientIt->second.friends) {
+        if (friendData.pid == *pid) {
+            logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add already existing friend "
+                                                       + std::to_string(*pid));
+
+            sendMsg(client, createError(req, Error::FPD__FRIEND_ALREADY_EXISTS), {});
+            registeredClientsLock.unlock();
+            co_return;
+        }
+    }
+    registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    if (!co_await cleanupExpiredFriendRequests(*pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(*pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    auto blacklistCmd = db::Database::craftGetBlockedFriendsCommand(client.pid);
+    const db::Result blacklistResult = co_await db->runCommand(std::move(blacklistCmd));
+    if (blacklistResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get blocked friends for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    for (auto& blockedData : blacklistResult.getData<std::vector<db::DBBlockData>>()) {
+        if (blockedData.blockedPid == *pid) {
+            logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add blacklisted friend "
+                                                       + std::to_string(*pid));
+
+            sendMsg(client, createError(req, Error::FPD__BLACKLISTED_BY_ME), {});
+            co_return;
+        }
+    }
+
+    auto sentFriendRequestsCmd = db::Database::craftGetSentFriendRequestsCommand(client.pid);
+    const db::Result sentFriendRequestsResult = co_await db->runCommand(std::move(sentFriendRequestsCmd));
+    if (sentFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get sent friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    for (auto& requestData : sentFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>()) {
+        if (requestData.toPid == *pid) {
+            // Send the already sent friend request back to the client
+            FriendRequest request(client.minorVersion);
+
+            NNAInfo requestNNAInfo(client.minorVersion);
+            requestNNAInfo.decode(std::move(*requestData.nnaInfo));
+            FriendRequestMsg requestMsg(client.minorVersion);
+            requestMsg.decode(std::move(requestData.data));
+
+            request.principalBasicInfo = requestNNAInfo.info;
+            request.friendRequestMsg = requestMsg;
+
+            auto year2000 = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(946684800));
+            if (requestMsg.expiresOn > year2000) {
+                request.friendRequestMsg.id = requestData.id;
+            }
+
+            request.sentOn = Datetime(0, requestData.createdAt);
+
+            FriendInfo friendInfo(client.minorVersion);
+
+            Response res;
+            res.protocolId = req.protocolId;
+            res.extendedProtocolId = req.extendedProtocolId;
+            res.methodId = req.methodId;
+            res.callId = req.callId;
+            res.success = true;
+
+            std::vector<T_ptr> params(2);
+            params[0] = std::make_unique<FriendRequest>(std::move(request));
+            params[1] = std::make_unique<FriendInfo>(std::move(friendInfo));
+
+            sendMsg(client, res, params);
+            co_return;
+        }
+    }
+
+    auto receivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(client.pid);
+    const db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(receivedFriendRequestsCmd));
+    if (receivedFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get received friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    bool otherUserHadSentRequest = false;
+    int64_t sentRequestId = -1;
+    for (auto& requestData : receivedFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>()) {
+        if (requestData.toPid == *pid) {
+            otherUserHadSentRequest = true;
+            sentRequestId = requestData.id;
+            break;
+        }
+    }
+
+    auto friendInfoCmd = db::Database::craftGetUserInfoByPidCommand(*pid);
+    const db::Result friendInfoResult = co_await db->runCommand(std::move(friendInfoCmd));
+    if (friendInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(*pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    if (!friendInfoResult.hasData()) {
+        logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(*pid) + " not found");
+
+        sendMsg(client, createError(req, Error::FPD__INVALID_ACCOUNT), {});
+        co_return;
+    }
+
+    auto friendBlockCmd = db::Database::craftGetBlockedFriendsCommand(*pid);
+    const db::Result friendBlockResult = co_await db->runCommand(std::move(friendBlockCmd));
+    if (friendBlockResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get blocked friends for " + std::to_string(*pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
+    for (auto& blockedData : friendBlockResult.getData<std::vector<db::DBBlockData>>()) {
+        if (blockedData.blockedPid == client.pid) {
+            logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add blacklisted friend "
+                                                       + std::to_string(*pid));
+
+            // We tell the user that "the user can't receive any more requests"
+            sendMsg(client, createError(req, Error::FPD__REQUEST_LIMIT_EXCEED), {});
+            co_return;
+        }
+    }
+
+    if (!otherUserHadSentRequest) {
+        auto friendReceivedRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(*pid);
+        const db::Result friendReceivedRequestsResult = co_await db->runCommand(std::move(friendReceivedRequestsCmd));
+        if (friendReceivedRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get received friend requests for " + std::to_string(*pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        auto friendReceivedRequests = friendReceivedRequestsResult.getData<std::vector<db::DBFriendRequestData>>();
+        if (friendReceivedRequests.size() >= 100) {
+            logger->log(Logger::level::WARN, logGroup, "Friend " + std::to_string(*pid) + " has too many friend requests");
+
+            sendMsg(client, createError(req, Error::FPD__REQUEST_LIMIT_EXCEED), {});
+            co_return;
         }
     }
 }
@@ -626,7 +919,7 @@ Task<void> FriendsSecureRMC::updateMii(ClientInfo client, Request req, std::uniq
     }
     registeredClientsLock.unlock();
 
-    auto getUserInfoCmd = db::Database::craftGetUserInfoCommand(client.pid);
+    auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
     const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
     if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
@@ -837,7 +1130,7 @@ Task<void> FriendsSecureRMC::getBasicInfo(ClientInfo client, Request req, std::u
 
     auto infos = std::make_unique<List<PrincipalBasicInfo>>(client.minorVersion);
     for (const auto& pid : *pids) {
-        auto getBlockSettingCmd = db::Database::craftGetUserInfoCommand(pid);
+        auto getBlockSettingCmd = db::Database::craftGetUserInfoByPidCommand(pid);
         const db::Result getBlockSettingResult = co_await db->runCommand(std::move(getBlockSettingCmd));
         if (getBlockSettingResult.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(pid)
@@ -912,7 +1205,7 @@ Task<void> FriendsSecureRMC::getRequestBlockSettings(ClientInfo client, Request 
         PrincipalRequestBlockSetting setting(client.minorVersion);
         setting.pid = pid;
 
-        auto getBlockSettingCmd = db::Database::craftGetUserInfoCommand(pid);
+        auto getBlockSettingCmd = db::Database::craftGetUserInfoByPidCommand(pid);
         const db::Result getBlockSettingResult = co_await db->runCommand(std::move(getBlockSettingCmd));
         if (getBlockSettingResult.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(pid)
@@ -955,6 +1248,66 @@ void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationT
     params.push_back(std::make_unique<NintendoNotificationEvent>(notificationEvent));
 
     sendMsg(client, req, params);
+}
+
+Task<bool> FriendsSecureRMC::cleanupExpiredFriendRequests(const uint32_t pid) const {
+    auto sentFriendRequestsCmd = db::Database::craftGetSentFriendRequestsCommand(pid);
+    db::Result sentFriendRequestsResult = co_await db->runCommand(std::move(sentFriendRequestsCmd));
+    if (sentFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get sent friend requests for " + std::to_string(pid) + ".");
+        co_return false;
+    }
+
+    auto receivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(pid);
+    db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(receivedFriendRequestsCmd));
+    if (receivedFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get received friend requests for " + std::to_string(pid) + ".");
+        co_return false;
+    }
+
+    auto sentRequests = sentFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>();
+    auto receivedRequests = receivedFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>();
+
+    auto session = db->createSession();
+    if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to begin transaction for cleaning up expired friend requests for " + std::to_string(pid) + ".");
+        co_return false;
+    }
+
+    // If a request is created with an expiration of 0, it is considered permanent and should not be deleted.
+    // We assume that all requests created before the year 2000 are permanent.
+    auto year2000 = std::chrono::system_clock::from_time_t(946684800); // January 1, 2000
+
+    for (const auto& request : sentRequests) {
+        if (request.expiresAt < std::chrono::system_clock::now() && request.expiresAt > year2000) {
+            auto deleteCmd = db::Database::craftDeleteFriendRequestCommand(request.id);
+            db::Result deleteResult = co_await session->runCommand(std::move(deleteCmd));
+            if (deleteResult.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_await session->rollbackTransaction();
+                logger->log(Logger::level::WARN, logGroup, "Failed to delete expired sent friend request for " + std::to_string(pid) + ".");
+                co_return false;
+            }
+        }
+    }
+
+    for (const auto& request : receivedRequests) {
+        if (request.expiresAt < std::chrono::system_clock::now() && request.expiresAt > year2000) {
+            auto deleteCmd = db::Database::craftDeleteFriendRequestCommand(request.id);
+            db::Result deleteResult = co_await session->runCommand(std::move(deleteCmd));
+            if (deleteResult.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_await session->rollbackTransaction();
+                logger->log(Logger::level::WARN, logGroup, "Failed to delete expired sent friend request for " + std::to_string(pid) + ".");
+                co_return false;
+            }
+        }
+    }
+
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for cleaning up expired friend requests for " + std::to_string(pid) + ".");
+        co_return false;
+    }
+
+    co_return true;
 }
 
 Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {

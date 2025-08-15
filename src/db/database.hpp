@@ -44,10 +44,13 @@ enum class DBCommandType {
     GET_USER_BY_USERNAME,
     GET_GAME_SERVER_ACCESS,
     INSERT_GAME_SERVER_ACCESS,
-    GET_USER_INFO,
-    INSERT_USER_INFO,
-    UPDATE_USER_INFO,
+    GET_USER_INFO_BY_PID,
+    GET_USER_INFO_BY_USERNAME,
     GET_FRIENDS_INFO,
+    GET_FRIEND_REQUEST,
+    GET_SENT_FRIEND_REQUESTS,
+    GET_RECEIVED_FRIEND_REQUESTS,
+    GET_BLOCKED_FRIENDS,
     GET_USER_PROFILE,
     GET_USER_MII,
     GET_USER_EMAIL,
@@ -59,7 +62,11 @@ enum class DBCommandType {
     GET_LATEST_OWNERSHIP,
     HAS_ACTIVE_OWNERSHIP,
     GET_OWNERSHIPS,
-    INACTIVATE_DEVICE_OWNERSHIPS,
+    GET_PERSISTENT_NOTIFICATIONS,
+    INSERT_USER_INFO,
+    ADD_FRIEND,
+    BLOCK_FRIEND,
+    INSERT_PERSISTENT_NOTIFICATION,
     INSERT_OR_UPDATE_DEVICE,
     INSERT_OR_UPDATE_USER_AGREEMENT,
     INSERT_OR_UPDATE_MII,
@@ -67,14 +74,20 @@ enum class DBCommandType {
     INSERT_USER_PROFILE,
     INSERT_OR_UPDATE_DEVICE_ATTRIBUTES,
     INSERT_OR_UPDATE_OWNERSHIP,
+    INSERT_OR_UPDATE_FRIEND_REQUEST,
+    UPDATE_USER_INFO,
     UPDATE_USER_PROFILE,
+    INACTIVATE_DEVICE_OWNERSHIPS,
     DELETE_MII,
     DELETE_EMAIL,
     DELETE_USER,
     DELETE_USER_OWNERSHIPS,
     DELETE_USER_AGREEMENTS,
     DELETE_USER_DEVICE_ATTRIBUTES,
-    DELETE_FRIEND
+    DELETE_FRIEND,
+    DELETE_FRIEND_REQUEST,
+    DELETE_PERSISTENT_NOTIFICATION,
+    UNBLOCK_FRIEND
 };
 
 enum class DBResultStatus {
@@ -199,6 +212,28 @@ struct DBUserProfileInsertQuery {
     datetime_t updated;
 };
 
+struct DBFriendshipInsertQuery {
+    uint32_t pid{};
+    uint32_t friendPid{};
+    datetime_t becameFriends;
+};
+
+struct DBBlockInsertQuery {
+    uint32_t pid;
+    uint32_t blockedPid;
+    datetime_t createdAt;
+    std::vector<uint8_t> gameKey;
+};
+
+struct DBPersistentNotificationInsertQuery {
+    uint32_t forPid;
+    int64_t value1;
+    uint32_t value2;
+    uint32_t value3;
+    uint32_t value4;
+    std::string text;
+};
+
 struct DBUserProfileUpdateQuery {
     uint32_t pid{};
     std::optional<std::string> username;
@@ -231,6 +266,15 @@ struct DBOwnershipInsertOrUpdateQuery {
     uint32_t deviceId;
     std::string status;
     datetime_t lastUpdated;
+};
+
+struct DBFriendRequestInsertOrUpdateQuery {
+    std::optional<int64_t> id;
+    uint32_t fromPid;
+    uint32_t toPid;
+    datetime_t expiresAt;
+    datetime_t createdAt;
+    std::vector<uint8_t> data;
 };
 
 struct DBFriendDeleteQuery {
@@ -275,6 +319,34 @@ struct DBFriendInfoData {
     std::vector<uint8_t> comment;
     datetime_t lastOnline;
     datetime_t becameFriends;
+};
+
+struct DBFriendRequestData {
+    int64_t id;
+    uint32_t fromPid;
+    uint32_t toPid;
+    datetime_t expiresAt;
+    datetime_t createdAt;
+    std::vector<uint8_t> data;
+    std::optional<std::vector<uint8_t>> nnaInfo;
+};
+
+struct DBBlockData {
+    uint32_t pid;
+    uint32_t blockedPid;
+    datetime_t createdAt;
+    std::vector<uint8_t> gameKey;
+    std::vector<uint8_t> nnaInfo;
+};
+
+struct DBPersistentNotificationData {
+    int64_t id;
+    uint32_t forPid;
+    int64_t value1;
+    uint32_t value2;
+    uint32_t value3;
+    uint32_t value4;
+    std::string text;
 };
 
 struct DBUserProfileData {
@@ -463,13 +535,18 @@ public:
     static std::unique_ptr<Command> craftGetUserByUsernameCommand(const std::string& username);
     static std::unique_ptr<Command> craftGetGameServerAccessCommand(uint32_t pid);
     static std::unique_ptr<Command> craftInsertGameServerAccessCommand(uint32_t pid, const std::string& password);
-    static std::unique_ptr<Command> craftGetUserInfoCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetUserInfoByPidCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetUserInfoByUsernameCommand(const std::string& username);
     static std::unique_ptr<Command> craftInsertUserInfoCommand(uint32_t pid, const std::string& username,
                                                                bool showOnline, bool showPlaying,
                                                                bool blockRequests, const std::vector<uint8_t>& nnaInfo,
                                                                const std::vector<uint8_t>& presence,
                                                                const std::vector<uint8_t>& comment,
                                                                datetime_t lastOnline);
+    static std::unique_ptr<Command> craftAddFriendCommand(uint32_t pid, uint32_t friendPid,
+                                                          datetime_t becameFriends);
+    static std::unique_ptr<Command> craftBlockFriendCommand(uint32_t pid, uint32_t blockedPid,
+                                                            datetime_t createdAt, const std::vector<uint8_t>& gameKey);
     static std::unique_ptr<Command> craftUpdateUserInfoCommand(uint32_t pid, std::optional<std::string> username,
                                                                std::optional<bool> showOnline,
                                                                std::optional<bool> showPlaying,
@@ -479,6 +556,10 @@ public:
                                                                std::optional<std::vector<uint8_t>> comment,
                                                                std::optional<datetime_t> lastOnline);
     static std::unique_ptr<Command> craftGetFriendsInfoCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetFriendRequestCommand(int64_t id);
+    static std::unique_ptr<Command> craftGetSentFriendRequestsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetReceivedFriendRequestsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetBlockedFriendsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserProfileCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserMiiCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserEmailCommand(uint32_t pid);
@@ -488,10 +569,14 @@ public:
     static std::unique_ptr<Command> craftGetDeviceCommand(uint32_t deviceId);
     static std::unique_ptr<Command> craftGetLatestPidCommand();
     static std::unique_ptr<Command> craftGetOwnershipCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftGetPersistentNotificationsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetLatestOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftInactivateDeviceOwnershipsCommand(uint32_t deviceId);
+    static std::unique_ptr<Command> craftInsertPersistentNotificationCommand(uint32_t forPid, int64_t value1,
+                                                                           uint32_t value2, uint32_t value3,
+                                                                           uint32_t value4, const std::string& text);
     static std::unique_ptr<Command> craftInsertOrUpdateDeviceCommand(uint32_t deviceId, const std::string& language,
                                                                      uint32_t platformId, uint32_t region,
                                                                      const std::string& serialNumber,
@@ -527,6 +612,9 @@ public:
     static std::unique_ptr<Command> craftInsertOrUpdateOwnershipCommand(uint32_t pid, uint32_t deviceId,
                                                                         const std::string& status,
                                                                         datetime_t lastUpdated);
+    static std::unique_ptr<Command> craftInsertOrUpdateFriendRequestCommand(int64_t id, uint32_t fromPid,
+                                                                      uint32_t toPid, datetime_t expiresAt,
+                                                                      datetime_t createdAt, const std::vector<uint8_t>& data);
     static std::unique_ptr<Command> craftUpdateUserProfileCommand(uint32_t pid, std::optional<std::string> username,
                                                                   std::optional<std::string> password,
                                                                   std::optional<int64_t> emailId,
@@ -549,6 +637,9 @@ public:
     static std::unique_ptr<Command> craftDeleteUserAgreementsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserDeviceAttributesCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid);
+    static std::unique_ptr<Command> craftDeleteFriendRequestCommand(int64_t id);
+    static std::unique_ptr<Command> craftDeletePersistentNotificationCommand(int64_t id);
+    static std::unique_ptr<Command> craftUnblockFriendCommand(uint32_t pid, uint32_t blockedPid);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

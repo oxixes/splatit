@@ -57,9 +57,14 @@ private:
     sqlite3_stmt* getUserByUsernameStatement = nullptr;
     sqlite3_stmt* getGameServerAccessStatement = nullptr;
     sqlite3_stmt* insertGameServerAccessStatement = nullptr;
-    sqlite3_stmt* getUserInfoStatement = nullptr;
+    sqlite3_stmt* getUserInfoByPidStatement = nullptr;
+    sqlite3_stmt* getUserInfoByUsernameStatement = nullptr;
     sqlite3_stmt* insertUserInfoStatement = nullptr;
     sqlite3_stmt* getFriendsInfoStatement = nullptr;
+    sqlite3_stmt* getFriendRequestStatement = nullptr;
+    sqlite3_stmt* getSentFriendRequestsStatement = nullptr;
+    sqlite3_stmt* getReceivedFriendRequestsStatement = nullptr;
+    sqlite3_stmt* getBlockedFriendsStatement = nullptr;
     sqlite3_stmt* getUserProfileStatement = nullptr;
     sqlite3_stmt* getUserMiiStatement = nullptr;
     sqlite3_stmt* getUserEmailStatement = nullptr;
@@ -71,8 +76,12 @@ private:
     sqlite3_stmt* getLatestOwnershipStatement = nullptr;
     sqlite3_stmt* hasActiveOwnershipStatement = nullptr;
     sqlite3_stmt* getOwnershipsStatement = nullptr;
+    sqlite3_stmt* getPersistentNotificationsStatement = nullptr;
     sqlite3_stmt* inactivateDeviceOwnershipsStatement = nullptr;
     sqlite3_stmt* getLatestAgreementStatement = nullptr;
+    sqlite3_stmt* addFriendStatement = nullptr;
+    sqlite3_stmt* blockFriendStatement = nullptr;
+    sqlite3_stmt* insertPersistentNotificationStatement = nullptr;
     sqlite3_stmt* insertOrUpdateDeviceStatement = nullptr;
     sqlite3_stmt* insertOrUpdateUserAgreementStatement = nullptr;
     sqlite3_stmt* insertOrUpdateMiiStatement = nullptr;
@@ -80,6 +89,7 @@ private:
     sqlite3_stmt* insertProfileStatement = nullptr;
     sqlite3_stmt* insertOrUpdateDeviceAttributesStatement = nullptr;
     sqlite3_stmt* insertOrUpdateOwnershipStatement = nullptr;
+    sqlite3_stmt* insertOrUpdateFriendRequestStatement = nullptr;
     sqlite3_stmt* deleteMiiStatement = nullptr;
     sqlite3_stmt* deleteEmailStatement = nullptr;
     sqlite3_stmt* deleteUserStatement = nullptr;
@@ -87,6 +97,9 @@ private:
     sqlite3_stmt* deleteUserAgreementsStatement = nullptr;
     sqlite3_stmt* deleteUserDeviceAttributesStatement = nullptr;
     sqlite3_stmt* deleteFriendStatement = nullptr;
+    sqlite3_stmt* deleteFriendRequestStatement = nullptr;
+    sqlite3_stmt* deletePersistentNotificationStatement = nullptr;
+    sqlite3_stmt* unblockFriendStatement = nullptr;
 
     bool isSession = false;
 

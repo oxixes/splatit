@@ -45,6 +45,7 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                    "country TEXT NOT NULL, signed_date TEXT NOT NULL, PRIMARY KEY (pid, type, version, country), "
                                    "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
 
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_username ON users(username);");
             sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_active_user ON ownerships(pid) WHERE status = 'ACTIVE';");
             sqlCmds.emplace_back("COMMIT;");
             break;
@@ -85,6 +86,8 @@ bool migration_initial_splatoonAuth(const std::shared_ptr<Logger::Logger>& logge
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
 }
 
+// TODO Add trigger to prevent blocks if requests are sent, or viceversa, and the same with friendships
+// TODO Add trigger to prevent more than 100 requests received and friendships
 bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type) {
     std::vector<std::string> sqlCmds;
     switch (type) {
@@ -97,8 +100,27 @@ bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, co
                                  "nna_info BLOB NOT NULL, presence BLOB NOT NULL, comment BLOB NOT NULL, last_online TEXT NOT NULL, "
                                  "PRIMARY KEY (pid));");
             sqlCmds.emplace_back("CREATE TABLE friendships (pid INTEGER NOT NULL, friend_pid INTEGER NOT NULL, became_friends TEXT NOT NULL,"
+                                 "uidx_u1 INTEGER NOT NULL, uidx_u2 INTEGER NOT NULL, "
                                  "PRIMARY KEY (pid, friend_pid), FOREIGN KEY(pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
                                  "FOREIGN KEY(friend_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, for INTEGER NOT NULL,"
+                                 "value1 INTEGER NOT NULL, value2 INTEGER NOT NULL, value3 INTEGER NOT NULL, value4 INTEGER NOT NULL, "
+                                 "text TEXT NOT NULL, FOREIGN KEY(for) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE friend_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, from_pid INTEGER NOT NULL,"
+                                 "to_pid INTEGER NOT NULL, expiration TEXT NOT NULL, created_at TEXT NOT NULL, data BLOB NOT NULL,"
+                                 "uidx_u1 INTEGER NOT NULL, uidx_u2 INTEGER NOT NULL, "
+                                 "FOREIGN KEY(from_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY(to_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE blocks (pid INTEGER NOT NULL, blocked_pid INTEGER NOT NULL, created_at TEXT NOT NULL, "
+                                 "game_key BLOB NOT NULL, PRIMARY KEY (pid, blocked_pid), "
+                                 "FOREIGN KEY(pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY(blocked_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_username ON user_info(username);");
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_friendship ON friendships(uidx_u1, uidx_u2);");
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_friend_request ON friend_requests(uidx_u1, uidx_u2);");
+
+            sqlCmds.emplace_back("INSERT INTO sqlite_sequence (seq, name) VALUES (79999999, 'friend_requests');");
             sqlCmds.emplace_back("COMMIT;");
             break;
     }

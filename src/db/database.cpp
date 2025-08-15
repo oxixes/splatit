@@ -69,16 +69,27 @@ std::unique_ptr<Command> Database::craftInsertGameServerAccessCommand(uint32_t p
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetUserInfoCommand(uint32_t pid) {
+std::unique_ptr<Command> Database::craftGetUserInfoByPidCommand(uint32_t pid) {
     DBPidQuery query {
             .pid = pid
     };
 
-    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_INFO,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_INFO_BY_PID,
                                                std::any(query));
 
     return dbCommand;
 }
+
+std::unique_ptr<Command> Database::craftGetUserInfoByUsernameCommand(const std::string &username) {
+    DBUsernameQuery query {
+        .username = username
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_USER_INFO_BY_USERNAME,
+                                               std::any(query));
+    return dbCommand;
+}
+
 
 std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, const std::string& username,
                                                               bool showOnline, bool showPlaying,
@@ -101,6 +112,32 @@ std::unique_ptr<Command> Database::craftInsertUserInfoCommand(uint32_t pid, cons
     auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_USER_INFO,
                                                std::any(data));
 
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftAddFriendCommand(uint32_t pid, uint32_t friendPid, datetime_t becameFriends) {
+    DBFriendshipInsertQuery query {
+        .pid = pid,
+        .friendPid = friendPid,
+        .becameFriends = becameFriends
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::ADD_FRIEND,
+                                               std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftBlockFriendCommand(uint32_t pid, uint32_t blockedPid, datetime_t createdAt,
+                                                           const std::vector<uint8_t> &gameKey) {
+    DBBlockInsertQuery query {
+        .pid = pid,
+        .blockedPid = blockedPid,
+        .createdAt = createdAt,
+        .gameKey = gameKey
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::BLOCK_FRIEND,
+                                               std::any(query));
     return dbCommand;
 }
 
@@ -138,6 +175,49 @@ std::unique_ptr<Command> Database::craftGetFriendsInfoCommand(uint32_t pid) {
     auto dbCommand = std::make_unique<Command>(DBCommandType::GET_FRIENDS_INFO,
                                                std::any(query));
 
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetFriendRequestCommand(int64_t id) {
+    DBIdQuery query {
+        .id = id
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_FRIEND_REQUEST,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetSentFriendRequestsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_SENT_FRIEND_REQUESTS,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetReceivedFriendRequestsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_RECEIVED_FRIEND_REQUESTS,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetBlockedFriendsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_BLOCKED_FRIENDS,
+                                               std::any(query));
     return dbCommand;
 }
 
@@ -228,6 +308,16 @@ std::unique_ptr<Command> Database::craftGetOwnershipCommand(uint32_t pid, uint32
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetPersistentNotificationsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_PERSISTENT_NOTIFICATIONS,
+                                               std::any(query));
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftGetLatestOwnershipCommand(uint32_t pid) {
     DBPidQuery query {
         .pid = pid
@@ -269,6 +359,23 @@ std::unique_ptr<Command> Database::craftInactivateDeviceOwnershipsCommand(uint32
     auto dbCommand = std::make_unique<Command>(DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS,
                                                std::any(query));
 
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInsertPersistentNotificationCommand(uint32_t forPid, int64_t value1,
+                                                                            uint32_t value2, uint32_t value3,
+                                                                            uint32_t value4, const std::string &text) {
+    DBPersistentNotificationInsertQuery query {
+        .forPid = forPid,
+        .value1 = value1,
+        .value2 = value2,
+        .value3 = value3,
+        .value4 = value4,
+        .text = text
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_PERSISTENT_NOTIFICATION,
+                                               std::any(query));
     return dbCommand;
 }
 
@@ -426,6 +533,25 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateOwnershipCommand(uint32_t 
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftInsertOrUpdateFriendRequestCommand(int64_t id, uint32_t fromPid, uint32_t toPid,
+                                                                           datetime_t expiresAt, datetime_t createdAt,
+                                                                           const std::vector<uint8_t> &data) {
+    DBFriendRequestInsertOrUpdateQuery query {
+        .id = id,
+        .fromPid = fromPid,
+        .toPid = toPid,
+        .expiresAt = expiresAt,
+        .createdAt = createdAt,
+        .data = data
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_FRIEND_REQUEST,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+
 std::unique_ptr<Command> Database::craftUpdateUserProfileCommand(uint32_t pid, std::optional<std::string> username,
                                                                  std::optional<std::string> password,
                                                                  std::optional<int64_t> emailId,
@@ -530,6 +656,34 @@ std::unique_ptr<Command> Database::craftDeleteFriendCommand(uint32_t pid, uint32
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftDeleteFriendRequestCommand(int64_t id) {
+    DBIdQuery query {
+        .id = id
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_FRIEND_REQUEST, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeletePersistentNotificationCommand(int64_t id) {
+    DBIdQuery query {
+        .id = id
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_PERSISTENT_NOTIFICATION, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftUnblockFriendCommand(uint32_t pid, uint32_t blockedPid) {
+    DBFriendDeleteQuery query {
+        .pid = pid,
+        .friendPid = blockedPid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::UNBLOCK_FRIEND, std::any(query));
+    return dbCommand;
+}
+
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(logger, config["path"].get<std::string>());
@@ -572,7 +726,7 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
             break;
 
         case DBCommandType::GET_USER_BY_PID: // Gets the user (pid, username and password) by PID.
-        case DBCommandType::GET_USER_INFO: // Gets the user friend information by PID.
+        case DBCommandType::GET_USER_INFO_BY_PID: // Gets the user friend information by PID.
         case DBCommandType::GET_FRIENDS_INFO: // Gets the friends information of a user by PID.
         case DBCommandType::GET_USER_PROFILE: // Gets the user profile information by PID.
         case DBCommandType::GET_USER_MII: // Gets the Mii of a user by PID.
@@ -584,6 +738,10 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::DELETE_USER_OWNERSHIPS: // Deletes all ownerships of a user by PID.
         case DBCommandType::DELETE_USER_AGREEMENTS: // Deletes all user agreements by PID.
         case DBCommandType::DELETE_USER_DEVICE_ATTRIBUTES: // Deletes all device attributes of a user by PID.
+        case DBCommandType::GET_SENT_FRIEND_REQUESTS: // Gets the sent friend requests of a user by PID.
+        case DBCommandType::GET_RECEIVED_FRIEND_REQUESTS: // Gets the received friend requests of a user by PID.
+        case DBCommandType::GET_PERSISTENT_NOTIFICATIONS: // Gets the persistent notifications of a user by PID.
+        case DBCommandType::GET_BLOCKED_FRIENDS: // Gets the blocked friends of a user by PID.
             if (command->data.type() != typeid(DBPidQuery)) {
                 return false;
             }
@@ -593,14 +751,18 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::DELETE_MII: // Deletes a Mii by its ID.
         case DBCommandType::DELETE_EMAIL: // Deletes an email by its ID.
         case DBCommandType::GET_DEVICE: // Gets a device by its ID.
-        case DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS:
+        case DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS: // Inactivates all ownerships of a device by its ID.
+        case DBCommandType::GET_FRIEND_REQUEST: // Gets a friend request by its ID.
+        case DBCommandType::DELETE_FRIEND_REQUEST: // Deletes a friend request by its ID.
+        case DBCommandType::DELETE_PERSISTENT_NOTIFICATION: // Deletes a persistent notification by its ID.
             if (command->data.type() != typeid(DBIdQuery)) {
                 return false;
             }
 
             break;
 
-        case DBCommandType::GET_USER_BY_USERNAME:
+        case DBCommandType::GET_USER_BY_USERNAME: // Gets the user (pid, username and password) by username.
+        case DBCommandType::GET_USER_INFO_BY_USERNAME: // Gets the friends server user info by username.
             // Get user by username commands need the username of the user to get.
             if (command->data.type() != typeid(DBUsernameQuery)) {
                 return false;
@@ -729,6 +891,14 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
+        case DBCommandType::INSERT_OR_UPDATE_FRIEND_REQUEST:
+            // Inserts or updates a friend request in the database.
+            if (command->data.type() != typeid(DBFriendRequestInsertOrUpdateQuery)) {
+                return false;
+            }
+
+            break;
+
         case DBCommandType::UPDATE_USER_PROFILE:
             // Updates a user profile in the database.
             if (command->data.type() != typeid(DBUserProfileUpdateQuery)) {
@@ -737,9 +907,33 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
-        case DBCommandType::DELETE_FRIEND:
-            // Deletes a friendship between two users.
+        case DBCommandType::DELETE_FRIEND: // Deletes a friendship between two users.
+        case DBCommandType::UNBLOCK_FRIEND: // Unblocks a friend for a user.
             if (command->data.type() != typeid(DBFriendDeleteQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_PERSISTENT_NOTIFICATION:
+            // Inserts a persistent notification for a user.
+            if (command->data.type() != typeid(DBPersistentNotificationInsertQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::ADD_FRIEND:
+            // Adds a friend for a user.
+            if (command->data.type() != typeid(DBFriendshipInsertQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::BLOCK_FRIEND:
+            // Blocks a friend for a user.
+            if (command->data.type() != typeid(DBBlockInsertQuery)) {
                 return false;
             }
 
