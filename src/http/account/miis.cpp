@@ -79,7 +79,7 @@ Task<void> v1_api_miis(http::Server* srv, std::shared_ptr<http::Context> ctx,
         miiNode.append_child("primary").text().set(miiData.miiPrimary ? "Y" : "N");
         miiNode.append_child("user_id").text().set(miiData.username.c_str(), miiData.username.size());
 
-        constexpr std::array<std::string, 8> image_types = {
+        const std::array<std::string, 8> image_types = {
             "standard", "normal_face", "frustrated", "smile_open_mouth", "wink_left", "sorrow",
             "surprised_open_mouth", "body"
         };

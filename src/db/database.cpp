@@ -362,10 +362,11 @@ std::unique_ptr<Command> Database::craftInactivateDeviceOwnershipsCommand(uint32
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftInsertPersistentNotificationCommand(uint32_t forPid, int64_t value1,
-                                                                            uint32_t value2, uint32_t value3,
+std::unique_ptr<Command> Database::craftInsertOrUpdatePersistentNotificationCommand(std::optional<int64_t>id, uint32_t forPid,
+                                                                            int64_t value1, uint32_t value2, uint32_t value3,
                                                                             uint32_t value4, const std::string &text) {
-    DBPersistentNotificationInsertQuery query {
+    DBPersistentNotificationInsertOrUpdateQuery query {
+        .id = id,
         .forPid = forPid,
         .value1 = value1,
         .value2 = value2,
@@ -374,7 +375,7 @@ std::unique_ptr<Command> Database::craftInsertPersistentNotificationCommand(uint
         .text = text
     };
 
-    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_PERSISTENT_NOTIFICATION,
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION,
                                                std::any(query));
     return dbCommand;
 }
@@ -533,7 +534,7 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateOwnershipCommand(uint32_t 
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftInsertOrUpdateFriendRequestCommand(int64_t id, uint32_t fromPid, uint32_t toPid,
+std::unique_ptr<Command> Database::craftInsertOrUpdateFriendRequestCommand(std::optional<int64_t> id, uint32_t fromPid, uint32_t toPid,
                                                                            datetime_t expiresAt, datetime_t createdAt,
                                                                            const std::vector<uint8_t> &data) {
     DBFriendRequestInsertOrUpdateQuery query {
@@ -915,9 +916,9 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
-        case DBCommandType::INSERT_PERSISTENT_NOTIFICATION:
+        case DBCommandType::INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION:
             // Inserts a persistent notification for a user.
-            if (command->data.type() != typeid(DBPersistentNotificationInsertQuery)) {
+            if (command->data.type() != typeid(DBPersistentNotificationInsertOrUpdateQuery)) {
                 return false;
             }
 

@@ -19,6 +19,7 @@
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
 #include "boss/utils.hpp"
+#include "crypto/tools.hpp"
 
 std::atomic<bool> shouldStop = false;
 

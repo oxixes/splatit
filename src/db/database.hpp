@@ -66,7 +66,7 @@ enum class DBCommandType {
     INSERT_USER_INFO,
     ADD_FRIEND,
     BLOCK_FRIEND,
-    INSERT_PERSISTENT_NOTIFICATION,
+    INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION,
     INSERT_OR_UPDATE_DEVICE,
     INSERT_OR_UPDATE_USER_AGREEMENT,
     INSERT_OR_UPDATE_MII,
@@ -225,7 +225,8 @@ struct DBBlockInsertQuery {
     std::vector<uint8_t> gameKey;
 };
 
-struct DBPersistentNotificationInsertQuery {
+struct DBPersistentNotificationInsertOrUpdateQuery {
+    std::optional<int64_t> id;
     uint32_t forPid;
     int64_t value1;
     uint32_t value2;
@@ -574,8 +575,8 @@ public:
     static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftInactivateDeviceOwnershipsCommand(uint32_t deviceId);
-    static std::unique_ptr<Command> craftInsertPersistentNotificationCommand(uint32_t forPid, int64_t value1,
-                                                                           uint32_t value2, uint32_t value3,
+    static std::unique_ptr<Command> craftInsertOrUpdatePersistentNotificationCommand(std::optional<int64_t>id, uint32_t forPid,
+                                                                           int64_t value1, uint32_t value2, uint32_t value3,
                                                                            uint32_t value4, const std::string& text);
     static std::unique_ptr<Command> craftInsertOrUpdateDeviceCommand(uint32_t deviceId, const std::string& language,
                                                                      uint32_t platformId, uint32_t region,
@@ -612,7 +613,7 @@ public:
     static std::unique_ptr<Command> craftInsertOrUpdateOwnershipCommand(uint32_t pid, uint32_t deviceId,
                                                                         const std::string& status,
                                                                         datetime_t lastUpdated);
-    static std::unique_ptr<Command> craftInsertOrUpdateFriendRequestCommand(int64_t id, uint32_t fromPid,
+    static std::unique_ptr<Command> craftInsertOrUpdateFriendRequestCommand(std::optional<int64_t> id, uint32_t fromPid,
                                                                       uint32_t toPid, datetime_t expiresAt,
                                                                       datetime_t createdAt, const std::vector<uint8_t>& data);
     static std::unique_ptr<Command> craftUpdateUserProfileCommand(uint32_t pid, std::optional<std::string> username,

@@ -77,7 +77,7 @@ async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>> callAsync(
     auto task = std::make_shared<async::ManualTask<std::pair<std::shared_ptr<Response>, grpc::Status>>>();
 
     (stub->async()->*method)(context.get(), request.get(), response.get(),
-        [task, context = std::move(context), response = std::move(response), _req = std::move(request)]
+        [task, context = context, response = response, _req = request]
         (grpc::Status status) mutable {
             // Resolve the promise with the response and status
             task->complete(std::move(std::make_pair(std::move(response), status)));

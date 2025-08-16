@@ -88,6 +88,7 @@ bool migration_initial_splatoonAuth(const std::shared_ptr<Logger::Logger>& logge
 
 // TODO Add trigger to prevent blocks if requests are sent, or viceversa, and the same with friendships
 // TODO Add trigger to prevent more than 100 requests received and friendships
+// TODO Add trigger to prevent a friend request if the user is blocked or if it's a friend
 bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type) {
     std::vector<std::string> sqlCmds;
     switch (type) {

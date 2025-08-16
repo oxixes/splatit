@@ -1356,6 +1356,9 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             goto push_results;
         }
 
+        sqlite3_reset(getBlockedFriendsStatement);
+        sqlite3_clear_bindings(getBlockedFriendsStatement);
+
         std::vector<DBBlockData> results;
         for (const auto& row : *returnedData) {
             DBBlockData blockedFriendData {
@@ -1733,10 +1736,17 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(addFriendStatement);
         sqlite3_clear_bindings(addFriendStatement);
-    } else if (command->type == DBCommandType::INSERT_PERSISTENT_NOTIFICATION) {
+    } else if (command->type == DBCommandType::INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION) {
         if (insertPersistentNotificationStatement == nullptr) {
-            std::string sqlCommand = "INSERT INTO notifications (for, value1, value2, value3, value4, text) "
-                                     "VALUES (?, ?, ?, ?, ?);";
+            std::string sqlCommand = "INSERT INTO notifications (id, for, value1, value2, value3, value4, text) "
+                                     "VALUES (?, ?, ?, ?, ?, ?) "
+                                     "ON CONFLICT(id) DO UPDATE SET "
+                                     "for = excluded.for, "
+                                     "value1 = excluded.value1, "
+                                     "value2 = excluded.value2, "
+                                     "value3 = excluded.value3, "
+                                     "value4 = excluded.value4, "
+                                     "text = excluded.text;";
 
             if (!craftStatement(sqlCommand, &insertPersistentNotificationStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -1744,11 +1754,17 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             }
         }
 
-        auto* query = std::any_cast<DBPersistentNotificationInsertQuery>(&command->data);
+        auto* query = std::any_cast<DBPersistentNotificationInsertOrUpdateQuery>(&command->data);
+
+        std::shared_ptr<DBData> requestIdData = std::make_shared<DBNull>();
+        if (query->id.has_value()) {
+            requestIdData = std::make_shared<DBInteger>(query->id.value());
+        }
 
         if (!bindData(insertPersistentNotificationStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
-                                                              DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING},
-                                                      {std::make_shared<DBInteger>(query->forPid),
+                                                              DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING},
+                                                      {requestIdData,
+                                                       std::make_shared<DBInteger>(query->forPid),
                                                        std::make_shared<DBInteger>(query->value1),
                                                        std::make_shared<DBInteger>(static_cast<int64_t>(query->value2)),
                                                        std::make_shared<DBInteger>(static_cast<int64_t>(query->value3)),
@@ -1766,7 +1782,15 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             goto push_results;
         }
 
-        resultsData = sqlite3_last_insert_rowid(db);
+        int64_t insertedId = query->id.has_value() ? query->id.value() : sqlite3_last_insert_rowid(db);
+        if (insertedId < 0) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertPersistentNotificationStatement);
+            sqlite3_clear_bindings(insertPersistentNotificationStatement);
+            goto push_results;
+        }
+
+        resultsData = insertedId;
 
         sqlite3_reset(insertPersistentNotificationStatement);
         sqlite3_clear_bindings(insertPersistentNotificationStatement);

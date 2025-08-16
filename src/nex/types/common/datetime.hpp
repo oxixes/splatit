@@ -92,7 +92,6 @@ namespace nex::rmc {
         Datetime& operator=(const Datetime& other) = default;
         Datetime& operator=(Datetime&& other) noexcept = default;
 
-    private:
         time_point value;
     };
 

@@ -609,7 +609,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "email"]
       },
       "required": ["enabled"]
     },
