@@ -237,7 +237,7 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
     FriendsRegisteredClientInfo clientInfo{client, {client.pid, pref}, {}};
 
     for (auto& friendData : friendsInfo) {
-        clientInfo.friends.push_back(friendData.friendPid);
+        clientInfo.friends.insert(friendData.friendPid);
     }
 
     std::unique_lock registeredClientsLock(registeredClientsMutex);
@@ -490,13 +490,15 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         request.principalBasicInfo = reqNNAInfo.info;
         request.friendRequestMsg = reqMsg;
 
-        if (reqMsg.expiresOn > year2000)
+        if (requestData.expiresAt > year2000)
             request.friendRequestMsg.id = requestData.id;
         if (request.friendRequestMsg.id == 0xFFFFFFFFFFFFFFFF) {
             // Don't show the user that the request was rejected
             request.friendRequestMsg.id = 0;
         }
         request.sentOn = Datetime(0, requestData.createdAt);
+
+        request.friendRequestMsg.isReceived = 0; // Don't show the user that the request was received by the other user
 
         sentFriendRequests->push_back(std::move(request));
     }
@@ -511,7 +513,7 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         FriendRequestMsg reqMsg(client.minorVersion);
         reqMsg.decode(std::move(requestData.data));
 
-        if (reqMsg.expiresOn <= year2000) continue;
+        if (requestData.expiresAt <= year2000) continue;
         if (reqMsg.id == 0xFFFFFFFFFFFFFFFF) continue; // Don't show the user requests that were rejected
 
         request.principalBasicInfo = reqNNAInfo.info;
@@ -589,6 +591,7 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
             } else if (clientIt->second.userData.preference.showOnline) {
                 NintendoPresenceV2 presenceUpdate(client.minorVersion);
                 presenceUpdate.online = presence->online;
+                presenceUpdate.pid = client.pid;
                 data.set(*presence, "NintendoPresenceV2");
                 sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
             }
@@ -694,6 +697,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
             logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add already sent friend request "
                                                        + std::to_string(*pid));
             sendMsg(client, createError(req, Error::FPD__FRIEND_ALREADY_EXISTS), {});
+            co_return;
         }
     }
 
@@ -729,7 +733,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
     bool otherUserHadSentRequest = false;
     int64_t recvRequestId = -1;
     for (auto& requestData : receivedFriendRequestsResult.getData<std::vector<db::DBFriendRequestData>>()) {
-        if (requestData.toPid == *pid) {
+        if (requestData.fromPid == *pid) {
             otherUserHadSentRequest = true;
             recvRequestId = requestData.id;
             break;
@@ -864,6 +868,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
                                                        + " for " + std::to_string(client.pid)
                                                        + " from " + util::ipv4ToString(client.address.address) + ":"
                                                        + std::to_string(client.address.address.port));
+            co_await session->rollbackTransaction();
             sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
             co_return;
         }
@@ -894,7 +899,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         registeredClientsLock.lock();
         clientIt = registeredClients.find(client.pid);
         if (clientIt != registeredClients.end()) {
-            clientIt->second.friends.push_back(*pid);
+            clientIt->second.friends.insert(*pid);
         }
         registeredClientsLock.unlock();
 
@@ -903,7 +908,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         registeredClientsLock.lock();
         auto friendIt = registeredClients.find(*pid);
         if (friendIt != registeredClients.end()) {
-            friendIt->second.friends.push_back(client.pid);
+            friendIt->second.friends.insert(client.pid);
 
             // Send friend added notification to the other user
             AnyDataHolder data;
@@ -937,6 +942,14 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
             sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REQUEST_ACCEPTED, client.pid, data);
         }
     } else {
+        if (message != nullptr && friendInfoResult.getData<db::DBUserInfoData>().blockRequests) {
+            logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(*pid) + " has blocked friend requests from "
+                                                       + std::to_string(client.pid) + ", user should have used addFriend, instead of addFriendRequest");
+            co_await session->rollbackTransaction();
+            sendMsg(client, createError(req, Error::FPD__FRIEND_REQUEST_BLOCKED), {});
+            co_return;
+        }
+
         auto expiration = std::chrono::system_clock::from_time_t(0);
         bool messageProvided = message != nullptr;
 
@@ -970,6 +983,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
                                                        + std::to_string(client.pid) + " to " + std::to_string(*pid)
                                                        + " from " + util::ipv4ToString(client.address.address) + ":"
                                                        + std::to_string(client.address.address.port));
+            co_await session->rollbackTransaction();
             sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
             co_return;
         }
@@ -1000,6 +1014,41 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         params[1] = std::make_unique<FriendInfo>(std::move(friendInfo));
 
         sendMsg(client, res, params);
+
+        if (messageProvided && !rejectRequest) {
+            registeredClientsLock.lock();
+            auto friendIt = registeredClients.find(*pid);
+            if (friendIt != registeredClients.end()) {
+                // Send friend request notification to the other user
+                auto selfDataRequest = db::Database::craftGetUserInfoByPidCommand(client.pid);
+                const db::Result selfDataResult = co_await db->runCommand(std::move(selfDataRequest));
+                if (selfDataResult.getStatus() != db::DBResultStatus::SUCCESS) {
+                    logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                               + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                               + std::to_string(client.address.address.port));
+                    co_return;
+                }
+
+                if (!selfDataResult.hasData()) {
+                    logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
+                    co_return;
+                }
+
+                NNAInfo dbUserData(client.minorVersion);
+                dbUserData.decode(selfDataResult.getData<db::DBUserInfoData>().nnaInfo);
+
+                FriendRequest notificationFriendRequest(client.minorVersion);
+                notificationFriendRequest.principalBasicInfo = dbUserData.info;
+                notificationFriendRequest.friendRequestMsg = *requestMsg;
+                notificationFriendRequest.sentOn = Datetime(0, now);
+
+                AnyDataHolder notificationFriendRequestData;
+                notificationFriendRequestData.set(notificationFriendRequest, "FriendRequest");
+
+                sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REQUEST_RECEIVED,
+                                 client.pid, notificationFriendRequestData);
+            }
+        }
     }
 }
 
@@ -1027,7 +1076,7 @@ Task<void> FriendsSecureRMC::addFriendByName(ClientInfo client, Request req, std
         co_return;
     }
 
-    co_await addFriend(client, req, std::make_unique<PID>(getUserInfoResult.getData<db::DBUserInfoData>().pid));
+    co_await addFriend(client, req, std::make_unique<PID>(0, getUserInfoResult.getData<db::DBUserInfoData>().pid));
 }
 
 
@@ -1054,6 +1103,15 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
         }
     }
     registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
 
     if (!hasFriend) {
         auto sentFriendRequestsCmd = db::Database::craftGetSentFriendRequestsCommand(client.pid);
@@ -1112,6 +1170,7 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
                 // Send friend removed notification to the other user
                 NintendoNotificationEventGeneral event(client.minorVersion);
                 event.u32_param = *pid;
+                event.u64_param1 = friendRequestId;
 
                 auto now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
                 event.u64_param2.decode(Datetime(0, now).encode());
@@ -1124,6 +1183,36 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
             registeredClientsLock.unlock();
         }
     } else {
+        auto getSelfNotificationsCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
+        const db::Result getSelfNotificationsResult = co_await db->runCommand(std::move(getSelfNotificationsCmd));
+        if (getSelfNotificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        auto getFormerFriendNotificationsCmd = db::Database::craftGetUserInfoByPidCommand(*pid);
+        const db::Result getFormerFriendNotificationsResult = co_await db->runCommand(std::move(getFormerFriendNotificationsCmd));
+        if (getFormerFriendNotificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(*pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        auto session = db->createSession();
+        if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to begin transaction for deleting friend " + std::to_string(*pid)
+                                                       + " for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
         auto deleteCmd = db::Database::craftDeleteFriendCommand(client.pid, *pid);
         const db::Result deleteResult = co_await db->runCommand(std::move(deleteCmd));
         if (deleteResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1132,6 +1221,48 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
                                                        + " from " + util::ipv4ToString(client.address.address) + ":"
                                                        + std::to_string(client.address.address.port));
 
+            sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+            co_return;
+        }
+
+        for (auto& notification : getSelfNotificationsResult.getData<std::vector<db::DBPersistentNotificationData>>()) {
+            if (notification.value4 == 30 && notification.value3 == client.pid && notification.value2 == *pid) {
+                // Remove the friend removed notification
+                auto deleteNotificationCmd = db::Database::craftDeletePersistentNotificationCommand(notification.id);
+                const db::Result deleteNotificationResult = co_await session->runCommand(std::move(deleteNotificationCmd));
+                if (deleteNotificationResult.getStatus() != db::DBResultStatus::SUCCESS) {
+                    logger->log(Logger::level::WARN, logGroup, "Failed to delete friend removed notification for "
+                                                               + std::to_string(client.pid) + " from " + util::ipv4ToString(client.address.address)
+                                                               + ":" + std::to_string(client.address.address.port));
+                    co_await session->rollbackTransaction();
+                    sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+                    co_return;
+                }
+            }
+        }
+
+        for (auto& notification : getFormerFriendNotificationsResult.getData<std::vector<db::DBPersistentNotificationData>>()) {
+            if (notification.value4 == 30 && notification.value2 == client.pid && notification.value3 == *pid) {
+                // Remove the friend removed notification
+                auto deleteNotificationCmd = db::Database::craftDeletePersistentNotificationCommand(notification.id);
+                const db::Result deleteNotificationResult = co_await session->runCommand(std::move(deleteNotificationCmd));
+                if (deleteNotificationResult.getStatus() != db::DBResultStatus::SUCCESS) {
+                    logger->log(Logger::level::WARN, logGroup, "Failed to delete friend removed notification for "
+                                                               + std::to_string(client.pid) + " from " + util::ipv4ToString(client.address.address)
+                                                               + ":" + std::to_string(client.address.address.port));
+                    co_await session->rollbackTransaction();
+                    sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+                    co_return;
+                }
+            }
+        }
+
+        if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for deleting friend " + std::to_string(*pid)
+                                                       + " for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+            co_await session->rollbackTransaction();
             sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
             co_return;
         }
@@ -1146,17 +1277,15 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
         sendMsg(client, res, {});
 
         registeredClientsLock.lock();
-        auto clientIt = registeredClients.find(client.pid);
+        clientIt = registeredClients.find(client.pid);
         if (clientIt != registeredClients.end()) {
-            auto& friends = clientIt->second.friends;
-            friends.erase(std::ranges::remove(friends, *pid).begin(), friends.end());
+            clientIt->second.friends.erase(*pid);
         }
 
         auto formerFriendIt = registeredClients.find(*pid);
         if (formerFriendIt != registeredClients.end()) {
             // Remove friend from the client's friend list
-            auto& friends = formerFriendIt->second.friends;
-            friends.erase(std::ranges::remove(friends, *pid).begin(), friends.end());
+            formerFriendIt->second.friends.erase(client.pid);
 
             // Send friend removed notification to the other user
             NintendoNotificationEventGeneral event(client.minorVersion);
@@ -1210,6 +1339,15 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
     }
     registeredClientsLock.unlock();
 
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
     auto sentFriendRequestsCmd = db::Database::craftGetSentFriendRequestsCommand(client.pid);
     const db::Result sentFriendRequestsResult = co_await db->runCommand(std::move(sentFriendRequestsCmd));
     if (sentFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1242,21 +1380,28 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
 
             sendMsg(client, res, {});
 
-            registeredClientsLock.lock();
-            auto friendIt = registeredClients.find(requestData.toPid);
-            if (friendIt != registeredClients.end()) {
-                NintendoNotificationEventGeneral event(client.minorVersion);
-                event.u32_param = requestData.toPid;
+            auto year2000 = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(946684800));
+            FriendRequestMsg requestMsg(client.minorVersion);
+            requestMsg.decode(requestData.data);
 
-                auto now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
-                event.u64_param2.decode(Datetime(0, now).encode());
+            if (requestData.expiresAt > year2000 && requestMsg.id != 0xFFFFFFFFFFFFFFFF) {
+                registeredClientsLock.lock();
+                auto friendIt = registeredClients.find(requestData.toPid);
+                if (friendIt != registeredClients.end()) {
+                    NintendoNotificationEventGeneral event(client.minorVersion);
+                    event.u32_param = requestData.toPid;
+                    event.u64_param1 = requestData.id;
 
-                AnyDataHolder data;
-                data.set(event, "NintendoNotificationEventGeneral");
+                    auto now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+                    event.u64_param2.decode(Datetime(0, now).encode());
 
-                sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
+                    AnyDataHolder data;
+                    data.set(event, "NintendoNotificationEventGeneral");
+
+                    sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
+                }
+                registeredClientsLock.unlock();
             }
-            registeredClientsLock.unlock();
 
             co_return;
         }
@@ -1280,6 +1425,15 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
         co_return;
     }
     registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
 
     auto receivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(client.pid);
     const db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(receivedFriendRequestsCmd));
@@ -1363,9 +1517,12 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
                                                            + std::to_string(requestData.id) + " for " + std::to_string(client.pid)
                                                            + " from " + util::ipv4ToString(client.address.address) + ":"
                                                            + std::to_string(client.address.address.port));
+                co_await session->rollbackTransaction();
                 sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
                 co_return;
             }
+
+            co_await createBecameFriendsPersistentNotification(client.pid, requestData.fromPid);
 
             Response res;
             res.protocolId = req.protocolId;
@@ -1388,7 +1545,7 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
             registeredClientsLock.lock();
             clientIt = registeredClients.find(client.pid);
             if (clientIt != registeredClients.end()) {
-                clientIt->second.friends.push_back(requestData.fromPid);
+                clientIt->second.friends.insert(requestData.fromPid);
             }
             registeredClientsLock.unlock();
 
@@ -1397,7 +1554,7 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
             registeredClientsLock.lock();
             auto friendIt = registeredClients.find(requestData.fromPid);
             if (friendIt != registeredClients.end()) {
-                friendIt->second.friends.push_back(client.pid);
+                friendIt->second.friends.insert(client.pid);
 
                 auto selfDataRequest = db::Database::craftGetUserInfoByPidCommand(client.pid);
                 const db::Result selfDataResult = co_await db->runCommand(std::move(selfDataRequest));
@@ -1451,6 +1608,15 @@ Task<void> FriendsSecureRMC::deleteFriendRequest(ClientInfo client, Request req,
         co_return;
     }
     registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
 
     auto receivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(client.pid);
     const db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(receivedFriendRequestsCmd));
@@ -1520,6 +1686,15 @@ Task<void> FriendsSecureRMC::denyFriendRequest(ClientInfo client, Request req, s
     }
     registeredClientsLock.unlock();
 
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
     auto receivedFriendRequestsCmd = db::Database::craftGetReceivedFriendRequestsCommand(client.pid);
     const db::Result receivedFriendRequestsResult = co_await db->runCommand(std::move(receivedFriendRequestsCmd));
     if (receivedFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1570,6 +1745,15 @@ Task<void> FriendsSecureRMC::markFriendRequestsAsReceived(ClientInfo client, Req
         co_return;
     }
     registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
 
     auto session = db->createSession();
     if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1630,6 +1814,16 @@ Task<void> FriendsSecureRMC::markFriendRequestsAsReceived(ClientInfo client, Req
         }
     }
 
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for marking friend requests as received for "
+                                                   + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+        co_await session->rollbackTransaction();
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
+
     Response res;
     res.protocolId = req.protocolId;
     res.extendedProtocolId = req.extendedProtocolId;
@@ -1665,6 +1859,15 @@ Task<void> FriendsSecureRMC::addBlackList(ClientInfo client, Request req, std::u
         }
     }
     registeredClientsLock.unlock();
+
+    if (!co_await cleanupExpiredFriendRequests(client.pid)) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
+                                                   + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                   + std::to_string(client.address.address.port));
+
+        sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
+        co_return;
+    }
 
     auto blockedUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(blacklist->principalBasicInfo.pid);
     const db::Result blockedUserInfoResult = co_await db->runCommand(std::move(blockedUserInfoCmd));
@@ -1805,6 +2008,7 @@ Task<void> FriendsSecureRMC::addBlackList(ClientInfo client, Request req, std::u
                                                    + " for " + std::to_string(client.pid)
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
+        co_await session->rollbackTransaction();
         sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
         co_return;
     }
@@ -2158,6 +2362,43 @@ Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, st
 
             sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
         }
+    } else if (!wasOnline && preference->showOnline) {
+        auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
+        const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
+        if (getUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+                                                       + " from " + util::ipv4ToString(client.address.address) + ":"
+                                                       + std::to_string(client.address.address.port));
+            co_return;
+        }
+
+        if (!getUserInfoResult.hasData()) {
+            logger->log(Logger::level::WARN, logGroup, "User info for " + std::to_string(client.pid) + " not found");
+            co_return;
+        }
+
+        NintendoPresenceV2 presence(client.minorVersion);
+        if (preference->showPlaying) {
+            presence.decode(getUserInfoResult.getData<db::DBUserInfoData>().presence);
+        } else {
+            presence.online = true; // If showOnline is true, we assume the user is online
+            presence.pid = client.pid;
+        }
+
+        AnyDataHolder data;
+        data.set(presence, "NintendoPresenceV2");
+
+        // Send online notification to connected friends
+        registeredClientsLock.lock();
+        clientIt = registeredClients.find(client.pid);
+        if (clientIt == registeredClients.end()) co_return;
+
+        for (auto& friendPid : clientIt->second.friends) {
+            auto friendIt = registeredClients.find(friendPid);
+            if (friendIt == registeredClients.end()) continue;
+
+            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, clientIt->second.client.pid, data);
+        }
     }
 }
 
@@ -2291,6 +2532,7 @@ Task<void> FriendsSecureRMC::deletePersistentNotification(ClientInfo client, Req
                                                    + std::to_string(client.pid) + " from "
                                                    + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
+        co_await session->rollbackTransaction();
         sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
         co_return;
     }
@@ -2453,6 +2695,7 @@ Task<bool> FriendsSecureRMC::cleanupExpiredFriendRequests(const uint32_t pid) co
 
     if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for cleaning up expired friend requests for " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
         co_return false;
     }
 
@@ -2477,7 +2720,7 @@ Task<void> FriendsSecureRMC::createBecameFriendsPersistentNotification(const uin
         co_return;
     }
 
-    const int64_t notificationId = insertNotificationResult.getData<int64_t>();
+    const auto notificationId = insertNotificationResult.getData<int64_t>();
     auto updateNotificationCmd = db::Database::craftInsertOrUpdatePersistentNotificationCommand(
         notificationId, pid, notificationId, friendPid, pid, 30, ""
     );
@@ -2500,7 +2743,7 @@ Task<void> FriendsSecureRMC::createBecameFriendsPersistentNotification(const uin
         co_return;
     }
 
-    const int64_t friendNotificationId = insertFriendNotificationResult.getData<int64_t>();
+    const auto friendNotificationId = insertFriendNotificationResult.getData<int64_t>();
     auto updateFriendNotificationCmd = db::Database::craftInsertOrUpdatePersistentNotificationCommand(
         friendNotificationId, friendPid, friendNotificationId, pid, friendPid, 30, ""
     );
@@ -2514,6 +2757,7 @@ Task<void> FriendsSecureRMC::createBecameFriendsPersistentNotification(const uin
 
     if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
         logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for persistent notification for " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
         co_return;
     }
 }

@@ -34,7 +34,7 @@ struct UserData {
 struct FriendsRegisteredClientInfo {
     ClientInfo client;
     UserData userData;
-    std::vector<uint32_t> friends;
+    std::set<uint32_t> friends;
 };
 
 class FriendsSecureRMC : public Server {

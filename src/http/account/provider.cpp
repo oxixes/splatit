@@ -50,6 +50,14 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
         co_return;
     }
 
+    if (!gameServerHosts.contains(gameServerId)) {
+        ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                         "Game server ID " + gameServerId + " is not supported");
+        res = createError(ctx->request->getVersion(), 118, "Game server ID not supported", "", HTTP_STATUS_NOT_FOUND);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
     const std::pair<std::string, std::string> host = gameServerHosts[gameServerId][gameServerHostIndexRoundRobin[gameServerId]];
     gameServerHostIndexRoundRobin[gameServerId] = (gameServerHostIndexRoundRobin[gameServerId] + 1) % gameServerHosts[gameServerId].size();
 

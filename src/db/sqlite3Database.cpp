@@ -435,7 +435,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         auto* query = std::any_cast<DBUsernameQuery>(&command->data);
 
-        if (!bindData(getUserInfoByUsernameStatement, {DBDataType::INTEGER},
+        if (!bindData(getUserInfoByUsernameStatement, {DBDataType::STRING},
                       {std::make_shared<DBString>(query->username)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             goto push_results;
@@ -585,7 +585,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (getSentFriendRequestsStatement == nullptr) {
             if (!craftStatement("SELECT r.id, r.from_pid, r.to_pid, r.expiration, r.created_at, r.data, u.nna_info "
                                 "FROM friend_requests AS r "
-                                "JOIN user_info AS u ON r.from_pid = u.pid "
+                                "JOIN user_info AS u ON r.to_pid = u.pid "
                                 "WHERE r.from_pid = ?;",
                                 &getSentFriendRequestsStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -1739,7 +1739,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
     } else if (command->type == DBCommandType::INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION) {
         if (insertPersistentNotificationStatement == nullptr) {
             std::string sqlCommand = "INSERT INTO notifications (id, for, value1, value2, value3, value4, text) "
-                                     "VALUES (?, ?, ?, ?, ?, ?) "
+                                     "VALUES (?, ?, ?, ?, ?, ?, ?) "
                                      "ON CONFLICT(id) DO UPDATE SET "
                                      "for = excluded.for, "
                                      "value1 = excluded.value1, "
@@ -1761,7 +1761,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             requestIdData = std::make_shared<DBInteger>(query->id.value());
         }
 
-        if (!bindData(insertPersistentNotificationStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
+        if (!bindData(insertPersistentNotificationStatement, {requestIdData->type, DBDataType::INTEGER, DBDataType::INTEGER,
                                                               DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING},
                                                       {requestIdData,
                                                        std::make_shared<DBInteger>(query->forPid),
@@ -1922,9 +1922,10 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             requestIdData = std::make_shared<DBInteger>(query->id.value());
         }
 
-        if (!bindData(insertOrUpdateFriendRequestStatement, {DBDataType::INTEGER, DBDataType::INTEGER,
+        if (!bindData(insertOrUpdateFriendRequestStatement, {requestIdData->type, DBDataType::INTEGER,
                                                             DBDataType::INTEGER, DBDataType::DATETIME,
-                                                            DBDataType::DATETIME, DBDataType::BLOB},
+                                                            DBDataType::DATETIME, DBDataType::BLOB,
+                                                            DBDataType::INTEGER, DBDataType::INTEGER},
                                                       {requestIdData,
                                                        std::make_shared<DBInteger>(query->fromPid),
                                                        std::make_shared<DBInteger>(query->toPid),
@@ -2239,7 +2240,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
     } else if (command->type == DBCommandType::DELETE_FRIEND) {
         if (deleteFriendStatement == nullptr) {
             std::string sqlCommand = "DELETE FROM friendships WHERE pid = ? AND friend_pid = ? OR "
-                                     "friend_pid = ? AND pid = ?;";
+                                     "pid = ? AND friend_pid = ?;";
 
             if (!craftStatement(sqlCommand, &deleteFriendStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -2249,8 +2250,9 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         auto* query = std::any_cast<DBFriendDeleteQuery>(&command->data);
 
-        if (!bindData(deleteFriendStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
-                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->friendPid)})) {
+        if (!bindData(deleteFriendStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->friendPid),
+                      std::make_shared<DBInteger>(query->friendPid), std::make_shared<DBInteger>(query->pid)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(deleteFriendStatement);
             goto push_results;
