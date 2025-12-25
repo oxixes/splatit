@@ -492,7 +492,7 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
 
         if (requestData.expiresAt > year2000)
             request.friendRequestMsg.id = requestData.id;
-        if (request.friendRequestMsg.id == 0xFFFFFFFFFFFFFFFF) {
+        if (request.friendRequestMsg.id == static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
             // Don't show the user that the request was rejected
             request.friendRequestMsg.id = 0;
         }
@@ -514,7 +514,7 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         reqMsg.decode(std::move(requestData.data));
 
         if (requestData.expiresAt <= year2000) continue;
-        if (reqMsg.id == 0xFFFFFFFFFFFFFFFF) continue; // Don't show the user requests that were rejected
+        if (reqMsg.id == static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) continue; // Don't show the user requests that were rejected
 
         request.principalBasicInfo = reqNNAInfo.info;
         request.friendRequestMsg = reqMsg;
@@ -717,7 +717,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         FriendRequestMsg reqMsg(client.minorVersion);
         reqMsg.decode(std::move(requestData.data));
 
-        if (reqMsg.id != 0xFFFFFFFFFFFFFFFF && requestData.expiresAt > year2000) {
+        if (reqMsg.id != static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF) && requestData.expiresAt > year2000) {
             totalFriends++;
         }
     }
@@ -795,7 +795,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
             FriendRequestMsg reqMsg(client.minorVersion);
             reqMsg.decode(std::move(requestData.data));
 
-            if (reqMsg.id != 0xFFFFFFFFFFFFFFFF && requestData.expiresAt > year2000) {
+            if (reqMsg.id != static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF) && requestData.expiresAt > year2000) {
                 totalFriendCount++;
             }
         }
@@ -1384,7 +1384,7 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
             FriendRequestMsg requestMsg(client.minorVersion);
             requestMsg.decode(requestData.data);
 
-            if (requestData.expiresAt > year2000 && requestMsg.id != 0xFFFFFFFFFFFFFFFF) {
+            if (requestData.expiresAt > year2000 && requestMsg.id != static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
                 registeredClientsLock.lock();
                 auto friendIt = registeredClients.find(requestData.toPid);
                 if (friendIt != registeredClients.end()) {
@@ -1450,7 +1450,7 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
             FriendRequestMsg requestMsg(client.minorVersion);
             requestMsg.decode(requestData.data);
 
-            if (requestMsg.id == 0xFFFFFFFFFFFFFFFF) {
+            if (requestMsg.id == static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
                 logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to accept rejected friend request "
                                                            + std::to_string(requestData.id));
 
@@ -1633,7 +1633,7 @@ Task<void> FriendsSecureRMC::deleteFriendRequest(ClientInfo client, Request req,
             FriendRequestMsg requestMsg(client.minorVersion);
             requestMsg.decode(requestData.data);
 
-            if (requestMsg.id == 0xFFFFFFFFFFFFFFFF) {
+            if (requestMsg.id == static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
                 logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to reject already rejected friend request "
                                                            + std::to_string(requestData.id));
 
@@ -1710,7 +1710,7 @@ Task<void> FriendsSecureRMC::denyFriendRequest(ClientInfo client, Request req, s
             FriendRequestMsg requestMsg(client.minorVersion);
             requestMsg.decode(requestData.data);
 
-            if (requestMsg.id == 0xFFFFFFFFFFFFFFFF) {
+            if (requestMsg.id == static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
                 logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to deny already denied friend request "
                                                            + std::to_string(requestData.id));
 
