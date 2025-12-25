@@ -20,8 +20,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
-
-#include <iostream>
+#include <atomic>
 
 namespace async {
 

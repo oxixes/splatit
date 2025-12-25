@@ -1183,20 +1183,20 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
             registeredClientsLock.unlock();
         }
     } else {
-        auto getSelfNotificationsCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
+        auto getSelfNotificationsCmd = db::Database::craftGetPersistentNotificationsCommand(client.pid);
         const db::Result getSelfNotificationsResult = co_await db->runCommand(std::move(getSelfNotificationsCmd));
         if (getSelfNotificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
-            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(client.pid)
+            logger->log(Logger::level::WARN, logGroup, "Failed to get persistent notifications for " + std::to_string(client.pid)
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
             sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});
             co_return;
         }
 
-        auto getFormerFriendNotificationsCmd = db::Database::craftGetUserInfoByPidCommand(*pid);
+        auto getFormerFriendNotificationsCmd = db::Database::craftGetPersistentNotificationsCommand(*pid);
         const db::Result getFormerFriendNotificationsResult = co_await db->runCommand(std::move(getFormerFriendNotificationsCmd));
         if (getFormerFriendNotificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
-            logger->log(Logger::level::WARN, logGroup, "Failed to get user info for " + std::to_string(*pid)
+            logger->log(Logger::level::WARN, logGroup, "Failed to persistent notifications info for " + std::to_string(*pid)
                                                    + " from " + util::ipv4ToString(client.address.address) + ":"
                                                    + std::to_string(client.address.address.port));
             sendMsg(client, createError(req, Error::RENDEZ_VOUS__DATABASE_TEMPORARILY_UNAVAILABLE), {});

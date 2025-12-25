@@ -8,9 +8,11 @@ export default function Layout() {
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
             <SidebarProvider>
                 <AppSidebar />
-                <main>
+                <main className="w-full">
                     <SidebarTrigger />
-                    <Outlet />
+                    <div className="w-full p-3">
+                        <Outlet />
+                    </div>
                 </main>
             </SidebarProvider>
         </ThemeProvider>
