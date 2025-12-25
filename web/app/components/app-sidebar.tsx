@@ -1,4 +1,4 @@
-import {Home, Users, Settings, Activity, Gamepad2} from "lucide-react"
+import {Home, Users, Settings, Activity, Gamepad2, Info} from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -12,6 +12,13 @@ import {
     SidebarFooter,
 } from "@/components/ui/sidebar"
 import {NavLink} from "react-router";
+import { useConfig } from "~/contexts/AppConfigContext";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 // Menu items
 const mainItems = [
@@ -49,6 +56,8 @@ const systemItems = [
 ]
 
 export function AppSidebar() {
+    const { config } = useConfig();
+
     return (
         <Sidebar>
             <SidebarHeader>
@@ -100,8 +109,31 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                <div className="px-4 py-2 text-xs text-muted-foreground">
-                    {__APP_VERSION__} • <a href="https://github.com/oxixes/splatoon_server_cpp" className="underline" target="_blank">GitHub</a>
+                <div className="px-4 py-2 text-xs text-muted-foreground space-y-1">
+                    <div className="flex items-center gap-1">
+                        {__APP_VERSION__} • <a href="https://github.com/oxixes/splatoon_server_cpp" className="underline" target="_blank">GitHub</a>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-3 w-3 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                    <div className="space-y-2">
+                                        <div>
+                                            <p className="font-semibold text-xs">API URL:</p>
+                                            <p className="text-xs break-all">{config.apiUrl}</p>
+                                        </div>
+                                        {config.compatibleVersions.length > 0 && (
+                                            <div>
+                                                <p className="font-semibold text-xs">Compatible Versions:</p>
+                                                <p className="text-xs">{config.compatibleVersions.join(", ")}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
                 </div>
             </SidebarFooter>
         </Sidebar>
