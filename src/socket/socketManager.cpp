@@ -28,6 +28,7 @@ uint32_t SocketManager::addTCPSocket(std::shared_ptr<sock::TCPSocket> socket,
         nullptr,
         std::make_pair(std::move(closeCallback), std::move(connCloseCallback)),
         keepAliveTimeout,
+        -1,
         -1
     )));
 
@@ -56,7 +57,8 @@ uint32_t SocketManager::addTCPSocketConn(std::shared_ptr<sock::TCPSocket> socket
         nullptr,
         std::make_pair(std::move(closeCallback), nullptr),
         keepAlive,
-        -1
+        -1,
+        keepAliveTimeout
     )));
 
     return socketId;
@@ -76,6 +78,7 @@ uint32_t SocketManager::addUDPSocket(std::shared_ptr<sock::UDPSocket> socket,
         nullptr,
         std::move(recvCallback),
         std::make_pair(std::move(closeCallback), nullptr),
+        -1,
         -1,
         -1
     )));
@@ -446,10 +449,12 @@ void SocketManager::recv(uint32_t socketId) {
                         "Socket with ID " + std::to_string(socketId) + " has been closed (read 0 bytes)");
             close(socketId, true);
             return;
-        } else if (std::find(closeQueue.begin(), closeQueue.end(), socketId) != closeQueue.end()) {
+        }
+
+        if (std::find(closeQueue.begin(), closeQueue.end(), socketId) != closeQueue.end()) {
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                         "Socket with ID " + std::to_string(socketId) + " has received some data"
-                                                                                 " but is in the close queue, so it will be ignored.");
+                        " but is in the close queue, so it will be ignored.");
             return;
         }
 
@@ -461,17 +466,19 @@ void SocketManager::recv(uint32_t socketId) {
 
             tcpRecvCallback(socketId, std::move(recvBuf));
         }
+
+        if (socketInfo->keepAliveTime > 0) {
+            int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+
+            socketInfo->keepAliveTimeout = now + (socketInfo->keepAliveTime * 1000);
+        }
     } catch (const sock::RetryableException& e) {
-        // Actually, this could happen, it will be already handled by the poll call
-//        logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
-//                    "Socket with ID " + std::to_string(socketId) + " threw a retryable exception,"
-//                                                                             " this should NOT happen, but will be ignored.");
-        return;
+
     } catch (const sock::FatalException& e) {
         logger->log(Logger::level::DEBUG, Logger::group::NETWORK,
                     "Socket with ID " + std::to_string(socketId) + " has been closed (read threw a fatal exception)");
         close(socketId, true);
-        return;
     }
 }
 

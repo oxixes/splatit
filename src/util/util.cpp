@@ -54,6 +54,10 @@ std::string ipv4ToString(sock::IPv4Addr dir) {
     return std::to_string(dir.a) + "." + std::to_string(dir.b) + "." + std::to_string(dir.c) + "." + std::to_string(dir.d);
 }
 
+std::string ipv4WPortToString(sock::IPv4Addr dir) {
+    return ipv4ToString(dir) + ":" + std::to_string(dir.port);
+}
+
 sock::IPv4Addr stringToIPv4(const std::string& str) {
     sock::IPv4Addr addr{};
     std::vector<std::string> parts = split(str, ".");
@@ -66,6 +70,18 @@ sock::IPv4Addr stringToIPv4(const std::string& str) {
     addr.c = std::stoi(parts[2]);
     addr.d = std::stoi(parts[3]);
     addr.port = 0;
+    return addr;
+}
+
+sock::IPv4Addr stringToIPv4WPort(const std::string& str) {
+    sock::IPv4Addr addr{};
+    std::vector<std::string> parts = split(str, ":");
+    if (parts.size() != 2) {
+        return addr;
+    }
+
+    addr = stringToIPv4(parts[0]);
+    addr.port = static_cast<uint16_t>(std::stoi(parts[1]));
     return addr;
 }
 

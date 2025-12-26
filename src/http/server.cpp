@@ -120,6 +120,9 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
                 case Method::M_DELETE:
                     method = "DELETE";
                     break;
+                case Method::M_OPTIONS:
+                    method = "OPTIONS";
+                    break;
             }
 
             logger->log(Logger::level::DEBUG, Logger::group::NETWORK, "Received request from " +
@@ -207,6 +210,18 @@ void Server::serverThread() {
                 }
             }
 
+            if (handler == nullptr && routes.contains("*")
+                && routes["*"].contains(request.second->getPath())) {
+                handler = routes["*"][request.second->getPath()];
+            } else if (handler == nullptr && regexRoutes.contains("*")) {
+                for (auto& route : regexRoutes["*"]) {
+                    if (std::regex_match(request.second->getPath(), route.first)) {
+                        handler = route.second;
+                        break;
+                    }
+                }
+            }
+
             routesLock.unlock();
 
             std::unique_lock clientsLock(clientsMutex);
@@ -261,6 +276,17 @@ void Server::sendError(uint32_t sockId, int status, const std::shared_ptr<Reques
     std::unique_lock lock(routesMutex);
 
     if (!request->hasHeader("host") || !errorPages.contains(request->getHeader("host")[0])) {
+        if (errorPages.contains("*")) {
+            lock.unlock();
+            std::unique_ptr<Context> context = std::make_unique<Context>(logger, client, sockId, request, status,
+                                                                         scheduler);
+            auto task = std::move(errorPages["*"](this, std::move(context)));
+            task.setScheduler(scheduler);
+            task.setContext(std::make_pair(sockId, request));
+            scheduler->schedule(std::move(task));
+            return;
+        }
+
         auto response = std::move(getError(request->getVersion(), status));
         socketMgr->send(sockId, std::move(response->serialize()));
         socketMgr->close(sockId);

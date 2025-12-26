@@ -19,7 +19,7 @@
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
 #include "boss/utils.hpp"
-#include "crypto/tools.hpp"
+#include "http/management/management.hpp"
 
 std::atomic<bool> shouldStop = false;
 
@@ -207,6 +207,7 @@ int main(int argc, char** argv) {
 
     std::shared_ptr<db::Database> accountsDB = nullptr;
     std::shared_ptr<http::Server> httpServer = nullptr;
+    std::shared_ptr<http::Server> managementServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
         if (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr)) {
@@ -230,6 +231,11 @@ int main(int argc, char** argv) {
         } catch (const std::exception& e) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         std::string("An error occurred while initializing the HTTP server: ") + e.what());
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
             socketManager->cleanup();
             certManager->cleanup();
             sock::cleanup();
@@ -292,11 +298,37 @@ int main(int argc, char** argv) {
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }
 
+    if (settingsMgr->isManagementEnabled()) {
+        try {
+            managementServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getManagementListenAddress(),
+                                                              settingsMgr->getManagementKeepAliveTimeout(),
+                                                              false);
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        std::string("An error occurred while initializing the Management server: ") + e.what());
+            if (accountsDB != nullptr) accountsDB->close();
+            if (httpServer != nullptr) httpServer->stop();
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        mgm::registerRoutes(managementServer, settingsMgr, nullptr); // No management database for now
+        managementServer->listen(settingsMgr->getManagementWorkerCount(), stop);
+    }
+
     std::shared_ptr<grpcimpl::Server> grpcServer = nullptr;
 
     if (settingsMgr->isgRPCEnabled()) {
         try {
             grpcimpl::ServerPtrs serverPtrs {
+                settingsMgr,
                 httpServer,
                 friendsAuthRMC,
                 splatoonAuthRMC,
@@ -359,6 +391,7 @@ int main(int argc, char** argv) {
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
     if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
     if (httpServer != nullptr) httpServer->stop();
+    if (managementServer != nullptr) managementServer->stop();
     socketManager->cleanup();
     certManager->cleanup();
 

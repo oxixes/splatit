@@ -28,6 +28,9 @@ void Server::listen() {
                 serverPtrs.friendsAuthRMC, serverPtrs.splatoonAuthRMC, logger);
     }
 
+    serverStatusService = std::make_shared<grpcimpl::serverstatus::v1::ServerStatusServiceImpl>(
+            logger, serverPtrs.settingsManager);
+
     if (reflectionEnabled) {
         grpc::reflection::InitProtoReflectionServerBuilderPlugin();
     }
@@ -35,6 +38,7 @@ void Server::listen() {
     builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), grpc::InsecureServerCredentials());
 
     if (authService != nullptr) builder.RegisterService(authService.get());
+    builder.RegisterService(serverStatusService.get());
 
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {

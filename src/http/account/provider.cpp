@@ -95,6 +95,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
             settingsManager->getAccountsgRPCRequestTimeout()
         );
 
+    // TODO Try with other servers to see if we find one that works instead of just failing
     if (!response.second.ok()) {
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
                          "Failed to get game server credentials for game server " + gameServerId);

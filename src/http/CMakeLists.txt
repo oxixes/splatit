@@ -5,3 +5,4 @@ target_sources(splatoon_server PRIVATE
 add_subdirectory(parser)
 add_subdirectory(account)
 add_subdirectory(boss)
+add_subdirectory(management)

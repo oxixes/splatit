@@ -12,9 +12,9 @@ public:
     explicit AuthServiceImpl(std::shared_ptr<nex::rmc::AuthRMC> friendsAuth,
                              std::shared_ptr<nex::rmc::AuthRMC> splatoonAuth,
                              std::shared_ptr<Logger::Logger> logger) :
+                             logger(std::move(logger)),
                              friendsAuth(std::move(friendsAuth)),
-                             splatoonAuth(std::move(splatoonAuth)),
-                             logger(std::move(logger)) {};
+                             splatoonAuth(std::move(splatoonAuth)) {}
 
     grpc::ServerUnaryReactor* GetGameServerCredentials(grpc::CallbackServerContext* context,
                                        const GetGameServerCredentialsRequest* request,

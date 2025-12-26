@@ -116,6 +116,8 @@ void Request::parseHTTPHeader(const std::vector<uint8_t>& data, size_t length) {
         method = Method::M_DELETE;
     } else if (methodStr == "HEAD") {
         method = Method::M_HEAD;
+    } else if (methodStr == "OPTIONS") {
+        method = Method::M_OPTIONS;
     } else {
         throw MethodNotSupportedException("Method not supported");
     }
@@ -200,6 +202,9 @@ std::vector<uint8_t> Request::serialize() const {
             break;
         case Method::M_HEAD:
             methodStr = "HEAD";
+            break;
+        case Method::M_OPTIONS:
+            methodStr = "OPTIONS";
             break;
     }
 

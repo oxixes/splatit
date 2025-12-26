@@ -20,7 +20,9 @@ namespace util {
 
     sockaddr_in ipv4ToSockAddr(sock::IPv4Addr dir);
     std::string ipv4ToString(sock::IPv4Addr dir);
+    std::string ipv4WPortToString(sock::IPv4Addr dir);
     sock::IPv4Addr stringToIPv4(const std::string& str);
+    sock::IPv4Addr stringToIPv4WPort(const std::string& str);
 
     std::string getDateHeader();
     std::string getDateHeader(time_t time);

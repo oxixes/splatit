@@ -17,7 +17,8 @@ enum class Method {
     M_POST,
     M_PUT,
     M_DELETE,
-    M_HEAD
+    M_HEAD,
+    M_OPTIONS
 };
 
 class Request {

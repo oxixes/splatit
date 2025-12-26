@@ -18,6 +18,15 @@ using json = nlohmann::json;
 using json_validator = nlohmann::json_schema::json_validator;
 namespace fs = std::filesystem;
 
+enum class ServerType {
+    ACCOUNT,
+    BOSS,
+    FRIENDS_AUTH,
+    FRIENDS_SECURE,
+    SPLATOON_AUTH,
+    SPLATOON_SECURE
+};
+
 class SettingsManager {
 public:
     explicit SettingsManager(std::shared_ptr<Logger::Logger> logger);
@@ -34,6 +43,7 @@ public:
     [[nodiscard]] bool isSplatoonAuthEnabled() const;
     [[nodiscard]] bool isSplatoonSecureEnabled() const;
     [[nodiscard]] bool isgRPCEnabled() const;
+    [[nodiscard]] bool isManagementEnabled() const;
 
     [[nodiscard]] fs::path getSSLCertPath() const;
     [[nodiscard]] fs::path getSSLCACertPath() const;
@@ -53,6 +63,10 @@ public:
     [[nodiscard]] int getHTTPWorkerCount() const;
     [[nodiscard]] int getHTTPKeepAliveTimeout() const;
     [[nodiscard]] bool isHTTP_SSL_Enabled() const;
+
+    [[nodiscard]] sock::IPv4Addr getManagementListenAddress() const;
+    [[nodiscard]] int getManagementWorkerCount() const;
+    [[nodiscard]] int getManagementKeepAliveTimeout() const;
 
     [[nodiscard]] std::set<sock::IPv4Addr> getKnownProxies() const;
 
@@ -83,6 +97,11 @@ public:
     [[nodiscard]] std::map<std::string, std::vector<std::pair<std::string, std::string>>> getGameServerHosts() const;
     [[nodiscard]] int getAccountsgRPCRequestTimeout() const;
     [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize() const;
+
+    [[nodiscard]] std::map<ServerType, std::vector<sock::IPv4Addr>> getManagementServerAddresses() const;
+    [[nodiscard]] std::string getManagementCORSAllowedOrigin() const;
+    [[nodiscard]] int getManagementgRPCRequestTimeout() const;
+    [[nodiscard]] int getManagementgRPCConnectionPoolMaxSize() const;
 
     [[nodiscard]] bool isAccountsEmailEnabled() const;
     [[nodiscard]] json getAccountsEmailSettings() const;

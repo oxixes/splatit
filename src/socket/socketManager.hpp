@@ -36,6 +36,7 @@ struct SocketInfo {
     std::pair<std::function<void(uint32_t)>, std::function<void(uint32_t)>> closeCallback;
 
     int64_t keepAliveTimeout{};
+    int64_t keepAliveTime{};
     int64_t closeTimeout{};
 
     std::vector<uint8_t> tcpSendBuffer;
@@ -47,11 +48,11 @@ struct SocketInfo {
                std::function<void(uint32_t, std::vector<uint8_t>)> tcpRecvCallback,
                std::function<void(uint32_t, std::vector<uint8_t>, sock::IPv4Addr)> udpRecvCallback,
                std::pair<std::function<void(uint32_t)>, std::function<void(uint32_t)>> closeCallback,
-               int64_t keepAliveTimeout, int64_t closeTimeout) : socket(std::move(socket)),
+               int64_t keepAliveTimeout, int64_t closeTimeout, int64_t keepAliveTime) : socket(std::move(socket)),
                    type(type), acceptCallback(std::move(acceptCallback)), connectCallback(std::move(connectCallback)),
                    tcpRecvCallback(std::move(tcpRecvCallback)), udpRecvCallback(std::move(udpRecvCallback)),
                    closeCallback(std::move(closeCallback)), keepAliveTimeout(keepAliveTimeout),
-                   closeTimeout(closeTimeout) {}
+                   closeTimeout(closeTimeout), keepAliveTime(keepAliveTime) {}
 
     SocketInfo() = default;
 };

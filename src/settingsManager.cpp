@@ -283,6 +283,24 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    {"port", 1204},
                    {"workerCount", 3}
            }},
+           {"management", {
+                   {"enabled", true},
+                   {"listenAddress", "0.0.0.0"},
+                   {"listenPort", 3000},
+                   {"workerCount", 1},
+                   {"keepAliveTimeout", 10},
+                   {"servers", {
+                       {"accounts", {"127.0.0.1:1999"}},
+                       {"boss", {"127.0.0.1:1999"}},
+                       {"friendsAuth", {"127.0.0.1:1999"}},
+                       {"friendsSecure", {"127.0.0.1:1999"}},
+                       {"splatoonAuth", {"127.0.0.1:1999"}},
+                       {"splatoonSecure", {"127.0.0.1:1999"}}
+                   }},
+                   {"grpcRequestTimeout", 3000}, // in milliseconds
+                   {"grpcConnectionPoolMaxSize", 1},
+                   {"corsOrigin", "*"}
+           }},
            {"nex", {
                    {"tokenKey", nexTokenKeyString}
            }}
@@ -337,6 +355,10 @@ bool SettingsManager::isgRPCEnabled() const {
     return enabledServers.gRPC;
 }
 
+bool SettingsManager::isManagementEnabled() const {
+    return settings["management"]["enabled"];
+}
+
 fs::path SettingsManager::getSSLCertPath() const {
     return settings["ssl"]["cert"];
 }
@@ -382,6 +404,23 @@ sock::IPv4Addr SettingsManager::getHTTPListenAddress() const {
 
 bool SettingsManager::isHTTP_SSL_Enabled() const {
     return settings["http"]["ssl"];
+}
+
+sock::IPv4Addr SettingsManager::getManagementListenAddress() const {
+    std::string addressStr = settings["management"]["listenAddress"].get<std::string>();
+
+    sock::IPv4Addr address = util::stringToIPv4(addressStr);
+    address.port = settings["management"]["listenPort"].get<uint16_t>();
+
+    return address;
+}
+
+int SettingsManager::getManagementWorkerCount() const {
+    return settings["management"]["workerCount"];
+}
+
+int SettingsManager::getManagementKeepAliveTimeout() const {
+    return settings["management"]["keepAliveTimeout"];
 }
 
 std::set<sock::IPv4Addr> SettingsManager::getKnownProxies() const {
@@ -534,6 +573,42 @@ int SettingsManager::getAccountsgRPCRequestTimeout() const {
 
 int SettingsManager::getAccountsgRPCConnectionPoolMaxSize() const {
     return settings["accounts"]["grpcConnectionPoolMaxSize"];
+}
+
+std::map<ServerType, std::vector<sock::IPv4Addr>> SettingsManager::getManagementServerAddresses() const {
+    std::map<ServerType, std::vector<sock::IPv4Addr>> serverAddresses;
+
+    for (const auto& [serverName, addressList] : settings["management"]["servers"].items()) {
+        ServerType serverType;
+        if (serverName == "accounts") serverType = ServerType::ACCOUNT;
+        else if (serverName == "boss") serverType = ServerType::BOSS;
+        else if (serverName == "friendsAuth") serverType = ServerType::FRIENDS_AUTH;
+        else if (serverName == "friendsSecure") serverType = ServerType::FRIENDS_SECURE;
+        else if (serverName == "splatoonAuth") serverType = ServerType::SPLATOON_AUTH;
+        else if (serverName == "splatoonSecure") serverType = ServerType::SPLATOON_SECURE;
+        else continue;
+
+        std::vector<sock::IPv4Addr> addresses;
+        for (const auto& addressStr : addressList) {
+            addresses.push_back(util::stringToIPv4WPort(addressStr.get<std::string>()));
+        }
+
+        serverAddresses[serverType] = std::move(addresses);
+    }
+
+    return serverAddresses;
+}
+
+std::string SettingsManager::getManagementCORSAllowedOrigin() const {
+    return settings["management"]["corsOrigin"];
+}
+
+int SettingsManager::getManagementgRPCRequestTimeout() const {
+    return settings["management"]["grpcRequestTimeout"];
+}
+
+int SettingsManager::getManagementgRPCConnectionPoolMaxSize() const {
+    return settings["management"]["grpcConnectionPoolMaxSize"];
 }
 
 bool SettingsManager::isAccountsEmailEnabled() const {

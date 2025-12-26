@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package grpcimpl.serverstatus.v1;
+
+service ServerStatusService {
+  // Retrieves the current status of the game server.
+  rpc GetServerStatus(GetServerStatusRequest) returns (GetServerStatusResponse);
+}
+
+enum ServerType {
+  ACCOUNT = 0;
+  BOSS = 1;
+  FRIENDS_AUTH = 2;
+  FRIENDS_SECURE = 3;
+  SPLATOON_AUTH = 4;
+  SPLATOON_SECURE = 5;
+}
+
+message GetServerStatusRequest {
+  ServerType serverType = 1;
+}
+
+message GetServerStatusResponse {
+  bool isOnline = 1;
+  optional string message = 2;
+}

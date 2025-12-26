@@ -624,7 +624,125 @@
           "description": "Path to the BOSS server files",
           "type": "string"
         }
-      }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["path"]
+      },
+      "required": ["enabled"]
+    },
+    "management": {
+      "description": "Management server settings",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Enable or disable the management server",
+          "type": "boolean"
+        },
+        "listenAddress": {
+          "description": "IP address to listen to",
+          "type": "string",
+          "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+        },
+        "listenPort": {
+          "description": "Port to listen to",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "workerCount": {
+          "description": "Number of worker threads to use",
+          "type": "integer",
+          "minimum": 1
+        },
+        "keepAliveTimeout": {
+          "description": "Timeout for keep-alive connections (in seconds)",
+          "type": "integer",
+          "minimum": 1
+        },
+        "grpcRequestTimeout": {
+          "description": "Timeout for gRPC requests (in milliseconds)",
+          "type": "integer",
+          "minimum": 1
+        },
+        "grpcConnectionPoolMaxSize": {
+          "description": "Maximum size of the gRPC connection pool",
+          "type": "integer",
+          "minimum": 1
+        },
+        "corsOrigin": {
+          "description": "Allowed CORS origin",
+          "type": "string"
+        },
+        "servers": {
+          "description": "Mapping of server names to their gRPC addresses",
+          "type": "object",
+          "properties": {
+            "accounts": {
+              "description": "gRPC addresses of the accounts server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            },
+            "boss": {
+              "description": "gRPC addresses of the BOSS server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            },
+            "friendsAuth": {
+              "description": "gRPC addresses of the friends authentication server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            },
+            "splatoonAuth": {
+              "description": "gRPC addresses of the Splatoon authentication server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            },
+            "friendsSecure": {
+              "description": "gRPC addresses of the friends secure server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            },
+            "splatoonSecure": {
+              "description": "gRPC addresses of the Splatoon secure server",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              }
+            }
+          },
+          "required": ["accounts", "boss", "friendsAuth", "splatoonAuth", "friendsSecure", "splatoonSecure"]
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["listenAddress", "listenPort", "workerCount", "keepAliveTimeout", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "corsOrigin", "servers"]
+      },
+      "required": ["enabled"]
     }
   },
   "anyOf": [
@@ -690,6 +808,18 @@
     },
     {
       "required": ["splatoonSecure"],
+      "properties": {
+        "splatoonSecure": {
+          "properties": {
+            "enabled": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["management"],
       "properties": {
         "splatoonSecure": {
           "properties": {

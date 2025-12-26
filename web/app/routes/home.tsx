@@ -2,6 +2,8 @@ import type { Route } from "./+types/home"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "~/components/ui/card";
 import {Activity, Users, Gamepad2, Server} from "lucide-react";
 import {Badge} from "~/components/ui/badge";
+import { ServerStatusCard } from "~/components/server-status-card";
+import { useServerStatusData } from "~/contexts/ServerStatusContext";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -11,6 +13,50 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const { servers, loading } = useServerStatusData();
+
+  // Calculate overall system status (worst case scenario)
+  const getSystemStatus = () => {
+    if (loading || servers.length === 0) {
+      return { color: "bg-gray-500", text: "Loading...", pulse: false };
+    }
+
+    // Group servers by type
+    const serversByType = servers.reduce((acc, server) => {
+      if (!acc[server.type]) {
+        acc[server.type] = [];
+      }
+      acc[server.type].push(server);
+      return acc;
+    }, {} as Record<string, typeof servers>);
+
+    // Check status for each type
+    let hasAllOffline = false;
+    let hasSomeOffline = false;
+
+    Object.values(serversByType).forEach((serverList) => {
+      const onlineCount = serverList.filter(s => s.status === "online").length;
+      const totalCount = serverList.length;
+
+      if (onlineCount === 0) {
+        hasAllOffline = true;
+      } else if (onlineCount < totalCount) {
+        hasSomeOffline = true;
+      }
+    });
+
+    // Return worst case status
+    if (hasAllOffline) {
+      return { color: "bg-red-500", text: "System Critical", pulse: true };
+    } else if (hasSomeOffline) {
+      return { color: "bg-yellow-500", text: "System Degraded", pulse: true };
+    } else {
+      return { color: "bg-green-500", text: "System Online", pulse: true };
+    }
+  };
+
+  const systemStatus = getSystemStatus();
+
   return (
       <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -24,8 +70,8 @@ export default function Home() {
               </div>
               <Badge variant="outline" className="h-8 px-3">
                   <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      System Online
+                      <div className={`h-2 w-2 rounded-full ${systemStatus.color} ${systemStatus.pulse ? 'animate-pulse' : ''}`} />
+                      {systemStatus.text}
                   </div>
               </Badge>
           </div>
@@ -73,40 +119,7 @@ export default function Home() {
           </div>
 
           {/* Distributed Architecture Status */}
-          <Card>
-              <CardHeader>
-                  <CardTitle>Distributed Architecture Status</CardTitle>
-                  <CardDescription>Status of all server components</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-3">
-                      {[
-                          { name: "Account Server", status: "operational", description: "Authentication & account management" },
-                          { name: "Friends Auth Server", status: "operational", description: "Friends service authentication" },
-                          { name: "Friends Server", status: "operational", description: "Friendship management" },
-                          { name: "Splatoon Auth Server", status: "operational", description: "Game authentication" },
-                          { name: "Splatoon Server", status: "operational", description: "Game server & lobbies" },
-                          { name: "BOSS Server", status: "operational", description: "Festival data & map rotation" },
-                          { name: "Management UI Server", status: "operational", description: "Admin interface (gRPC)" },
-                      ].map((service) => (
-                          <div key={service.name} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                              <div className="flex items-center gap-3">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
-                                      <div className="h-2 w-2 rounded-full bg-green-500" />
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-sm">{service.name}</p>
-                                      <p className="text-xs text-muted-foreground">{service.description}</p>
-                                  </div>
-                              </div>
-                              <Badge variant="outline" className="text-green-500">
-                                  {service.status}
-                              </Badge>
-                          </div>
-                      ))}
-                  </div>
-              </CardContent>
-          </Card>
+          <ServerStatusCard showTitle={true} />
 
           {/* Recent Activity */}
           <Card>

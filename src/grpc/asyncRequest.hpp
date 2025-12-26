@@ -2,12 +2,9 @@
 #define SPLATOON_SERVER_ASYNCREQUEST_HPP
 
 #include <memory>
-#include <queue>
 #include <utility>
 
 #include <auth.grpc.pb.h>
-
-#include "../util/promise.hpp"
 
 namespace grpcimpl {
 

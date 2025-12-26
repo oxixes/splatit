@@ -28,7 +28,7 @@ export async function checkServerStatus(
   const apiClient = createApiClient(config);
 
   try {
-    const data = await apiClient.get<ServerStatus>('/status');
+    const data = await apiClient.get<ServerStatus>('/api/v1/status');
 
     // Check if server is down
     if (data.status === "down") {

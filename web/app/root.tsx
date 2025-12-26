@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { AppConfigProvider } from "./contexts/AppConfigContext";
 import { ServerStatusGuard } from "./components/server-status-guard";
+import { ServerStatusProvider } from "./contexts/ServerStatusContext";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -46,9 +47,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AppConfigProvider>
-      <ServerStatusGuard>
-        <Outlet />
-      </ServerStatusGuard>
+      <ServerStatusProvider>
+        <ServerStatusGuard>
+          <Outlet />
+        </ServerStatusGuard>
+      </ServerStatusProvider>
     </AppConfigProvider>
   );
 }

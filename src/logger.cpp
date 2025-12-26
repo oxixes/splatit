@@ -66,6 +66,8 @@ std::string Logger::getGroupName(group group) {
             return "GRPC";
         case group::SETUP:
             return "SETUP";
+        case group::MANAGEMENT:
+            return "MANAGEMENT";
         default:
             return "UNKNOWN";
     }

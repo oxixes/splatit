@@ -12,10 +12,12 @@
 #include "../nex/friends/friendsSecure.hpp"
 #include "../nex/splatoon/splatoonSecure.hpp"
 #include "services/authService.hpp"
+#include "services/serverStatusService.hpp"
 
 namespace grpcimpl {
 
 struct ServerPtrs {
+    std::shared_ptr<SettingsManager> settingsManager;
     std::shared_ptr<http::Server> httpServer;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
     std::shared_ptr<nex::rmc::AuthRMC> splatoonAuthRMC;
@@ -44,6 +46,7 @@ private:
     std::atomic<bool> running = false;
 
     std::shared_ptr<grpcimpl::auth::v1::AuthServiceImpl> authService;
+    std::shared_ptr<grpcimpl::serverstatus::v1::ServerStatusServiceImpl> serverStatusService;
 
     bool reflectionEnabled = false;
 };
