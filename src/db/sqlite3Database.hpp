@@ -11,7 +11,6 @@
 #include "database.hpp"
 #include "dbTypes.hpp"
 #include "migrations/migrations.hpp"
-#include "../util/util.hpp"
 
 namespace fs = std::filesystem;
 
@@ -69,6 +68,7 @@ private:
     sqlite3_stmt* getUserMiiStatement = nullptr;
     sqlite3_stmt* getUserEmailStatement = nullptr;
     sqlite3_stmt* getDeviceAttributesStatement = nullptr;
+    sqlite3_stmt* getAllAgreementsStatement = nullptr;
     sqlite3_stmt* getAgreementStatement = nullptr;
     sqlite3_stmt* getDeviceStatement = nullptr;
     sqlite3_stmt* getLatestPIDStatement = nullptr;

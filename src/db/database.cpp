@@ -266,6 +266,12 @@ std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid,
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftGetAllAgreementsCommand() {
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_ALL_AGREEMENTS,
+                                               std::any());
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                             const std::string& language, const std::optional<int> version) {
     DBGetAgreementQuery query {
@@ -806,6 +812,14 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::GET_DEVICE_ATTRIBUTES:
             // Get device attributes commands need the PID of the user to get (to get the attributes of the linked account).
             if (command->data.type() != typeid(DBDeviceAttributesQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_ALL_AGREEMENTS:
+            // Get all agreements commands do not need any data.
+            if (command->data.has_value()) {
                 return false;
             }
 

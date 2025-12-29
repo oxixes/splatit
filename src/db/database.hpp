@@ -14,7 +14,6 @@
 #include "../logger.hpp"
 #include "dbTypes.hpp"
 #include "../util/manualTask.hpp"
-#include "../util/task.hpp"
 
 using json = nlohmann::json;
 
@@ -55,6 +54,7 @@ enum class DBCommandType {
     GET_USER_MII,
     GET_USER_EMAIL,
     GET_DEVICE_ATTRIBUTES,
+    GET_ALL_AGREEMENTS,
     GET_AGREEMENT,
     GET_DEVICE,
     GET_LATEST_PID,
@@ -565,6 +565,7 @@ public:
     static std::unique_ptr<Command> craftGetUserMiiCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserEmailCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftGetAllAgreementsCommand();
     static std::unique_ptr<Command> craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                              const std::string& language, std::optional<int> version = std::nullopt);
     static std::unique_ptr<Command> craftGetDeviceCommand(uint32_t deviceId);

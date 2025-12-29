@@ -7,11 +7,11 @@
 
 namespace grpcimpl {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, ServerPtrs serverPtrs) {
+Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData) {
     this->logger = std::move(logger);
     this->listenDir = listenDir;
     this->reflectionEnabled = reflection;
-    this->serverPtrs = std::move(serverPtrs);
+    this->serverData = std::move(serverData);
 }
 
 Server::~Server() {
@@ -23,13 +23,18 @@ void Server::listen() {
 
     std::string listenIPv4 = util::ipv4ToString(listenDir);
 
-    if (serverPtrs.friendsAuthRMC != nullptr || serverPtrs.splatoonAuthRMC != nullptr) {
+    if (serverData.friendsAuthRMC != nullptr || serverData.splatoonAuthRMC != nullptr) {
         authService = std::make_shared<grpcimpl::auth::v1::AuthServiceImpl>(
-                serverPtrs.friendsAuthRMC, serverPtrs.splatoonAuthRMC, logger);
+                serverData.friendsAuthRMC, serverData.splatoonAuthRMC, logger);
+    }
+
+    if (serverData.settingsManager->isAccountEnabled()) {
+        accountManagementService = std::make_shared<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl>(
+                logger, serverData.accountDatabase, serverData.httpServer);
     }
 
     serverStatusService = std::make_shared<grpcimpl::serverstatus::v1::ServerStatusServiceImpl>(
-            logger, serverPtrs.settingsManager);
+            logger, serverData.settingsManager);
 
     if (reflectionEnabled) {
         grpc::reflection::InitProtoReflectionServerBuilderPlugin();
@@ -39,6 +44,7 @@ void Server::listen() {
 
     if (authService != nullptr) builder.RegisterService(authService.get());
     builder.RegisterService(serverStatusService.get());
+    if (accountManagementService != nullptr) builder.RegisterService(accountManagementService.get());
 
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {

@@ -50,6 +50,8 @@ public:
 
     void sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive = false) const;
 
+    void scheduleArbitraryFunction(async::Task<void>&& task) const;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<SocketManager> socketMgr;

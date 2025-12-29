@@ -13,11 +13,14 @@
 #include "../nex/splatoon/splatoonSecure.hpp"
 #include "services/authService.hpp"
 #include "services/serverStatusService.hpp"
+#include "services/accountManagementService.hpp"
 
 namespace grpcimpl {
 
-struct ServerPtrs {
+struct gRPCServerData {
     std::shared_ptr<SettingsManager> settingsManager;
+    std::shared_ptr<db::Database> accountDatabase;
+
     std::shared_ptr<http::Server> httpServer;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
     std::shared_ptr<nex::rmc::AuthRMC> splatoonAuthRMC;
@@ -27,7 +30,7 @@ struct ServerPtrs {
 
 class Server {
 public:
-    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, ServerPtrs serverPtrs);
+    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData);
     ~Server();
 
     void listen();
@@ -38,7 +41,7 @@ private:
 
     std::shared_ptr<Logger::Logger> logger;
     sock::IPv4Addr listenDir{};
-    ServerPtrs serverPtrs;
+    gRPCServerData serverData;
 
     std::thread serverThreadHandle;
     std::unique_ptr<grpc::Server> grpcServer;
@@ -47,6 +50,7 @@ private:
 
     std::shared_ptr<grpcimpl::auth::v1::AuthServiceImpl> authService;
     std::shared_ptr<grpcimpl::serverstatus::v1::ServerStatusServiceImpl> serverStatusService;
+    std::shared_ptr<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl> accountManagementService;
 
     bool reflectionEnabled = false;
 };

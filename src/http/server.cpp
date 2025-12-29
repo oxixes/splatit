@@ -1,6 +1,7 @@
 #include "server.hpp"
 
 #include <utility>
+#include <grpcpp/support/server_callback.h>
 
 #include "../exceptions.hpp"
 #include "../socket/sslSocket.hpp"
@@ -133,23 +134,23 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
             queueCV->notify_one();
             lock.unlock();
 
-            buffer.erase(buffer.begin(), buffer.begin() + (std::ptrdiff_t) length);
+            buffer.erase(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(length));
             finish = false;
-        } catch (NotCompleteException& e) {
+        } catch (NotCompleteException& _) {
             // Do nothing, wait for more data
-        } catch (LengthUnknownException& e) {
+        } catch (LengthUnknownException& _) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unknown length from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_BAD_REQUEST);
-        } catch (VersionNotSupportedException& e) {
+        } catch (VersionNotSupportedException& _) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unsupported HTTP version from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED);
-        } catch (MethodNotSupportedException& e) {
+        } catch (MethodNotSupportedException& _) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received request with unsupported method from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_METHOD_NOT_ALLOWED);
-        } catch (MalformedException& e) {
+        } catch (MalformedException& _) {
             logger->log(Logger::level::WARN, Logger::group::NETWORK,
                         "Received malformed request from " + std::to_string(sockId) + ", closing connection");
             sendError(sockId, HTTP_STATUS_BAD_REQUEST);
@@ -173,11 +174,18 @@ void Server::serverThread() {
                 async::Scheduler::run(task);
             } catch (const std::exception& e) {
                 if (task->getContext().has_value()) {
-                    auto context = std::move(std::any_cast<std::pair<uint32_t, std::shared_ptr<Request>>>(task->getContext()));
-                    std::unique_lock clientsLock(clientsMutex);
-                    sock::IPv4Addr clientDir = clients[context.first];
-                    clientsLock.unlock();
-                    sendError(context.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, context.second, clientDir);
+                    if (task->getContext().type() != typeid(std::pair<uint32_t, std::shared_ptr<Request>>)) {
+                        logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while processing a gRPC request: " +
+                                                                                         std::string(e.what()));
+                        const auto reactor = std::any_cast<grpc::ServerUnaryReactor*>(task->getContext());
+                        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Internal server error"));
+                    } else {
+                        auto context = std::move(std::any_cast<std::pair<uint32_t, std::shared_ptr<Request>>>(task->getContext()));
+                        std::unique_lock clientsLock(clientsMutex);
+                        sock::IPv4Addr clientDir = clients[context.first];
+                        clientsLock.unlock();
+                        sendError(context.first, HTTP_STATUS_INTERNAL_SERVER_ERROR, context.second, clientDir);
+                    }
                 }
 
                 logger->log(Logger::level::FAILURE, Logger::group::NETWORK, "An exception occurred while running a request handler: " +
@@ -373,6 +381,11 @@ void Server::registerErrorPage(const std::string& host, std::function<async::Tas
 void Server::sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive) const {
     socketMgr->send(context->clientSockId, std::move(response->serialize()));
     if (!keepAlive) socketMgr->close(context->clientSockId);
+}
+
+void Server::scheduleArbitraryFunction(async::Task<void>&& task) const {
+    task.setScheduler(scheduler);
+    scheduler->schedule(std::move(task));
 }
 
 } // namespace http

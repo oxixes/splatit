@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package grpcimpl.accountmanagement.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service AccountManagementService {
+  // Retrieves the current security status of the account management server
+  rpc GetSecurityStatus(google.protobuf.Empty) returns (SecurityStatus);
+
+  // Updates the current security status of the account management server
+  rpc UpdateSecurityStatus(SecurityStatus) returns (google.protobuf.Empty);
+
+  // Retrieves the current stored agreements stored in the server
+  rpc GetStoredAgreements(google.protobuf.Empty) returns (GetStoredAgreementsResponse);
+
+  // Publishes a new agreement to be stored in the server
+  rpc PublishAgreement(AgreementCreate) returns (google.protobuf.Empty);
+}
+
+message SecurityStatus {
+  optional bool allowAccountCreation = 1;
+  optional bool allowRealWiiU = 2;
+  optional bool allowGeneratedWiiU = 3;
+  optional bool maintenanceMode = 4;
+}
+
+message AgreementCreate {
+  string type = 1;
+  uint32 version = 2;
+  string country = 3;
+  string language = 4;
+  string languageName = 5;
+
+  // Content
+  string mainTitle = 7;
+  string mainContent = 8;
+  string subTitle = 9;
+  string subContent = 10;
+  string agreeButtonText = 11;
+  string disagreeButtonText = 12;
+}
+
+message Agreement {
+  AgreementCreate createInfo = 1;
+  google.protobuf.Timestamp publishDate = 2;
+}
+
+message GetStoredAgreementsResponse {
+  repeated Agreement agreements = 1;
+}

@@ -6,6 +6,7 @@ grpc::ServerUnaryReactor* ServerStatusServiceImpl::GetServerStatus(grpc::Callbac
                                                                    const GetServerStatusRequest* request,
                                                                    GetServerStatusResponse* reply) {
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
+               "[" + std::string(ServerStatusService::service_full_name()) + "] "
                "GetServerStatus called for Server Type: " + std::to_string(request->servertype()));
 
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
@@ -32,7 +33,8 @@ grpc::ServerUnaryReactor* ServerStatusServiceImpl::GetServerStatus(grpc::Callbac
         default:
             reply->set_isonline(false);
             reply->set_message("Unknown server type");
-            break;
+            reactor->Finish(grpc::Status::OK);
+            return reactor;
     }
 
     if (!reply->isonline()) {

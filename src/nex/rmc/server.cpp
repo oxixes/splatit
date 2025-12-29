@@ -1,5 +1,7 @@
 #include "server.hpp"
 
+#include <grpcpp/support/server_callback.h>
+
 #include "../../exceptions.hpp"
 
 namespace nex::rmc {
@@ -161,14 +163,21 @@ void Server::serverThread() {
                 async::Scheduler::run(task);
             } catch (const std::exception& e) {
                 if (task->getContext().has_value()) {
-                    auto context = std::any_cast<std::pair<ClientInfo, Request>>(task->getContext());
-                    logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
-                                                                  "(protocol id: " +
-                                                                  std::to_string(context.second.protocolId) + ", extended protocol id: " +
-                                                                  std::to_string(context.second.extendedProtocolId) + ", method id: " +
-                                                                  std::to_string(context.second.methodId) + "): " +
-                                                                  std::string(e.what()));
-                    sendMsg(context.first, createError(context.second, Error::CORE__EXCEPTION), {});
+                    if (task->getContext().type() != typeid(std::pair<ClientInfo, Request>)) {
+                        logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a gRPC request: " +
+                                                                      std::string(e.what()));
+                        const auto reactor = std::any_cast<grpc::ServerUnaryReactor*>(task->getContext());
+                        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Internal server error"));
+                    } else {
+                        auto context = std::any_cast<std::pair<ClientInfo, Request>>(task->getContext());
+                        logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while processing a request "
+                                                                      "(protocol id: " +
+                                                                      std::to_string(context.second.protocolId) + ", extended protocol id: " +
+                                                                      std::to_string(context.second.extendedProtocolId) + ", method id: " +
+                                                                      std::to_string(context.second.methodId) + "): " +
+                                                                      std::string(e.what()));
+                        sendMsg(context.first, createError(context.second, Error::CORE__EXCEPTION), {});
+                    }
                 } else {
                     logger->log(Logger::level::FAILURE, logGroup, "An exception occurred while running a task: " +
                                                                   std::string(e.what()));

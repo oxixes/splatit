@@ -327,8 +327,10 @@ int main(int argc, char** argv) {
 
     if (settingsMgr->isgRPCEnabled()) {
         try {
-            grpcimpl::ServerPtrs serverPtrs {
+            grpcimpl::gRPCServerData serverPtrs {
                 settingsMgr,
+                accountsDB,
+
                 httpServer,
                 friendsAuthRMC,
                 splatoonAuthRMC,

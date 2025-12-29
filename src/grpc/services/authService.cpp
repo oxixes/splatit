@@ -23,6 +23,7 @@ grpc::ServerUnaryReactor* AuthServiceImpl::GetGameServerCredentials(grpc::Callba
                                                                     const GetGameServerCredentialsRequest* request,
                                                                     GetGameServerCredentialsResponse* reply) {
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
+                "[" + std::string(AuthService::service_full_name()) + "] "
                "GetGameServerCredentials called for GameServerID: " + request->gameserverid()
                + ", PID: " + std::to_string(request->pid()));
 
@@ -41,7 +42,9 @@ grpc::ServerUnaryReactor* AuthServiceImpl::GetGameServerCredentials(grpc::Callba
         reactor->Finish(grpc::Status::OK);
     } else {
         // Schedule the task to complete the request
-        authRMC->scheduleArbitraryFunction(completeGetGameServerCredentials(reactor, reply, request, authRMC));
+        auto task = completeGetGameServerCredentials(reactor, reply, request, authRMC);
+        task.setContext(reactor);
+        authRMC->scheduleArbitraryFunction(std::move(task));
     }
 
     return reactor;

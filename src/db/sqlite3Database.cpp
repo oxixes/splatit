@@ -4,6 +4,7 @@
 #include <date/date.h>
 
 #include "sqlite3Database.hpp"
+#include "../util/util.hpp"
 
 namespace db {
 
@@ -1014,6 +1015,52 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         }
 
         resultsData = std::move(attributesData);
+    } else if (command->type == DBCommandType::GET_ALL_AGREEMENTS) {
+        if (getAllAgreementsStatement == nullptr) {
+            const std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
+                                           "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
+                                           "FROM agreements ORDER BY type, version DESC;";
+
+            if (!craftStatement(sqlCommand, &getAllAgreementsStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        std::vector returnedDataTypes {DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                       DBDataType::STRING, DBDataType::DATETIME, DBDataType::STRING, DBDataType::STRING,
+                                       DBDataType::STRING, DBDataType::STRING, DBDataType::STRING, DBDataType::STRING};
+
+        if (!runStatement(getAllAgreementsStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getAllAgreementsStatement);
+            sqlite3_clear_bindings(getAllAgreementsStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(getAllAgreementsStatement);
+        sqlite3_clear_bindings(getAllAgreementsStatement);
+
+        std::vector<DBAgreementData> agreementsData;
+        for (const auto& row : *returnedData) {
+            DBAgreementData agreementData {};
+            agreementData.type = std::any_cast<std::string>(row[0]->data);
+            agreementData.version = static_cast<int>(std::any_cast<int64_t>(row[1]->data));
+            agreementData.country = std::any_cast<std::string>(row[2]->data);
+            agreementData.language = std::any_cast<std::string>(row[3]->data);
+            agreementData.languageName = std::any_cast<std::string>(row[4]->data);
+            agreementData.publishedAt = std::any_cast<datetime_t>(row[5]->data);
+            agreementData.mainTitle = std::any_cast<std::string>(row[6]->data);
+            agreementData.subTitle = std::any_cast<std::string>(row[7]->data);
+            agreementData.agreeText = std::any_cast<std::string>(row[8]->data);
+            agreementData.disagreeText = std::any_cast<std::string>(row[9]->data);
+            agreementData.mainText = std::any_cast<std::string>(row[10]->data);
+            agreementData.subText = std::any_cast<std::string>(row[11]->data);
+
+            agreementsData.push_back(agreementData);
+        }
+
+        resultsData = std::move(agreementsData);
     } else if (command->type == DBCommandType::GET_AGREEMENT) {
         auto* query = std::any_cast<DBGetAgreementQuery>(&command->data);
         if (query->version.has_value() && getAgreementStatement == nullptr) {
