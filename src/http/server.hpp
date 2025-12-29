@@ -81,7 +81,7 @@ private:
     std::mutex routesMutex;
 
     std::map<uint32_t, sock::IPv4Addr> clients;
-    std::mutex clientsMutex;
+    std::recursive_mutex clientsMutex;
 
     bool shouldStop = false;
 

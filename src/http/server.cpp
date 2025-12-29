@@ -331,8 +331,15 @@ void Server::stop() {
     threads.clear();
 
     std::unique_lock clientsLock(clientsMutex);
-    for (auto& client : clients) {
-        socketMgr->close(client.first, true);
+
+    std::vector<uint32_t> clientIds;
+    for (const auto& client : clients) {
+        clientIds.push_back(client.first);
+    }
+
+    // sockerMgr->close() will modify the clients map through the onClose callback, so we can't iterate over it directly
+    for (uint32_t id : clientIds) {
+        socketMgr->close(id, true);
     }
     clients.clear();
     buffers.clear();
