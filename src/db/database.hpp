@@ -69,6 +69,7 @@ enum class DBCommandType {
     INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION,
     INSERT_OR_UPDATE_DEVICE,
     INSERT_OR_UPDATE_USER_AGREEMENT,
+    INSERT_OR_UPDATE_AGREEMENT,
     INSERT_OR_UPDATE_MII,
     INSERT_OR_UPDATE_EMAIL,
     INSERT_USER_PROFILE,
@@ -84,6 +85,7 @@ enum class DBCommandType {
     DELETE_USER_OWNERSHIPS,
     DELETE_USER_AGREEMENTS,
     DELETE_USER_DEVICE_ATTRIBUTES,
+    DELETE_AGREEMENT,
     DELETE_FRIEND,
     DELETE_FRIEND_REQUEST,
     DELETE_PERSISTENT_NOTIFICATION,
@@ -139,7 +141,7 @@ struct DBDeviceAttributesQuery {
     uint32_t deviceId;
 };
 
-struct DBGetAgreementQuery {
+struct DBAgreementQuery {
     std::string type;
     std::string country;
     std::string language;
@@ -171,6 +173,7 @@ struct DBUserAgreementInsertOrUpdateQuery {
     std::string country;
     datetime_t signedAt;
 };
+
 
 struct DBMiiInsertOrUpdateQuery {
     std::optional<int64_t> miiId;
@@ -590,6 +593,17 @@ public:
     static std::unique_ptr<Command> craftInsertOrUpdateUserAgreementCommand(uint32_t pid, const std::string& type,
                                                                             int version, const std::string& country,
                                                                             datetime_t signedAt);
+    static std::unique_ptr<Command> craftInsertOrUpdateAgreementCommand(const std::string& type, int version,
+                                                                        const std::string& country,
+                                                                        const std::string& language,
+                                                                        const std::string& languageName,
+                                                                        datetime_t publishedAt,
+                                                                        const std::string& mainTitle,
+                                                                        const std::string& subTitle,
+                                                                        const std::string& agreeText,
+                                                                        const std::string& disagreeText,
+                                                                        const std::string& mainText,
+                                                                        const std::string& subText);
     static std::unique_ptr<Command> craftInsertOrUpdateMiiCommand(std::optional<int64_t> miiId,
                                                                   const std::string& hash, const std::string& name,
                                                                   bool primary, const std::string& data);
@@ -638,6 +652,8 @@ public:
     static std::unique_ptr<Command> craftDeleteUserOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserAgreementsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserDeviceAttributesCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteAgreementCommand(const std::string& type, const std::string& country,
+                                                                const std::string& language, std::optional<int> version = std::nullopt);
     static std::unique_ptr<Command> craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid);
     static std::unique_ptr<Command> craftDeleteFriendRequestCommand(int64_t id);
     static std::unique_ptr<Command> craftDeletePersistentNotificationCommand(int64_t id);

@@ -30,6 +30,9 @@ public:
     grpc::ServerUnaryReactor* PublishAgreement(grpc::CallbackServerContext* context,
         const AgreementCreate* request, google::protobuf::Empty* _) override;
 
+    grpc::ServerUnaryReactor* DeleteAgreement(grpc::CallbackServerContext* context,
+        const AgreementDelete* request, google::protobuf::Empty* _) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<db::Database> db;

@@ -1062,7 +1062,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         resultsData = std::move(agreementsData);
     } else if (command->type == DBCommandType::GET_AGREEMENT) {
-        auto* query = std::any_cast<DBGetAgreementQuery>(&command->data);
+        auto* query = std::any_cast<DBAgreementQuery>(&command->data);
         if (query->version.has_value() && getAgreementStatement == nullptr) {
             const std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
                                            "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
@@ -1582,6 +1582,60 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(insertOrUpdateUserAgreementStatement);
         sqlite3_clear_bindings(insertOrUpdateUserAgreementStatement);
+    } else if (command->type == DBCommandType::INSERT_OR_UPDATE_AGREEMENT) {
+        if (insertOrUpdateAgreementStatement == nullptr) {
+            std::string sqlCommand = "INSERT INTO agreements (type, version, country, language, language_name, publish_date, "
+                        "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        "ON CONFLICT(type, version, country, language) DO UPDATE SET "
+                        "language_name = excluded.language_name, "
+                        "publish_date = excluded.publish_date, "
+                        "main_title = excluded.main_title, "
+                        "sub_title = excluded.sub_title, "
+                        "agree_text = excluded.agree_text, "
+                        "non_agree_text = excluded.non_agree_text, "
+                        "main_text = excluded.main_text, "
+                        "sub_text = excluded.sub_text;";
+
+            if (!craftStatement(sqlCommand, &insertOrUpdateAgreementStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto *query = std::any_cast<DBAgreementData>(&command->data);
+
+        if (!bindData(insertOrUpdateAgreementStatement, {DBDataType::STRING, DBDataType::INTEGER,
+                                                         DBDataType::STRING, DBDataType::STRING, DBDataType::STRING,
+                                                         DBDataType::DATETIME, DBDataType::STRING, DBDataType::STRING,
+                                                         DBDataType::STRING, DBDataType::STRING, DBDataType::STRING,
+                                                         DBDataType::STRING},
+                                                      {std::make_shared<DBString>(query->type),
+                                                       std::make_shared<DBInteger>(query->version),
+                                                       std::make_shared<DBString>(query->country),
+                                                       std::make_shared<DBString>(query->language),
+                                                       std::make_shared<DBString>(query->languageName),
+                                                       std::make_shared<DBDateTime>(query->publishedAt),
+                                                       std::make_shared<DBString>(query->mainTitle),
+                                                       std::make_shared<DBString>(query->subTitle),
+                                                       std::make_shared<DBString>(query->agreeText),
+                                                       std::make_shared<DBString>(query->disagreeText),
+                                                       std::make_shared<DBString>(query->mainText),
+                                                       std::make_shared<DBString>(query->subText)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertOrUpdateAgreementStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(insertOrUpdateAgreementStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertOrUpdateAgreementStatement);
+            sqlite3_clear_bindings(insertOrUpdateAgreementStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(insertOrUpdateAgreementStatement);
+        sqlite3_clear_bindings(insertOrUpdateAgreementStatement);
     } else if (command->type == DBCommandType::INSERT_OR_UPDATE_MII) {
         if (insertOrUpdateMiiStatement == nullptr) {
             std::string sqlCommand = "INSERT INTO miis (id, hash, name, `primary`, data) "
@@ -2284,6 +2338,65 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(deleteUserDeviceAttributesStatement);
         sqlite3_clear_bindings(deleteUserDeviceAttributesStatement);
+    } else if (command->type == DBCommandType::DELETE_AGREEMENT) {
+        auto* query = std::any_cast<DBAgreementQuery>(&command->data);
+
+        // If version is specified, delete only that version; otherwise delete all versions
+        if (query->version.has_value()) {
+            // Delete specific version
+            if (deleteAgreementVersionStatement == nullptr) {
+                std::string sqlCommand = "DELETE FROM agreements WHERE type = ? AND version = ? AND country = ? AND language = ?;";
+
+                if (!craftStatement(sqlCommand, &deleteAgreementVersionStatement)) {
+                    resultStatus = DBResultStatus::FAILURE_STMT;
+                    goto push_results;
+                }
+            }
+
+            if (!bindData(deleteAgreementVersionStatement, {DBDataType::STRING, DBDataType::INTEGER,
+                                                           DBDataType::STRING, DBDataType::STRING},
+                          {std::make_shared<DBString>(query->type),
+                           std::make_shared<DBInteger>(query->version.value()),
+                           std::make_shared<DBString>(query->country),
+                           std::make_shared<DBString>(query->language)})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_clear_bindings(deleteAgreementVersionStatement);
+                goto push_results;
+            }
+
+            if (!runStatement(deleteAgreementVersionStatement, {}, returnedData)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+            }
+
+            sqlite3_reset(deleteAgreementVersionStatement);
+            sqlite3_clear_bindings(deleteAgreementVersionStatement);
+        } else {
+            // Delete all versions
+            if (deleteAgreementStatement == nullptr) {
+                std::string sqlCommand = "DELETE FROM agreements WHERE type = ? AND country = ? AND language = ?;";
+
+                if (!craftStatement(sqlCommand, &deleteAgreementStatement)) {
+                    resultStatus = DBResultStatus::FAILURE_STMT;
+                    goto push_results;
+                }
+            }
+
+            if (!bindData(deleteAgreementStatement, {DBDataType::STRING, DBDataType::STRING, DBDataType::STRING},
+                          {std::make_shared<DBString>(query->type),
+                           std::make_shared<DBString>(query->country),
+                           std::make_shared<DBString>(query->language)})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_clear_bindings(deleteAgreementStatement);
+                goto push_results;
+            }
+
+            if (!runStatement(deleteAgreementStatement, {}, returnedData)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+            }
+
+            sqlite3_reset(deleteAgreementStatement);
+            sqlite3_clear_bindings(deleteAgreementStatement);
+        }
     } else if (command->type == DBCommandType::DELETE_FRIEND) {
         if (deleteFriendStatement == nullptr) {
             std::string sqlCommand = "DELETE FROM friendships WHERE pid = ? AND friend_pid = ? OR "

@@ -82,16 +82,85 @@ grpc::ServerUnaryReactor* AccountManagementServiceImpl::GetStoredAgreements(grpc
     return reactor;
 }
 
+Task<void> completePublishAgreement(grpc::ServerUnaryReactor* reactor,
+                                        const AgreementCreate* request, const std::shared_ptr<db::Database> db) {
+    const db::datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+
+    auto insertCmd = db::Database::craftInsertOrUpdateAgreementCommand(
+        request->type(),
+        request->version(),
+        request->country(),
+        request->language(),
+        request->languagename(),
+        now,
+        request->maintitle(),
+        request->subtitle(),
+        request->agreebuttontext(),
+        request->disagreebuttontext(),
+        request->maincontent(),
+        request->subcontent()
+    );
+
+    const db::Result result = co_await db->runCommand(std::move(insertCmd));
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error"));
+        co_return;
+    }
+
+    reactor->Finish(grpc::Status::OK);
+}
+
 grpc::ServerUnaryReactor* AccountManagementServiceImpl::PublishAgreement(grpc::CallbackServerContext *context,
     const AgreementCreate* request, google::protobuf::Empty* _) {
 
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
                "[" + std::string(AccountManagementService::service_full_name()) + "] PublishAgreement called "
-               "for Agreement Type: " + request->type() + ", Version: " + std::to_string(request->version()));
+               "for Agreement Type: " + request->type() + ", Version: " + std::to_string(request->version()) +
+               ", Country: " + request->country() + ", Language: " + request->language());
 
-    // Not implemented
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
-    reactor->Finish(grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Not implemented"));
+
+    // Schedule the task to complete the request
+    auto task = completePublishAgreement(reactor, request, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
+
+    return reactor;
+}
+
+Task<void> completeDeleteAgreement(grpc::ServerUnaryReactor* reactor,
+                                        const AgreementDelete* request, const std::shared_ptr<db::Database> db) {
+    auto deleteCmd = db::Database::craftDeleteAgreementCommand(
+        request->type(),
+        request->country(),
+        request->language(),
+        request->has_version() ? std::optional(request->version()) : std::nullopt
+    );
+
+    const db::Result result = co_await db->runCommand(std::move(deleteCmd));
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error"));
+        co_return;
+    }
+
+    reactor->Finish(grpc::Status::OK);
+}
+
+grpc::ServerUnaryReactor* AccountManagementServiceImpl::DeleteAgreement(grpc::CallbackServerContext* context,
+    const AgreementDelete* request, google::protobuf::Empty* _) {
+
+    logger->log(Logger::level::DEBUG, Logger::group::GRPC,
+               "[" + std::string(AccountManagementService::service_full_name()) + "] DeleteAgreement called "
+               "for Agreement Type: " + request->type() + ", Country: " + request->country() +
+               ", Language: " + request->language() + (request->has_version() ? ", Version: " + std::to_string(request->version()) : ""));
+
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
+
+    // Schedule the task to complete the request
+    auto task = completeDeleteAgreement(reactor, request, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
+
     return reactor;
 }
 

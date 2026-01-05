@@ -4,8 +4,25 @@ import {Button} from "~/components/ui/button";
 import {Label} from "~/components/ui/label";
 import {Switch} from "~/components/ui/switch";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "~/components/ui/tabs";
-import {AlertCircle, RefreshCw, Sparkles, Plus} from "lucide-react";
+import {AlertCircle, RefreshCw, Sparkles, Plus, Pencil, Trash2} from "lucide-react";
 import {Link} from "react-router";
+import { useState, useEffect } from "react";
+import { useAppConfig } from "~/hooks/useAppConfig";
+import { getAgreements, saveAgreement, deleteAgreement } from "~/lib/agreements";
+import { AgreementEditor } from "~/components/agreements/AgreementEditor";
+import type { Agreement } from "~/types/agreement";
+import { AGREEMENT_TYPES } from "~/constants/agreement-types";
+import countriesLanguages from "~/data/countries_languages.json";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -15,6 +32,90 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Settings() {
+  const { config } = useAppConfig();
+
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
+
+  useEffect(() => {
+    loadAgreements();
+  }, []);
+
+  const loadAgreements = async () => {
+    try {
+      setIsLoading(true);
+      const agreementsList = await getAgreements(config);
+      setAgreements(agreementsList);
+    } catch (error) {
+      console.error("Error loading agreements:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddAgreement = () => {
+    setEditingAgreement(null);
+    setEditorOpen(true);
+  };
+
+  const handleEditAgreement = (agreement: Agreement) => {
+    setEditingAgreement(agreement);
+    setEditorOpen(true);
+  };
+
+  const handleSaveAgreement = async (agreement: Agreement) => {
+    await saveAgreement(config, agreement);
+    await loadAgreements();
+  };
+
+  const handleDeleteClick = (agreement: Agreement) => {
+    setAgreementToDelete(agreement);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!agreementToDelete) return;
+
+    try {
+      await deleteAgreement(config, {
+        type: agreementToDelete.type,
+        version: agreementToDelete.version,
+        country: agreementToDelete.country,
+        language: agreementToDelete.language,
+      });
+      await loadAgreements();
+    } catch (error) {
+      console.error("Error deleting agreement:", error);
+      alert("Failed to delete agreement");
+    } finally {
+      setDeleteDialogOpen(false);
+      setAgreementToDelete(null);
+    }
+  };
+
+  const getAgreementTypeLabel = (type: string) => {
+    const agreementType = AGREEMENT_TYPES.find(t => t.value === type);
+    return agreementType ? agreementType.label : type;
+  };
+
+  const getCountryName = (countryCode: string) => {
+    const countryData = countriesLanguages.countries[countryCode as keyof typeof countriesLanguages.countries];
+    return countryData ? countryData.name : countryCode;
+  };
+
+  const getLanguageName = (countryCode: string, languageCode: string) => {
+    const countryData = countriesLanguages.countries[countryCode as keyof typeof countriesLanguages.countries];
+    if (countryData) {
+      const langData = countryData.languages[languageCode as keyof typeof countryData.languages];
+      return langData ? (langData as { native: string; english: string }).english : languageCode;
+    }
+    return languageCode;
+  };
+
   return (
       <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -48,7 +149,7 @@ export default function Settings() {
                                       Manage EULAs and Privacy Policies by country and language
                                   </CardDescription>
                               </div>
-                              <Button>
+                              <Button onClick={handleAddAgreement}>
                                   <Plus className="mr-2 h-4 w-4" />
                                   Add Agreement
                               </Button>
@@ -70,17 +171,60 @@ export default function Settings() {
                           </div>
 
                           <div className="space-y-2">
-                              <div className="grid grid-cols-3 gap-4 font-medium text-sm border-b pb-2">
-                                  <div>Type / Country / Language</div>
+                              <div className="grid grid-cols-[1.5fr_1.5fr_1.5fr_0.8fr_100px] gap-4 font-medium text-sm border-b pb-2">
+                                  <div>Type</div>
+                                  <div>Country</div>
+                                  <div>Language</div>
                                   <div>Version</div>
                                   <div>Actions</div>
                               </div>
 
-                              {/* Placeholder for agreement list */}
-                              <div className="text-center py-8 text-muted-foreground">
-                                  <p>No agreements configured</p>
-                                  <p className="text-sm mt-2">Click "Add Agreement" to create your first EULA or Privacy Policy</p>
-                              </div>
+                              {isLoading ? (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                      <p>Loading agreements...</p>
+                                  </div>
+                              ) : agreements.length === 0 ? (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                      <p>No agreements configured</p>
+                                      <p className="text-sm mt-2">Click "Add Agreement" to create your first EULA and Privacy Policy</p>
+                                  </div>
+                              ) : (
+                                  agreements.map((agreement) => (
+                                      <div
+                                          key={`${agreement.type}-${agreement.version}-${agreement.country}-${agreement.language}`}
+                                          className="grid grid-cols-[1.5fr_1.5fr_1.5fr_0.8fr_100px] gap-4 items-center py-3 border-b last:border-0"
+                                      >
+                                          <div>
+                                              <div className="font-medium">{getAgreementTypeLabel(agreement.type)}</div>
+                                          </div>
+                                          <div>
+                                              <div className="text-sm">{getCountryName(agreement.country)}</div>
+                                              <div className="text-xs text-muted-foreground">{agreement.country}</div>
+                                          </div>
+                                          <div>
+                                              <div className="text-sm">{getLanguageName(agreement.country, agreement.language)} ({agreement.language.toUpperCase()})</div>
+                                              <div className="text-xs text-muted-foreground">{agreement.languageName}</div>
+                                          </div>
+                                          <div className="font-medium">{agreement.version}</div>
+                                          <div className="flex gap-2">
+                                              <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => handleEditAgreement(agreement)}
+                                              >
+                                                  <Pencil className="h-4 w-4" />
+                                              </Button>
+                                              <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => handleDeleteClick(agreement)}
+                                              >
+                                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                              </Button>
+                                          </div>
+                                      </div>
+                                  ))
+                              )}
                           </div>
                       </CardContent>
                   </Card>
@@ -93,9 +237,39 @@ export default function Settings() {
                       <CardContent className="text-sm space-y-2">
                           <p>• If no agreement exists for a specific country/language combination, a default message is shown</p>
                           <p>• Players will see: "Hey, if you are reading this, it means the server administrator has not set up the agreements..."</p>
-                          <p>• It's recommended to create at least one default agreement for common languages</p>
                       </CardContent>
                   </Card>
+
+                  {/* Agreement Editor Modal */}
+                  <AgreementEditor
+                      open={editorOpen}
+                      onOpenChange={setEditorOpen}
+                      agreement={editingAgreement}
+                      onSave={handleSaveAgreement}
+                  />
+
+                  {/* Delete Confirmation Dialog */}
+                  <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Agreement</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  Are you sure you want to delete this agreement?
+                                  {agreementToDelete && (
+                                      <div className="mt-2 font-medium">
+                                          {getAgreementTypeLabel(agreementToDelete.type)} - {agreementToDelete.country}/{agreementToDelete.language.toUpperCase()} v{agreementToDelete.version}
+                                      </div>
+                                  )}
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
+                                  Delete
+                              </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
               </TabsContent>
 
               <TabsContent value="splatfests" className="space-y-4">

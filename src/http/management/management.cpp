@@ -237,6 +237,21 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                              return mgm_server_status(srv, std::move(ctx), settingsMgr);
                          });
 
+    server->registerRoute("*", "/api/v1/agreements",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             // Route to appropriate handler based on method
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_POST) {
+                                 return mgm_publish_agreement(srv, std::move(ctx), settingsMgr);
+                             }
+
+                             if (method == http::Method::M_DELETE) {
+                                 return mgm_delete_agreement(srv, std::move(ctx), settingsMgr);
+                             }
+
+                             return mgm_get_agreements(srv, std::move(ctx), settingsMgr);
+                         });
+
     server->registerErrorPage("*",
                              [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                  return errorHandler(srv, std::move(ctx), settingsMgr);

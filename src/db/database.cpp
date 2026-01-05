@@ -274,7 +274,7 @@ std::unique_ptr<Command> Database::craftGetAllAgreementsCommand() {
 
 std::unique_ptr<Command> Database::craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                             const std::string& language, const std::optional<int> version) {
-    DBGetAgreementQuery query {
+    DBAgreementQuery query {
         .type = type,
         .country = country,
         .language = language,
@@ -425,6 +425,38 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateUserAgreementCommand(uint3
     };
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_USER_AGREEMENT,
+                                               std::any(query));
+
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInsertOrUpdateAgreementCommand(const std::string& type, int version,
+                                                                       const std::string& country,
+                                                                       const std::string& language,
+                                                                       const std::string& languageName,
+                                                                       datetime_t publishedAt,
+                                                                       const std::string& mainTitle,
+                                                                       const std::string& subTitle,
+                                                                       const std::string& agreeText,
+                                                                       const std::string& disagreeText,
+                                                                       const std::string& mainText,
+                                                                       const std::string& subText) {
+    DBAgreementData query {
+        .type = type,
+        .version = version,
+        .country = country,
+        .language = language,
+        .languageName = languageName,
+        .publishedAt = publishedAt,
+        .mainTitle = mainTitle,
+        .subTitle = subTitle,
+        .agreeText = agreeText,
+        .disagreeText = disagreeText,
+        .mainText = mainText,
+        .subText = subText
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_AGREEMENT,
                                                std::any(query));
 
     return dbCommand;
@@ -653,6 +685,19 @@ std::unique_ptr<Command> Database::craftDeleteUserDeviceAttributesCommand(uint32
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftDeleteAgreementCommand(const std::string& type, const std::string& country,
+                                                               const std::string& language, std::optional<int> version) {
+    DBAgreementQuery query {
+        .type = type,
+        .country = country,
+        .language = language,
+        .version = version
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_AGREEMENT, std::any(query));
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid) {
     DBFriendDeleteQuery query {
         .pid = pid,
@@ -827,7 +872,15 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
         case DBCommandType::GET_AGREEMENT:
             // Get agreement commands need the type, country, language, and optionally the version of the agreement (latest if not specified).
-            if (command->data.type() != typeid(DBGetAgreementQuery)) {
+            if (command->data.type() != typeid(DBAgreementQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_AGREEMENT:
+            // Delete agreement commands need the type, country, language, and optionally the version (all versions if not specified).
+            if (command->data.type() != typeid(DBAgreementQuery)) {
                 return false;
             }
 
@@ -861,6 +914,14 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::INSERT_OR_UPDATE_USER_AGREEMENT:
             // Inserts or updates a user agreement in the database.
             if (command->data.type() != typeid(DBUserAgreementInsertOrUpdateQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_OR_UPDATE_AGREEMENT:
+            // Inserts or updates an agreement document in the database.
+            if (command->data.type() != typeid(DBAgreementData)) {
                 return false;
             }
 

@@ -83,6 +83,25 @@ export class ApiClient {
 
     return response.json();
   }
+
+  /**
+   * Make a DELETE request with a body to the API
+   */
+  async deleteWithBody<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 /**

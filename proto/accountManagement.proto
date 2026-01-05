@@ -17,6 +17,9 @@ service AccountManagementService {
 
   // Publishes a new agreement to be stored in the server
   rpc PublishAgreement(AgreementCreate) returns (google.protobuf.Empty);
+
+  // Deletes an existing agreement from the server
+  rpc DeleteAgreement(AgreementDelete) returns (google.protobuf.Empty);
 }
 
 message SecurityStatus {
@@ -49,4 +52,11 @@ message Agreement {
 
 message GetStoredAgreementsResponse {
   repeated Agreement agreements = 1;
+}
+
+message AgreementDelete {
+  string type = 1;
+  optional uint32 version = 2;
+  string country = 3;
+  string language = 4;
 }

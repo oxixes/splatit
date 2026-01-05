@@ -84,6 +84,7 @@ private:
     sqlite3_stmt* insertPersistentNotificationStatement = nullptr;
     sqlite3_stmt* insertOrUpdateDeviceStatement = nullptr;
     sqlite3_stmt* insertOrUpdateUserAgreementStatement = nullptr;
+    sqlite3_stmt* insertOrUpdateAgreementStatement = nullptr;
     sqlite3_stmt* insertOrUpdateMiiStatement = nullptr;
     sqlite3_stmt* insertOrUpdateEmailStatement = nullptr;
     sqlite3_stmt* insertProfileStatement = nullptr;
@@ -96,6 +97,8 @@ private:
     sqlite3_stmt* deleteUserOwnershipsStatement = nullptr;
     sqlite3_stmt* deleteUserAgreementsStatement = nullptr;
     sqlite3_stmt* deleteUserDeviceAttributesStatement = nullptr;
+    sqlite3_stmt* deleteAgreementStatement = nullptr;
+    sqlite3_stmt* deleteAgreementVersionStatement = nullptr;
     sqlite3_stmt* deleteFriendStatement = nullptr;
     sqlite3_stmt* deleteFriendRequestStatement = nullptr;
     sqlite3_stmt* deletePersistentNotificationStatement = nullptr;
