@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpcimpl.internalaccountmanagement.v1;
+
+import "google/protobuf/empty.proto";
+
+service InternalAccountManagementService {
+  // Deletes a friends server account for a given PID.
+  rpc DeleteServerAccount(DeleteServerAccountRequest) returns (google.protobuf.Empty);
+}
+
+message DeleteServerAccountRequest {
+  uint32 pid = 1;
+  string gameServerId = 2;
+}

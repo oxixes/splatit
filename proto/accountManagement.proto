@@ -4,6 +4,7 @@ package grpcimpl.accountmanagement.v1;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "common.proto";
 
 service AccountManagementService {
   // Retrieves the current security status of the account management server
@@ -13,13 +14,89 @@ service AccountManagementService {
   rpc UpdateSecurityStatus(SecurityStatus) returns (google.protobuf.Empty);
 
   // Retrieves the current stored agreements stored in the server
-  rpc GetStoredAgreements(google.protobuf.Empty) returns (GetStoredAgreementsResponse);
+  rpc GetStoredAgreements(GetStoredAgreementsRequest) returns (GetStoredAgreementsResponse);
 
   // Publishes a new agreement to be stored in the server
   rpc PublishAgreement(AgreementCreate) returns (google.protobuf.Empty);
 
   // Deletes an existing agreement from the server
   rpc DeleteAgreement(AgreementDelete) returns (google.protobuf.Empty);
+
+  // Device Management
+  // Creates a new device (console)
+  rpc CreateDevice(DeviceCreate) returns (Device);
+
+  // Retrieves a device by ID
+  rpc GetDevice(DeviceGetRequest) returns (Device);
+
+  // Lists devices with optional filtering and pagination
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+
+  // Updates an existing device
+  rpc UpdateDevice(DeviceUpdate) returns (Device);
+
+  // Deletes a device
+  rpc DeleteDevice(DeviceDeleteRequest) returns (google.protobuf.Empty);
+
+
+  // Account Management
+  // Creates a new account
+  rpc CreateAccount(AccountCreate) returns (Account);
+
+  // Retrieves an account by PID
+  rpc GetAccount(AccountGetRequest) returns (Account);
+
+  // Retrieves an account by username
+  rpc GetAccountByUsername(AccountGetByUsernameRequest) returns (Account);
+
+  // Lists accounts with optional filtering and pagination
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+
+  // Updates an existing account
+  rpc UpdateAccount(AccountUpdate) returns (Account);
+
+  // Deletes an account
+  rpc DeleteAccount(AccountDeleteRequest) returns (google.protobuf.Empty);
+
+
+  // Account Email Management
+  // Updates an account's email
+  rpc UpdateAccountEmail(UpdateAccountEmailRequest) returns (AccountEmail);
+
+
+  // Account Mii Management
+  // Sets or updates an account's Mii
+  rpc SetAccountMii(SetAccountMiiRequest) returns (AccountMii);
+
+
+  // Account Agreement Management
+  // Adds a signed agreement to an account
+  rpc AddAccountAgreement(AddAccountAgreementRequest) returns (google.protobuf.Empty);
+
+  // Removes a signed agreement from an account
+  rpc RemoveAccountAgreement(RemoveAccountAgreementRequest) returns (google.protobuf.Empty);
+
+
+  // Account Device Ownership Management
+  // Links a device to an account
+  rpc LinkDeviceToAccount(LinkDeviceRequest) returns (google.protobuf.Empty);
+
+  // Unlinks a device from an account
+  rpc UnlinkDeviceFromAccount(UnlinkDeviceRequest) returns (google.protobuf.Empty);
+
+  // Updates device status for an account (will deactivate other devices if set to active)
+  rpc UpdateDeviceStatus(UpdateDeviceStatusRequest) returns (google.protobuf.Empty);
+
+
+  // Account-Device Attribute Management
+  // Adds or updates a device attribute for an account-device relationship
+  rpc SetAccountDeviceAttribute(SetAccountDeviceAttributeRequest) returns (google.protobuf.Empty);
+
+  // Removes a device attribute from an account-device relationship
+  rpc RemoveAccountDeviceAttribute(RemoveAccountDeviceAttributeRequest) returns (google.protobuf.Empty);
+
+  // Lists device attributes for an account-device relationship
+  rpc ListAccountDeviceAttributes(ListAccountDeviceAttributesRequest) returns (ListAccountDeviceAttributesResponse);
 }
 
 message SecurityStatus {
@@ -50,8 +127,33 @@ message Agreement {
   google.protobuf.Timestamp publishDate = 2;
 }
 
+enum GetStoredAgreementsRequestSorting {
+  SORT_BY_TYPE_ASC = 0;
+  SORT_BY_TYPE_DESC = 1;
+  SORT_BY_VERSION_ASC = 2;
+  SORT_BY_VERSION_DESC = 3;
+  SORT_BY_COUNTRY_ASC = 4;
+  SORT_BY_COUNTRY_DESC = 5;
+  SORT_BY_LANGUAGE_ASC = 6;
+  SORT_BY_LANGUAGE_DESC = 7;
+  SORT_BY_PUBLISH_DATE_ASC = 8;
+  SORT_BY_PUBLISH_DATE_DESC = 9;
+}
+
+message GetStoredAgreementsRequest {
+  optional string type = 1;
+  optional uint32 version = 2;
+  optional string country = 3;
+  optional string language = 4;
+
+  repeated GetStoredAgreementsRequestSorting sorting = 6; // Multiple sorting criteria can be applied
+
+  optional grpcimpl.common.PageRequest pageRequest = 5;
+}
+
 message GetStoredAgreementsResponse {
   repeated Agreement agreements = 1;
+  grpcimpl.common.PageResponse pageResponse = 2;
 }
 
 message AgreementDelete {
@@ -59,4 +161,340 @@ message AgreementDelete {
   optional uint32 version = 2;
   string country = 3;
   string language = 4;
+}
+
+enum DevicePlatform {
+  PLATFORM_WII_U = 0;
+}
+
+enum DeviceRegion {
+  REGION_JPN = 0;
+  REGION_USA = 1;
+  REGION_EUR = 2;
+  REGION_AUS = 3;
+  REGION_CHN = 4;
+  REGION_KOR = 5;
+  REGION_TWN = 6;
+}
+
+enum DeviceStatus {
+  STATUS_ACTIVE = 0;
+  STATUS_INACTIVE = 1;
+}
+
+message DeviceAttribute {
+  string name = 1;
+  string value = 2;
+  optional google.protobuf.Timestamp createdAt = 3;
+}
+
+message Device {
+  uint32 id = 1;
+  string language = 2;
+  DevicePlatform platform = 3;
+  DeviceRegion region = 4;
+  string serialNumber = 5;
+  string systemVersion = 6;
+  string type = 7;
+  string updatedBy = 8;
+  optional google.protobuf.Timestamp lastUpdated = 9;
+  bool banned = 10;
+  string status = 11;
+}
+
+// Device Management Messages
+message DeviceCreate {
+  string language = 1;
+  DevicePlatform platform = 2;
+  DeviceRegion region = 3;
+  string serialNumber = 4;
+  string systemVersion = 5;
+  string type = 6;
+  string updatedBy = 7;
+  string status = 8;
+}
+
+message DeviceUpdate {
+  uint32 id = 1;
+  optional string language = 2;
+  optional DevicePlatform platform = 3;
+  optional DeviceRegion region = 4;
+  optional string serialNumber = 5;
+  optional string systemVersion = 6;
+  optional string type = 7;
+  optional string updatedBy = 8;
+  optional bool banned = 9;
+  optional string status = 10;
+}
+
+message DeviceGetRequest {
+  uint32 id = 1;
+}
+
+enum ListDevicesRequestSorting {
+  SORT_DEVICE_BY_ID_ASC = 0;
+  SORT_DEVICE_BY_ID_DESC = 1;
+  SORT_DEVICE_BY_PLATFORM_ASC = 2;
+  SORT_DEVICE_BY_PLATFORM_DESC = 3;
+  SORT_DEVICE_BY_REGION_ASC = 4;
+  SORT_DEVICE_BY_REGION_DESC = 5;
+  SORT_DEVICE_BY_SERIAL_ASC = 6;
+  SORT_DEVICE_BY_SERIAL_DESC = 7;
+  SORT_DEVICE_BY_LAST_UPDATED_ASC = 8;
+  SORT_DEVICE_BY_LAST_UPDATED_DESC = 9;
+}
+
+message ListDevicesRequest {
+  optional DevicePlatform platform = 1;
+  optional DeviceRegion region = 2;
+  optional bool banned = 3;
+  optional string serialNumber = 4;
+  optional string type = 5;
+
+  repeated ListDevicesRequestSorting sorting = 6;
+  optional grpcimpl.common.PageRequest pageRequest = 7;
+}
+
+message ListDevicesResponse {
+  repeated Device devices = 1;
+  grpcimpl.common.PageResponse pageResponse = 2;
+}
+
+message DeviceDeleteRequest {
+  uint32 id = 1;
+}
+
+
+message AccountAgreement {
+  string type = 1;
+  uint32 version = 2;
+  string country = 3;
+}
+
+message AccountEmail {
+  optional uint32 id = 1;
+  string address = 2;
+  bool parent = 3;
+  bool primary = 4;
+  bool reachable = 5;
+  string type = 6;
+  string updatedBy = 7;
+  bool validated = 8;
+  optional google.protobuf.Timestamp validatedAt = 9;
+  string validationCode = 10;
+}
+
+message AccountMii {
+  optional uint32 id = 1;
+  optional string hash = 2;
+  string name = 3;
+  bool primary = 4;
+  string data = 5;
+}
+
+message AccountOwnership {
+  Device device = 1;
+  DeviceStatus status = 2;
+  google.protobuf.Timestamp lastUpdated = 3;
+  repeated DeviceAttribute accountDeviceAttributes = 4; // Attributes specific to the account-device relationship
+}
+
+enum AccountGender {
+  GENDER_MALE = 0;
+  GENDER_FEMALE = 1;
+}
+
+message Account {
+  optional uint32 pid = 1;
+  string username = 2;
+  optional string password = 3;
+  AccountGender gender = 4;
+  uint64 region = 5;
+  string timezone = 6;
+  string language = 7;
+  bool active = 8; // We use this to ban accounts
+  bool marketing = 9;
+  bool offDevice = 10;
+  string birthdate = 11;
+  string country = 12;
+  optional google.protobuf.Timestamp created = 13;
+  optional google.protobuf.Timestamp updated = 14;
+
+  AccountEmail primaryEmail = 15;
+  AccountMii mii = 16;
+  repeated AccountAgreement signedAgreements = 17;
+
+  repeated AccountOwnership ownedDevices = 18;
+}
+
+// Account Management Messages
+message AccountCreate {
+  string username = 1;
+  string password = 2;
+  AccountGender gender = 3;
+  uint64 region = 4;
+  string timezone = 5;
+  string language = 6;
+  AccountEmail email = 7;
+  AccountMii mii = 8;
+  bool marketing = 9;
+  bool offDevice = 10;
+  string birthdate = 11;
+  string country = 12;
+}
+
+message AccountUpdate {
+  uint32 pid = 1;
+  optional string username = 2;
+  optional string password = 3;
+  optional AccountGender gender = 4;
+  optional uint64 region = 5;
+  optional string timezone = 6;
+  optional string language = 7;
+  optional bool active = 8;
+  optional bool marketing = 9;
+  optional bool offDevice = 10;
+  optional string birthdate = 11;
+  optional string country = 12;
+}
+
+message AccountGetRequest {
+  uint32 pid = 1;
+}
+
+message AccountGetByUsernameRequest {
+  string username = 1;
+}
+
+enum ListAccountsRequestSorting {
+  SORT_ACCOUNT_BY_PID_ASC = 0;
+  SORT_ACCOUNT_BY_PID_DESC = 1;
+  SORT_ACCOUNT_BY_USERNAME_ASC = 2;
+  SORT_ACCOUNT_BY_USERNAME_DESC = 3;
+  SORT_ACCOUNT_BY_REGION_ASC = 4;
+  SORT_ACCOUNT_BY_REGION_DESC = 5;
+}
+
+message ListAccountsRequest {
+  optional string username = 1; // Filter by username (partial match)
+  optional AccountGender gender = 2;
+  optional uint64 region = 3;
+  optional bool active = 4;
+
+  repeated ListAccountsRequestSorting sorting = 5;
+  optional grpcimpl.common.PageRequest pageRequest = 6;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+  grpcimpl.common.PageResponse pageResponse = 2;
+}
+
+message AccountDeleteRequest {
+  uint32 pid = 1;
+}
+
+
+// Account Email Management Messages
+message AddAccountEmailRequest {
+  uint32 pid = 1;
+  string address = 2;
+  bool parent = 3;
+  bool primary = 4;
+  bool reachable = 5;
+  string type = 6;
+  string updatedBy = 7;
+  bool validated = 8;
+}
+
+message UpdateAccountEmailRequest {
+  uint32 pid = 1;
+  uint32 emailId = 2;
+  optional string address = 3;
+  optional bool parent = 4;
+  optional bool primary = 5;
+  optional bool reachable = 6;
+  optional string type = 7;
+  optional string updatedBy = 8;
+  optional bool validated = 9;
+  optional string validationCode = 10;
+}
+
+message DeleteAccountEmailRequest {
+  uint32 pid = 1;
+  uint32 emailId = 2;
+}
+
+// Account Mii Management Messages
+message SetAccountMiiRequest {
+  uint32 pid = 1;
+  string name = 2;
+  bool primary = 3;
+  string data = 4;
+}
+
+message DeleteAccountMiiRequest {
+  uint32 pid = 1;
+}
+
+// Account Agreement Management Messages
+message AddAccountAgreementRequest {
+  uint32 pid = 1;
+  string type = 2;
+  uint32 version = 3;
+  string country = 4;
+}
+
+message RemoveAccountAgreementRequest {
+  uint32 pid = 1;
+  string type = 2;
+  uint32 version = 3;
+  string country = 4;
+}
+
+// Account Device Ownership Management Messages
+message LinkDeviceRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+  DeviceStatus status = 3;
+  repeated DeviceAttribute accountDeviceAttributes = 4;
+}
+
+message UnlinkDeviceRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+}
+
+message SetActiveDeviceRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+}
+
+message UpdateDeviceStatusRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+  DeviceStatus status = 3;
+}
+
+// Account-Device Attribute Management Messages
+message SetAccountDeviceAttributeRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+  string attributeName = 3;
+  string attributeValue = 4;
+}
+
+message RemoveAccountDeviceAttributeRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+  string attributeName = 3;
+}
+
+message ListAccountDeviceAttributesRequest {
+  uint32 pid = 1;
+  uint32 deviceId = 2;
+}
+
+message ListAccountDeviceAttributesResponse {
+  repeated DeviceAttribute attributes = 1;
 }

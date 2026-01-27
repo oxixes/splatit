@@ -1,16 +1,28 @@
-import { createApiClient } from "~/lib/api-client";
-import type { AppConfig } from "~/hooks/useAppConfig";
-import type { Agreement, AgreementsResponse, DeleteAgreementRequest } from "~/types/agreement";
+import {createApiClient} from "~/lib/api-client";
+import type {AppConfig} from "~/hooks/useAppConfig";
+import type {Agreement, AgreementsFilters, AgreementsResponse, DeleteAgreementRequest} from "~/types/agreement";
 
 /**
- * Get all agreements from the server
+ * Get all agreements from the server with optional filtering, pagination and sorting
  */
-export async function getAgreements(config: AppConfig): Promise<Agreement[]> {
+export async function getAgreements(config: AppConfig, filters?: AgreementsFilters): Promise<AgreementsResponse> {
   const apiClient = createApiClient(config);
 
   try {
-    const response = await apiClient.get<AgreementsResponse>("/api/v1/agreements");
-    return response.agreements || [];
+    const params = new URLSearchParams();
+
+    if (filters) {
+      if (filters.type) params.append("type", filters.type);
+      if (filters.country) params.append("country", filters.country);
+      if (filters.language) params.append("language", filters.language);
+      if (filters.version !== undefined) params.append("version", filters.version.toString());
+      if (filters.page !== undefined) params.append("page", filters.page.toString());
+      if (filters.pageSize !== undefined) params.append("pageSize", filters.pageSize.toString());
+      if (filters.sort) params.append("sort", filters.sort);
+    }
+
+    const url = `/api/v1/agreements${params.toString() ? `?${params.toString()}` : ""}`;
+    return await apiClient.get<AgreementsResponse>(url);
   } catch (error) {
     console.error("Error loading agreements:", error);
     throw error;

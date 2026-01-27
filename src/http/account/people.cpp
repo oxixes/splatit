@@ -3,7 +3,12 @@
 #include <date/tz.h>
 #include <cstring>
 
+#include "../../exceptions.hpp"
 #include "../../crypto/tools.hpp"
+#include "../../grpc/asyncRequest.hpp"
+#include "../../util/globalTaskScheduler.hpp"
+#include "../../constants.hpp"
+#include <internalAccountManagement.grpc.pb.h>
 
 // TODO Don't use get profile all the time, try and improve performance by executing shorter queries
 
@@ -371,6 +376,14 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     const std::string regionStr = doc->child("person").child_value("region");
     try {
         int64_t region = std::stoll(regionStr);
+
+        // Check that region is 1, 2, 4, 8, 16, 32 or 64
+        if (region != 1 && region != 2 && region != 4 && region != 8 &&
+            region != 16 && region != 32 && region != 64) {
+            res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
     } catch (const std::invalid_argument&) {
         res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -423,6 +436,14 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     const std::string deviceId = ctx->request->getHeader("x-nintendo-device-id")[0];
     uint32_t deviceIdNum = std::stoul(deviceId);
 
+    if (co_await checkDeviceBanned(deviceIdNum, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                         "Banned device with ID " + std::to_string(deviceIdNum) + " tried to create an account (client " + util::ipv4ToString(ctx->client) + ").");
+        res = createError(ctx->request->getVersion(), 12, "The device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
     db::datetime_t lastUpdated = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
 
     std::shared_ptr<db::Database> session = db->createSession();
@@ -432,7 +453,7 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     }
 
     std::unique_ptr<db::Command> updateDevCmd = db::Database::craftInsertOrUpdateDeviceCommand(deviceIdNum, language, 1,
-            region, serialNumber, systemVersion, "RETAIL", "USER", "ACTIVE", lastUpdated);
+            region, serialNumber, systemVersion, "RETAIL", "USER", "ACTIVE", false, lastUpdated);
     db::Result deviceResults = co_await session->runCommand(std::move(updateDevCmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
         co_await session->rollbackTransaction();
@@ -477,23 +498,45 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         std::string(doc->child("person").child("mii").child_value("primary")) == "Y",
         miiData);
 
-    // And finally we can also get the latest pid to get a new one for the user
-    std::unique_ptr<db::Command> pidCmd = db::Database::craftGetLatestPidCommand();
-
     db::Result emailResults = co_await session->runCommand(std::move(emailCmd));
     db::Result miiResults = co_await session->runCommand(std::move(miiCmd));
-    db::Result pidResults = co_await session->runCommand(std::move(pidCmd));
 
     if (emailResults.getStatus() != db::DBResultStatus::SUCCESS ||
-        miiResults.getStatus() != db::DBResultStatus::SUCCESS ||
-        pidResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        miiResults.getStatus() != db::DBResultStatus::SUCCESS) {
         co_await session->rollbackTransaction();
         throw std::runtime_error("Database error");
     }
 
     auto emailId = emailResults.getData<int64_t>();
     auto miiId = miiResults.getData<int64_t>();
-    uint32_t pid = pidResults.getData<uint32_t>() - 1; // Pid is the latest pid, so we need to subtract 1 to get the new pid
+
+    db::datetime_t created = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+
+    // Now we can insert the user
+    std::unique_ptr<db::Command> profileCmd = db::Database::craftInsertProfileCommand(
+        doc->child("person").child_value("user_id"),
+        "x", // Temporary password, will be updated later
+        emailId,
+        miiId,
+        std::string(doc->child("person").child_value("gender")) == "F",
+        std::stoll(doc->child("person").child_value("region")),
+        doc->child("person").child_value("tz_name"),
+        doc->child("person").child_value("language"),
+        true, // active
+        std::string(doc->child("person").child_value("marketing_flag")) == "Y",
+        std::string(doc->child("person").child_value("off_device_flag")) == "Y",
+        doc->child("person").child_value("birth_date"),
+        doc->child("person").child_value("country"),
+        created,
+        created); // created and updated are the same for now
+
+    db::Result profileResults = co_await session->runCommand(std::move(profileCmd));
+    if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    auto pid = static_cast<uint32_t>(profileResults.getData<int64_t>());
 
     std::string hashedPassword;
     bool error = false;
@@ -513,29 +556,13 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
         co_return;
     }
 
-    db::datetime_t created = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
-
-    // Now we can insert the user
-    std::unique_ptr<db::Command> profileCmd = db::Database::craftInsertProfileCommand(
+    auto updatePasswordCmd = db::Database::craftUpdateUserProfileCommand(
         pid,
-        doc->child("person").child_value("user_id"),
-        hashedPassword,
-        emailId,
-        miiId,
-        std::string(doc->child("person").child_value("gender")) == "F",
-        std::stoll(doc->child("person").child_value("region")),
-        doc->child("person").child_value("tz_name"),
-        doc->child("person").child_value("language"),
-        true, // active
-        std::string(doc->child("person").child_value("marketing_flag")) == "Y",
-        std::string(doc->child("person").child_value("off_device_flag")) == "Y",
-        doc->child("person").child_value("birth_date"),
-        doc->child("person").child_value("country"),
-        created,
-        created); // created and updated are the same for now
-
-    db::Result profileResults = co_await session->runCommand(std::move(profileCmd));
-    if (profileResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        std::nullopt, hashedPassword, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+        std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+        std::nullopt, std::nullopt, std::nullopt);
+    db::Result updatePasswordResults = co_await session->runCommand(std::move(updatePasswordCmd));
+    if (updatePasswordResults.getStatus() != db::DBResultStatus::SUCCESS) {
         co_await session->rollbackTransaction();
         throw std::runtime_error("Database error");
     }
@@ -667,6 +694,14 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
     if (!doc->child("person").child("region").empty()) {
         try {
             region = std::stoll(doc->child("person").child_value("region"));
+
+            // Check that region is 1, 2, 4, 8, 16, 32 or 64
+            if (*region != 1 && *region != 2 && *region != 4 && *region != 8 &&
+                *region != 16 && *region != 32 && *region != 64) {
+                res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
+                srv->sendResponse(std::move(ctx), std::move(res), false);
+                co_return;
+            }
         } catch (const std::invalid_argument&) {
             res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
             srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1198,9 +1233,25 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
-    if (!pid.has_value()) {
-        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+    uint32_t deviceId = std::stoul(ctx->request->getHeader("x-nintendo-device-id")[0]);
+    if (co_await checkDeviceBanned(deviceId, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                         "Banned device with ID " + std::to_string(deviceId) + " tried to add a user agreement (client " + util::ipv4ToString(ctx->client) + ").");
+        res = createError(ctx->request->getVersion(), 12, "The device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::optional<uint32_t> pid;
+    try {
+        pid = co_await checkHashedBasicAuth(db, ctx);
+        if (!pid.has_value()) {
+            res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+    } catch (UserBanned&) {
+        res = createError(ctx->request->getVersion(), 108, "The user is banned", "", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1447,9 +1498,25 @@ Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<htt
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
-    if (!pid.has_value()) {
-        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+    uint32_t deviceId = std::stoul(ctx->request->getHeader("x-nintendo-device-id")[0]);
+    if (co_await checkDeviceBanned(deviceId, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                         "Banned device with ID " + std::to_string(deviceId) + " tried to obtain user information (client " + util::ipv4ToString(ctx->client) + ").");
+        res = createError(ctx->request->getVersion(), 12, "The device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::optional<uint32_t> pid;
+    try {
+        pid = co_await checkHashedBasicAuth(db, ctx);
+        if (!pid.has_value()) {
+            res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+    } catch (UserBanned&) {
+        res = createError(ctx->request->getVersion(), 108, "The user is banned", "", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1556,9 +1623,25 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         co_return;
     }
 
-    std::optional<uint32_t> pid = co_await checkHashedBasicAuth(db, ctx);
-    if (!pid.has_value()) {
-        res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+    uint32_t deviceIdNum = std::stoul(ctx->request->getHeader("x-nintendo-device-id")[0]);
+    if (co_await checkDeviceBanned(deviceIdNum, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+                         "Banned device with ID " + std::to_string(deviceIdNum) + " tried to link to an account (client " + util::ipv4ToString(ctx->client) + ").");
+        res = createError(ctx->request->getVersion(), 12, "The device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    std::optional<uint32_t> pid;
+    try {
+        pid = co_await checkHashedBasicAuth(db, ctx);
+        if (!pid.has_value()) {
+            res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+    } catch (UserBanned&) {
+        res = createError(ctx->request->getVersion(), 108, "The user is banned", "", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1611,8 +1694,6 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
     uint32_t region = std::stoul(ctx->request->getHeader("x-nintendo-region")[0]);
     const std::string serialNumber = ctx->request->getHeader("x-nintendo-serial-number")[0];
     const std::string systemVersion = ctx->request->getHeader("x-nintendo-system-version")[0];
-    const std::string deviceId = ctx->request->getHeader("x-nintendo-device-id")[0];
-    uint32_t deviceIdNum = std::stoul(deviceId);
 
     db::datetime_t lastUpdated = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
 
@@ -1626,6 +1707,7 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
         "RETAIL", // type
         "USER", // updatedBy
         "ACTIVE", // status
+        false, // banned
         lastUpdated);
     db::Result deviceResults = co_await session->runCommand(std::move(cmd));
     if (deviceResults.getStatus() != db::DBResultStatus::SUCCESS) {
@@ -1743,7 +1825,6 @@ Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::s
     srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
-// TODO Delete friends server account (and in the future possibly in splatoon too)
 /*
  * Handler for POST https://account.<domain>/v1/api/people/@me/deletion
  * Deletes the account of the logged-in user.
@@ -1836,6 +1917,15 @@ Task<void> v1_api_people_me_deletion(http::Server* srv, std::shared_ptr<http::Co
         throw std::runtime_error("Database error");
     }
 
+    // Add a task to delete the friends server account
+    auto deleteFriendsServerAccountCmd = db::Database::craftInsertTaskCommand(
+        static_cast<int>(util::GlobalTaskType::DELETE_FRIENDS_ACCOUNT), std::to_string(accountToken.pid));
+    db::Result deleteFriendsServerAccountResults = co_await session->runCommand(std::move(deleteFriendsServerAccountCmd));
+    if (deleteFriendsServerAccountResults.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
     if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
         throw std::runtime_error("Database error");
     }
@@ -1847,4 +1937,89 @@ Task<void> v1_api_people_me_deletion(http::Server* srv, std::shared_ptr<http::Co
     srv->sendResponse(std::move(ctx), std::move(res), false);
 }
 
+// Helper function to delete secure server accounts for an account
+Task<bool> deleteFriendsServerAccountForAccount(
+    const uint32_t pid,
+    const std::shared_ptr<SettingsManager>& settingsManager,
+    const std::shared_ptr<Logger::Logger>& logger) {
+
+    const std::string friendsServerId = FRIENDS_SERVER_ID;
+    auto secureHostsMap = settingsManager->getGameServergRPCHosts();
+    const auto it = secureHostsMap.find(friendsServerId);
+    if (it == secureHostsMap.end()) {
+        logger->log(Logger::level::INFO, Logger::group::ACCOUNT,
+            "Friends server (ID " + friendsServerId + ") not found in secure hosts map");
+        co_return false;
+    }
+
+    const auto& hosts = it->second;
+    if (hosts.empty()) {
+        co_return false;
+    }
+
+    static std::map<std::string, size_t> localSecureServerHostIndexRoundRobin;
+
+    if (!localSecureServerHostIndexRoundRobin.contains(friendsServerId)) {
+        localSecureServerHostIndexRoundRobin[friendsServerId] = 0;
+    }
+
+    size_t startIndex = localSecureServerHostIndexRoundRobin[friendsServerId];
+    bool success = false;
+
+    for (size_t i = 0; i < hosts.size(); ++i) {
+        size_t index = (startIndex + i) % hosts.size();
+        const auto& hostAddr = hosts[index];
+
+        auto channel = channelPool->getChannel(hostAddr);
+        if (!channel) {
+            logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                "Failed to get channel for friends server " + friendsServerId + " at host " + hostAddr);
+            continue;
+        }
+
+        auto request = std::make_shared<grpcimpl::internalaccountmanagement::v1::DeleteServerAccountRequest>();
+        request->set_pid(pid);
+        request->set_gameserverid(friendsServerId);
+
+        auto stub = grpcimpl::internalaccountmanagement::v1::InternalAccountManagementService::NewStub(channel);
+
+        auto response = co_await grpcimpl::callAsync<
+            grpcimpl::internalaccountmanagement::v1::InternalAccountManagementService::Stub,
+            void (grpcimpl::internalaccountmanagement::v1::InternalAccountManagementService::Stub::async::*)(
+                grpc::ClientContext*,
+                const grpcimpl::internalaccountmanagement::v1::DeleteServerAccountRequest*,
+                google::protobuf::Empty*,
+                std::function<void(grpc::Status)>
+            ),
+            grpcimpl::internalaccountmanagement::v1::DeleteServerAccountRequest,
+            google::protobuf::Empty
+        >(
+            stub,
+            &grpcimpl::internalaccountmanagement::v1::InternalAccountManagementService::Stub::async::DeleteServerAccount,
+            std::move(request),
+            settingsManager->getAccountsgRPCRequestTimeout()
+        );
+
+        if (response.second.ok() || response.second.error_code() == grpc::StatusCode::NOT_FOUND) {
+            success = true;
+            localSecureServerHostIndexRoundRobin[friendsServerId] = (index + 1) % hosts.size();
+            break;
+        }
+
+        logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+            "Failed to delete server account for friends server " + friendsServerId +
+            " at host " + hostAddr + ": " + response.second.error_message());
+    }
+
+    if (!success) {
+        logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+            "Failed to delete server account for friends server " + friendsServerId +
+            " from all available hosts");
+        co_return false;
+    }
+
+    co_return true;
+}
+
 } // namespace acc
+

@@ -9,4 +9,7 @@ target_sources(splatoon_server PRIVATE
         manualTask.hpp
         taskSync.hpp
         scheduler.hpp
-        scheduler.cpp)
+        scheduler.cpp
+        taskRunner.hpp
+        globalTaskScheduler.cpp
+        globalTaskScheduler.hpp)

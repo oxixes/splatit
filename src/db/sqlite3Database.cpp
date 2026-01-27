@@ -504,6 +504,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (!bindData(getFriendsInfoStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(getFriendsInfoStatement);
             goto push_results;
                       }
 
@@ -678,87 +679,6 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         }
 
         resultsData = std::move(friendRequests);
-    } else if (command->type == DBCommandType::UPDATE_USER_INFO) {
-        std::vector<DBDataType> dataTypes;
-        std::vector<std::shared_ptr<DBData>> data;
-
-        auto* updateData = std::any_cast<DBUserInfoUpdate>(&command->data);
-
-        // Not all data needs to be updated, so we need to check which fields are being updated.
-        // These are given by optionals, so we can just check if they have a value.
-        std::string sqlCommand = "UPDATE user_info SET ";
-        if (updateData->username.has_value()) {
-            sqlCommand += "username = ?, ";
-            dataTypes.push_back(DBDataType::STRING);
-            data.emplace_back(std::make_shared<DBString>(updateData->username.value()));
-        }
-
-        if (updateData->showPresence.has_value()) {
-            sqlCommand += "show_presence = ?, ";
-            dataTypes.push_back(DBDataType::INTEGER);
-            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->showPresence.value())));
-        }
-
-        if (updateData->showPlaying.has_value()) {
-            sqlCommand += "show_playing = ?, ";
-            dataTypes.push_back(DBDataType::INTEGER);
-            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->showPlaying.value())));
-        }
-
-        if (updateData->blockRequests.has_value()) {
-            sqlCommand += "block_requests = ?, ";
-            dataTypes.push_back(DBDataType::INTEGER);
-            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->blockRequests.value())));
-        }
-
-        if (updateData->nnaInfo.has_value()) {
-            sqlCommand += "nna_info = ?, ";
-            dataTypes.push_back(DBDataType::BLOB);
-            data.emplace_back(std::make_shared<DBBlob>(updateData->nnaInfo.value()));
-        }
-
-        if (updateData->presence.has_value()) {
-            sqlCommand += "presence = ?, ";
-            dataTypes.push_back(DBDataType::BLOB);
-            data.emplace_back(std::make_shared<DBBlob>(updateData->presence.value()));
-        }
-
-        if (updateData->comment.has_value()) {
-            sqlCommand += "comment = ?, ";
-            dataTypes.push_back(DBDataType::BLOB);
-            data.emplace_back(std::make_shared<DBBlob>(updateData->comment.value()));
-        }
-
-        if (updateData->lastOnline.has_value()) {
-            sqlCommand += "last_online = ?, ";
-            dataTypes.push_back(DBDataType::DATETIME);
-            data.emplace_back(std::make_shared<DBDateTime>(updateData->lastOnline.value()));
-        }
-
-        // Remove the last comma and space and add the WHERE clause
-        sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
-
-        dataTypes.push_back(DBDataType::INTEGER);
-        data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->pid)));
-
-        if (!craftStatement(sqlCommand, &statement)) {
-            resultStatus = DBResultStatus::FAILURE_STMT;
-            goto push_results;
-        }
-
-        if (!bindData(statement, dataTypes, data)) {
-            resultStatus = DBResultStatus::FAILURE_DATA;
-            sqlite3_finalize(statement);
-            goto push_results;
-        }
-
-        if (!runStatement(statement, dataTypes, returnedData)) {
-            resultStatus = DBResultStatus::FAILURE_EXEC;
-            sqlite3_finalize(statement);
-            goto push_results;
-        }
-
-        sqlite3_finalize(statement);
     } else if (command->type == DBCommandType::INSERT_USER_INFO) {
         if (insertUserInfoStatement == nullptr) {
             if (!craftStatement("INSERT INTO user_info (pid, username, show_presence, show_playing, block_requests, nna_info, presence, comment, last_online) "
@@ -819,8 +739,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (!bindData(getUserProfileStatement, {DBDataType::INTEGER},
                       {std::make_shared<DBInteger>((int64_t) query->pid)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
-            goto push_results;
-                      }
+                      goto push_results;
+        }
 
         std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
                                                    DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
@@ -1016,15 +936,81 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         resultsData = std::move(attributesData);
     } else if (command->type == DBCommandType::GET_ALL_AGREEMENTS) {
-        if (getAllAgreementsStatement == nullptr) {
-            const std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
-                                           "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
-                                           "FROM agreements ORDER BY type, version DESC;";
+        sqlite3_stmt* getAllAgreementsStatement = nullptr;
 
-            if (!craftStatement(sqlCommand, &getAllAgreementsStatement)) {
-                resultStatus = DBResultStatus::FAILURE_STMT;
-                goto push_results;
+        std::string sqlCommand = "SELECT type, version, country, language, language_name, publish_date, "
+                                 "main_title, sub_title, agree_text, non_agree_text, main_text, sub_text "
+                                 "FROM agreements";
+
+        auto* query = std::any_cast<DBAgreementsQuery>(&command->data);
+
+        std::vector<std::shared_ptr<DBData>> bindValues;
+        std::vector<DBDataType> bindTypes;
+
+        bool whereAdded = false;
+        if (query->type.has_value()) {
+            sqlCommand += " WHERE type = ?";
+            whereAdded = true;
+
+            bindTypes.push_back(DBDataType::STRING);
+            bindValues.push_back(std::make_shared<DBString>(query->type.value()));
+        }
+
+        if (query->country.has_value()) {
+            sqlCommand += whereAdded ? " AND country = ?" : " WHERE country = ?";
+            whereAdded = true;
+
+            bindTypes.push_back(DBDataType::STRING);
+            bindValues.push_back(std::make_shared<DBString>(query->country.value()));
+        }
+
+        if (query->language.has_value()) {
+            sqlCommand += whereAdded ? " AND language = ?" : " WHERE language = ?";
+            whereAdded = true;
+
+            bindTypes.push_back(DBDataType::STRING);
+            bindValues.push_back(std::make_shared<DBString>(query->language.value()));
+        }
+
+        if (query->version.has_value()) {
+            sqlCommand += whereAdded ? " AND version = ?" : " WHERE version = ?";
+
+            bindTypes.push_back(DBDataType::INTEGER);
+            bindValues.push_back(std::make_shared<DBInteger>(query->version.value()));
+        }
+
+        bool orderByAdded = false;
+        for (const auto& order : query->sortBy) {
+            if (!orderByAdded) {
+                sqlCommand += " ORDER BY ";
+                orderByAdded = true;
+            } else {
+                sqlCommand += ", ";
             }
+
+            std::string lowerCaseOrder = order.first;
+            std::ranges::transform(lowerCaseOrder, lowerCaseOrder.begin(), ::tolower);
+
+            sqlCommand += lowerCaseOrder + (order.second ? " ASC" : " DESC");
+        }
+
+        if (query->pageSize != std::numeric_limits<uint32_t>::max()) {
+            sqlCommand += " LIMIT " + std::to_string(query->pageSize) +
+                " OFFSET " + std::to_string(static_cast<int64_t>(query->pageSize) *  static_cast<int64_t>(query->pageNumber));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &getAllAgreementsStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(getAllAgreementsStatement, bindTypes, bindValues)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(getAllAgreementsStatement);
+            sqlite3_finalize(getAllAgreementsStatement);
+            goto push_results;
         }
 
         std::vector returnedDataTypes {DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
@@ -1035,11 +1021,13 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             resultStatus = DBResultStatus::FAILURE_EXEC;
             sqlite3_reset(getAllAgreementsStatement);
             sqlite3_clear_bindings(getAllAgreementsStatement);
+            sqlite3_finalize(getAllAgreementsStatement);
             goto push_results;
         }
 
         sqlite3_reset(getAllAgreementsStatement);
         sqlite3_clear_bindings(getAllAgreementsStatement);
+        sqlite3_finalize(getAllAgreementsStatement);
 
         std::vector<DBAgreementData> agreementsData;
         for (const auto& row : *returnedData) {
@@ -1139,7 +1127,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
     } else if (command->type == DBCommandType::GET_DEVICE) {
         if (getDeviceStatement == nullptr) {
             std::string sqlCommand = "SELECT id, language, platform_id, region, serial_num, system_ver, type, "
-                                     "updated_by, status, last_updated FROM devices WHERE id = ?;";
+                                     "updated_by, status, banned, last_updated FROM devices WHERE id = ?;";
 
             if (!craftStatement(sqlCommand, &getDeviceStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -1159,7 +1147,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (!runStatement(getDeviceStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
                                                 DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
                                                 DBDataType::STRING, DBDataType::STRING, DBDataType::STRING,
-                                                DBDataType::DATETIME},
+                                                DBDataType::INTEGER, DBDataType::DATETIME},
                                                 returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
             sqlite3_reset(getDeviceStatement);
@@ -1178,7 +1166,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                 .type = std::any_cast<std::string>((*returnedData)[0][6]->data),
                 .updatedBy = std::any_cast<std::string>((*returnedData)[0][7]->data),
                 .status = std::any_cast<std::string>((*returnedData)[0][8]->data),
-                .lastUpdated = std::any_cast<datetime_t>((*returnedData)[0][9]->data)
+                .banned = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][9]->data)),
+                .lastUpdated = std::any_cast<datetime_t>((*returnedData)[0][10]->data)
             };
 
             resultsData = std::move(deviceData);
@@ -1186,33 +1175,6 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(getDeviceStatement);
         sqlite3_clear_bindings(getDeviceStatement);
-    } else if (command->type == DBCommandType::GET_LATEST_PID) {
-        if (getLatestPIDStatement == nullptr) {
-            // New PIDS start at 1799999999 and go downwards, so we can just get the latest PID
-            std::string sqlCommand = "SELECT pid FROM users ORDER BY pid ASC LIMIT 1;";
-
-            if (!craftStatement(sqlCommand, &getLatestPIDStatement)) {
-                resultStatus = DBResultStatus::FAILURE_STMT;
-                goto push_results;
-            }
-        }
-
-        if (!runStatement(getLatestPIDStatement, {DBDataType::INTEGER}, returnedData)) {
-            resultStatus = DBResultStatus::FAILURE_EXEC;
-            sqlite3_reset(getLatestPIDStatement);
-            sqlite3_clear_bindings(getLatestPIDStatement);
-            goto push_results;
-        }
-
-        uint32_t newPid = 1800000000; // Default value if no users exist
-        if (!returnedData->empty()) {
-            newPid = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data));
-        }
-
-        sqlite3_reset(getLatestPIDStatement);
-        sqlite3_clear_bindings(getLatestPIDStatement);
-
-        resultsData = newPid;
     } else if (command->type == DBCommandType::GET_OWNERSHIP) {
         if (getOwnershipStatement == nullptr) {
             std::string sqlCommand = "SELECT pid, device_id, status, last_updated FROM ownerships WHERE pid = ? "
@@ -1497,8 +1459,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlite3_clear_bindings(inactivateDeviceOwnershipsStatement);
     } else if (command->type == DBCommandType::INSERT_OR_UPDATE_DEVICE) {
         if (insertOrUpdateDeviceStatement == nullptr) {
-            std::string sqlCommand = "INSERT INTO devices (id, language, platform_id, region, serial_num, system_ver, type, updated_by, status, last_updated) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            std::string sqlCommand = "INSERT INTO devices (id, language, platform_id, region, serial_num, system_ver, type, updated_by, status, banned, last_updated) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         "ON CONFLICT(id) DO UPDATE SET "
                         "language = excluded.language, "
                         "platform_id = excluded.platform_id, "
@@ -1508,6 +1470,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                         "type = excluded.type, "
                         "updated_by = excluded.updated_by, "
                         "status = excluded.status, "
+                        "banned = excluded.banned, "
                         "last_updated = excluded.last_updated;";
 
             if (!craftStatement(sqlCommand, &insertOrUpdateDeviceStatement)) {
@@ -1521,7 +1484,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (!bindData(insertOrUpdateDeviceStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
                                                       DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
                                                       DBDataType::STRING, DBDataType::STRING, DBDataType::STRING,
-                                                      DBDataType::DATETIME},
+                                                      DBDataType::INTEGER, DBDataType::DATETIME},
                       {std::make_shared<DBInteger>(query->deviceId),
                        std::make_shared<DBString>(query->language),
                        std::make_shared<DBInteger>(query->platformId),
@@ -1531,11 +1494,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                        std::make_shared<DBString>(query->type),
                        std::make_shared<DBString>(query->updatedBy),
                        std::make_shared<DBString>(query->status),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->banned)),
                        std::make_shared<DBDateTime>(query->lastUpdated)})) {
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(insertOrUpdateDeviceStatement);
             goto push_results;
-                       }
+        }
 
         if (!runStatement(insertOrUpdateDeviceStatement, {}, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -1760,7 +1724,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (insertProfileStatement == nullptr) {
             std::string sqlCommand = "INSERT INTO users (pid, username, password, email_id, mii_id, gender, region, tz, "
                                      "language, active, marketing, off_device, birth_date, country, create_date, last_updated) "
-                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                                     "VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
             if (!craftStatement(sqlCommand, &insertProfileStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
@@ -1770,14 +1734,13 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         auto *query = std::any_cast<DBUserProfileInsertQuery>(&command->data);
 
-        if (!bindData(insertProfileStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+        if (!bindData(insertProfileStatement, {DBDataType::STRING, DBDataType::STRING,
                                                  DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
                                                  DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
                                                  DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER,
                                                  DBDataType::STRING, DBDataType::STRING, DBDataType::DATETIME,
                                                  DBDataType::DATETIME},
-                                                  {std::make_shared<DBInteger>(query->pid),
-                                                   std::make_shared<DBString>(query->username),
+                                                  {std::make_shared<DBString>(query->username),
                                                    std::make_shared<DBString>(query->password),
                                                    std::make_shared<DBInteger>(query->emailId),
                                                    std::make_shared<DBInteger>(query->miiId),
@@ -1802,6 +1765,35 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             sqlite3_reset(insertProfileStatement);
             sqlite3_clear_bindings(insertProfileStatement);
             goto push_results;
+        }
+
+        // Use a separate select to get the ID, as triggers break sqlite3_last_insert_rowid (returns 0)
+        sqlite3_stmt* getPidByUsernameStatement = nullptr;
+        if (!craftStatement("SELECT pid FROM users WHERE username = ?;", &getPidByUsernameStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(getPidByUsernameStatement, {DBDataType::STRING}, {std::make_shared<DBString>(query->username)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(getPidByUsernameStatement);
+            goto push_results;
+        }
+
+        auto pidResults = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
+        if (!runStatement(getPidByUsernameStatement, {DBDataType::INTEGER}, pidResults) || pidResults->empty() || pidResults->at(0).empty()) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(getPidByUsernameStatement);
+            goto push_results;
+        }
+
+        int64_t insertedId = std::any_cast<int64_t>(std::dynamic_pointer_cast<DBInteger>(pidResults->at(0).at(0))->data);
+        sqlite3_finalize(getPidByUsernameStatement);
+
+        if (insertedId <= 0) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        } else {
+            resultsData = insertedId;
         }
 
         sqlite3_reset(insertProfileStatement);
@@ -2345,7 +2337,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         if (query->version.has_value()) {
             // Delete specific version
             if (deleteAgreementVersionStatement == nullptr) {
-                std::string sqlCommand = "DELETE FROM agreements WHERE type = ? AND version = ? AND country = ? AND language = ?;";
+                const std::string sqlCommand = "DELETE FROM agreements WHERE type = ? AND version = ? AND country = ? AND language = ?;";
 
                 if (!craftStatement(sqlCommand, &deleteAgreementVersionStatement)) {
                     resultStatus = DBResultStatus::FAILURE_STMT;
@@ -2353,8 +2345,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                 }
             }
 
-            if (!bindData(deleteAgreementVersionStatement, {DBDataType::STRING, DBDataType::INTEGER,
-                                                           DBDataType::STRING, DBDataType::STRING},
+            if (!bindData(deleteAgreementVersionStatement, {DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING},
                           {std::make_shared<DBString>(query->type),
                            std::make_shared<DBInteger>(query->version.value()),
                            std::make_shared<DBString>(query->country),
@@ -2499,6 +2490,961 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(unblockFriendStatement);
         sqlite3_clear_bindings(unblockFriendStatement);
+    } else if (command->type == DBCommandType::COUNT_AGREEMENTS) {
+        sqlite3_stmt* countAgreementsStatement = nullptr;
+
+        auto *query = std::any_cast<DBAgreementsQuery>(&command->data);
+
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        std::string sqlCommand = "SELECT COUNT(*) FROM agreements";
+
+        bool whereAdded = false;
+        if (query->type.has_value()) {
+            sqlCommand += " WHERE type = ?";
+            whereAdded = true;
+
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->type.value()));
+        }
+
+        if (query->country.has_value()) {
+            sqlCommand += whereAdded ? " AND country = ?" : " WHERE country = ?";
+            whereAdded = true;
+
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->country.value()));
+        }
+
+        if (query->language.has_value()) {
+            sqlCommand += whereAdded ? " AND language = ?" : " WHERE language = ?";
+            whereAdded = true;
+
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->language.value()));
+        }
+
+        if (query->version.has_value()) {
+            sqlCommand += whereAdded ? " AND version = ?" : " WHERE version = ?";
+
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->version.value()));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &countAgreementsStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(countAgreementsStatement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(countAgreementsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(countAgreementsStatement, {DBDataType::INTEGER}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(countAgreementsStatement);
+            goto push_results;
+        }
+
+        if (!returnedData->empty() && !(*returnedData)[0].empty()) {
+            resultsData = std::any_cast<int64_t>(std::dynamic_pointer_cast<DBInteger>((*returnedData)[0][0])->data);
+        } else {
+            resultsData = static_cast<int64_t>(0);
+        }
+    } else if (command->type == DBCommandType::GET_SIGNED_AGREEMENTS) {
+        sqlite3_stmt* getSignedAgreementsStatement = nullptr;
+
+        auto *query = std::any_cast<DBUserAgreementsQuery>(&command->data);
+
+        std::string sqlCommand = "SELECT type, version, country, signed_date FROM user_agreements WHERE pid = ?;";
+
+        if (!craftStatement(sqlCommand, &getSignedAgreementsStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(getSignedAgreementsStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(getSignedAgreementsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(getSignedAgreementsStatement, {DBDataType::STRING, DBDataType::INTEGER,
+                                                         DBDataType::STRING, DBDataType::DATETIME},
+                          returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(getSignedAgreementsStatement);
+            goto push_results;
+        }
+
+        std::vector<DBUserAgreementData> agreements;
+        for (const auto& row : *returnedData) {
+            DBUserAgreementData agreement {
+                .type = std::any_cast<std::string>(row[0]->data),
+                .version = static_cast<int>(std::any_cast<int64_t>(row[1]->data)),
+                .country = std::any_cast<std::string>(row[2]->data),
+                .signedAt = std::any_cast<datetime_t>(row[3]->data)
+            };
+            agreements.push_back(std::move(agreement));
+        }
+
+        resultsData = std::move(agreements);
+        sqlite3_finalize(getSignedAgreementsStatement);
+    } else if (command->type == DBCommandType::LIST_DEVICES) {
+        sqlite3_stmt* listDevicesStatement = nullptr;
+
+        auto *query = std::any_cast<DBDevicesListQuery>(&command->data);
+
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        std::string sqlCommand = "SELECT id, language, platform_id, region, serial_num, system_ver, type, "
+                                 "updated_by, status, banned, last_updated FROM devices";
+
+        bool whereAdded = false;
+        if (query->platform.has_value()) {
+            sqlCommand += " WHERE platform_id = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->platform.value()));
+        }
+
+        if (query->region.has_value()) {
+            sqlCommand += whereAdded ? " AND region = ?" : " WHERE region = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->region.value()));
+        }
+
+        if (query->banned.has_value()) {
+            sqlCommand += whereAdded ? " AND banned = ?" : " WHERE banned = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->banned.value() ? 1 : 0));
+        }
+
+        if (query->serialNumber.has_value()) {
+            sqlCommand += whereAdded ? " AND serial_num = ?" : " WHERE serial_num = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->serialNumber.value()));
+        }
+
+        if (query->type.has_value()) {
+            sqlCommand += whereAdded ? " AND type = ?" : " WHERE type = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->type.value()));
+        }
+
+        // Add sorting
+        if (!query->sortBy.empty()) {
+            sqlCommand += " ORDER BY ";
+            bool first = true;
+            for (const auto& [field, desc] : query->sortBy) {
+                if (!first) sqlCommand += ", ";
+                first = false;
+
+                // Map field names to database columns
+                if (field == "id") sqlCommand += "id";
+                else if (field == "platform") sqlCommand += "platform_id";
+                else if (field == "region") sqlCommand += "region";
+                else if (field == "serial") sqlCommand += "serial_num";
+                else if (field == "lastUpdated") sqlCommand += "last_updated";
+                else sqlCommand += field;
+
+                sqlCommand += desc ? " DESC" : " ASC";
+            }
+        }
+
+        // Add pagination
+        if (query->pageSize != std::numeric_limits<uint64_t>::max()) {
+            sqlCommand += " LIMIT ? OFFSET ?";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->pageSize));
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->pageNumber * query->pageSize));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &listDevicesStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!dataTypes.empty() && !bindData(listDevicesStatement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(listDevicesStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(listDevicesStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
+                                                 DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                                 DBDataType::STRING, DBDataType::STRING, DBDataType::STRING,
+                                                 DBDataType::INTEGER, DBDataType::DATETIME},
+                          returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(listDevicesStatement);
+            goto push_results;
+        }
+
+        std::vector<DBDeviceData> devices;
+        for (const auto& row : *returnedData) {
+            DBDeviceData device {
+                .deviceId = static_cast<uint32_t>(std::any_cast<int64_t>(row[0]->data)),
+                .language = std::any_cast<std::string>(row[1]->data),
+                .platformId = static_cast<uint32_t>(std::any_cast<int64_t>(row[2]->data)),
+                .region = static_cast<uint32_t>(std::any_cast<int64_t>(row[3]->data)),
+                .serialNumber = std::any_cast<std::string>(row[4]->data),
+                .systemVersion = std::any_cast<std::string>(row[5]->data),
+                .type = std::any_cast<std::string>(row[6]->data),
+                .updatedBy = std::any_cast<std::string>(row[7]->data),
+                .status = std::any_cast<std::string>(row[8]->data),
+                .banned = static_cast<bool>(std::any_cast<int64_t>(row[9]->data)),
+                .lastUpdated = std::any_cast<datetime_t>(row[10]->data)
+            };
+            devices.push_back(std::move(device));
+        }
+
+        resultsData = std::move(devices);
+        sqlite3_finalize(listDevicesStatement);
+    } else if (command->type == DBCommandType::LIST_ACCOUNTS) {
+        sqlite3_stmt* listAccountsStatement = nullptr;
+
+        auto *query = std::any_cast<DBAccountsListQuery>(&command->data);
+
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        std::string sqlCommand = "SELECT u.pid, u.username, u.password, e.id, e.address, e.parent, e.\"primary\", "
+                                 "e.reachable, e.type, e.updated_by, e.validated, e.validated_date, e.validation_code, "
+                                 "m.id, m.hash, m.name, m.\"primary\", m.data, u.gender, u.region, u.tz, u.language, "
+                                 "u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated "
+                                 "FROM users u "
+                                 "LEFT JOIN emails e ON u.email_id = e.id "
+                                 "LEFT JOIN miis m ON u.mii_id = m.id";
+
+        bool whereAdded = false;
+        if (query->username.has_value()) {
+            sqlCommand += " WHERE u.username LIKE ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>("%" + query->username.value() + "%"));
+        }
+
+        if (query->gender.has_value()) {
+            sqlCommand += whereAdded ? " AND u.gender = ?" : " WHERE u.gender = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->gender.value() ? 1 : 0));
+        }
+
+        if (query->region.has_value()) {
+            sqlCommand += whereAdded ? " AND u.region = ?" : " WHERE u.region = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->region.value()));
+        }
+
+        if (query->active.has_value()) {
+            sqlCommand += whereAdded ? " AND u.active = ?" : " WHERE u.active = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->active.value() ? 1 : 0));
+        }
+
+        // Add sorting
+        if (!query->sortBy.empty()) {
+            sqlCommand += " ORDER BY ";
+            bool first = true;
+            for (const auto& [field, desc] : query->sortBy) {
+                if (!first) sqlCommand += ", ";
+                first = false;
+
+                // Map field names to database columns
+                if (field == "pid") sqlCommand += "u.pid";
+                else if (field == "username") sqlCommand += "u.username";
+                else if (field == "region") sqlCommand += "u.region";
+                else sqlCommand += "u." + field;
+
+                sqlCommand += desc ? " DESC" : " ASC";
+            }
+        }
+
+        // Add pagination
+        if (query->pageSize != std::numeric_limits<uint64_t>::max()) {
+            sqlCommand += " LIMIT ? OFFSET ?";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->pageSize));
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->pageNumber * query->pageSize));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &listAccountsStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!dataTypes.empty() && !bindData(listAccountsStatement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(listAccountsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(listAccountsStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                                  DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER,
+                                                  DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+                                                  DBDataType::STRING, DBDataType::INTEGER, DBDataType::DATETIME,
+                                                  DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING,
+                                                  DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING,
+                                                  DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
+                                                  DBDataType::STRING, DBDataType::INTEGER, DBDataType::INTEGER,
+                                                  DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
+                                                  DBDataType::DATETIME, DBDataType::DATETIME},
+                          returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(listAccountsStatement);
+            goto push_results;
+        }
+
+        std::vector<DBUserProfileData> accounts;
+        for (const auto& row : *returnedData) {
+            DBUserProfileData account {
+                .pid = static_cast<uint32_t>(std::any_cast<int64_t>(row[0]->data)),
+                .username = std::any_cast<std::string>(row[1]->data),
+                .emailId = std::any_cast<int64_t>(row[3]->data),
+                .miiId = std::any_cast<int64_t>(row[13]->data),
+                .gender = static_cast<bool>(std::any_cast<int64_t>(row[18]->data)),
+                .region = std::any_cast<int64_t>(row[19]->data),
+                .tz = std::any_cast<std::string>(row[20]->data),
+                .language = std::any_cast<std::string>(row[21]->data),
+                .active = static_cast<bool>(std::any_cast<int64_t>(row[22]->data)),
+                .marketing = static_cast<bool>(std::any_cast<int64_t>(row[23]->data)),
+                .offDevice = static_cast<bool>(std::any_cast<int64_t>(row[24]->data)),
+                .birthdate = std::any_cast<std::string>(row[25]->data),
+                .country = std::any_cast<std::string>(row[26]->data),
+                .created = std::any_cast<datetime_t>(row[27]->data),
+                .updated = std::any_cast<datetime_t>(row[28]->data),
+                .email = std::any_cast<std::string>(row[4]->data),
+                .emailParent = static_cast<bool>(std::any_cast<int64_t>(row[5]->data)),
+                .emailPrimary = static_cast<bool>(std::any_cast<int64_t>(row[6]->data)),
+                .emailReachable = static_cast<bool>(std::any_cast<int64_t>(row[7]->data)),
+                .emailType = std::any_cast<std::string>(row[8]->data),
+                .emailUpdatedBy = std::any_cast<std::string>(row[9]->data),
+                .emailValidated = static_cast<bool>(std::any_cast<int64_t>(row[10]->data)),
+                .emailValidatedDate = std::any_cast<datetime_t>(row[11]->data),
+                .emailValidationCode = std::any_cast<std::string>(row[12]->data),
+                .miiName = std::any_cast<std::string>(row[15]->data),
+                .miiData = std::any_cast<std::string>(row[17]->data),
+                .miiPrimary = static_cast<bool>(std::any_cast<int64_t>(row[16]->data)),
+                .miiHash = std::any_cast<std::string>(row[14]->data)
+            };
+            accounts.push_back(std::move(account));
+        }
+
+        resultsData = std::move(accounts);
+        sqlite3_finalize(listAccountsStatement);
+    } else if (command->type == DBCommandType::DELETE_USER_DEVICE_ATTRIBUTE) {
+        auto *query = std::any_cast<DBDeviceAttributeDeleteQuery>(&command->data);
+
+        if (deleteAttributeStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM device_attributes WHERE device_id = ? AND pid = ? AND name = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteAttributeStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteAttributeStatement, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING},
+                      {std::make_shared<DBInteger>(query->deviceId),
+                       std::make_shared<DBInteger>(query->pid),
+                       std::make_shared<DBString>(query->name)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAttributeStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAttributeStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAttributeStatement);
+        sqlite3_clear_bindings(deleteAttributeStatement);
+    } else if (command->type == DBCommandType::DELETE_DEVICE_ATTRIBUTES_FOR_OWNERSHIP) {
+        auto *query = std::any_cast<DBOwnershipDeleteQuery>(&command->data);
+
+        if (deleteAttributesStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM device_attributes WHERE device_id = ? AND pid = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteAttributesStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteAttributesStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->deviceId),
+                       std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAttributesStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAttributesStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAttributesStatement);
+        sqlite3_clear_bindings(deleteAttributesStatement);
+    } else if (command->type == DBCommandType::DELETE_DEVICE) {
+        auto *query = std::any_cast<DBIdQuery>(&command->data);
+
+        if (deleteDeviceStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM devices WHERE id = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteDeviceStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteDeviceStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->id)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteDeviceStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteDeviceStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteDeviceStatement);
+        sqlite3_clear_bindings(deleteDeviceStatement);
+    } else if (command->type == DBCommandType::DELETE_DEVICE_OWNERSHIPS) {
+        auto *query = std::any_cast<DBIdQuery>(&command->data);
+
+        if (deleteDeviceOwnershipsStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM ownerships WHERE device_id = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteDeviceOwnershipsStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteDeviceOwnershipsStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->id)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteDeviceOwnershipsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteDeviceOwnershipsStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteDeviceOwnershipsStatement);
+        sqlite3_clear_bindings(deleteDeviceOwnershipsStatement);
+    } else if (command->type == DBCommandType::DELETE_DEVICE_ATTRIBUTES) {
+        auto *query = std::any_cast<DBIdQuery>(&command->data);
+
+        if (deleteDeviceAttributesStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM device_attributes WHERE device_id = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteDeviceAttributesStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteDeviceAttributesStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->id)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteDeviceAttributesStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteDeviceAttributesStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteDeviceAttributesStatement);
+        sqlite3_clear_bindings(deleteDeviceAttributesStatement);
+    } else if (command->type == DBCommandType::DELETE_OWNERSHIP) {
+        auto *query = std::any_cast<DBOwnershipDeleteQuery>(&command->data);
+
+        if (deleteOwnershipStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM ownerships WHERE pid = ? AND device_id = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteOwnershipStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteOwnershipStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid),
+                       std::make_shared<DBInteger>(query->deviceId)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteOwnershipStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteOwnershipStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteOwnershipStatement);
+        sqlite3_clear_bindings(deleteOwnershipStatement);
+    } else if (command->type == DBCommandType::DELETE_USER_AGREEMENT) {
+        auto *query = std::any_cast<DBUserAgreementDeleteQuery>(&command->data);
+
+        if (deleteUserAgreementStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM user_agreements WHERE pid = ? AND type = ? AND version = ? AND country = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteUserAgreementStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        if (!bindData(deleteUserAgreementStatement, {DBDataType::INTEGER, DBDataType::STRING, DBDataType::INTEGER, DBDataType::STRING},
+                      {std::make_shared<DBInteger>(query->pid),
+                       std::make_shared<DBString>(query->type),
+                       std::make_shared<DBInteger>(query->version),
+                       std::make_shared<DBString>(query->country)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteUserAgreementStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteUserAgreementStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteUserAgreementStatement);
+        sqlite3_clear_bindings(deleteUserAgreementStatement);
+    } else if (command->type == DBCommandType::DELETE_GAME_SERVER_ACCESS) {
+        if (deleteGameServerAccessStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM game_server_access WHERE pid = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteGameServerAccessStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto *query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteGameServerAccessStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteGameServerAccessStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteGameServerAccessStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteGameServerAccessStatement);
+        sqlite3_clear_bindings(deleteGameServerAccessStatement);
+    } else if (command->type == DBCommandType::INACTIVATE_ALL_USER_OWNERSHIPS) {
+        auto *query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (inactivateOwnershipsStatement == nullptr) {
+            std::string sqlCommand = "UPDATE ownerships SET status = 'INACTIVE', last_updated = ? WHERE pid = ?;";
+
+            if (!craftStatement(sqlCommand, &inactivateOwnershipsStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+
+        if (!bindData(inactivateOwnershipsStatement, {DBDataType::INTEGER, DBDataType::DATETIME},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBDateTime>(now)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_reset(inactivateOwnershipsStatement);
+            sqlite3_clear_bindings(inactivateOwnershipsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(inactivateOwnershipsStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(inactivateOwnershipsStatement);
+        sqlite3_clear_bindings(inactivateOwnershipsStatement);
+    } else if (command->type == DBCommandType::COUNT_DEVICES) {
+        sqlite3_stmt* countDevicesStatement = nullptr;
+
+        auto *query = std::any_cast<DBDevicesListQuery>(&command->data);
+
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        std::string sqlCommand = "SELECT COUNT(*) FROM devices";
+
+        bool whereAdded = false;
+        if (query->platform.has_value()) {
+            sqlCommand += " WHERE platform_id = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->platform.value()));
+        }
+
+        if (query->region.has_value()) {
+            sqlCommand += whereAdded ? " AND region = ?" : " WHERE region = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->region.value()));
+        }
+
+        if (query->banned.has_value()) {
+            sqlCommand += whereAdded ? " AND banned = ?" : " WHERE banned = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->banned.value() ? 1 : 0));
+        }
+
+        if (query->serialNumber.has_value()) {
+            sqlCommand += whereAdded ? " AND serial_num = ?" : " WHERE serial_num = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->serialNumber.value()));
+        }
+
+        if (query->type.has_value()) {
+            sqlCommand += whereAdded ? " AND type = ?" : " WHERE type = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(query->type.value()));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &countDevicesStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!dataTypes.empty() && !bindData(countDevicesStatement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(countDevicesStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(countDevicesStatement, {DBDataType::INTEGER}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(countDevicesStatement);
+            goto push_results;
+        }
+
+        if (!returnedData->empty() && !(*returnedData)[0].empty()) {
+            resultsData = std::any_cast<int64_t>(std::dynamic_pointer_cast<DBInteger>((*returnedData)[0][0])->data);
+        } else {
+            resultsData = static_cast<int64_t>(0);
+        }
+
+        sqlite3_finalize(countDevicesStatement);
+    } else if (command->type == DBCommandType::COUNT_ACCOUNTS) {
+        sqlite3_stmt* countAccountsStatement = nullptr;
+
+        auto *query = std::any_cast<DBAccountsListQuery>(&command->data);
+
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        std::string sqlCommand = "SELECT COUNT(*) FROM users u";
+
+        bool whereAdded = false;
+        if (query->username.has_value()) {
+            sqlCommand += " WHERE u.username LIKE ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>("%" + query->username.value() + "%"));
+        }
+
+        if (query->gender.has_value()) {
+            sqlCommand += whereAdded ? " AND u.gender = ?" : " WHERE u.gender = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->gender.value() ? 1 : 0));
+        }
+
+        if (query->region.has_value()) {
+            sqlCommand += whereAdded ? " AND u.region = ?" : " WHERE u.region = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->region.value()));
+        }
+
+        if (query->active.has_value()) {
+            sqlCommand += whereAdded ? " AND u.active = ?" : " WHERE u.active = ?";
+            whereAdded = true;
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(query->active.value() ? 1 : 0));
+        }
+
+        sqlCommand += ";";
+
+        if (!craftStatement(sqlCommand, &countAccountsStatement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!dataTypes.empty() && !bindData(countAccountsStatement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(countAccountsStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(countAccountsStatement, {DBDataType::INTEGER}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(countAccountsStatement);
+            goto push_results;
+        }
+
+        if (!returnedData->empty() && !(*returnedData)[0].empty()) {
+            resultsData = std::any_cast<int64_t>(std::dynamic_pointer_cast<DBInteger>((*returnedData)[0][0])->data);
+        } else {
+            resultsData = static_cast<int64_t>(0);
+        }
+
+        sqlite3_finalize(countAccountsStatement);
+    } else if (command->type == DBCommandType::DELETE_ALL_BLOCKS_BY_PID) {
+        if (deleteAllBlocksByPidStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM blocks WHERE pid = ? OR blocked_pid = ?;";
+            if (!craftStatement(sqlCommand, &deleteAllBlocksByPidStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteAllBlocksByPidStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAllBlocksByPidStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAllBlocksByPidStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAllBlocksByPidStatement);
+        sqlite3_clear_bindings(deleteAllBlocksByPidStatement);
+    } else if (command->type == DBCommandType::DELETE_ALL_FRIEND_REQUESTS_BY_PID) {
+        if (deleteAllFriendRequestsByPidStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM friend_requests WHERE from_pid = ? OR to_pid = ?;";
+            if (!craftStatement(sqlCommand, &deleteAllFriendRequestsByPidStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteAllFriendRequestsByPidStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAllFriendRequestsByPidStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAllFriendRequestsByPidStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAllFriendRequestsByPidStatement);
+        sqlite3_clear_bindings(deleteAllFriendRequestsByPidStatement);
+    } else if (command->type == DBCommandType::DELETE_ALL_FRIENDSHIPS_BY_PID) {
+        if (deleteAllFriendshipsByPidStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM friendships WHERE pid = ? OR friend_pid = ?;";
+            if (!craftStatement(sqlCommand, &deleteAllFriendshipsByPidStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteAllFriendshipsByPidStatement, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid), std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAllFriendshipsByPidStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAllFriendshipsByPidStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAllFriendshipsByPidStatement);
+        sqlite3_clear_bindings(deleteAllFriendshipsByPidStatement);
+    } else if (command->type == DBCommandType::DELETE_ALL_NOTIFICATIONS_BY_PID) {
+        if (deleteAllNotificationsByPidStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM notifications WHERE for = ?;";
+            if (!craftStatement(sqlCommand, &deleteAllNotificationsByPidStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteAllNotificationsByPidStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteAllNotificationsByPidStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteAllNotificationsByPidStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteAllNotificationsByPidStatement);
+        sqlite3_clear_bindings(deleteAllNotificationsByPidStatement);
+    } else if (command->type == DBCommandType::DELETE_USER_INFO_BY_PID) {
+        if (deleteUserInfoByPidStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM user_info WHERE pid = ?;";
+            if (!craftStatement(sqlCommand, &deleteUserInfoByPidStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBPidQuery>(&command->data);
+
+        if (!bindData(deleteUserInfoByPidStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->pid)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteUserInfoByPidStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteUserInfoByPidStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(deleteUserInfoByPidStatement);
+        sqlite3_clear_bindings(deleteUserInfoByPidStatement);
+    } else if (command->type == DBCommandType::INSERT_TASK) {
+        if (insertTaskStatement == nullptr) {
+            std::string sqlCommand = "INSERT INTO pending_tasks (type, params) VALUES (?, ?);";
+
+            if (!craftStatement(sqlCommand, &insertTaskStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto *query = std::any_cast<DBTaskInsertQuery>(&command->data);
+
+        if (!bindData(insertTaskStatement, {DBDataType::INTEGER, DBDataType::STRING},
+                      {std::make_shared<DBInteger>(query->type),
+                       std::make_shared<DBString>(query->params)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertTaskStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(insertTaskStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertTaskStatement);
+            sqlite3_clear_bindings(insertTaskStatement);
+            goto push_results;
+        }
+
+        int64_t insertedId = sqlite3_last_insert_rowid(db);
+        if (insertedId < 0) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(insertTaskStatement);
+            sqlite3_clear_bindings(insertTaskStatement);
+            goto push_results;
+        }
+
+        resultsData = insertedId;
+
+        sqlite3_reset(insertTaskStatement);
+        sqlite3_clear_bindings(insertTaskStatement);
+    } else if (command->type == DBCommandType::GET_ALL_TASKS) {
+        if (getAllTasksStatement == nullptr) {
+            std::string sqlCommand = "SELECT id, type, params FROM pending_tasks;";
+
+            if (!craftStatement(sqlCommand, &getAllTasksStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        std::vector returnedDataTypes {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING};
+
+        if (!runStatement(getAllTasksStatement, returnedDataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getAllTasksStatement);
+            sqlite3_clear_bindings(getAllTasksStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(getAllTasksStatement);
+        sqlite3_clear_bindings(getAllTasksStatement);
+
+        std::vector<DBTaskData> tasksData;
+        for (const auto& row : *returnedData) {
+            DBTaskData taskData {};
+            taskData.id = std::any_cast<int64_t>(row[0]->data);
+            taskData.type = static_cast<int>(std::any_cast<int64_t>(row[1]->data));
+            taskData.params = std::any_cast<std::string>(row[2]->data);
+
+            tasksData.push_back(taskData);
+        }
+
+        resultsData = tasksData;
+    } else if (command->type == DBCommandType::DELETE_TASK) {
+        if (deleteTaskStatement == nullptr) {
+            std::string sqlCommand = "DELETE FROM pending_tasks WHERE id = ?;";
+
+            if (!craftStatement(sqlCommand, &deleteTaskStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto *query = std::any_cast<DBIdQuery>(&command->data);
+
+        if (!bindData(deleteTaskStatement, {DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(query->id)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(deleteTaskStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(deleteTaskStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(deleteTaskStatement);
+            sqlite3_clear_bindings(deleteTaskStatement);
+            goto push_results;
+        }
+
+        sqlite3_reset(deleteTaskStatement);
+        sqlite3_clear_bindings(deleteTaskStatement);
     } else {
         logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Unknown command type: " + std::to_string(static_cast<int>(command->type)));
@@ -2680,7 +3626,6 @@ void sqlite3Database::close() {
     if (getDeviceAttributesStatement != nullptr) sqlite3_finalize(getDeviceAttributesStatement);
     if (getAgreementStatement != nullptr) sqlite3_finalize(getAgreementStatement);
     if (getDeviceStatement != nullptr) sqlite3_finalize(getDeviceStatement);
-    if (getLatestPIDStatement != nullptr) sqlite3_finalize(getLatestPIDStatement);
     if (getOwnershipStatement != nullptr) sqlite3_finalize(getOwnershipStatement);
     if (getOwnershipsStatement != nullptr) sqlite3_finalize(getOwnershipsStatement);
     if (getPersistentNotificationsStatement != nullptr) sqlite3_finalize(getPersistentNotificationsStatement);
@@ -2708,7 +3653,24 @@ void sqlite3Database::close() {
     if (deleteFriendStatement != nullptr) sqlite3_finalize(deleteFriendStatement);
     if (deleteFriendRequestStatement != nullptr) sqlite3_finalize(deleteFriendRequestStatement);
     if (deletePersistentNotificationStatement != nullptr) sqlite3_finalize(deletePersistentNotificationStatement);
+    if (deleteAgreementStatement != nullptr) sqlite3_finalize(deleteAgreementStatement);
+    if (deleteAgreementVersionStatement != nullptr) sqlite3_finalize(deleteAgreementVersionStatement);
+    if (deleteAttributeStatement != nullptr) sqlite3_finalize(deleteAttributeStatement);
+    if (deleteAttributesStatement != nullptr) sqlite3_finalize(deleteAttributesStatement);
+    if (deleteDeviceStatement != nullptr) sqlite3_finalize(deleteDeviceStatement);
+    if (deleteOwnershipStatement != nullptr) sqlite3_finalize(deleteOwnershipStatement);
+    if (deleteUserAgreementStatement != nullptr) sqlite3_finalize(deleteUserAgreementStatement);
+    if (deleteGameServerAccessStatement != nullptr) sqlite3_finalize(deleteGameServerAccessStatement);
+    if (inactivateOwnershipsStatement != nullptr) sqlite3_finalize(inactivateOwnershipsStatement);
     if (unblockFriendStatement != nullptr) sqlite3_finalize(unblockFriendStatement);
+    if (deleteAllBlocksByPidStatement != nullptr) sqlite3_finalize(deleteAllBlocksByPidStatement);
+    if (deleteAllFriendRequestsByPidStatement != nullptr) sqlite3_finalize(deleteAllFriendRequestsByPidStatement);
+    if (deleteAllFriendshipsByPidStatement != nullptr) sqlite3_finalize(deleteAllFriendshipsByPidStatement);
+    if (deleteAllNotificationsByPidStatement != nullptr) sqlite3_finalize(deleteAllNotificationsByPidStatement);
+    if (deleteUserInfoByPidStatement != nullptr) sqlite3_finalize(deleteUserInfoByPidStatement);
+    if (insertTaskStatement != nullptr) sqlite3_finalize(insertTaskStatement);
+    if (getAllTasksStatement != nullptr) sqlite3_finalize(getAllTasksStatement);
+    if (deleteTaskStatement != nullptr) sqlite3_finalize(deleteTaskStatement);
 
     sqlite3_close(db);
     db = nullptr;

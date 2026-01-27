@@ -14,6 +14,7 @@
 #include "../../util/util.hpp"
 #include "../../util/task.hpp"
 #include "../../util/scheduler.hpp"
+#include "../../util/taskRunner.hpp"
 
 namespace nex::rmc {
 
@@ -65,12 +66,12 @@ struct function_traits<ReturnType(ClassType::*)(Args...)>
 
 #define REGISTER_CALL(callback, protoId, methodId) registerCall(this, &callback, protoId, methodId)
 
-class Server {
+class Server : public async::TaskRunner {
 public:
-    virtual ~Server() = default;
+    ~Server() override = default;
 
     void registerPRUDPServer(const std::shared_ptr<prudp::Server>& server, uint8_t listenPort, int workerCount);
-    void scheduleArbitraryFunction(async::Task<void>&& task) const;
+    void scheduleArbitraryFunction(async::Task<void>&& task) const override;
 
 protected:
     explicit Server(std::shared_ptr<Logger::Logger> logger);

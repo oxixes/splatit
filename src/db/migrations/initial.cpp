@@ -26,7 +26,7 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
             sqlCmds.emplace_back("CREATE TABLE devices (id INTEGER, language TEXT NOT NULL, platform_id INTEGER NOT NULL,"
                                  "region INTEGER NOT NULL, serial_num TEXT NOT NULL, system_ver TEXT NOT NULL,"
                                  "type TEXT NOT NULL, updated_by TEXT NOT NULL, status TEXT NOT NULL,"
-                                 "last_updated TEXT NOT NULL, PRIMARY KEY (id));");
+                                 "banned INTEGER NOT NULL, last_updated TEXT NOT NULL, PRIMARY KEY (id));");
             sqlCmds.emplace_back("CREATE TABLE device_attributes (device_id INTEGER NOT NULL, pid INTEGER NOT NULL,"
                                  "name TEXT NOT NULL, value TEXT NOT NULL, created_date TEXT NOT NULL,"
                                  "PRIMARY KEY (device_id, pid, name), FOREIGN KEY (device_id) REFERENCES devices(id) "
@@ -44,9 +44,22 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
             sqlCmds.emplace_back("CREATE TABLE user_agreements (pid INTEGER NOT NULL, type TEXT NOT NULL, version INTEGER NOT NULL, "
                                    "country TEXT NOT NULL, signed_date TEXT NOT NULL, PRIMARY KEY (pid, type, version, country), "
                                    "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE pending_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, type INTEGER NOT NULL, "
+                                   "params TEXT NOT NULL);");
 
             sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_username ON users(username);");
             sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_active_user ON ownerships(pid) WHERE status = 'ACTIVE';");
+
+            sqlCmds.emplace_back("CREATE TABLE pid_sequence (value INTEGER);");
+            sqlCmds.emplace_back("INSERT INTO pid_sequence (value) VALUES (1800000000);");
+            sqlCmds.emplace_back("CREATE TRIGGER set_pid AFTER INSERT ON users "
+                                 "FOR EACH ROW "
+                                 "WHEN NEW.pid = 0 "
+                                 "BEGIN "
+                                 "UPDATE users SET pid = (SELECT value - 1 FROM pid_sequence) WHERE pid = NEW.pid; "
+                                 "UPDATE pid_sequence SET value = value - 1; "
+                                 "END;");
+
             sqlCmds.emplace_back("COMMIT;");
             break;
     }

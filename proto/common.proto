@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package grpcimpl.common;
+
+message PageRequest {
+  uint64 pageNumber = 1;
+  uint64 pageSize = 2;
+}
+
+message PageResponse {
+  uint64 totalItems = 1;
+  uint64 totalPages = 2;
+  uint64 currentPage = 3;
+}

@@ -43,6 +43,8 @@ public:
                               std::string base64JWTKey);
     ~FriendsSecureRMC() override = default;
 
+    async::Task<bool> deleteAccount(uint32_t pid) const;
+
 private:
     async::Task<void> register_(ClientInfo client, Request req,
                                 std::unique_ptr<List<StationURL>> urls);

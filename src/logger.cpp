@@ -8,7 +8,12 @@ void Logger::log(level level, group group, const std::string& msg) {
     std::unique_lock lock(logMutex);
 
     time_t currentTime = std::time(nullptr);
-    tm localTime = *std::localtime(&currentTime);
+    tm localTime;
+#ifdef _WIN32
+    localtime_s(&localTime, &currentTime);
+#else
+    localtime_r(&currentTime, &localTime);
+#endif
 
     std::cout << "[" << std::put_time(&localTime, "%d/%m/%Y %H:%M:%S") << "] "
             << "[" << getLevelName(level) << "] "
@@ -68,6 +73,8 @@ std::string Logger::getGroupName(group group) {
             return "SETUP";
         case group::MANAGEMENT:
             return "MANAGEMENT";
+        case group::GLOBAL_TASKS:
+            return "GLOBAL TASKS";
         default:
             return "UNKNOWN";
     }

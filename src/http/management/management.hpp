@@ -17,6 +17,7 @@ enum class ManagementError {
     BAD_REQUEST = 4000,
     NOT_FOUND = 4040,
     METHOD_NOT_ALLOWED = 4050,
+    CONFLICT = 4090,
     INTERNAL_ERROR = 5000,
     BAD_GATEWAY = 5020,
 };
@@ -33,6 +34,39 @@ async::Task<void> mgm_get_agreements(http::Server* srv, std::shared_ptr<http::Co
 async::Task<void> mgm_publish_agreement(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> mgm_delete_agreement(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 
+// Device management endpoints
+async::Task<void> mgm_list_devices(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_create_device(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_get_device(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t deviceId);
+async::Task<void> mgm_update_device(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t deviceId);
+async::Task<void> mgm_delete_device(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t deviceId);
+
+// Account management endpoints
+async::Task<void> mgm_list_accounts(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_create_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_get_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_update_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_delete_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_get_account_by_username(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+
+// Account email & mii
+async::Task<void> mgm_update_account_email(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_set_account_mii(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+
+// Account agreements
+async::Task<void> mgm_add_account_agreement(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_remove_account_agreement(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+
+// Account-device ownership
+async::Task<void> mgm_link_device_to_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+async::Task<void> mgm_unlink_device_from_account(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId);
+async::Task<void> mgm_update_account_device_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId);
+
+// Account-device attributes
+async::Task<void> mgm_list_account_device_attributes(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId);
+async::Task<void> mgm_set_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
+async::Task<void> mgm_remove_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
+
 std::unique_ptr<http::Response> createError(const std::shared_ptr<http::Context>& ctx, ManagementError code, const std::string& message, const std::string& corsOrigin, bool& keepAlive, int httpStatus);
 
 async::Task<void> errorHandler(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
@@ -47,3 +81,4 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
 } // namespace mgm
 
 #endif //SPLATOON_SERVER_MANAGEMENT_HPP
+

@@ -210,6 +210,10 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                             }
                         }}
                     }},
+                    {"secureServerGrpcAddresses", {
+                        {"00003200", {"127.0.0.1:1999"}},
+                        {"10162B00", {"127.0.0.1:1999"}}
+                    }},
                     {"db", {
                         {"type", "SQLite3"},
                         {"path", (dataDirAbsPath/fs::path("account.db")).string()}
@@ -562,6 +566,20 @@ std::map<std::string, std::vector<std::pair<std::string, std::string>>> Settings
             hostPairs.emplace_back(hostInfo["address"], hostInfo["grpcAddress"]);
         }
         hosts[id] = std::move(hostPairs);
+    }
+
+    return std::move(hosts);
+}
+
+std::map<std::string, std::vector<std::string>> SettingsManager::getGameServergRPCHosts() const {
+    std::map<std::string, std::vector<std::string>> hosts;
+
+    for (const auto& [id, grpcAddressList] : settings["accounts"]["secureServerGrpcAddresses"].items()) {
+        std::vector<std::string> grpcAddresses;
+        for (const auto& grpcAddress : grpcAddressList) {
+            grpcAddresses.push_back(grpcAddress.get<std::string>());
+        }
+        hosts[id] = std::move(grpcAddresses);
     }
 
     return std::move(hosts);

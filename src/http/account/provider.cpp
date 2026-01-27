@@ -50,6 +50,28 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
         co_return;
     }
 
+    if (co_await checkDeviceBanned(accountToken.deviceId, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "Device " + std::to_string(accountToken.deviceId) + " tried to request game server credentials but is banned "
+                                                                          "(client " + util::ipv4ToString(ctx->client) + ", account pid: " + std::to_string(accountToken.pid) + ").");
+        res = createError(ctx->request->getVersion(), 12, "Device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return; // Device is banned
+    }
+
+    auto getProfileCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
+    db::Result profileRes = co_await db->runCommand(std::move(getProfileCmd));
+    if (profileRes.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (!profileRes.hasData() || !profileRes.getData<db::DBUserProfileData>().active) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + std::to_string(accountToken.pid) + " tried to request game server credentials but is banned "
+                                                                          "(client " + util::ipv4ToString(ctx->client) + ", device id: " + std::to_string(accountToken.deviceId) + ").");
+        res = createError(ctx->request->getVersion(), 108, "User is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return; // Database error or user banned
+    }
+
     if (!gameServerHosts.contains(gameServerId)) {
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
                          "Game server ID " + gameServerId + " is not supported");
@@ -58,59 +80,69 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
         co_return;
     }
 
-    const std::pair<std::string, std::string> host = gameServerHosts[gameServerId][gameServerHostIndexRoundRobin[gameServerId]];
-    gameServerHostIndexRoundRobin[gameServerId] = (gameServerHostIndexRoundRobin[gameServerId] + 1) % gameServerHosts[gameServerId].size();
+    const auto& hosts = gameServerHosts[gameServerId];
+    size_t startIndex = gameServerHostIndexRoundRobin[gameServerId];
+    bool credentialsObtained = false;
+    std::pair<std::string, std::string> selectedHost;
+    std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status> successfulResponse;
 
-    auto channel = channelPool->getChannel(host.second);
-    if (!channel) {
+    for (size_t i = 0; i < hosts.size(); ++i) {
+        size_t index = (startIndex + i) % hosts.size();
+        const auto& host = hosts[index];
+
+        auto channel = channelPool->getChannel(host.second);
+        if (!channel) {
+            ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                             "Failed to get channel for game server " + gameServerId + " at host " + host.second);
+            continue;
+        }
+
+        auto request = std::make_shared<grpcimpl::auth::v1::GetGameServerCredentialsRequest>();
+        request->set_pid(accountToken.pid);
+        request->set_gameserverid(gameServerId);
+
+        // Create the stub and call the gRPC method
+        auto stub = grpcimpl::auth::v1::AuthService::NewStub(channel);
+
+        std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status> response =
+            co_await grpcimpl::callAsync<
+                grpcimpl::auth::v1::AuthService::Stub,
+                void (grpcimpl::auth::v1::AuthService::Stub::async::*)(
+                    grpc::ClientContext*,
+                    const grpcimpl::auth::v1::GetGameServerCredentialsRequest*,
+                    grpcimpl::auth::v1::GetGameServerCredentialsResponse*,
+                    std::function<void(grpc::Status)>
+                ),
+                grpcimpl::auth::v1::GetGameServerCredentialsRequest,
+                grpcimpl::auth::v1::GetGameServerCredentialsResponse
+            >(
+                stub,
+                &grpcimpl::auth::v1::AuthService::Stub::async::GetGameServerCredentials,
+                std::move(request),
+                settingsManager->getAccountsgRPCRequestTimeout()
+            );
+
+        if (response.second.ok() && response.first->success()) {
+            credentialsObtained = true;
+            selectedHost = host;
+            successfulResponse = response;
+            gameServerHostIndexRoundRobin[gameServerId] = (index + 1) % hosts.size();
+            break;
+        }
+
         ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
-                         "Failed to get channel for game server " + gameServerId);
+                         "Failed to get game server credentials for game server " + gameServerId + " at host " + host.second);
+    }
+
+    if (!credentialsObtained) {
+        ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                         "Failed to get game server credentials for game server " + gameServerId + " from all available hosts");
         res = createError(ctx->request->getVersion(), 1018, "Failure to generate game server token", "", HTTP_STATUS_INTERNAL_SERVER_ERROR);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
 
-    auto request = std::make_shared<grpcimpl::auth::v1::GetGameServerCredentialsRequest>();
-    request->set_pid(accountToken.pid);
-    request->set_gameserverid(gameServerId);
-
-    // Create the stub and call the gRPC method
-    auto stub = grpcimpl::auth::v1::AuthService::NewStub(channel);
-
-    std::pair<std::shared_ptr<grpcimpl::auth::v1::GetGameServerCredentialsResponse>, grpc::Status> response =
-        co_await grpcimpl::callAsync<
-            grpcimpl::auth::v1::AuthService::Stub,
-            void (grpcimpl::auth::v1::AuthService::Stub::async::*)(
-                grpc::ClientContext*,
-                const grpcimpl::auth::v1::GetGameServerCredentialsRequest*,
-                grpcimpl::auth::v1::GetGameServerCredentialsResponse*,
-                std::function<void(grpc::Status)>
-            ),
-            grpcimpl::auth::v1::GetGameServerCredentialsRequest,
-            grpcimpl::auth::v1::GetGameServerCredentialsResponse
-        >(
-            stub,
-            &grpcimpl::auth::v1::AuthService::Stub::async::GetGameServerCredentials,
-            std::move(request),
-            settingsManager->getAccountsgRPCRequestTimeout()
-        );
-
-    // TODO Try with other servers to see if we find one that works instead of just failing
-    if (!response.second.ok()) {
-        ctx->logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
-                         "Failed to get game server credentials for game server " + gameServerId);
-        // TODO Change the error to maintenance
-        res = createError(ctx->request->getVersion(), 1018,
-                                                          "Failure to generate game server token", "", HTTP_STATUS_INTERNAL_SERVER_ERROR);
-        srv->sendResponse(std::move(ctx), std::move(res), false);
-        co_return;
-    }
-
-    if (!response.first->success()) {
-        res = createError(ctx->request->getVersion(), 1016, "NEX account not found", "", HTTP_STATUS_NOT_FOUND);
-        srv->sendResponse(std::move(ctx), std::move(res), false);
-        co_return;
-    }
+    const std::pair<std::string, std::string> host = selectedHost;
 
     auto userInfoCmd = db::Database::craftGetUserByPIDCommand(accountToken.pid);
     auto userInfoResult = co_await db->runCommand(std::move(userInfoCmd));
@@ -134,7 +166,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
 
     const std::string tokenJwt = crypto::signJWT(settingsManager->getNEXTokenKey(), jwtPayload);
 
-    const auto nexPassword = response.first->password();
+    const auto nexPassword = successfulResponse.first->password();
 
     pugi::xml_document doc;
     pugi::xml_node nex_token = doc.append_child("nex_token");
@@ -183,6 +215,28 @@ Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<h
         res = createError(ctx->request->getVersion(), 5, "Invalid access token", "access_token", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
+    }
+
+    if (co_await checkDeviceBanned(accountToken.deviceId, db)) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "Device " + std::to_string(accountToken.deviceId) + " tried to request service credentials but is banned "
+                                                                          "(client " + util::ipv4ToString(ctx->client) + ", account pid: " + std::to_string(accountToken.pid) + ").");
+        res = createError(ctx->request->getVersion(), 12, "Device is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return; // Device is banned
+    }
+
+    auto getProfileCmd = db::Database::craftGetUserProfileCommand(accountToken.pid);
+    db::Result profileRes = co_await db->runCommand(std::move(getProfileCmd));
+    if (profileRes.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (!profileRes.hasData() || !profileRes.getData<db::DBUserProfileData>().active) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + std::to_string(accountToken.pid) + " tried to request service credentials but is banned "
+                                                                          "(client " + util::ipv4ToString(ctx->client) + ", device id: " + std::to_string(accountToken.deviceId) + ").");
+        res = createError(ctx->request->getVersion(), 108, "User is banned", "", HTTP_STATUS_FORBIDDEN);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return; // Database error or user banned
     }
 
     if (!ctx->request->hasQuery("client_id") || !ctx->request->hasHeader("x-nintendo-title-id")) {

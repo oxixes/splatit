@@ -95,6 +95,7 @@ public:
     [[nodiscard]] std::string getNEXTokenKey() const;
 
     [[nodiscard]] std::map<std::string, std::vector<std::pair<std::string, std::string>>> getGameServerHosts() const;
+    [[nodiscard]] std::map<std::string, std::vector<std::string>> getGameServergRPCHosts() const;
     [[nodiscard]] int getAccountsgRPCRequestTimeout() const;
     [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize() const;
 

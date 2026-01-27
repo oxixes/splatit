@@ -1,0 +1,6754 @@
+[
+  {
+    "code": "JP",
+    "name": "Japan",
+    "regions": [
+      {
+        "id": 16777216,
+        "name": "—"
+      },
+      {
+        "id": 16908288,
+        "name": "Tokyo"
+      },
+      {
+        "id": 16973824,
+        "name": "Hokkaido"
+      },
+      {
+        "id": 17039360,
+        "name": "Aomori"
+      },
+      {
+        "id": 17104896,
+        "name": "Iwate"
+      },
+      {
+        "id": 17170432,
+        "name": "Miyagi"
+      },
+      {
+        "id": 17235968,
+        "name": "Akita"
+      },
+      {
+        "id": 17301504,
+        "name": "Yamagata"
+      },
+      {
+        "id": 17367040,
+        "name": "Fukushima"
+      },
+      {
+        "id": 17432576,
+        "name": "Ibaraki"
+      },
+      {
+        "id": 17498112,
+        "name": "Tochigi"
+      },
+      {
+        "id": 17563648,
+        "name": "Gunma"
+      },
+      {
+        "id": 17629184,
+        "name": "Saitama"
+      },
+      {
+        "id": 17694720,
+        "name": "Chiba"
+      },
+      {
+        "id": 17760256,
+        "name": "Kanagawa"
+      },
+      {
+        "id": 17825792,
+        "name": "Toyama"
+      },
+      {
+        "id": 17891328,
+        "name": "Ishikawa"
+      },
+      {
+        "id": 17956864,
+        "name": "Fukui"
+      },
+      {
+        "id": 18022400,
+        "name": "Yamanashi"
+      },
+      {
+        "id": 18087936,
+        "name": "Nagano"
+      },
+      {
+        "id": 18153472,
+        "name": "Niigata"
+      },
+      {
+        "id": 18219008,
+        "name": "Gifu"
+      },
+      {
+        "id": 18284544,
+        "name": "Shizuoka"
+      },
+      {
+        "id": 18350080,
+        "name": "Aichi"
+      },
+      {
+        "id": 18415616,
+        "name": "Mie"
+      },
+      {
+        "id": 18481152,
+        "name": "Shiga"
+      },
+      {
+        "id": 18546688,
+        "name": "Kyoto"
+      },
+      {
+        "id": 18612224,
+        "name": "Osaka"
+      },
+      {
+        "id": 18677760,
+        "name": "Hyogo"
+      },
+      {
+        "id": 18743296,
+        "name": "Nara"
+      },
+      {
+        "id": 18808832,
+        "name": "Wakayama"
+      },
+      {
+        "id": 18874368,
+        "name": "Tottori"
+      },
+      {
+        "id": 18939904,
+        "name": "Shimane"
+      },
+      {
+        "id": 19005440,
+        "name": "Okayama"
+      },
+      {
+        "id": 19070976,
+        "name": "Hiroshima"
+      },
+      {
+        "id": 19136512,
+        "name": "Yamaguchi"
+      },
+      {
+        "id": 19202048,
+        "name": "Tokushima"
+      },
+      {
+        "id": 19267584,
+        "name": "Kagawa"
+      },
+      {
+        "id": 19333120,
+        "name": "Ehime"
+      },
+      {
+        "id": 19398656,
+        "name": "Kochi"
+      },
+      {
+        "id": 19464192,
+        "name": "Fukuoka"
+      },
+      {
+        "id": 19529728,
+        "name": "Saga"
+      },
+      {
+        "id": 19595264,
+        "name": "Nagasaki"
+      },
+      {
+        "id": 19660800,
+        "name": "Kumamoto"
+      },
+      {
+        "id": 19726336,
+        "name": "Oita"
+      },
+      {
+        "id": 19791872,
+        "name": "Miyazaki"
+      },
+      {
+        "id": 19857408,
+        "name": "Kagoshima"
+      },
+      {
+        "id": 19922944,
+        "name": "Okinawa"
+      }
+    ]
+  },
+  {
+    "code": "AI",
+    "name": "Anguilla",
+    "regions": [
+      {
+        "id": 134217728,
+        "name": "—"
+      },
+      {
+        "id": 134283264,
+        "name": "Anguilla"
+      }
+    ]
+  },
+  {
+    "code": "AG",
+    "name": "Antigua and Barbuda",
+    "regions": [
+      {
+        "id": 150994944,
+        "name": "—"
+      },
+      {
+        "id": 151126016,
+        "name": "Saint John"
+      },
+      {
+        "id": 151191552,
+        "name": "Barbuda"
+      },
+      {
+        "id": 151257088,
+        "name": "Saint George"
+      },
+      {
+        "id": 151322624,
+        "name": "Saint Mary"
+      },
+      {
+        "id": 151388160,
+        "name": "Saint Paul"
+      },
+      {
+        "id": 151453696,
+        "name": "Saint Peter"
+      },
+      {
+        "id": 151519232,
+        "name": "Saint Philip"
+      }
+    ]
+  },
+  {
+    "code": "AR",
+    "name": "Argentina",
+    "regions": [
+      {
+        "id": 167772160,
+        "name": "—"
+      },
+      {
+        "id": 167903232,
+        "name": "Distrito Federal"
+      },
+      {
+        "id": 167968768,
+        "name": "Buenos Aires"
+      },
+      {
+        "id": 168034304,
+        "name": "Catamarca"
+      },
+      {
+        "id": 168099840,
+        "name": "Chaco"
+      },
+      {
+        "id": 168165376,
+        "name": "Chubut"
+      },
+      {
+        "id": 168230912,
+        "name": "Córdoba"
+      },
+      {
+        "id": 168296448,
+        "name": "Corrientes"
+      },
+      {
+        "id": 168361984,
+        "name": "Entre Ríos"
+      },
+      {
+        "id": 168427520,
+        "name": "Formosa"
+      },
+      {
+        "id": 168493056,
+        "name": "Jujuy"
+      },
+      {
+        "id": 168558592,
+        "name": "La Pampa"
+      },
+      {
+        "id": 168624128,
+        "name": "La Rioja"
+      },
+      {
+        "id": 168689664,
+        "name": "Mendoza"
+      },
+      {
+        "id": 168755200,
+        "name": "Misiones"
+      },
+      {
+        "id": 168820736,
+        "name": "Neuquén"
+      },
+      {
+        "id": 168886272,
+        "name": "Río Negro"
+      },
+      {
+        "id": 168951808,
+        "name": "Salta"
+      },
+      {
+        "id": 169017344,
+        "name": "San Juan"
+      },
+      {
+        "id": 169082880,
+        "name": "San Luis"
+      },
+      {
+        "id": 169148416,
+        "name": "Santa Cruz"
+      },
+      {
+        "id": 169213952,
+        "name": "Santa Fe"
+      },
+      {
+        "id": 169279488,
+        "name": "Santiago del Estero"
+      },
+      {
+        "id": 169345024,
+        "name": "Tierra del Fuego, Antártida e Islas del Atlántico Sur"
+      },
+      {
+        "id": 169410560,
+        "name": "Tucumán"
+      }
+    ]
+  },
+  {
+    "code": "AW",
+    "name": "Aruba",
+    "regions": [
+      {
+        "id": 184549376,
+        "name": "—"
+      },
+      {
+        "id": 184614912,
+        "name": "Aruba"
+      }
+    ]
+  },
+  {
+    "code": "BS",
+    "name": "Bahamas",
+    "regions": [
+      {
+        "id": 201326592,
+        "name": "—"
+      },
+      {
+        "id": 201392128,
+        "name": "Bahamas"
+      }
+    ]
+  },
+  {
+    "code": "BB",
+    "name": "Barbados",
+    "regions": [
+      {
+        "id": 218103808,
+        "name": "—"
+      },
+      {
+        "id": 218169344,
+        "name": "Barbados"
+      }
+    ]
+  },
+  {
+    "code": "BZ",
+    "name": "Belize",
+    "regions": [
+      {
+        "id": 234881024,
+        "name": "—"
+      },
+      {
+        "id": 235012096,
+        "name": "Cayo"
+      },
+      {
+        "id": 235077632,
+        "name": "Belize"
+      },
+      {
+        "id": 235143168,
+        "name": "Corozal"
+      },
+      {
+        "id": 235208704,
+        "name": "Orange Walk"
+      },
+      {
+        "id": 235274240,
+        "name": "Stann Creek"
+      },
+      {
+        "id": 235339776,
+        "name": "Toledo"
+      }
+    ]
+  },
+  {
+    "code": "BO",
+    "name": "Bolivia",
+    "regions": [
+      {
+        "id": 251658240,
+        "name": "—"
+      },
+      {
+        "id": 251789312,
+        "name": "La Paz"
+      },
+      {
+        "id": 251854848,
+        "name": "Chuquisaca"
+      },
+      {
+        "id": 251920384,
+        "name": "Cochabamba"
+      },
+      {
+        "id": 251985920,
+        "name": "El Beni"
+      },
+      {
+        "id": 252051456,
+        "name": "Oruro"
+      },
+      {
+        "id": 252116992,
+        "name": "Pando"
+      },
+      {
+        "id": 252182528,
+        "name": "Potosí"
+      },
+      {
+        "id": 252248064,
+        "name": "Santa Cruz"
+      },
+      {
+        "id": 252313600,
+        "name": "Tarija"
+      }
+    ]
+  },
+  {
+    "code": "BR",
+    "name": "Brazil",
+    "regions": [
+      {
+        "id": 268435456,
+        "name": "—"
+      },
+      {
+        "id": 268566528,
+        "name": "Distrito Federal"
+      },
+      {
+        "id": 268632064,
+        "name": "Acre"
+      },
+      {
+        "id": 268697600,
+        "name": "Alagoas"
+      },
+      {
+        "id": 268763136,
+        "name": "Amapá"
+      },
+      {
+        "id": 268828672,
+        "name": "Amazonas"
+      },
+      {
+        "id": 268894208,
+        "name": "Bahia"
+      },
+      {
+        "id": 268959744,
+        "name": "Ceará"
+      },
+      {
+        "id": 269025280,
+        "name": "Espírito Santo"
+      },
+      {
+        "id": 269090816,
+        "name": "Mato Grosso do Sul"
+      },
+      {
+        "id": 269156352,
+        "name": "Maranhão"
+      },
+      {
+        "id": 269221888,
+        "name": "Mato Grosso"
+      },
+      {
+        "id": 269287424,
+        "name": "Minas Gerais"
+      },
+      {
+        "id": 269352960,
+        "name": "Pará"
+      },
+      {
+        "id": 269418496,
+        "name": "Paraíba"
+      },
+      {
+        "id": 269484032,
+        "name": "Paraná"
+      },
+      {
+        "id": 269549568,
+        "name": "Piauí"
+      },
+      {
+        "id": 269615104,
+        "name": "Rio de Janeiro"
+      },
+      {
+        "id": 269680640,
+        "name": "Rio Grande do Norte"
+      },
+      {
+        "id": 269746176,
+        "name": "Rio Grande do Sul"
+      },
+      {
+        "id": 269811712,
+        "name": "Rondônia"
+      },
+      {
+        "id": 269877248,
+        "name": "Roraima"
+      },
+      {
+        "id": 269942784,
+        "name": "Santa Catarina"
+      },
+      {
+        "id": 270008320,
+        "name": "São Paulo"
+      },
+      {
+        "id": 270073856,
+        "name": "Sergipe"
+      },
+      {
+        "id": 270139392,
+        "name": "Goiás"
+      },
+      {
+        "id": 270204928,
+        "name": "Pernambuco"
+      },
+      {
+        "id": 270270464,
+        "name": "Tocantins"
+      }
+    ]
+  },
+  {
+    "code": "VG",
+    "name": "British Virgin Islands",
+    "regions": [
+      {
+        "id": 285212672,
+        "name": "—"
+      },
+      {
+        "id": 285278208,
+        "name": "British Virgin Islands"
+      }
+    ]
+  },
+  {
+    "code": "CA",
+    "name": "Canada",
+    "regions": [
+      {
+        "id": 301989888,
+        "name": "—"
+      },
+      {
+        "id": 302120960,
+        "name": "Ontario"
+      },
+      {
+        "id": 302186496,
+        "name": "Alberta"
+      },
+      {
+        "id": 302252032,
+        "name": "British Columbia"
+      },
+      {
+        "id": 302317568,
+        "name": "Manitoba"
+      },
+      {
+        "id": 302383104,
+        "name": "New Brunswick"
+      },
+      {
+        "id": 302448640,
+        "name": "Newfoundland and Labrador"
+      },
+      {
+        "id": 302514176,
+        "name": "Nova Scotia"
+      },
+      {
+        "id": 302579712,
+        "name": "Prince Edward Island"
+      },
+      {
+        "id": 302645248,
+        "name": "Quebec"
+      },
+      {
+        "id": 302710784,
+        "name": "Saskatchewan"
+      },
+      {
+        "id": 302776320,
+        "name": "Yukon"
+      },
+      {
+        "id": 302841856,
+        "name": "Northwest Territories"
+      },
+      {
+        "id": 302907392,
+        "name": "Nunavut"
+      }
+    ]
+  },
+  {
+    "code": "KY",
+    "name": "Cayman Islands",
+    "regions": [
+      {
+        "id": 318767104,
+        "name": "—"
+      },
+      {
+        "id": 318832640,
+        "name": "Cayman Islands"
+      }
+    ]
+  },
+  {
+    "code": "CL",
+    "name": "Chile",
+    "regions": [
+      {
+        "id": 335544320,
+        "name": "—"
+      },
+      {
+        "id": 335675392,
+        "name": "Región Metropolitana"
+      },
+      {
+        "id": 335740928,
+        "name": "Valparaíso"
+      },
+      {
+        "id": 335806464,
+        "name": "Aisén del General Carlos Ibáñez del Campo"
+      },
+      {
+        "id": 335872000,
+        "name": "Antofagasta"
+      },
+      {
+        "id": 335937536,
+        "name": "Araucanía"
+      },
+      {
+        "id": 336003072,
+        "name": "Atacama"
+      },
+      {
+        "id": 336068608,
+        "name": "Bío-Bío"
+      },
+      {
+        "id": 336134144,
+        "name": "Coquimbo"
+      },
+      {
+        "id": 336199680,
+        "name": "Libertador General Bernardo O'Higgins"
+      },
+      {
+        "id": 336265216,
+        "name": "Los Lagos"
+      },
+      {
+        "id": 336330752,
+        "name": "Magallanes y Antártica Chilena"
+      },
+      {
+        "id": 336396288,
+        "name": "Maule"
+      },
+      {
+        "id": 336461824,
+        "name": "Tarapacá"
+      }
+    ]
+  },
+  {
+    "code": "CO",
+    "name": "Colombia",
+    "regions": [
+      {
+        "id": 352321536,
+        "name": "—"
+      },
+      {
+        "id": 352452608,
+        "name": "Distrito Capital"
+      },
+      {
+        "id": 352518144,
+        "name": "Cundinamarca"
+      },
+      {
+        "id": 352583680,
+        "name": "Amazonas"
+      },
+      {
+        "id": 352649216,
+        "name": "Antioquia"
+      },
+      {
+        "id": 352714752,
+        "name": "Arauca"
+      },
+      {
+        "id": 352780288,
+        "name": "Atlántico"
+      },
+      {
+        "id": 352845824,
+        "name": "Bolívar"
+      },
+      {
+        "id": 352911360,
+        "name": "Boyacá"
+      },
+      {
+        "id": 352976896,
+        "name": "Caldas"
+      },
+      {
+        "id": 353042432,
+        "name": "Caquetá"
+      },
+      {
+        "id": 353107968,
+        "name": "Cauca"
+      },
+      {
+        "id": 353173504,
+        "name": "Cesar"
+      },
+      {
+        "id": 353239040,
+        "name": "Chocó"
+      },
+      {
+        "id": 353304576,
+        "name": "Córdoba"
+      },
+      {
+        "id": 353370112,
+        "name": "Guaviare"
+      },
+      {
+        "id": 353435648,
+        "name": "Guainía"
+      },
+      {
+        "id": 353501184,
+        "name": "Huila"
+      },
+      {
+        "id": 353566720,
+        "name": "La Guajira"
+      },
+      {
+        "id": 353632256,
+        "name": "Magdalena"
+      },
+      {
+        "id": 353697792,
+        "name": "Meta"
+      },
+      {
+        "id": 353763328,
+        "name": "Nariño"
+      },
+      {
+        "id": 353828864,
+        "name": "Norte de Santander"
+      },
+      {
+        "id": 353894400,
+        "name": "Putumayo"
+      },
+      {
+        "id": 353959936,
+        "name": "Quindío"
+      },
+      {
+        "id": 354025472,
+        "name": "Risaralda"
+      },
+      {
+        "id": 354091008,
+        "name": "Archipiélago de San Andrés, Providencia y Santa Catalina"
+      },
+      {
+        "id": 354156544,
+        "name": "Santander"
+      },
+      {
+        "id": 354222080,
+        "name": "Sucre"
+      },
+      {
+        "id": 354287616,
+        "name": "Tolima"
+      },
+      {
+        "id": 354353152,
+        "name": "Valle del Cauca"
+      },
+      {
+        "id": 354418688,
+        "name": "Vaupés"
+      },
+      {
+        "id": 354484224,
+        "name": "Vichada"
+      },
+      {
+        "id": 354549760,
+        "name": "Casanare"
+      }
+    ]
+  },
+  {
+    "code": "CR",
+    "name": "Costa Rica",
+    "regions": [
+      {
+        "id": 369098752,
+        "name": "—"
+      },
+      {
+        "id": 369229824,
+        "name": "San José"
+      },
+      {
+        "id": 369295360,
+        "name": "Alajuela"
+      },
+      {
+        "id": 369360896,
+        "name": "Cartago"
+      },
+      {
+        "id": 369426432,
+        "name": "Guanacaste"
+      },
+      {
+        "id": 369491968,
+        "name": "Heredia"
+      },
+      {
+        "id": 369557504,
+        "name": "Limón"
+      },
+      {
+        "id": 369623040,
+        "name": "Puntarenas"
+      }
+    ]
+  },
+  {
+    "code": "DM",
+    "name": "Dominica",
+    "regions": [
+      {
+        "id": 385875968,
+        "name": "—"
+      },
+      {
+        "id": 385941504,
+        "name": "Dominica"
+      }
+    ]
+  },
+  {
+    "code": "DO",
+    "name": "Dominican Republic",
+    "regions": [
+      {
+        "id": 402653184,
+        "name": "—"
+      },
+      {
+        "id": 402784256,
+        "name": "Distrito Nacional"
+      },
+      {
+        "id": 402849792,
+        "name": "Azua"
+      },
+      {
+        "id": 402915328,
+        "name": "Baoruco"
+      },
+      {
+        "id": 402980864,
+        "name": "Barahona"
+      },
+      {
+        "id": 403046400,
+        "name": "Dajabón"
+      },
+      {
+        "id": 403111936,
+        "name": "Duarte"
+      },
+      {
+        "id": 403177472,
+        "name": "Espaillat"
+      },
+      {
+        "id": 403243008,
+        "name": "Independencia"
+      },
+      {
+        "id": 403308544,
+        "name": "La Altagracia"
+      },
+      {
+        "id": 403374080,
+        "name": "Elías Piña"
+      },
+      {
+        "id": 403439616,
+        "name": "La Romana"
+      },
+      {
+        "id": 403505152,
+        "name": "María Trinidad Sánchez"
+      },
+      {
+        "id": 403570688,
+        "name": "Monte Cristi"
+      },
+      {
+        "id": 403636224,
+        "name": "Pedernales"
+      },
+      {
+        "id": 403701760,
+        "name": "Peravia"
+      },
+      {
+        "id": 403767296,
+        "name": "Puerto Plata"
+      },
+      {
+        "id": 403832832,
+        "name": "Salcedo"
+      },
+      {
+        "id": 403898368,
+        "name": "Samaná"
+      },
+      {
+        "id": 403963904,
+        "name": "Sánchez Ramírez"
+      },
+      {
+        "id": 404029440,
+        "name": "San Juan"
+      },
+      {
+        "id": 404094976,
+        "name": "San Pedro de Macorís"
+      },
+      {
+        "id": 404160512,
+        "name": "Santiago"
+      },
+      {
+        "id": 404226048,
+        "name": "Santiago Rodríguez"
+      },
+      {
+        "id": 404291584,
+        "name": "Valverde"
+      },
+      {
+        "id": 404357120,
+        "name": "El Seíbo"
+      },
+      {
+        "id": 404422656,
+        "name": "Hato Mayor"
+      },
+      {
+        "id": 404488192,
+        "name": "La Vega"
+      },
+      {
+        "id": 404553728,
+        "name": "Monseñor Nouel"
+      },
+      {
+        "id": 404619264,
+        "name": "Monte Plata"
+      },
+      {
+        "id": 404684800,
+        "name": "San Cristóbal"
+      }
+    ]
+  },
+  {
+    "code": "EC",
+    "name": "Ecuador",
+    "regions": [
+      {
+        "id": 419430400,
+        "name": "—"
+      },
+      {
+        "id": 419561472,
+        "name": "Pichincha"
+      },
+      {
+        "id": 419627008,
+        "name": "Galápagos"
+      },
+      {
+        "id": 419692544,
+        "name": "Azuay"
+      },
+      {
+        "id": 419758080,
+        "name": "Bolívar"
+      },
+      {
+        "id": 419823616,
+        "name": "Cañar"
+      },
+      {
+        "id": 419889152,
+        "name": "Carchi"
+      },
+      {
+        "id": 419954688,
+        "name": "Chimborazo"
+      },
+      {
+        "id": 420020224,
+        "name": "Cotopaxi"
+      },
+      {
+        "id": 420085760,
+        "name": "El Oro"
+      },
+      {
+        "id": 420151296,
+        "name": "Esmeraldas"
+      },
+      {
+        "id": 420216832,
+        "name": "Guayas"
+      },
+      {
+        "id": 420282368,
+        "name": "Imbabura"
+      },
+      {
+        "id": 420347904,
+        "name": "Loja"
+      },
+      {
+        "id": 420413440,
+        "name": "Los Ríos"
+      },
+      {
+        "id": 420478976,
+        "name": "Manabí"
+      },
+      {
+        "id": 420544512,
+        "name": "Morona-Santiago"
+      },
+      {
+        "id": 420610048,
+        "name": "Pastaza"
+      },
+      {
+        "id": 420675584,
+        "name": "Tungurahua"
+      },
+      {
+        "id": 420741120,
+        "name": "Zamora-Chinchipe"
+      },
+      {
+        "id": 420806656,
+        "name": "Sucumbios"
+      },
+      {
+        "id": 420872192,
+        "name": "Napo"
+      },
+      {
+        "id": 420937728,
+        "name": "Orellana"
+      },
+      {
+        "id": 421003264,
+        "name": "Santa Elena"
+      },
+      {
+        "id": 421068800,
+        "name": "Santo Domingo de los Tsáchilas"
+      }
+    ]
+  },
+  {
+    "code": "SV",
+    "name": "El Salvador",
+    "regions": [
+      {
+        "id": 436207616,
+        "name": "—"
+      },
+      {
+        "id": 436338688,
+        "name": "San Salvador"
+      },
+      {
+        "id": 436404224,
+        "name": "Ahuachapán"
+      },
+      {
+        "id": 436469760,
+        "name": "Cabañas"
+      },
+      {
+        "id": 436535296,
+        "name": "Chalatenango"
+      },
+      {
+        "id": 436600832,
+        "name": "Cuscatlán"
+      },
+      {
+        "id": 436666368,
+        "name": "La Libertad"
+      },
+      {
+        "id": 436731904,
+        "name": "La Paz"
+      },
+      {
+        "id": 436797440,
+        "name": "La Unión"
+      },
+      {
+        "id": 436862976,
+        "name": "Morazán"
+      },
+      {
+        "id": 436928512,
+        "name": "San Miguel"
+      },
+      {
+        "id": 436994048,
+        "name": "Santa Ana"
+      },
+      {
+        "id": 437059584,
+        "name": "San Vicente"
+      },
+      {
+        "id": 437125120,
+        "name": "Sonsonate"
+      },
+      {
+        "id": 437190656,
+        "name": "Usulután"
+      }
+    ]
+  },
+  {
+    "code": "GF",
+    "name": "French Guiana",
+    "regions": [
+      {
+        "id": 452984832,
+        "name": "—"
+      },
+      {
+        "id": 453050368,
+        "name": "French Guiana"
+      }
+    ]
+  },
+  {
+    "code": "GD",
+    "name": "Grenada",
+    "regions": [
+      {
+        "id": 469762048,
+        "name": "—"
+      },
+      {
+        "id": 469827584,
+        "name": "Grenada"
+      }
+    ]
+  },
+  {
+    "code": "GP",
+    "name": "Guadeloupe",
+    "regions": [
+      {
+        "id": 486539264,
+        "name": "—"
+      },
+      {
+        "id": 486604800,
+        "name": "Guadeloupe"
+      }
+    ]
+  },
+  {
+    "code": "GT",
+    "name": "Guatemala",
+    "regions": [
+      {
+        "id": 503316480,
+        "name": "—"
+      },
+      {
+        "id": 503447552,
+        "name": "Guatemala"
+      },
+      {
+        "id": 503513088,
+        "name": "Alta Verapaz"
+      },
+      {
+        "id": 503578624,
+        "name": "Baja Verapaz"
+      },
+      {
+        "id": 503644160,
+        "name": "Chimaltenango"
+      },
+      {
+        "id": 503709696,
+        "name": "Chiquimula"
+      },
+      {
+        "id": 503775232,
+        "name": "El Progreso"
+      },
+      {
+        "id": 503840768,
+        "name": "Escuintla"
+      },
+      {
+        "id": 503906304,
+        "name": "Huehuetenango"
+      },
+      {
+        "id": 503971840,
+        "name": "Izabal"
+      },
+      {
+        "id": 504037376,
+        "name": "Jalapa"
+      },
+      {
+        "id": 504102912,
+        "name": "Jutiapa"
+      },
+      {
+        "id": 504168448,
+        "name": "Petén"
+      },
+      {
+        "id": 504233984,
+        "name": "Quetzaltenango"
+      },
+      {
+        "id": 504299520,
+        "name": "Quiché"
+      },
+      {
+        "id": 504365056,
+        "name": "Retalhuleu"
+      },
+      {
+        "id": 504430592,
+        "name": "Sacatepéquez"
+      },
+      {
+        "id": 504496128,
+        "name": "San Marcos"
+      },
+      {
+        "id": 504561664,
+        "name": "Santa Rosa"
+      },
+      {
+        "id": 504627200,
+        "name": "Sololá"
+      },
+      {
+        "id": 504692736,
+        "name": "Suchitepéquez"
+      },
+      {
+        "id": 504758272,
+        "name": "Totonicapán"
+      },
+      {
+        "id": 504823808,
+        "name": "Zacapa"
+      }
+    ]
+  },
+  {
+    "code": "GY",
+    "name": "Guyana",
+    "regions": [
+      {
+        "id": 520093696,
+        "name": "—"
+      },
+      {
+        "id": 520224768,
+        "name": "Demerara-Mahaica"
+      },
+      {
+        "id": 520290304,
+        "name": "Barima-Waini"
+      },
+      {
+        "id": 520355840,
+        "name": "Cuyuni-Mazaruni"
+      },
+      {
+        "id": 520421376,
+        "name": "East Berbice-Corentyne"
+      },
+      {
+        "id": 520486912,
+        "name": "Essequibo Islands-West Demerara"
+      },
+      {
+        "id": 520552448,
+        "name": "Mahaica-Berbice"
+      },
+      {
+        "id": 520617984,
+        "name": "Pomeroon-Supenaam"
+      },
+      {
+        "id": 520683520,
+        "name": "Potaro-Siparuni"
+      },
+      {
+        "id": 520749056,
+        "name": "Upper Demerara-Berbice"
+      },
+      {
+        "id": 520814592,
+        "name": "Upper Takutu-Upper Essequibo"
+      }
+    ]
+  },
+  {
+    "code": "HT",
+    "name": "Haiti",
+    "regions": [
+      {
+        "id": 536870912,
+        "name": "—"
+      },
+      {
+        "id": 537001984,
+        "name": "Ouest"
+      },
+      {
+        "id": 537067520,
+        "name": "Nord-Ouest"
+      },
+      {
+        "id": 537133056,
+        "name": "Artibonite"
+      },
+      {
+        "id": 537198592,
+        "name": "Centre"
+      },
+      {
+        "id": 537264128,
+        "name": "Grand'Anse"
+      },
+      {
+        "id": 537329664,
+        "name": "Nord"
+      },
+      {
+        "id": 537395200,
+        "name": "Nord-Est"
+      },
+      {
+        "id": 537460736,
+        "name": "Sud"
+      },
+      {
+        "id": 537526272,
+        "name": "Sud-Est"
+      },
+      {
+        "id": 537591808,
+        "name": "Nippes"
+      }
+    ]
+  },
+  {
+    "code": "HN",
+    "name": "Honduras",
+    "regions": [
+      {
+        "id": 553648128,
+        "name": "—"
+      },
+      {
+        "id": 553779200,
+        "name": "Fr얆徇᥄\udac7슃\udfd9榩\ud822ﰕ\udcca䮍輝n"
+      },
+      {
+        "id": 553844736,
+        "name": "Atlántida"
+      },
+      {
+        "id": 553910272,
+        "name": "Choluteca"
+      },
+      {
+        "id": 553975808,
+        "name": "Colón"
+      },
+      {
+        "id": 554041344,
+        "name": "Comayagua"
+      },
+      {
+        "id": 554106880,
+        "name": "Copán"
+      },
+      {
+        "id": 554172416,
+        "name": "Cortés"
+      },
+      {
+        "id": 554237952,
+        "name": "El Paraíso"
+      },
+      {
+        "id": 554303488,
+        "name": "Gracias a Dios"
+      },
+      {
+        "id": 554369024,
+        "name": "Intibucá"
+      },
+      {
+        "id": 554434560,
+        "name": "Islas de la Bahía"
+      },
+      {
+        "id": 554500096,
+        "name": "La Paz"
+      },
+      {
+        "id": 554565632,
+        "name": "Lempira"
+      },
+      {
+        "id": 554631168,
+        "name": "Ocotepeque"
+      },
+      {
+        "id": 554696704,
+        "name": "Olancho"
+      },
+      {
+        "id": 554762240,
+        "name": "Santa Bárbara"
+      },
+      {
+        "id": 554827776,
+        "name": "Valle"
+      },
+      {
+        "id": 554893312,
+        "name": "Yoro"
+      }
+    ]
+  },
+  {
+    "code": "JM",
+    "name": "Jamaica",
+    "regions": [
+      {
+        "id": 570425344,
+        "name": "—"
+      },
+      {
+        "id": 570556416,
+        "name": "Saint Thomas"
+      },
+      {
+        "id": 570621952,
+        "name": "Clarendon"
+      },
+      {
+        "id": 570687488,
+        "name": "Hanover"
+      },
+      {
+        "id": 570753024,
+        "name": "Manchester"
+      },
+      {
+        "id": 570818560,
+        "name": "Portland"
+      },
+      {
+        "id": 570884096,
+        "name": "Saint Andrew"
+      },
+      {
+        "id": 570949632,
+        "name": "Saint Ann"
+      },
+      {
+        "id": 571015168,
+        "name": "Saint Catherine"
+      },
+      {
+        "id": 571080704,
+        "name": "Saint Elizabeth"
+      },
+      {
+        "id": 571146240,
+        "name": "Saint James"
+      },
+      {
+        "id": 571211776,
+        "name": "Saint Mary"
+      },
+      {
+        "id": 571277312,
+        "name": "Trelawny"
+      },
+      {
+        "id": 571342848,
+        "name": "Westmoreland"
+      },
+      {
+        "id": 571408384,
+        "name": "Kingston"
+      }
+    ]
+  },
+  {
+    "code": "MQ",
+    "name": "Martinique",
+    "regions": [
+      {
+        "id": 587202560,
+        "name": "—"
+      },
+      {
+        "id": 587268096,
+        "name": "Martinique"
+      }
+    ]
+  },
+  {
+    "code": "MX",
+    "name": "Mexico",
+    "regions": [
+      {
+        "id": 603979776,
+        "name": "—"
+      },
+      {
+        "id": 604110848,
+        "name": "Distrito Federal"
+      },
+      {
+        "id": 604176384,
+        "name": "Aguascalientes"
+      },
+      {
+        "id": 604241920,
+        "name": "Baja California"
+      },
+      {
+        "id": 604307456,
+        "name": "Baja California Sur"
+      },
+      {
+        "id": 604372992,
+        "name": "Campeche"
+      },
+      {
+        "id": 604438528,
+        "name": "Chiapas"
+      },
+      {
+        "id": 604504064,
+        "name": "Chihuahua"
+      },
+      {
+        "id": 604569600,
+        "name": "Coahuila de Zaragoza"
+      },
+      {
+        "id": 604635136,
+        "name": "Colima"
+      },
+      {
+        "id": 604700672,
+        "name": "Durango"
+      },
+      {
+        "id": 604766208,
+        "name": "Guanajuato"
+      },
+      {
+        "id": 604831744,
+        "name": "Guerrero"
+      },
+      {
+        "id": 604897280,
+        "name": "Hidalgo"
+      },
+      {
+        "id": 604962816,
+        "name": "Jalisco"
+      },
+      {
+        "id": 605028352,
+        "name": "México"
+      },
+      {
+        "id": 605093888,
+        "name": "Michoacán de Ocampo"
+      },
+      {
+        "id": 605159424,
+        "name": "Morelos"
+      },
+      {
+        "id": 605224960,
+        "name": "Nayarit"
+      },
+      {
+        "id": 605290496,
+        "name": "Nuevo León"
+      },
+      {
+        "id": 605356032,
+        "name": "Oaxaca"
+      },
+      {
+        "id": 605421568,
+        "name": "Puebla"
+      },
+      {
+        "id": 605487104,
+        "name": "Querétaro de Arteaga"
+      },
+      {
+        "id": 605552640,
+        "name": "Quintana Roo"
+      },
+      {
+        "id": 605618176,
+        "name": "San Luis Potosí"
+      },
+      {
+        "id": 605683712,
+        "name": "Sinaloa"
+      },
+      {
+        "id": 605749248,
+        "name": "Sonora"
+      },
+      {
+        "id": 605814784,
+        "name": "Tabasco"
+      },
+      {
+        "id": 605880320,
+        "name": "Tamaulipas"
+      },
+      {
+        "id": 605945856,
+        "name": "Tlaxcala"
+      },
+      {
+        "id": 606011392,
+        "name": "Veracruz-Llave"
+      },
+      {
+        "id": 606076928,
+        "name": "Yucatán"
+      },
+      {
+        "id": 606142464,
+        "name": "Zacatecas"
+      }
+    ]
+  },
+  {
+    "code": "MS",
+    "name": "Montserrat",
+    "regions": [
+      {
+        "id": 620756992,
+        "name": "—"
+      },
+      {
+        "id": 620822528,
+        "name": "Montserrat"
+      }
+    ]
+  },
+  {
+    "code": "AN",
+    "name": "Netherlands Antilles",
+    "regions": [
+      {
+        "id": 637534208,
+        "name": "—"
+      },
+      {
+        "id": 637599744,
+        "name": "Netherlands Antilles"
+      }
+    ]
+  },
+  {
+    "code": "NI",
+    "name": "Nicaragua",
+    "regions": [
+      {
+        "id": 654311424,
+        "name": "—"
+      },
+      {
+        "id": 654442496,
+        "name": "Managua"
+      },
+      {
+        "id": 654508032,
+        "name": "Boaco"
+      },
+      {
+        "id": 654573568,
+        "name": "Carazo"
+      },
+      {
+        "id": 654639104,
+        "name": "Chinandega"
+      },
+      {
+        "id": 654704640,
+        "name": "Chontales"
+      },
+      {
+        "id": 654770176,
+        "name": "Estelí"
+      },
+      {
+        "id": 654835712,
+        "name": "Granada"
+      },
+      {
+        "id": 654901248,
+        "name": "Jinotega"
+      },
+      {
+        "id": 654966784,
+        "name": "León"
+      },
+      {
+        "id": 655032320,
+        "name": "Madriz"
+      },
+      {
+        "id": 655097856,
+        "name": "Masaya"
+      },
+      {
+        "id": 655163392,
+        "name": "Matagalpa"
+      },
+      {
+        "id": 655228928,
+        "name": "Nueva Segovia"
+      },
+      {
+        "id": 655294464,
+        "name": "Río San Juan"
+      },
+      {
+        "id": 655360000,
+        "name": "Rivas"
+      },
+      {
+        "id": 655425536,
+        "name": "Atlántico Norte"
+      },
+      {
+        "id": 655491072,
+        "name": "Atlántico Sur"
+      }
+    ]
+  },
+  {
+    "code": "PA",
+    "name": "Panama",
+    "regions": [
+      {
+        "id": 671088640,
+        "name": "—"
+      },
+      {
+        "id": 671219712,
+        "name": "Panamá"
+      },
+      {
+        "id": 671285248,
+        "name": "Bocas del Toro"
+      },
+      {
+        "id": 671350784,
+        "name": "Chiriquí"
+      },
+      {
+        "id": 671416320,
+        "name": "Coclé"
+      },
+      {
+        "id": 671481856,
+        "name": "Colón"
+      },
+      {
+        "id": 671547392,
+        "name": "Darién"
+      },
+      {
+        "id": 671612928,
+        "name": "Herrera"
+      },
+      {
+        "id": 671678464,
+        "name": "Los Santos"
+      },
+      {
+        "id": 671744000,
+        "name": "Kuna Yala"
+      },
+      {
+        "id": 671809536,
+        "name": "Veraguas"
+      }
+    ]
+  },
+  {
+    "code": "PY",
+    "name": "Paraguay",
+    "regions": [
+      {
+        "id": 687865856,
+        "name": "—"
+      },
+      {
+        "id": 687996928,
+        "name": "Central"
+      },
+      {
+        "id": 688062464,
+        "name": "Alto Paraná"
+      },
+      {
+        "id": 688128000,
+        "name": "Amambay"
+      },
+      {
+        "id": 688193536,
+        "name": "Caaguazú"
+      },
+      {
+        "id": 688259072,
+        "name": "Caazapá"
+      },
+      {
+        "id": 688324608,
+        "name": "Concepción"
+      },
+      {
+        "id": 688390144,
+        "name": "Cordillera"
+      },
+      {
+        "id": 688455680,
+        "name": "Guairá"
+      },
+      {
+        "id": 688521216,
+        "name": "Itapúa"
+      },
+      {
+        "id": 688586752,
+        "name": "Misiones"
+      },
+      {
+        "id": 688652288,
+        "name": "Ñeembucú"
+      },
+      {
+        "id": 688717824,
+        "name": "Paraguarí"
+      },
+      {
+        "id": 688783360,
+        "name": "Presidente Hayes"
+      },
+      {
+        "id": 688848896,
+        "name": "San Pedro"
+      },
+      {
+        "id": 688914432,
+        "name": "Canindeyú"
+      },
+      {
+        "id": 688979968,
+        "name": "Asunción"
+      },
+      {
+        "id": 689045504,
+        "name": "Alto Paraguay"
+      },
+      {
+        "id": 689111040,
+        "name": "Boquerón"
+      }
+    ]
+  },
+  {
+    "code": "PE",
+    "name": "Peru",
+    "regions": [
+      {
+        "id": 704643072,
+        "name": "—"
+      },
+      {
+        "id": 704774144,
+        "name": "Lima"
+      },
+      {
+        "id": 704839680,
+        "name": "Amazonas"
+      },
+      {
+        "id": 704905216,
+        "name": "Ancash"
+      },
+      {
+        "id": 704970752,
+        "name": "Apurímac"
+      },
+      {
+        "id": 705036288,
+        "name": "Arequipa"
+      },
+      {
+        "id": 705101824,
+        "name": "Ayacucho"
+      },
+      {
+        "id": 705167360,
+        "name": "Cajamarca"
+      },
+      {
+        "id": 705232896,
+        "name": "Callao"
+      },
+      {
+        "id": 705298432,
+        "name": "Cuzco"
+      },
+      {
+        "id": 705363968,
+        "name": "Huancavelica"
+      },
+      {
+        "id": 705429504,
+        "name": "Huánuco"
+      },
+      {
+        "id": 705495040,
+        "name": "Ica"
+      },
+      {
+        "id": 705560576,
+        "name": "Junín"
+      },
+      {
+        "id": 705626112,
+        "name": "La Libertad"
+      },
+      {
+        "id": 705691648,
+        "name": "Lambayeque"
+      },
+      {
+        "id": 705757184,
+        "name": "Loreto"
+      },
+      {
+        "id": 705822720,
+        "name": "Madre de Dios"
+      },
+      {
+        "id": 705888256,
+        "name": "Moquegua"
+      },
+      {
+        "id": 705953792,
+        "name": "Pasco"
+      },
+      {
+        "id": 706019328,
+        "name": "Piura"
+      },
+      {
+        "id": 706084864,
+        "name": "Puno"
+      },
+      {
+        "id": 706150400,
+        "name": "San Martín"
+      },
+      {
+        "id": 706215936,
+        "name": "Tacna"
+      },
+      {
+        "id": 706281472,
+        "name": "Tumbes"
+      },
+      {
+        "id": 706347008,
+        "name": "Ucayali"
+      }
+    ]
+  },
+  {
+    "code": "KN",
+    "name": "St. Kitts and Nevis",
+    "regions": [
+      {
+        "id": 721420288,
+        "name": "—"
+      },
+      {
+        "id": 721551360,
+        "name": "Saint George Basseterre"
+      },
+      {
+        "id": 721616896,
+        "name": "Christ Church Nichola Town"
+      },
+      {
+        "id": 721682432,
+        "name": "Saint Anne Sandy Point"
+      },
+      {
+        "id": 721747968,
+        "name": "Saint George Gingerland"
+      },
+      {
+        "id": 721813504,
+        "name": "Saint James Windward"
+      },
+      {
+        "id": 721879040,
+        "name": "Saint John Capesterre"
+      },
+      {
+        "id": 721944576,
+        "name": "Saint John Figtree"
+      },
+      {
+        "id": 722010112,
+        "name": "Saint Mary Cayon"
+      },
+      {
+        "id": 722075648,
+        "name": "Saint Paul Capesterre"
+      },
+      {
+        "id": 722141184,
+        "name": "Saint Paul Charlestown"
+      },
+      {
+        "id": 722206720,
+        "name": "Saint Peter Basseterre"
+      },
+      {
+        "id": 722272256,
+        "name": "Saint Thomas Lowland"
+      },
+      {
+        "id": 722337792,
+        "name": "Saint Thomas Middle Island"
+      },
+      {
+        "id": 722403328,
+        "name": "Trinity Palmetto Point"
+      }
+    ]
+  },
+  {
+    "code": "LC",
+    "name": "St. Lucia",
+    "regions": [
+      {
+        "id": 738197504,
+        "name": "—"
+      },
+      {
+        "id": 738263040,
+        "name": "St. Lucia"
+      }
+    ]
+  },
+  {
+    "code": "VC",
+    "name": "St. Vincent and the Grenadines",
+    "regions": [
+      {
+        "id": 754974720,
+        "name": "—"
+      },
+      {
+        "id": 755040256,
+        "name": "St. Vincent and the Grenadines"
+      }
+    ]
+  },
+  {
+    "code": "SR",
+    "name": "Suriname",
+    "regions": [
+      {
+        "id": 771751936,
+        "name": "—"
+      },
+      {
+        "id": 771883008,
+        "name": "Paramaribo"
+      },
+      {
+        "id": 771948544,
+        "name": "Brokopondo"
+      },
+      {
+        "id": 772014080,
+        "name": "Commewijne"
+      },
+      {
+        "id": 772079616,
+        "name": "Coronie"
+      },
+      {
+        "id": 772145152,
+        "name": "Marowijne"
+      },
+      {
+        "id": 772210688,
+        "name": "Nickerie"
+      },
+      {
+        "id": 772276224,
+        "name": "Para"
+      },
+      {
+        "id": 772341760,
+        "name": "Saramacca"
+      },
+      {
+        "id": 772407296,
+        "name": "Sipaliwini"
+      },
+      {
+        "id": 772472832,
+        "name": "Wanica"
+      }
+    ]
+  },
+  {
+    "code": "TT",
+    "name": "Trinidad and Tobago",
+    "regions": [
+      {
+        "id": 788529152,
+        "name": "—"
+      },
+      {
+        "id": 788660224,
+        "name": "Port-of-Spain"
+      },
+      {
+        "id": 788725760,
+        "name": "Arima"
+      },
+      {
+        "id": 788791296,
+        "name": "Caroni"
+      },
+      {
+        "id": 788856832,
+        "name": "Mayaro"
+      },
+      {
+        "id": 788922368,
+        "name": "Nariva"
+      },
+      {
+        "id": 788987904,
+        "name": "Saint Andrew"
+      },
+      {
+        "id": 789053440,
+        "name": "Saint David"
+      },
+      {
+        "id": 789118976,
+        "name": "Saint George"
+      },
+      {
+        "id": 789184512,
+        "name": "Saint Patrick"
+      },
+      {
+        "id": 789250048,
+        "name": "San Fernando"
+      },
+      {
+        "id": 789315584,
+        "name": "Tobago"
+      },
+      {
+        "id": 789381120,
+        "name": "Victoria"
+      },
+      {
+        "id": 789446656,
+        "name": "Point Fortin"
+      }
+    ]
+  },
+  {
+    "code": "TC",
+    "name": "Turks and Caicos Islands",
+    "regions": [
+      {
+        "id": 805306368,
+        "name": "—"
+      },
+      {
+        "id": 805371904,
+        "name": "Turks and Caicos Islands"
+      }
+    ]
+  },
+  {
+    "code": "US",
+    "name": "United States",
+    "regions": [
+      {
+        "id": 822083584,
+        "name": "—"
+      },
+      {
+        "id": 822214656,
+        "name": "District of Columbia"
+      },
+      {
+        "id": 822280192,
+        "name": "Alaska"
+      },
+      {
+        "id": 822345728,
+        "name": "Alabama"
+      },
+      {
+        "id": 822411264,
+        "name": "Arkansas"
+      },
+      {
+        "id": 822476800,
+        "name": "Arizona"
+      },
+      {
+        "id": 822542336,
+        "name": "California"
+      },
+      {
+        "id": 822607872,
+        "name": "Colorado"
+      },
+      {
+        "id": 822673408,
+        "name": "Connecticut"
+      },
+      {
+        "id": 822738944,
+        "name": "Delaware"
+      },
+      {
+        "id": 822804480,
+        "name": "Florida"
+      },
+      {
+        "id": 822870016,
+        "name": "Georgia"
+      },
+      {
+        "id": 822935552,
+        "name": "Hawaii"
+      },
+      {
+        "id": 823001088,
+        "name": "Iowa"
+      },
+      {
+        "id": 823066624,
+        "name": "Idaho"
+      },
+      {
+        "id": 823132160,
+        "name": "Illinois"
+      },
+      {
+        "id": 823197696,
+        "name": "Indiana"
+      },
+      {
+        "id": 823263232,
+        "name": "Kansas"
+      },
+      {
+        "id": 823328768,
+        "name": "Kentucky"
+      },
+      {
+        "id": 823394304,
+        "name": "Louisiana"
+      },
+      {
+        "id": 823459840,
+        "name": "Massachusetts"
+      },
+      {
+        "id": 823525376,
+        "name": "Maryland"
+      },
+      {
+        "id": 823590912,
+        "name": "Maine"
+      },
+      {
+        "id": 823656448,
+        "name": "Michigan"
+      },
+      {
+        "id": 823721984,
+        "name": "Minnesota"
+      },
+      {
+        "id": 823787520,
+        "name": "Missouri"
+      },
+      {
+        "id": 823853056,
+        "name": "Mississippi"
+      },
+      {
+        "id": 823918592,
+        "name": "Montana"
+      },
+      {
+        "id": 823984128,
+        "name": "North Carolina"
+      },
+      {
+        "id": 824049664,
+        "name": "North Dakota"
+      },
+      {
+        "id": 824115200,
+        "name": "Nebraska"
+      },
+      {
+        "id": 824180736,
+        "name": "New Hampshire"
+      },
+      {
+        "id": 824246272,
+        "name": "New Jersey"
+      },
+      {
+        "id": 824311808,
+        "name": "New Mexico"
+      },
+      {
+        "id": 824377344,
+        "name": "Nevada"
+      },
+      {
+        "id": 824442880,
+        "name": "New York"
+      },
+      {
+        "id": 824508416,
+        "name": "Ohio"
+      },
+      {
+        "id": 824573952,
+        "name": "Oklahoma"
+      },
+      {
+        "id": 824639488,
+        "name": "Oregon"
+      },
+      {
+        "id": 824705024,
+        "name": "Pennsylvania"
+      },
+      {
+        "id": 824770560,
+        "name": "Rhode Island"
+      },
+      {
+        "id": 824836096,
+        "name": "South Carolina"
+      },
+      {
+        "id": 824901632,
+        "name": "South Dakota"
+      },
+      {
+        "id": 824967168,
+        "name": "Tennessee"
+      },
+      {
+        "id": 825032704,
+        "name": "Texas"
+      },
+      {
+        "id": 825098240,
+        "name": "Utah"
+      },
+      {
+        "id": 825163776,
+        "name": "Virginia"
+      },
+      {
+        "id": 825229312,
+        "name": "Vermont"
+      },
+      {
+        "id": 825294848,
+        "name": "Washington"
+      },
+      {
+        "id": 825360384,
+        "name": "Wisconsin"
+      },
+      {
+        "id": 825425920,
+        "name": "West Virginia"
+      },
+      {
+        "id": 825491456,
+        "name": "Wyoming"
+      },
+      {
+        "id": 825556992,
+        "name": "Puerto Rico"
+      }
+    ]
+  },
+  {
+    "code": "UY",
+    "name": "Uruguay",
+    "regions": [
+      {
+        "id": 838860800,
+        "name": "—"
+      },
+      {
+        "id": 838991872,
+        "name": "Montevideo"
+      },
+      {
+        "id": 839057408,
+        "name": "Artigas"
+      },
+      {
+        "id": 839122944,
+        "name": "Canelones"
+      },
+      {
+        "id": 839188480,
+        "name": "Cerro Largo"
+      },
+      {
+        "id": 839254016,
+        "name": "Colonia"
+      },
+      {
+        "id": 839319552,
+        "name": "Durazno"
+      },
+      {
+        "id": 839385088,
+        "name": "Flores"
+      },
+      {
+        "id": 839450624,
+        "name": "Florida"
+      },
+      {
+        "id": 839516160,
+        "name": "Lavalleja"
+      },
+      {
+        "id": 839581696,
+        "name": "Maldonado"
+      },
+      {
+        "id": 839647232,
+        "name": "Paysandú"
+      },
+      {
+        "id": 839712768,
+        "name": "Río Negro"
+      },
+      {
+        "id": 839778304,
+        "name": "Rivera"
+      },
+      {
+        "id": 839843840,
+        "name": "Rocha"
+      },
+      {
+        "id": 839909376,
+        "name": "Salto"
+      },
+      {
+        "id": 839974912,
+        "name": "San José"
+      },
+      {
+        "id": 840040448,
+        "name": "Soriano"
+      },
+      {
+        "id": 840105984,
+        "name": "Tacuarembó"
+      },
+      {
+        "id": 840171520,
+        "name": "Treinta y Tres"
+      }
+    ]
+  },
+  {
+    "code": "VI",
+    "name": "US Virgin Islands",
+    "regions": [
+      {
+        "id": 855638016,
+        "name": "—"
+      },
+      {
+        "id": 855703552,
+        "name": "US Virgin Islands"
+      }
+    ]
+  },
+  {
+    "code": "VE",
+    "name": "Venezuela",
+    "regions": [
+      {
+        "id": 872415232,
+        "name": "—"
+      },
+      {
+        "id": 872546304,
+        "name": "Distrito Federal"
+      },
+      {
+        "id": 872611840,
+        "name": "Amazonas"
+      },
+      {
+        "id": 872677376,
+        "name": "Anzoátegui"
+      },
+      {
+        "id": 872742912,
+        "name": "Apure"
+      },
+      {
+        "id": 872808448,
+        "name": "Aragua"
+      },
+      {
+        "id": 872873984,
+        "name": "Barinas"
+      },
+      {
+        "id": 872939520,
+        "name": "Bolívar"
+      },
+      {
+        "id": 873005056,
+        "name": "Carabobo"
+      },
+      {
+        "id": 873070592,
+        "name": "Cojedes"
+      },
+      {
+        "id": 873136128,
+        "name": "Delta Amacuro"
+      },
+      {
+        "id": 873201664,
+        "name": "Falcón"
+      },
+      {
+        "id": 873267200,
+        "name": "Guárico"
+      },
+      {
+        "id": 873332736,
+        "name": "Lara"
+      },
+      {
+        "id": 873398272,
+        "name": "Mérida"
+      },
+      {
+        "id": 873463808,
+        "name": "Miranda"
+      },
+      {
+        "id": 873529344,
+        "name": "Monagas"
+      },
+      {
+        "id": 873594880,
+        "name": "Nueva Esparta"
+      },
+      {
+        "id": 873660416,
+        "name": "Portuguesa"
+      },
+      {
+        "id": 873725952,
+        "name": "Sucre"
+      },
+      {
+        "id": 873791488,
+        "name": "Táchira"
+      },
+      {
+        "id": 873857024,
+        "name": "Trujillo"
+      },
+      {
+        "id": 873922560,
+        "name": "Yaracuy"
+      },
+      {
+        "id": 873988096,
+        "name": "Zulia"
+      },
+      {
+        "id": 874053632,
+        "name": "Dependencias Federales"
+      },
+      {
+        "id": 874119168,
+        "name": "Vargas"
+      }
+    ]
+  },
+  {
+    "code": "AL",
+    "name": "Albania",
+    "regions": [
+      {
+        "id": 1073741824,
+        "name": "—"
+      },
+      {
+        "id": 1073872896,
+        "name": "Tirana"
+      },
+      {
+        "id": 1073938432,
+        "name": "Berat"
+      },
+      {
+        "id": 1074003968,
+        "name": "Dibër"
+      },
+      {
+        "id": 1074069504,
+        "name": "Durrës"
+      },
+      {
+        "id": 1074135040,
+        "name": "Elbasan"
+      },
+      {
+        "id": 1074200576,
+        "name": "Fier"
+      },
+      {
+        "id": 1074266112,
+        "name": "Gjirokastër"
+      },
+      {
+        "id": 1074331648,
+        "name": "Korçë"
+      },
+      {
+        "id": 1074397184,
+        "name": "Kukës"
+      },
+      {
+        "id": 1074462720,
+        "name": "Lezhë"
+      },
+      {
+        "id": 1074528256,
+        "name": "Shkodër"
+      },
+      {
+        "id": 1074593792,
+        "name": "Vlorë"
+      }
+    ]
+  },
+  {
+    "code": "AU",
+    "name": "Australia",
+    "regions": [
+      {
+        "id": 1090519040,
+        "name": "—"
+      },
+      {
+        "id": 1090650112,
+        "name": "Australian Capital Territory"
+      },
+      {
+        "id": 1090715648,
+        "name": "New South Wales"
+      },
+      {
+        "id": 1090781184,
+        "name": "Northern Territory"
+      },
+      {
+        "id": 1090846720,
+        "name": "Queensland"
+      },
+      {
+        "id": 1090912256,
+        "name": "South Australia"
+      },
+      {
+        "id": 1090977792,
+        "name": "Tasmania"
+      },
+      {
+        "id": 1091043328,
+        "name": "Victoria"
+      },
+      {
+        "id": 1091108864,
+        "name": "Western Australia"
+      }
+    ]
+  },
+  {
+    "code": "AT",
+    "name": "Austria",
+    "regions": [
+      {
+        "id": 1107296256,
+        "name": "—"
+      },
+      {
+        "id": 1107427328,
+        "name": "Vienna"
+      },
+      {
+        "id": 1107492864,
+        "name": "Burgenland"
+      },
+      {
+        "id": 1107558400,
+        "name": "Carinthia"
+      },
+      {
+        "id": 1107623936,
+        "name": "Lower Austria"
+      },
+      {
+        "id": 1107689472,
+        "name": "Upper Austria"
+      },
+      {
+        "id": 1107755008,
+        "name": "Salzburg"
+      },
+      {
+        "id": 1107820544,
+        "name": "Styria"
+      },
+      {
+        "id": 1107886080,
+        "name": "Tyrol"
+      },
+      {
+        "id": 1107951616,
+        "name": "Vorarlberg"
+      }
+    ]
+  },
+  {
+    "code": "BE",
+    "name": "Belgium",
+    "regions": [
+      {
+        "id": 1124073472,
+        "name": "—"
+      },
+      {
+        "id": 1124204544,
+        "name": "Brussels Region"
+      },
+      {
+        "id": 1124270080,
+        "name": "Flanders"
+      },
+      {
+        "id": 1124335616,
+        "name": "Wallonia"
+      }
+    ]
+  },
+  {
+    "code": "BA",
+    "name": "Bosnia and Herzegovina",
+    "regions": [
+      {
+        "id": 1140850688,
+        "name": "—"
+      },
+      {
+        "id": 1140981760,
+        "name": "Federation of Bosnia and Herzegovina"
+      },
+      {
+        "id": 1141047296,
+        "name": "Republika Srpska"
+      },
+      {
+        "id": 1141112832,
+        "name": "Brčko District"
+      }
+    ]
+  },
+  {
+    "code": "BW",
+    "name": "Botswana",
+    "regions": [
+      {
+        "id": 1157627904,
+        "name": "—"
+      },
+      {
+        "id": 1157693440,
+        "name": "Botswana"
+      }
+    ]
+  },
+  {
+    "code": "BG",
+    "name": "Bulgaria",
+    "regions": [
+      {
+        "id": 1174405120,
+        "name": "—"
+      },
+      {
+        "id": 1174536192,
+        "name": "Sofia City"
+      },
+      {
+        "id": 1174601728,
+        "name": "Sofia Province"
+      },
+      {
+        "id": 1174667264,
+        "name": "Blagoevgrad"
+      },
+      {
+        "id": 1174732800,
+        "name": "Pleven"
+      },
+      {
+        "id": 1174798336,
+        "name": "Vidin"
+      },
+      {
+        "id": 1174863872,
+        "name": "Varna"
+      },
+      {
+        "id": 1174929408,
+        "name": "Burgas"
+      },
+      {
+        "id": 1174994944,
+        "name": "Dobrich"
+      },
+      {
+        "id": 1175060480,
+        "name": "Gabrovo"
+      },
+      {
+        "id": 1175126016,
+        "name": "Haskovo"
+      },
+      {
+        "id": 1175191552,
+        "name": "Yambol"
+      },
+      {
+        "id": 1175257088,
+        "name": "Kardzhali"
+      },
+      {
+        "id": 1175322624,
+        "name": "Kyustendil"
+      },
+      {
+        "id": 1175388160,
+        "name": "Lovech"
+      },
+      {
+        "id": 1175453696,
+        "name": "Montana"
+      },
+      {
+        "id": 1175519232,
+        "name": "Pazardzhik"
+      },
+      {
+        "id": 1175584768,
+        "name": "Pernik"
+      },
+      {
+        "id": 1175650304,
+        "name": "Plovdiv"
+      },
+      {
+        "id": 1175715840,
+        "name": "Razgrad"
+      },
+      {
+        "id": 1175781376,
+        "name": "Ruse"
+      },
+      {
+        "id": 1175846912,
+        "name": "Silistra"
+      },
+      {
+        "id": 1175912448,
+        "name": "Sliven"
+      },
+      {
+        "id": 1175977984,
+        "name": "Smolyan"
+      },
+      {
+        "id": 1176043520,
+        "name": "Stara Zagora"
+      },
+      {
+        "id": 1176109056,
+        "name": "Shumen"
+      },
+      {
+        "id": 1176174592,
+        "name": "Targovishte"
+      },
+      {
+        "id": 1176240128,
+        "name": "Veliko Tarnovo"
+      },
+      {
+        "id": 1176305664,
+        "name": "Vratsa"
+      }
+    ]
+  },
+  {
+    "code": "HR",
+    "name": "Croatia",
+    "regions": [
+      {
+        "id": 1191182336,
+        "name": "—"
+      },
+      {
+        "id": 1191575552,
+        "name": "Zagreb"
+      },
+      {
+        "id": 1191641088,
+        "name": "Bjelovar-Bilogora County"
+      },
+      {
+        "id": 1191706624,
+        "name": "Brod-Posavina County"
+      },
+      {
+        "id": 1191772160,
+        "name": "Dubrovnik-Neretva County"
+      },
+      {
+        "id": 1191837696,
+        "name": "Istria County"
+      },
+      {
+        "id": 1191903232,
+        "name": "Karlovac County"
+      },
+      {
+        "id": 1191968768,
+        "name": "Koprivnica-Križevci County"
+      },
+      {
+        "id": 1192034304,
+        "name": "Krapina-Zagorje County"
+      },
+      {
+        "id": 1192099840,
+        "name": "Lika-Senj County"
+      },
+      {
+        "id": 1192165376,
+        "name": "Međimurje County"
+      },
+      {
+        "id": 1192230912,
+        "name": "Osijek-Baranja County"
+      },
+      {
+        "id": 1192296448,
+        "name": "Požega-Slavonia County"
+      },
+      {
+        "id": 1192361984,
+        "name": "Primorje-Gorski Kotar County"
+      },
+      {
+        "id": 1192427520,
+        "name": "Sisak-Moslavina County"
+      },
+      {
+        "id": 1192493056,
+        "name": "Split-Dalmatia County"
+      },
+      {
+        "id": 1192558592,
+        "name": "Šibenik-Knin County"
+      },
+      {
+        "id": 1192624128,
+        "name": "Varaždin County"
+      },
+      {
+        "id": 1192689664,
+        "name": "Virovitica-Podravina County"
+      },
+      {
+        "id": 1192755200,
+        "name": "Vukovar-Syrmia County"
+      },
+      {
+        "id": 1192820736,
+        "name": "Zadar County"
+      },
+      {
+        "id": 1192886272,
+        "name": "Zagreb County"
+      }
+    ]
+  },
+  {
+    "code": "CY",
+    "name": "Cyprus",
+    "regions": [
+      {
+        "id": 1207959552,
+        "name": "—"
+      },
+      {
+        "id": 1208025088,
+        "name": "Cyprus"
+      }
+    ]
+  },
+  {
+    "code": "CZ",
+    "name": "Czech Republic",
+    "regions": [
+      {
+        "id": 1224736768,
+        "name": "—"
+      },
+      {
+        "id": 1224867840,
+        "name": "Prague"
+      },
+      {
+        "id": 1224933376,
+        "name": "Central Bohemian Region"
+      },
+      {
+        "id": 1224998912,
+        "name": "South Bohemian Region"
+      },
+      {
+        "id": 1225064448,
+        "name": "Plzeň Region"
+      },
+      {
+        "id": 1225129984,
+        "name": "Karlovy Vary Region"
+      },
+      {
+        "id": 1225195520,
+        "name": "Ústí nad Labem Region"
+      },
+      {
+        "id": 1225261056,
+        "name": "Liberec Region"
+      },
+      {
+        "id": 1225326592,
+        "name": "Hradec Králové Region"
+      },
+      {
+        "id": 1225392128,
+        "name": "Pardubice Region"
+      },
+      {
+        "id": 1225457664,
+        "name": "Olomouc Region"
+      },
+      {
+        "id": 1225523200,
+        "name": "Moravian-Silesian Region"
+      },
+      {
+        "id": 1225588736,
+        "name": "South Moravian Region"
+      },
+      {
+        "id": 1225654272,
+        "name": "Zlín Region"
+      },
+      {
+        "id": 1225719808,
+        "name": "Vysočina Region"
+      }
+    ]
+  },
+  {
+    "code": "DK",
+    "name": "Denmark (Kingdom of)",
+    "regions": [
+      {
+        "id": 1241513984,
+        "name": "—"
+      },
+      {
+        "id": 1242693632,
+        "name": "Greenland"
+      },
+      {
+        "id": 1242759168,
+        "name": "Capital Region of Denmark"
+      },
+      {
+        "id": 1242824704,
+        "name": "Central Denmark Region"
+      },
+      {
+        "id": 1242890240,
+        "name": "North Denmark Region"
+      },
+      {
+        "id": 1242955776,
+        "name": "Region Zealand"
+      },
+      {
+        "id": 1243021312,
+        "name": "Region of Southern Denmark"
+      },
+      {
+        "id": 1243086848,
+        "name": "Faroe Islands"
+      }
+    ]
+  },
+  {
+    "code": "EE",
+    "name": "Estonia",
+    "regions": [
+      {
+        "id": 1258291200,
+        "name": "—"
+      },
+      {
+        "id": 1258356736,
+        "name": "Estonia"
+      }
+    ]
+  },
+  {
+    "code": "FI",
+    "name": "Finland",
+    "regions": [
+      {
+        "id": 1275068416,
+        "name": "—"
+      },
+      {
+        "id": 1275592704,
+        "name": "Uusimaa / Nyland"
+      },
+      {
+        "id": 1275658240,
+        "name": "Lappi / Lapland"
+      },
+      {
+        "id": 1275723776,
+        "name": "Pohjois-Pohjanmaa / Norra Österbotten"
+      },
+      {
+        "id": 1275789312,
+        "name": "Kainuu / Kajanaland"
+      },
+      {
+        "id": 1275854848,
+        "name": "Pohjois-Karjala / Norra Karelen"
+      },
+      {
+        "id": 1275920384,
+        "name": "Pohjois-Savo / Norra Savolax"
+      },
+      {
+        "id": 1275985920,
+        "name": "Etelä-Savo / Södra Savolax"
+      },
+      {
+        "id": 1276051456,
+        "name": "Etelä-Pohjanmaa / Södra Österbotten"
+      },
+      {
+        "id": 1276116992,
+        "name": "Pohjanmaa / Österbotten"
+      },
+      {
+        "id": 1276182528,
+        "name": "Pirkanmaa / Birkaland"
+      },
+      {
+        "id": 1276248064,
+        "name": "Satakunta / Satakunda"
+      },
+      {
+        "id": 1276313600,
+        "name": "Keski-Pohjanmaa / Mellersta Österbotten"
+      },
+      {
+        "id": 1276379136,
+        "name": "Keski-Suomi / Mellersta Finland"
+      },
+      {
+        "id": 1276444672,
+        "name": "Varsinais-Suomi / Egentliga Finland"
+      },
+      {
+        "id": 1276510208,
+        "name": "Etelä-Karjala / Södra Karelen"
+      },
+      {
+        "id": 1276575744,
+        "name": "Päijät-Häme / Päijänne Tavastland"
+      },
+      {
+        "id": 1276641280,
+        "name": "Kanta-Häme / Egentliga Tavastland"
+      },
+      {
+        "id": 1276772352,
+        "name": "Kymenlaakso / Kymmenedalen"
+      },
+      {
+        "id": 1276837888,
+        "name": "Ahvenanmaa / Åland"
+      }
+    ]
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "regions": [
+      {
+        "id": 1291845632,
+        "name": "—"
+      },
+      {
+        "id": 1291976704,
+        "name": "Île-de-France"
+      },
+      {
+        "id": 1292042240,
+        "name": "Alsace"
+      },
+      {
+        "id": 1292107776,
+        "name": "Aquitaine"
+      },
+      {
+        "id": 1292173312,
+        "name": "Auvergne"
+      },
+      {
+        "id": 1292238848,
+        "name": "Lower Normandy"
+      },
+      {
+        "id": 1292304384,
+        "name": "Burgundy"
+      },
+      {
+        "id": 1292369920,
+        "name": "Brittany"
+      },
+      {
+        "id": 1292435456,
+        "name": "Centre"
+      },
+      {
+        "id": 1292500992,
+        "name": "Champagne-Ardenne"
+      },
+      {
+        "id": 1292566528,
+        "name": "Corsica"
+      },
+      {
+        "id": 1292632064,
+        "name": "Franche-Comté"
+      },
+      {
+        "id": 1292697600,
+        "name": "Upper Normandy"
+      },
+      {
+        "id": 1292763136,
+        "name": "Languedoc-Roussillon"
+      },
+      {
+        "id": 1292828672,
+        "name": "Limousin"
+      },
+      {
+        "id": 1292894208,
+        "name": "Lorraine"
+      },
+      {
+        "id": 1292959744,
+        "name": "Midi-Pyrénées"
+      },
+      {
+        "id": 1293025280,
+        "name": "Nord-Pas-de-Calais"
+      },
+      {
+        "id": 1293090816,
+        "name": "Pays de la Loire"
+      },
+      {
+        "id": 1293156352,
+        "name": "Picardy"
+      },
+      {
+        "id": 1293221888,
+        "name": "Poitou-Charentes"
+      },
+      {
+        "id": 1293287424,
+        "name": "Provence-Alpes-Côte d'Azur"
+      },
+      {
+        "id": 1293352960,
+        "name": "Rhône-Alpes"
+      },
+      {
+        "id": 1293418496,
+        "name": "Guadeloupe"
+      },
+      {
+        "id": 1293484032,
+        "name": "Martinique"
+      },
+      {
+        "id": 1293549568,
+        "name": "French Guiana"
+      },
+      {
+        "id": 1293615104,
+        "name": "Réunion"
+      },
+      {
+        "id": 1293680640,
+        "name": "Mayotte"
+      }
+    ]
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "regions": [
+      {
+        "id": 1308622848,
+        "name": "—"
+      },
+      {
+        "id": 1308753920,
+        "name": "Berlin"
+      },
+      {
+        "id": 1308819456,
+        "name": "Hesse"
+      },
+      {
+        "id": 1308884992,
+        "name": "Baden-Württemberg"
+      },
+      {
+        "id": 1308950528,
+        "name": "Bavaria"
+      },
+      {
+        "id": 1309016064,
+        "name": "Brandenburg"
+      },
+      {
+        "id": 1309081600,
+        "name": "Bremen"
+      },
+      {
+        "id": 1309147136,
+        "name": "Hamburg"
+      },
+      {
+        "id": 1309212672,
+        "name": "Mecklenburg-Vorpommern"
+      },
+      {
+        "id": 1309278208,
+        "name": "Lower Saxony"
+      },
+      {
+        "id": 1309343744,
+        "name": "North Rhine-Westphalia"
+      },
+      {
+        "id": 1309409280,
+        "name": "Rhineland-Palatinate"
+      },
+      {
+        "id": 1309474816,
+        "name": "Saarland"
+      },
+      {
+        "id": 1309540352,
+        "name": "Saxony"
+      },
+      {
+        "id": 1309605888,
+        "name": "Saxony-Anhalt"
+      },
+      {
+        "id": 1309671424,
+        "name": "Schleswig-Holstein"
+      },
+      {
+        "id": 1309736960,
+        "name": "Thuringia"
+      }
+    ]
+  },
+  {
+    "code": "GR",
+    "name": "Greece",
+    "regions": [
+      {
+        "id": 1325400064,
+        "name": "—"
+      },
+      {
+        "id": 1325531136,
+        "name": "Attica"
+      },
+      {
+        "id": 1325596672,
+        "name": "Central Greece"
+      },
+      {
+        "id": 1325662208,
+        "name": "Central Macedonia"
+      },
+      {
+        "id": 1325727744,
+        "name": "Crete"
+      },
+      {
+        "id": 1325793280,
+        "name": "East Macedonia and Thrace"
+      },
+      {
+        "id": 1325858816,
+        "name": "Epirus"
+      },
+      {
+        "id": 1325924352,
+        "name": "Ionian Islands"
+      },
+      {
+        "id": 1325989888,
+        "name": "North Aegean"
+      },
+      {
+        "id": 1326055424,
+        "name": "Peloponnese"
+      },
+      {
+        "id": 1326120960,
+        "name": "South Aegean"
+      },
+      {
+        "id": 1326186496,
+        "name": "Thessaly"
+      },
+      {
+        "id": 1326252032,
+        "name": "West Greece"
+      },
+      {
+        "id": 1326317568,
+        "name": "West Macedonia"
+      }
+    ]
+  },
+  {
+    "code": "HU",
+    "name": "Hungary",
+    "regions": [
+      {
+        "id": 1342177280,
+        "name": "—"
+      },
+      {
+        "id": 1342308352,
+        "name": "Budapest"
+      },
+      {
+        "id": 1342373888,
+        "name": "Bács-Kiskun County"
+      },
+      {
+        "id": 1342439424,
+        "name": "Baranya County"
+      },
+      {
+        "id": 1342504960,
+        "name": "Békés County"
+      },
+      {
+        "id": 1342570496,
+        "name": "Borsod-Abaúj-Zemplén County"
+      },
+      {
+        "id": 1342636032,
+        "name": "Csongrád County"
+      },
+      {
+        "id": 1342701568,
+        "name": "Fejér County"
+      },
+      {
+        "id": 1342767104,
+        "name": "Győr-Moson-Sopron County"
+      },
+      {
+        "id": 1342832640,
+        "name": "Hajdú-Bihar County"
+      },
+      {
+        "id": 1342898176,
+        "name": "Heves County"
+      },
+      {
+        "id": 1342963712,
+        "name": "Jász-Nagykun-Szolnok County"
+      },
+      {
+        "id": 1343029248,
+        "name": "Komárom-Esztergom County"
+      },
+      {
+        "id": 1343094784,
+        "name": "Nógrád County"
+      },
+      {
+        "id": 1343160320,
+        "name": "Pest County"
+      },
+      {
+        "id": 1343225856,
+        "name": "Somogy County"
+      },
+      {
+        "id": 1343291392,
+        "name": "Szabolcs-Szatmár-Bereg County"
+      },
+      {
+        "id": 1343356928,
+        "name": "Tolna County"
+      },
+      {
+        "id": 1343422464,
+        "name": "Vas County"
+      },
+      {
+        "id": 1343488000,
+        "name": "Veszprém County"
+      },
+      {
+        "id": 1343553536,
+        "name": "Zala County"
+      }
+    ]
+  },
+  {
+    "code": "IS",
+    "name": "Iceland",
+    "regions": [
+      {
+        "id": 1358954496,
+        "name": "—"
+      },
+      {
+        "id": 1359020032,
+        "name": "Iceland"
+      }
+    ]
+  },
+  {
+    "code": "IE",
+    "name": "Ireland",
+    "regions": [
+      {
+        "id": 1375731712,
+        "name": "—"
+      },
+      {
+        "id": 1375862784,
+        "name": "Dublin"
+      },
+      {
+        "id": 1376387072,
+        "name": "County Carlow"
+      },
+      {
+        "id": 1376452608,
+        "name": "County Cavan"
+      },
+      {
+        "id": 1376518144,
+        "name": "County Clare"
+      },
+      {
+        "id": 1376583680,
+        "name": "County Cork"
+      },
+      {
+        "id": 1376649216,
+        "name": "County Donegal"
+      },
+      {
+        "id": 1376714752,
+        "name": "County Galway"
+      },
+      {
+        "id": 1376780288,
+        "name": "County Kerry"
+      },
+      {
+        "id": 1376845824,
+        "name": "County Kildare"
+      },
+      {
+        "id": 1376911360,
+        "name": "County Kilkenny"
+      },
+      {
+        "id": 1376976896,
+        "name": "County Laois"
+      },
+      {
+        "id": 1377042432,
+        "name": "County Leitrim"
+      },
+      {
+        "id": 1377107968,
+        "name": "County Limerick"
+      },
+      {
+        "id": 1377173504,
+        "name": "County Longford"
+      },
+      {
+        "id": 1377239040,
+        "name": "County Louth"
+      },
+      {
+        "id": 1377304576,
+        "name": "County Mayo"
+      },
+      {
+        "id": 1377370112,
+        "name": "County Meath"
+      },
+      {
+        "id": 1377435648,
+        "name": "County Monaghan"
+      },
+      {
+        "id": 1377501184,
+        "name": "County Offaly"
+      },
+      {
+        "id": 1377566720,
+        "name": "County Roscommon"
+      },
+      {
+        "id": 1377632256,
+        "name": "County Sligo"
+      },
+      {
+        "id": 1377697792,
+        "name": "County Tipperary"
+      },
+      {
+        "id": 1377763328,
+        "name": "County Waterford"
+      },
+      {
+        "id": 1377828864,
+        "name": "County Westmeath"
+      },
+      {
+        "id": 1377894400,
+        "name": "County Wexford"
+      },
+      {
+        "id": 1377959936,
+        "name": "County Wicklow"
+      }
+    ]
+  },
+  {
+    "code": "IT",
+    "name": "Italy",
+    "regions": [
+      {
+        "id": 1392508928,
+        "name": "—"
+      },
+      {
+        "id": 1392640000,
+        "name": "Lazio"
+      },
+      {
+        "id": 1392705536,
+        "name": "Aosta Valley"
+      },
+      {
+        "id": 1392771072,
+        "name": "Piedmont"
+      },
+      {
+        "id": 1392836608,
+        "name": "Liguria"
+      },
+      {
+        "id": 1392902144,
+        "name": "Lombardy"
+      },
+      {
+        "id": 1392967680,
+        "name": "Trentino-Alto Adige"
+      },
+      {
+        "id": 1393033216,
+        "name": "Veneto"
+      },
+      {
+        "id": 1393098752,
+        "name": "Friuli Venezia Giulia"
+      },
+      {
+        "id": 1393164288,
+        "name": "Emilia-Romagna"
+      },
+      {
+        "id": 1393229824,
+        "name": "Tuscany"
+      },
+      {
+        "id": 1393295360,
+        "name": "Umbria"
+      },
+      {
+        "id": 1393360896,
+        "name": "Marche"
+      },
+      {
+        "id": 1393426432,
+        "name": "Abruzzo"
+      },
+      {
+        "id": 1393491968,
+        "name": "Molise"
+      },
+      {
+        "id": 1393557504,
+        "name": "Campania"
+      },
+      {
+        "id": 1393623040,
+        "name": "Apulia"
+      },
+      {
+        "id": 1393688576,
+        "name": "Basilicata"
+      },
+      {
+        "id": 1393754112,
+        "name": "Calabria"
+      },
+      {
+        "id": 1393819648,
+        "name": "Sicily"
+      },
+      {
+        "id": 1393885184,
+        "name": "Sardinia"
+      }
+    ]
+  },
+  {
+    "code": "LV",
+    "name": "Latvia",
+    "regions": [
+      {
+        "id": 1409286144,
+        "name": "—"
+      },
+      {
+        "id": 1409351680,
+        "name": "Latvia"
+      }
+    ]
+  },
+  {
+    "code": "LS",
+    "name": "Lesotho",
+    "regions": [
+      {
+        "id": 1426063360,
+        "name": "—"
+      },
+      {
+        "id": 1426194432,
+        "name": "Maseru"
+      },
+      {
+        "id": 1426259968,
+        "name": "Berea"
+      },
+      {
+        "id": 1426325504,
+        "name": "Butha-Buthe"
+      },
+      {
+        "id": 1426391040,
+        "name": "Leribe"
+      },
+      {
+        "id": 1426456576,
+        "name": "Mafeteng"
+      },
+      {
+        "id": 1426522112,
+        "name": "Mohale's Hoek"
+      },
+      {
+        "id": 1426587648,
+        "name": "Mokhotlong"
+      },
+      {
+        "id": 1426653184,
+        "name": "Qacha's Nek"
+      },
+      {
+        "id": 1426718720,
+        "name": "Quthing"
+      },
+      {
+        "id": 1426784256,
+        "name": "Thaba-Tseka"
+      }
+    ]
+  },
+  {
+    "code": "LI",
+    "name": "Liechtenstein",
+    "regions": [
+      {
+        "id": 1442840576,
+        "name": "—"
+      },
+      {
+        "id": 1442906112,
+        "name": "Liechtenstein"
+      }
+    ]
+  },
+  {
+    "code": "LT",
+    "name": "Lithuania",
+    "regions": [
+      {
+        "id": 1459617792,
+        "name": "—"
+      },
+      {
+        "id": 1459748864,
+        "name": "Vilnius"
+      },
+      {
+        "id": 1459814400,
+        "name": "Alytus"
+      },
+      {
+        "id": 1459879936,
+        "name": "Kaunas"
+      },
+      {
+        "id": 1459945472,
+        "name": "Klaipėda"
+      },
+      {
+        "id": 1460011008,
+        "name": "Marijampolė"
+      },
+      {
+        "id": 1460076544,
+        "name": "Panevėžys"
+      },
+      {
+        "id": 1460142080,
+        "name": "Šiauliai"
+      },
+      {
+        "id": 1460207616,
+        "name": "Taurage"
+      },
+      {
+        "id": 1460273152,
+        "name": "Telšiai"
+      },
+      {
+        "id": 1460338688,
+        "name": "Utena"
+      }
+    ]
+  },
+  {
+    "code": "LU",
+    "name": "Luxembourg",
+    "regions": [
+      {
+        "id": 1476395008,
+        "name": "—"
+      },
+      {
+        "id": 1476460544,
+        "name": "Luxembourg"
+      }
+    ]
+  },
+  {
+    "code": "MK",
+    "name": "Macedonia (Republic of)",
+    "regions": [
+      {
+        "id": 1493172224,
+        "name": "—"
+      },
+      {
+        "id": 1493237760,
+        "name": "Macedonia (Republic of)"
+      }
+    ]
+  },
+  {
+    "code": "MT",
+    "name": "Malta",
+    "regions": [
+      {
+        "id": 1509949440,
+        "name": "—"
+      },
+      {
+        "id": 1510014976,
+        "name": "Malta"
+      }
+    ]
+  },
+  {
+    "code": "ME",
+    "name": "Montenegro",
+    "regions": [
+      {
+        "id": 1526726656,
+        "name": "—"
+      },
+      {
+        "id": 1526792192,
+        "name": "Montenegro"
+      }
+    ]
+  },
+  {
+    "code": "MZ",
+    "name": "Mozambique",
+    "regions": [
+      {
+        "id": 1543503872,
+        "name": "—"
+      },
+      {
+        "id": 1543569408,
+        "name": "Mozambique"
+      }
+    ]
+  },
+  {
+    "code": "NA",
+    "name": "Namibia",
+    "regions": [
+      {
+        "id": 1560281088,
+        "name": "—"
+      },
+      {
+        "id": 1560346624,
+        "name": "Namibia"
+      }
+    ]
+  },
+  {
+    "code": "NL",
+    "name": "Netherlands",
+    "regions": [
+      {
+        "id": 1577058304,
+        "name": "—"
+      },
+      {
+        "id": 1577189376,
+        "name": "North Holland"
+      },
+      {
+        "id": 1577254912,
+        "name": "Drenthe"
+      },
+      {
+        "id": 1577320448,
+        "name": "Flevoland"
+      },
+      {
+        "id": 1577385984,
+        "name": "Friesland"
+      },
+      {
+        "id": 1577451520,
+        "name": "Gelderland"
+      },
+      {
+        "id": 1577517056,
+        "name": "Groningen"
+      },
+      {
+        "id": 1577582592,
+        "name": "Limburg"
+      },
+      {
+        "id": 1577648128,
+        "name": "North Brabant"
+      },
+      {
+        "id": 1577713664,
+        "name": "Overijssel"
+      },
+      {
+        "id": 1577779200,
+        "name": "South Holland"
+      },
+      {
+        "id": 1577844736,
+        "name": "Utrecht"
+      },
+      {
+        "id": 1577910272,
+        "name": "Zeeland"
+      }
+    ]
+  },
+  {
+    "code": "NZ",
+    "name": "New Zealand",
+    "regions": [
+      {
+        "id": 1593835520,
+        "name": "—"
+      },
+      {
+        "id": 1593966592,
+        "name": "Wellington"
+      },
+      {
+        "id": 1594032128,
+        "name": "Auckland"
+      },
+      {
+        "id": 1594097664,
+        "name": "Bay of Plenty"
+      },
+      {
+        "id": 1594163200,
+        "name": "Canterbury"
+      },
+      {
+        "id": 1594228736,
+        "name": "Otago"
+      },
+      {
+        "id": 1594294272,
+        "name": "Hawke's Bay"
+      },
+      {
+        "id": 1594359808,
+        "name": "Manawatu-Wanganui"
+      },
+      {
+        "id": 1594425344,
+        "name": "Nelson"
+      },
+      {
+        "id": 1594490880,
+        "name": "Northland"
+      },
+      {
+        "id": 1594621952,
+        "name": "Southland"
+      },
+      {
+        "id": 1594687488,
+        "name": "Taranaki"
+      },
+      {
+        "id": 1594753024,
+        "name": "Waikato"
+      },
+      {
+        "id": 1594818560,
+        "name": "Gisborne"
+      },
+      {
+        "id": 1594884096,
+        "name": "West Coast"
+      },
+      {
+        "id": 1594949632,
+        "name": "Marlborough"
+      },
+      {
+        "id": 1595015168,
+        "name": "Tasman"
+      }
+    ]
+  },
+  {
+    "code": "NO",
+    "name": "Norway",
+    "regions": [
+      {
+        "id": 1610612736,
+        "name": "—"
+      },
+      {
+        "id": 1611071488,
+        "name": "Oslo"
+      },
+      {
+        "id": 1611137024,
+        "name": "Akershus"
+      },
+      {
+        "id": 1611202560,
+        "name": "Aust-Agder"
+      },
+      {
+        "id": 1611268096,
+        "name": "Buskerud"
+      },
+      {
+        "id": 1611333632,
+        "name": "Finnmark"
+      },
+      {
+        "id": 1611399168,
+        "name": "Hedmark"
+      },
+      {
+        "id": 1611464704,
+        "name": "Hordaland"
+      },
+      {
+        "id": 1611530240,
+        "name": "Møre og Romsdal"
+      },
+      {
+        "id": 1611595776,
+        "name": "Nordland"
+      },
+      {
+        "id": 1611661312,
+        "name": "Nord-Trøndelag"
+      },
+      {
+        "id": 1611726848,
+        "name": "Oppland"
+      },
+      {
+        "id": 1611792384,
+        "name": "Rogaland"
+      },
+      {
+        "id": 1611857920,
+        "name": "Sogn og Fjordane"
+      },
+      {
+        "id": 1611923456,
+        "name": "Sør-Trøndelag"
+      },
+      {
+        "id": 1611988992,
+        "name": "Telemark"
+      },
+      {
+        "id": 1612054528,
+        "name": "Troms"
+      },
+      {
+        "id": 1612120064,
+        "name": "Vest-Agder"
+      },
+      {
+        "id": 1612185600,
+        "name": "Vestfold"
+      },
+      {
+        "id": 1612251136,
+        "name": "Østfold"
+      },
+      {
+        "id": 1612316672,
+        "name": "Svalbard"
+      }
+    ]
+  },
+  {
+    "code": "PL",
+    "name": "Poland",
+    "regions": [
+      {
+        "id": 1627389952,
+        "name": "—"
+      },
+      {
+        "id": 1627521024,
+        "name": "Masovia"
+      },
+      {
+        "id": 1627586560,
+        "name": "Lower Silesia"
+      },
+      {
+        "id": 1627652096,
+        "name": "Kuyavian-Pomeranian Voivodeship"
+      },
+      {
+        "id": 1627717632,
+        "name": "Lodz"
+      },
+      {
+        "id": 1627783168,
+        "name": "Lublin"
+      },
+      {
+        "id": 1627848704,
+        "name": "Lubusz"
+      },
+      {
+        "id": 1627914240,
+        "name": "Lesser Poland"
+      },
+      {
+        "id": 1627979776,
+        "name": "Opole"
+      },
+      {
+        "id": 1628045312,
+        "name": "Subcarpathia"
+      },
+      {
+        "id": 1628110848,
+        "name": "Podlachia"
+      },
+      {
+        "id": 1628176384,
+        "name": "Pomerania"
+      },
+      {
+        "id": 1628241920,
+        "name": "Silesia"
+      },
+      {
+        "id": 1628307456,
+        "name": "Świętokrzyskie"
+      },
+      {
+        "id": 1628372992,
+        "name": "Warmian-Masurian Voivodeship"
+      },
+      {
+        "id": 1628438528,
+        "name": "Greater Poland"
+      },
+      {
+        "id": 1628504064,
+        "name": "Western Pomerania"
+      }
+    ]
+  },
+  {
+    "code": "PT",
+    "name": "Portugal",
+    "regions": [
+      {
+        "id": 1644167168,
+        "name": "—"
+      },
+      {
+        "id": 1644298240,
+        "name": "Lisbon"
+      },
+      {
+        "id": 1644625920,
+        "name": "Madeira"
+      },
+      {
+        "id": 1644691456,
+        "name": "Azores"
+      },
+      {
+        "id": 1644756992,
+        "name": "Aveiro"
+      },
+      {
+        "id": 1644822528,
+        "name": "Beja"
+      },
+      {
+        "id": 1644888064,
+        "name": "Braga"
+      },
+      {
+        "id": 1644953600,
+        "name": "Bragança"
+      },
+      {
+        "id": 1645019136,
+        "name": "Castelo Branco"
+      },
+      {
+        "id": 1645084672,
+        "name": "Coimbra"
+      },
+      {
+        "id": 1645150208,
+        "name": "Évora"
+      },
+      {
+        "id": 1645215744,
+        "name": "Faro"
+      },
+      {
+        "id": 1645281280,
+        "name": "Guarda"
+      },
+      {
+        "id": 1645346816,
+        "name": "Leiria"
+      },
+      {
+        "id": 1645412352,
+        "name": "Portalegre"
+      },
+      {
+        "id": 1645477888,
+        "name": "Porto"
+      },
+      {
+        "id": 1645543424,
+        "name": "Santarém"
+      },
+      {
+        "id": 1645608960,
+        "name": "Setúbal"
+      },
+      {
+        "id": 1645674496,
+        "name": "Viana do Castelo"
+      },
+      {
+        "id": 1645740032,
+        "name": "Vila Real"
+      },
+      {
+        "id": 1645805568,
+        "name": "Viseu"
+      }
+    ]
+  },
+  {
+    "code": "RO",
+    "name": "Romania",
+    "regions": [
+      {
+        "id": 1660944384,
+        "name": "—"
+      },
+      {
+        "id": 1661075456,
+        "name": "Bucharest"
+      },
+      {
+        "id": 1661140992,
+        "name": "Alba"
+      },
+      {
+        "id": 1661206528,
+        "name": "Arad"
+      },
+      {
+        "id": 1661272064,
+        "name": "Arges"
+      },
+      {
+        "id": 1661337600,
+        "name": "Bacau"
+      },
+      {
+        "id": 1661403136,
+        "name": "Bihor"
+      },
+      {
+        "id": 1661468672,
+        "name": "Bistrita-Nasaud"
+      },
+      {
+        "id": 1661534208,
+        "name": "Botosani"
+      },
+      {
+        "id": 1661599744,
+        "name": "Braila"
+      },
+      {
+        "id": 1661665280,
+        "name": "Brasov"
+      },
+      {
+        "id": 1661730816,
+        "name": "Buzau"
+      },
+      {
+        "id": 1661796352,
+        "name": "Calarasi"
+      },
+      {
+        "id": 1661861888,
+        "name": "Caras-Severin"
+      },
+      {
+        "id": 1661927424,
+        "name": "Cluj"
+      },
+      {
+        "id": 1661992960,
+        "name": "Constanta"
+      },
+      {
+        "id": 1662058496,
+        "name": "Covasna"
+      },
+      {
+        "id": 1662124032,
+        "name": "Dâmbovita"
+      },
+      {
+        "id": 1662189568,
+        "name": "Dolj"
+      },
+      {
+        "id": 1662255104,
+        "name": "Galati"
+      },
+      {
+        "id": 1662320640,
+        "name": "Giurgiu"
+      },
+      {
+        "id": 1662386176,
+        "name": "Gorj"
+      },
+      {
+        "id": 1662451712,
+        "name": "Harghita"
+      },
+      {
+        "id": 1662517248,
+        "name": "Hunedoara"
+      },
+      {
+        "id": 1662582784,
+        "name": "Ialomita"
+      },
+      {
+        "id": 1662648320,
+        "name": "Iasi"
+      },
+      {
+        "id": 1662713856,
+        "name": "Ilfov"
+      },
+      {
+        "id": 1662779392,
+        "name": "Maramures"
+      },
+      {
+        "id": 1662844928,
+        "name": "Mehedinti"
+      },
+      {
+        "id": 1662910464,
+        "name": "Mures"
+      },
+      {
+        "id": 1662976000,
+        "name": "Neamt"
+      },
+      {
+        "id": 1663041536,
+        "name": "Olt"
+      },
+      {
+        "id": 1663107072,
+        "name": "Prahova"
+      },
+      {
+        "id": 1663172608,
+        "name": "Salaj"
+      },
+      {
+        "id": 1663238144,
+        "name": "Satu Mare"
+      },
+      {
+        "id": 1663303680,
+        "name": "Sibiu"
+      },
+      {
+        "id": 1663369216,
+        "name": "Suceava"
+      },
+      {
+        "id": 1663434752,
+        "name": "Teleorman"
+      },
+      {
+        "id": 1663500288,
+        "name": "Timis"
+      },
+      {
+        "id": 1663565824,
+        "name": "Tulcea"
+      },
+      {
+        "id": 1663631360,
+        "name": "Vâlcea"
+      },
+      {
+        "id": 1663696896,
+        "name": "Vaslui"
+      },
+      {
+        "id": 1663762432,
+        "name": "Vrancea"
+      }
+    ]
+  },
+  {
+    "code": "RU",
+    "name": "Russia",
+    "regions": [
+      {
+        "id": 1677721600,
+        "name": "—"
+      },
+      {
+        "id": 1678311424,
+        "name": "Moscow City"
+      },
+      {
+        "id": 1678376960,
+        "name": "Adygey"
+      },
+      {
+        "id": 1678442496,
+        "name": "Gorno-Altay"
+      },
+      {
+        "id": 1678508032,
+        "name": "Altay"
+      },
+      {
+        "id": 1678573568,
+        "name": "Amur"
+      },
+      {
+        "id": 1678639104,
+        "name": "Arkhangel'sk"
+      },
+      {
+        "id": 1678704640,
+        "name": "Astrakhan'"
+      },
+      {
+        "id": 1678770176,
+        "name": "Bashkortostan"
+      },
+      {
+        "id": 1678835712,
+        "name": "Belgorod"
+      },
+      {
+        "id": 1678901248,
+        "name": "Bryansk"
+      },
+      {
+        "id": 1678966784,
+        "name": "Buryat"
+      },
+      {
+        "id": 1679032320,
+        "name": "Chechnya"
+      },
+      {
+        "id": 1679097856,
+        "name": "Chelyabinsk"
+      },
+      {
+        "id": 1679163392,
+        "name": "Chukot"
+      },
+      {
+        "id": 1679228928,
+        "name": "Chuvash"
+      },
+      {
+        "id": 1679294464,
+        "name": "Dagestan"
+      },
+      {
+        "id": 1679360000,
+        "name": "Ingushetia"
+      },
+      {
+        "id": 1679425536,
+        "name": "Irkutsk"
+      },
+      {
+        "id": 1679491072,
+        "name": "Ivanovo"
+      },
+      {
+        "id": 1679556608,
+        "name": "Kabardin-Balkar"
+      },
+      {
+        "id": 1679622144,
+        "name": "Kaliningrad"
+      },
+      {
+        "id": 1679687680,
+        "name": "Kalmyk"
+      },
+      {
+        "id": 1679753216,
+        "name": "Kaluga"
+      },
+      {
+        "id": 1679818752,
+        "name": "Kamchatka"
+      },
+      {
+        "id": 1679884288,
+        "name": "Karachay-Cherkess"
+      },
+      {
+        "id": 1679949824,
+        "name": "Karelia"
+      },
+      {
+        "id": 1680015360,
+        "name": "Kemerovo"
+      },
+      {
+        "id": 1680080896,
+        "name": "Khabarovsk"
+      },
+      {
+        "id": 1680146432,
+        "name": "Khakassia"
+      },
+      {
+        "id": 1680211968,
+        "name": "Khanty-Mansiy"
+      },
+      {
+        "id": 1680277504,
+        "name": "Kirov"
+      },
+      {
+        "id": 1680343040,
+        "name": "Komi"
+      },
+      {
+        "id": 1680408576,
+        "name": "Kostroma"
+      },
+      {
+        "id": 1680474112,
+        "name": "Krasnodar"
+      },
+      {
+        "id": 1680539648,
+        "name": "Krasnoyarsk"
+      },
+      {
+        "id": 1680605184,
+        "name": "Kurgan"
+      },
+      {
+        "id": 1680670720,
+        "name": "Kursk"
+      },
+      {
+        "id": 1680736256,
+        "name": "Leningrad"
+      },
+      {
+        "id": 1680801792,
+        "name": "Lipetsk"
+      },
+      {
+        "id": 1680867328,
+        "name": "Magadan"
+      },
+      {
+        "id": 1680932864,
+        "name": "Mariy-El"
+      },
+      {
+        "id": 1680998400,
+        "name": "Mordovia"
+      },
+      {
+        "id": 1681063936,
+        "name": "Moscow"
+      },
+      {
+        "id": 1681129472,
+        "name": "Murmansk"
+      },
+      {
+        "id": 1681195008,
+        "name": "Nenets"
+      },
+      {
+        "id": 1681260544,
+        "name": "Nizhegorod"
+      },
+      {
+        "id": 1681326080,
+        "name": "Novgorod"
+      },
+      {
+        "id": 1681391616,
+        "name": "Novosibirsk"
+      },
+      {
+        "id": 1681457152,
+        "name": "Omsk"
+      },
+      {
+        "id": 1681522688,
+        "name": "Orenburg"
+      },
+      {
+        "id": 1681588224,
+        "name": "Orel"
+      },
+      {
+        "id": 1681653760,
+        "name": "Penza"
+      },
+      {
+        "id": 1681719296,
+        "name": "Perm'"
+      },
+      {
+        "id": 1681784832,
+        "name": "Primor'ye"
+      },
+      {
+        "id": 1681850368,
+        "name": "Pskov"
+      },
+      {
+        "id": 1681915904,
+        "name": "Rostov"
+      },
+      {
+        "id": 1681981440,
+        "name": "Ryazan'"
+      },
+      {
+        "id": 1682046976,
+        "name": "Sakha"
+      },
+      {
+        "id": 1682112512,
+        "name": "Sakhalin"
+      },
+      {
+        "id": 1682178048,
+        "name": "Samara"
+      },
+      {
+        "id": 1682243584,
+        "name": "St. Petersburg"
+      },
+      {
+        "id": 1682309120,
+        "name": "Saratov"
+      },
+      {
+        "id": 1682374656,
+        "name": "North Ossetia"
+      },
+      {
+        "id": 1682440192,
+        "name": "Smolensk"
+      },
+      {
+        "id": 1682505728,
+        "name": "Stavropol'"
+      },
+      {
+        "id": 1682571264,
+        "name": "Sverdlovsk"
+      },
+      {
+        "id": 1682636800,
+        "name": "Tambov"
+      },
+      {
+        "id": 1682702336,
+        "name": "Tatarstan"
+      },
+      {
+        "id": 1682767872,
+        "name": "Tomsk"
+      },
+      {
+        "id": 1682833408,
+        "name": "Tula"
+      },
+      {
+        "id": 1682898944,
+        "name": "Tver'"
+      },
+      {
+        "id": 1682964480,
+        "name": "Tyumen'"
+      },
+      {
+        "id": 1683030016,
+        "name": "Tuva"
+      },
+      {
+        "id": 1683095552,
+        "name": "Udmurt"
+      },
+      {
+        "id": 1683161088,
+        "name": "Ul'yanovsk"
+      },
+      {
+        "id": 1683226624,
+        "name": "Vladimir"
+      },
+      {
+        "id": 1683292160,
+        "name": "Volgograd"
+      },
+      {
+        "id": 1683357696,
+        "name": "Vologda"
+      },
+      {
+        "id": 1683423232,
+        "name": "Voronezh"
+      },
+      {
+        "id": 1683488768,
+        "name": "Yamal-Nenets"
+      },
+      {
+        "id": 1683554304,
+        "name": "Yaroslavl'"
+      },
+      {
+        "id": 1683619840,
+        "name": "Yevrey"
+      },
+      {
+        "id": 1683685376,
+        "name": "Zabaykal'ye"
+      }
+    ]
+  },
+  {
+    "code": "RS",
+    "name": "Serbia and Kosovo",
+    "regions": [
+      {
+        "id": 1694498816,
+        "name": "—"
+      },
+      {
+        "id": 1694564352,
+        "name": "Serbia and Kosovo"
+      }
+    ]
+  },
+  {
+    "code": "SK",
+    "name": "Slovakia",
+    "regions": [
+      {
+        "id": 1711276032,
+        "name": "—"
+      },
+      {
+        "id": 1711407104,
+        "name": "Bratislava"
+      },
+      {
+        "id": 1711472640,
+        "name": "Banská Bystrica"
+      },
+      {
+        "id": 1711538176,
+        "name": "Košice"
+      },
+      {
+        "id": 1711603712,
+        "name": "Nitra"
+      },
+      {
+        "id": 1711669248,
+        "name": "Prešov"
+      },
+      {
+        "id": 1711734784,
+        "name": "Trencín"
+      },
+      {
+        "id": 1711800320,
+        "name": "Trnava"
+      },
+      {
+        "id": 1711865856,
+        "name": "Žilina"
+      }
+    ]
+  },
+  {
+    "code": "SI",
+    "name": "Slovenia",
+    "regions": [
+      {
+        "id": 1728053248,
+        "name": "—"
+      },
+      {
+        "id": 1728118784,
+        "name": "Slovenia"
+      }
+    ]
+  },
+  {
+    "code": "ZA",
+    "name": "South Africa",
+    "regions": [
+      {
+        "id": 1744830464,
+        "name": "—"
+      },
+      {
+        "id": 1744961536,
+        "name": "Gauteng"
+      },
+      {
+        "id": 1745027072,
+        "name": "Western Cape"
+      },
+      {
+        "id": 1745092608,
+        "name": "Northern Cape"
+      },
+      {
+        "id": 1745158144,
+        "name": "Eastern Cape"
+      },
+      {
+        "id": 1745223680,
+        "name": "KwaZulu-Natal"
+      },
+      {
+        "id": 1745289216,
+        "name": "Free State"
+      },
+      {
+        "id": 1745354752,
+        "name": "North West"
+      },
+      {
+        "id": 1745420288,
+        "name": "Mpumalanga"
+      },
+      {
+        "id": 1745485824,
+        "name": "Limpopo"
+      }
+    ]
+  },
+  {
+    "code": "ES",
+    "name": "Spain",
+    "regions": [
+      {
+        "id": 1761607680,
+        "name": "—"
+      },
+      {
+        "id": 1761738752,
+        "name": "Madrid"
+      },
+      {
+        "id": 1761804288,
+        "name": "Andalusia"
+      },
+      {
+        "id": 1761869824,
+        "name": "Aragon"
+      },
+      {
+        "id": 1761935360,
+        "name": "Principality of Asturias"
+      },
+      {
+        "id": 1762000896,
+        "name": "Balearic Islands"
+      },
+      {
+        "id": 1762066432,
+        "name": "Canary Islands"
+      },
+      {
+        "id": 1762131968,
+        "name": "Cantabria"
+      },
+      {
+        "id": 1762197504,
+        "name": "Castile-La Mancha"
+      },
+      {
+        "id": 1762263040,
+        "name": "Castilla y León"
+      },
+      {
+        "id": 1762328576,
+        "name": "Catalonia"
+      },
+      {
+        "id": 1762394112,
+        "name": "Valencia"
+      },
+      {
+        "id": 1762459648,
+        "name": "Extremadura"
+      },
+      {
+        "id": 1762525184,
+        "name": "Galicia"
+      },
+      {
+        "id": 1762590720,
+        "name": "Murcia"
+      },
+      {
+        "id": 1762656256,
+        "name": "Navarre"
+      },
+      {
+        "id": 1762721792,
+        "name": "Basque Country"
+      },
+      {
+        "id": 1762787328,
+        "name": "La Rioja"
+      },
+      {
+        "id": 1762852864,
+        "name": "Ceuta"
+      },
+      {
+        "id": 1762918400,
+        "name": "Melilla"
+      }
+    ]
+  },
+  {
+    "code": "SZ",
+    "name": "Swaziland",
+    "regions": [
+      {
+        "id": 1778384896,
+        "name": "—"
+      },
+      {
+        "id": 1778515968,
+        "name": "Hhohho"
+      },
+      {
+        "id": 1778581504,
+        "name": "Lubombo"
+      },
+      {
+        "id": 1778647040,
+        "name": "Manzini"
+      },
+      {
+        "id": 1778712576,
+        "name": "Shiselweni"
+      }
+    ]
+  },
+  {
+    "code": "SE",
+    "name": "Sweden",
+    "regions": [
+      {
+        "id": 1795162112,
+        "name": "—"
+      },
+      {
+        "id": 1795293184,
+        "name": "Stockholm County"
+      },
+      {
+        "id": 1795358720,
+        "name": "Skåne County"
+      },
+      {
+        "id": 1795424256,
+        "name": "Västra Götaland County"
+      },
+      {
+        "id": 1795489792,
+        "name": "Östergötland County"
+      },
+      {
+        "id": 1795555328,
+        "name": "Södermanland County"
+      },
+      {
+        "id": 1795620864,
+        "name": "Värmland County"
+      },
+      {
+        "id": 1795686400,
+        "name": "Uppsala County"
+      },
+      {
+        "id": 1795751936,
+        "name": "Gävleborg County"
+      },
+      {
+        "id": 1795817472,
+        "name": "Västerbotten County"
+      },
+      {
+        "id": 1795883008,
+        "name": "Norrbotten County"
+      },
+      {
+        "id": 1795948544,
+        "name": "Gotland Island"
+      },
+      {
+        "id": 1796014080,
+        "name": "Jämtland County"
+      },
+      {
+        "id": 1796079616,
+        "name": "Dalarna County"
+      },
+      {
+        "id": 1796145152,
+        "name": "Blekinge County"
+      },
+      {
+        "id": 1796210688,
+        "name": "Örebro County"
+      },
+      {
+        "id": 1796276224,
+        "name": "Västernorrland County"
+      },
+      {
+        "id": 1796341760,
+        "name": "Jönköping County"
+      },
+      {
+        "id": 1796407296,
+        "name": "Kronoberg County"
+      },
+      {
+        "id": 1796472832,
+        "name": "Kalmar County"
+      },
+      {
+        "id": 1796538368,
+        "name": "Västmanland County"
+      },
+      {
+        "id": 1796603904,
+        "name": "Halland County"
+      }
+    ]
+  },
+  {
+    "code": "CH",
+    "name": "Switzerland",
+    "regions": [
+      {
+        "id": 1811939328,
+        "name": "—"
+      },
+      {
+        "id": 1812070400,
+        "name": "Bern"
+      },
+      {
+        "id": 1812201472,
+        "name": "Aargau"
+      },
+      {
+        "id": 1812267008,
+        "name": "Basel-City"
+      },
+      {
+        "id": 1812332544,
+        "name": "Fribourg"
+      },
+      {
+        "id": 1812398080,
+        "name": "Geneva"
+      },
+      {
+        "id": 1812463616,
+        "name": "Glarus"
+      },
+      {
+        "id": 1812529152,
+        "name": "Graubünden"
+      },
+      {
+        "id": 1812594688,
+        "name": "Jura"
+      },
+      {
+        "id": 1812660224,
+        "name": "Luzern"
+      },
+      {
+        "id": 1812725760,
+        "name": "Neuchâtel"
+      },
+      {
+        "id": 1812791296,
+        "name": "Obwalden"
+      },
+      {
+        "id": 1812856832,
+        "name": "St. Gallen"
+      },
+      {
+        "id": 1812922368,
+        "name": "Schaffhausen"
+      },
+      {
+        "id": 1812987904,
+        "name": "Schwyz"
+      },
+      {
+        "id": 1813053440,
+        "name": "Solothurn"
+      },
+      {
+        "id": 1813118976,
+        "name": "Thurgau"
+      },
+      {
+        "id": 1813184512,
+        "name": "Ticino"
+      },
+      {
+        "id": 1813250048,
+        "name": "Uri"
+      },
+      {
+        "id": 1813315584,
+        "name": "Valais"
+      },
+      {
+        "id": 1813381120,
+        "name": "Vaud"
+      },
+      {
+        "id": 1813446656,
+        "name": "Zug"
+      },
+      {
+        "id": 1813512192,
+        "name": "Zurich"
+      },
+      {
+        "id": 1813577728,
+        "name": "Appenzell Outer Rhodes"
+      },
+      {
+        "id": 1813643264,
+        "name": "Appenzell Inner Rhodes"
+      },
+      {
+        "id": 1813708800,
+        "name": "Basel-Landschaft"
+      },
+      {
+        "id": 1813774336,
+        "name": "Nidwalden"
+      }
+    ]
+  },
+  {
+    "code": "TR",
+    "name": "Turkey",
+    "regions": [
+      {
+        "id": 1828716544,
+        "name": "—"
+      },
+      {
+        "id": 1828847616,
+        "name": "Ankara"
+      },
+      {
+        "id": 1828913152,
+        "name": "İstanbul"
+      },
+      {
+        "id": 1828978688,
+        "name": "İzmir"
+      },
+      {
+        "id": 1829044224,
+        "name": "Bursa"
+      },
+      {
+        "id": 1829109760,
+        "name": "Adana"
+      },
+      {
+        "id": 1829175296,
+        "name": "Gaziantep"
+      },
+      {
+        "id": 1829240832,
+        "name": "Konya"
+      },
+      {
+        "id": 1829306368,
+        "name": "Antalya"
+      },
+      {
+        "id": 1829371904,
+        "name": "Diyarbakır"
+      },
+      {
+        "id": 1829437440,
+        "name": "Mersin"
+      },
+      {
+        "id": 1829502976,
+        "name": "Kayseri"
+      },
+      {
+        "id": 1829634048,
+        "name": "Şanlıurfa"
+      },
+      {
+        "id": 1829699584,
+        "name": "Malatya"
+      },
+      {
+        "id": 1829765120,
+        "name": "Erzurum"
+      },
+      {
+        "id": 1829830656,
+        "name": "Samsun"
+      },
+      {
+        "id": 1829896192,
+        "name": "Van"
+      },
+      {
+        "id": 1829961728,
+        "name": "Kahramanmaraş"
+      },
+      {
+        "id": 1830027264,
+        "name": "Denizli"
+      },
+      {
+        "id": 1830092800,
+        "name": "Batman"
+      },
+      {
+        "id": 1830158336,
+        "name": "Elazığ"
+      },
+      {
+        "id": 1830223872,
+        "name": "Sakarya"
+      },
+      {
+        "id": 1830289408,
+        "name": "Kocaeli"
+      },
+      {
+        "id": 1830354944,
+        "name": "Sivas"
+      },
+      {
+        "id": 1830420480,
+        "name": "Manisa"
+      },
+      {
+        "id": 1830486016,
+        "name": "Trabzon"
+      },
+      {
+        "id": 1830551552,
+        "name": "Balıkesir"
+      },
+      {
+        "id": 1830617088,
+        "name": "Adıyaman"
+      },
+      {
+        "id": 1830682624,
+        "name": "Tekirdağ"
+      },
+      {
+        "id": 1830748160,
+        "name": "Kırıkkale"
+      },
+      {
+        "id": 1830813696,
+        "name": "Osmaniye"
+      },
+      {
+        "id": 1830879232,
+        "name": "Kütahya"
+      },
+      {
+        "id": 1830944768,
+        "name": "Çorum"
+      },
+      {
+        "id": 1831010304,
+        "name": "Isparta"
+      },
+      {
+        "id": 1831075840,
+        "name": "Aydın"
+      },
+      {
+        "id": 1831141376,
+        "name": "Hatay"
+      },
+      {
+        "id": 1831206912,
+        "name": "Mardin"
+      },
+      {
+        "id": 1831272448,
+        "name": "Aksaray"
+      },
+      {
+        "id": 1831337984,
+        "name": "Afyonkarahisar"
+      },
+      {
+        "id": 1831403520,
+        "name": "Tokat"
+      },
+      {
+        "id": 1831469056,
+        "name": "Edirne"
+      },
+      {
+        "id": 1831534592,
+        "name": "Karaman"
+      },
+      {
+        "id": 1831600128,
+        "name": "Ordu"
+      },
+      {
+        "id": 1831665664,
+        "name": "Siirt"
+      },
+      {
+        "id": 1831731200,
+        "name": "Erzincan"
+      },
+      {
+        "id": 1831796736,
+        "name": "Çankırı"
+      },
+      {
+        "id": 1831862272,
+        "name": "Zonguldak"
+      },
+      {
+        "id": 1831927808,
+        "name": "Yozgat"
+      },
+      {
+        "id": 1831993344,
+        "name": "Uşak"
+      },
+      {
+        "id": 1832058880,
+        "name": "Ağrı"
+      },
+      {
+        "id": 1832124416,
+        "name": "Amasya"
+      },
+      {
+        "id": 1832189952,
+        "name": "Ardahan"
+      },
+      {
+        "id": 1832255488,
+        "name": "Artvin"
+      },
+      {
+        "id": 1832321024,
+        "name": "Bartın"
+      },
+      {
+        "id": 1832386560,
+        "name": "Bayburt"
+      },
+      {
+        "id": 1832452096,
+        "name": "Bilecik"
+      },
+      {
+        "id": 1832517632,
+        "name": "Bingöl"
+      },
+      {
+        "id": 1832583168,
+        "name": "Bitlis"
+      },
+      {
+        "id": 1832648704,
+        "name": "Bolu"
+      },
+      {
+        "id": 1832714240,
+        "name": "Burdur"
+      },
+      {
+        "id": 1832779776,
+        "name": "Çanakkale"
+      },
+      {
+        "id": 1832845312,
+        "name": "Düzce"
+      },
+      {
+        "id": 1832910848,
+        "name": "Eskişehir"
+      },
+      {
+        "id": 1832976384,
+        "name": "Giresun"
+      },
+      {
+        "id": 1833041920,
+        "name": "Gümüşhane"
+      },
+      {
+        "id": 1833107456,
+        "name": "Hakkari"
+      },
+      {
+        "id": 1833172992,
+        "name": "Iğdır"
+      },
+      {
+        "id": 1833238528,
+        "name": "Karabük"
+      },
+      {
+        "id": 1833304064,
+        "name": "Kars"
+      },
+      {
+        "id": 1833369600,
+        "name": "Kastamonu"
+      },
+      {
+        "id": 1833435136,
+        "name": "Kilis"
+      },
+      {
+        "id": 1833500672,
+        "name": "Kırklareli"
+      },
+      {
+        "id": 1833566208,
+        "name": "Kırşehir"
+      },
+      {
+        "id": 1833631744,
+        "name": "Muğla"
+      },
+      {
+        "id": 1833697280,
+        "name": "Muş"
+      },
+      {
+        "id": 1833762816,
+        "name": "Nevşehir"
+      },
+      {
+        "id": 1833828352,
+        "name": "Niğde"
+      },
+      {
+        "id": 1833893888,
+        "name": "Rize"
+      },
+      {
+        "id": 1833959424,
+        "name": "Sinop"
+      },
+      {
+        "id": 1834024960,
+        "name": "Şırnak"
+      },
+      {
+        "id": 1834090496,
+        "name": "Tunceli"
+      },
+      {
+        "id": 1834156032,
+        "name": "Yalova"
+      }
+    ]
+  },
+  {
+    "code": "GB",
+    "name": "United Kingdom",
+    "regions": [
+      {
+        "id": 1845493760,
+        "name": "—"
+      },
+      {
+        "id": 1845690368,
+        "name": "London"
+      },
+      {
+        "id": 1845821440,
+        "name": "Scotland"
+      },
+      {
+        "id": 1845886976,
+        "name": "Wales"
+      },
+      {
+        "id": 1845952512,
+        "name": "Northern Ireland"
+      },
+      {
+        "id": 1846018048,
+        "name": "South West"
+      },
+      {
+        "id": 1846083584,
+        "name": "West Midlands"
+      },
+      {
+        "id": 1846149120,
+        "name": "North West"
+      },
+      {
+        "id": 1846214656,
+        "name": "North East"
+      },
+      {
+        "id": 1846280192,
+        "name": "Yorkshire and the Humber"
+      },
+      {
+        "id": 1846345728,
+        "name": "East Midlands"
+      },
+      {
+        "id": 1846411264,
+        "name": "East of England"
+      },
+      {
+        "id": 1846476800,
+        "name": "South East"
+      }
+    ]
+  },
+  {
+    "code": "ZM",
+    "name": "Zambia",
+    "regions": [
+      {
+        "id": 1862270976,
+        "name": "—"
+      },
+      {
+        "id": 1862336512,
+        "name": "Zambia"
+      }
+    ]
+  },
+  {
+    "code": "ZW",
+    "name": "Zimbabwe",
+    "regions": [
+      {
+        "id": 1879048192,
+        "name": "—"
+      },
+      {
+        "id": 1879113728,
+        "name": "Zimbabwe"
+      }
+    ]
+  },
+  {
+    "code": "AZ",
+    "name": "Azerbaijan",
+    "regions": [
+      {
+        "id": 1895825408,
+        "name": "—"
+      },
+      {
+        "id": 1895890944,
+        "name": "Azerbaijan"
+      }
+    ]
+  },
+  {
+    "code": "MR",
+    "name": "Mauritania",
+    "regions": [
+      {
+        "id": 1912602624,
+        "name": "—"
+      },
+      {
+        "id": 1912668160,
+        "name": "Mauritania"
+      }
+    ]
+  },
+  {
+    "code": "ML",
+    "name": "Mali",
+    "regions": [
+      {
+        "id": 1929379840,
+        "name": "—"
+      },
+      {
+        "id": 1929445376,
+        "name": "Mali"
+      }
+    ]
+  },
+  {
+    "code": "NE",
+    "name": "Niger",
+    "regions": [
+      {
+        "id": 1946157056,
+        "name": "—"
+      },
+      {
+        "id": 1946222592,
+        "name": "Niger"
+      }
+    ]
+  },
+  {
+    "code": "TD",
+    "name": "Chad",
+    "regions": [
+      {
+        "id": 1962934272,
+        "name": "—"
+      },
+      {
+        "id": 1962999808,
+        "name": "Chad"
+      }
+    ]
+  },
+  {
+    "code": "SD",
+    "name": "Sudan",
+    "regions": [
+      {
+        "id": 1979711488,
+        "name": "—"
+      },
+      {
+        "id": 1979777024,
+        "name": "Sudan"
+      }
+    ]
+  },
+  {
+    "code": "ER",
+    "name": "Eritrea",
+    "regions": [
+      {
+        "id": 1996488704,
+        "name": "—"
+      },
+      {
+        "id": 1996554240,
+        "name": "Eritrea"
+      }
+    ]
+  },
+  {
+    "code": "DJ",
+    "name": "Djibouti",
+    "regions": [
+      {
+        "id": 2013265920,
+        "name": "—"
+      },
+      {
+        "id": 2013331456,
+        "name": "Djibouti"
+      }
+    ]
+  },
+  {
+    "code": "SO",
+    "name": "Somalia",
+    "regions": [
+      {
+        "id": 2030043136,
+        "name": "—"
+      },
+      {
+        "id": 2030108672,
+        "name": "Somalia"
+      }
+    ]
+  },
+  {
+    "code": "AD",
+    "name": "Andorra",
+    "regions": [
+      {
+        "id": 2046820352,
+        "name": "—"
+      },
+      {
+        "id": 2046885888,
+        "name": "Andorra"
+      }
+    ]
+  },
+  {
+    "code": "GI",
+    "name": "Gibraltar",
+    "regions": [
+      {
+        "id": 2063597568,
+        "name": "—"
+      },
+      {
+        "id": 2063663104,
+        "name": "Gibraltar"
+      }
+    ]
+  },
+  {
+    "code": "GG",
+    "name": "Guernsey",
+    "regions": [
+      {
+        "id": 2080374784,
+        "name": "—"
+      },
+      {
+        "id": 2080440320,
+        "name": "Guernsey"
+      }
+    ]
+  },
+  {
+    "code": "IM",
+    "name": "Isle of Man",
+    "regions": [
+      {
+        "id": 2097152000,
+        "name": "—"
+      },
+      {
+        "id": 2097217536,
+        "name": "Isle of Man"
+      }
+    ]
+  },
+  {
+    "code": "JE",
+    "name": "Jersey",
+    "regions": [
+      {
+        "id": 2113929216,
+        "name": "—"
+      },
+      {
+        "id": 2113994752,
+        "name": "Jersey"
+      }
+    ]
+  },
+  {
+    "code": "MC",
+    "name": "Monaco",
+    "regions": [
+      {
+        "id": 2130706432,
+        "name": "—"
+      },
+      {
+        "id": 2130771968,
+        "name": "Monaco"
+      }
+    ]
+  },
+  {
+    "code": "TW",
+    "name": "Taiwan",
+    "regions": [
+      {
+        "id": 2147483648,
+        "name": "—"
+      },
+      {
+        "id": 2147614720,
+        "name": "Taipei City"
+      },
+      {
+        "id": 2147680256,
+        "name": "Kaohsiung City"
+      },
+      {
+        "id": 2147745792,
+        "name": "Keelung City"
+      },
+      {
+        "id": 2147811328,
+        "name": "Hsinchu City"
+      },
+      {
+        "id": 2147876864,
+        "name": "Taichung City"
+      },
+      {
+        "id": 2147942400,
+        "name": "Chiayi City"
+      },
+      {
+        "id": 2148007936,
+        "name": "Tainan City"
+      },
+      {
+        "id": 2148073472,
+        "name": "New Taipei City"
+      },
+      {
+        "id": 2148139008,
+        "name": "Taoyuan City"
+      },
+      {
+        "id": 2148204544,
+        "name": "HsinChu County"
+      },
+      {
+        "id": 2148270080,
+        "name": "Miaoli County"
+      },
+      {
+        "id": 2148335616,
+        "name": "Taichung County"
+      },
+      {
+        "id": 2148401152,
+        "name": "Changhua County"
+      },
+      {
+        "id": 2148466688,
+        "name": "Nantou County"
+      },
+      {
+        "id": 2148532224,
+        "name": "Yunlin County"
+      },
+      {
+        "id": 2148597760,
+        "name": "Chiayi County"
+      },
+      {
+        "id": 2148663296,
+        "name": "Tainan County"
+      },
+      {
+        "id": 2148728832,
+        "name": "Kaohsiung County"
+      },
+      {
+        "id": 2148794368,
+        "name": "Pingtung County"
+      },
+      {
+        "id": 2148859904,
+        "name": "Yilan County"
+      },
+      {
+        "id": 2148925440,
+        "name": "Hualien County"
+      },
+      {
+        "id": 2148990976,
+        "name": "Taitung County"
+      },
+      {
+        "id": 2149056512,
+        "name": "Penghu County"
+      },
+      {
+        "id": 2149122048,
+        "name": "Kinmen County"
+      },
+      {
+        "id": 2149187584,
+        "name": "Lienchiang County"
+      }
+    ]
+  },
+  {
+    "code": "KR",
+    "name": "South Korea",
+    "regions": [
+      {
+        "id": 2281701376,
+        "name": "—"
+      },
+      {
+        "id": 2281832448,
+        "name": "Seoul-teukbyeolsi"
+      },
+      {
+        "id": 2281897984,
+        "name": "Busan-gwangyeoksi"
+      },
+      {
+        "id": 2281963520,
+        "name": "Daegu-gwangyeoksi"
+      },
+      {
+        "id": 2282029056,
+        "name": "Incheon-gwangyeoksi"
+      },
+      {
+        "id": 2282094592,
+        "name": "Gwangju-gwangyeoksi"
+      },
+      {
+        "id": 2282160128,
+        "name": "Daejeon-gwangyeoksi"
+      },
+      {
+        "id": 2282225664,
+        "name": "Ulsan-gwangyeoksi"
+      },
+      {
+        "id": 2282291200,
+        "name": "Gyeonggi-do"
+      },
+      {
+        "id": 2282356736,
+        "name": "Gangwon-do"
+      },
+      {
+        "id": 2282422272,
+        "name": "Chungcheongbuk-do"
+      },
+      {
+        "id": 2282487808,
+        "name": "Chungcheongnam-do"
+      },
+      {
+        "id": 2282553344,
+        "name": "Jeollabuk-do"
+      },
+      {
+        "id": 2282618880,
+        "name": "Jeollanam-do"
+      },
+      {
+        "id": 2282684416,
+        "name": "Gyeongsangbuk-do"
+      },
+      {
+        "id": 2282749952,
+        "name": "Gyeongsangnam-do"
+      },
+      {
+        "id": 2282815488,
+        "name": "Jeju-teukbyeoljachido"
+      }
+    ]
+  },
+  {
+    "code": "HK",
+    "name": "Hong Kong",
+    "regions": [
+      {
+        "id": 2415919104,
+        "name": "—"
+      },
+      {
+        "id": 2415984640,
+        "name": "Hong Kong"
+      }
+    ]
+  },
+  {
+    "code": "MO",
+    "name": "Macao",
+    "regions": [
+      {
+        "id": 2432696320,
+        "name": "—"
+      },
+      {
+        "id": 2432761856,
+        "name": "Macao"
+      }
+    ]
+  },
+  {
+    "code": "SG",
+    "name": "Singapore",
+    "regions": [
+      {
+        "id": 2566914048,
+        "name": "—"
+      },
+      {
+        "id": 2566979584,
+        "name": "Singapore"
+      }
+    ]
+  },
+  {
+    "code": "MY",
+    "name": "Malaysia",
+    "regions": [
+      {
+        "id": 2617245696,
+        "name": "—"
+      },
+      {
+        "id": 2617376768,
+        "name": "Kuala Lumpur"
+      },
+      {
+        "id": 2617442304,
+        "name": "Johor"
+      },
+      {
+        "id": 2617507840,
+        "name": "Kedah"
+      },
+      {
+        "id": 2617573376,
+        "name": "Kelantan"
+      },
+      {
+        "id": 2617638912,
+        "name": "Melaka"
+      },
+      {
+        "id": 2617704448,
+        "name": "Negeri Sembilan"
+      },
+      {
+        "id": 2617769984,
+        "name": "Pahang"
+      },
+      {
+        "id": 2617835520,
+        "name": "Perak"
+      },
+      {
+        "id": 2617901056,
+        "name": "Perlis"
+      },
+      {
+        "id": 2617966592,
+        "name": "Penang"
+      },
+      {
+        "id": 2618032128,
+        "name": "Sarawak"
+      },
+      {
+        "id": 2618097664,
+        "name": "Selangor"
+      },
+      {
+        "id": 2618163200,
+        "name": "Terengganu"
+      },
+      {
+        "id": 2618228736,
+        "name": "Labuan"
+      },
+      {
+        "id": 2618294272,
+        "name": "Sabah"
+      },
+      {
+        "id": 2618359808,
+        "name": "Putrajaya"
+      }
+    ]
+  },
+  {
+    "code": "CN",
+    "name": "China",
+    "regions": [
+      {
+        "id": 2684354560,
+        "name": "—"
+      },
+      {
+        "id": 2684485632,
+        "name": "Beijing"
+      },
+      {
+        "id": 2684551168,
+        "name": "Chongqing"
+      },
+      {
+        "id": 2684616704,
+        "name": "Shanghai"
+      },
+      {
+        "id": 2684682240,
+        "name": "Tianjin"
+      },
+      {
+        "id": 2684747776,
+        "name": "Anhui"
+      },
+      {
+        "id": 2684813312,
+        "name": "Fujian"
+      },
+      {
+        "id": 2684878848,
+        "name": "Gansu"
+      },
+      {
+        "id": 2684944384,
+        "name": "Guangdong"
+      },
+      {
+        "id": 2685009920,
+        "name": "Guizhou"
+      },
+      {
+        "id": 2685075456,
+        "name": "Hainan"
+      },
+      {
+        "id": 2685140992,
+        "name": "Hebei"
+      },
+      {
+        "id": 2685206528,
+        "name": "Heilongjiang"
+      },
+      {
+        "id": 2685272064,
+        "name": "Henan"
+      },
+      {
+        "id": 2685337600,
+        "name": "Hubei"
+      },
+      {
+        "id": 2685403136,
+        "name": "Húnán"
+      },
+      {
+        "id": 2685468672,
+        "name": "Jiangsu"
+      },
+      {
+        "id": 2685534208,
+        "name": "Jiangxi"
+      },
+      {
+        "id": 2685599744,
+        "name": "Jilin"
+      },
+      {
+        "id": 2685665280,
+        "name": "Liaoning"
+      },
+      {
+        "id": 2685730816,
+        "name": "Qinghai"
+      },
+      {
+        "id": 2685796352,
+        "name": "Shanxi"
+      },
+      {
+        "id": 2685861888,
+        "name": "Shandong"
+      },
+      {
+        "id": 2685927424,
+        "name": "Shanxi"
+      },
+      {
+        "id": 2685992960,
+        "name": "Sichuan"
+      },
+      {
+        "id": 2686058496,
+        "name": "Yunnan"
+      },
+      {
+        "id": 2686124032,
+        "name": "Zhejiang"
+      },
+      {
+        "id": 2686189568,
+        "name": "Taiwan"
+      },
+      {
+        "id": 2686255104,
+        "name": "Guangxi-Zhuangzu"
+      },
+      {
+        "id": 2686320640,
+        "name": "Nei-Menggu"
+      },
+      {
+        "id": 2686386176,
+        "name": "Ningxia-huizu"
+      },
+      {
+        "id": 2686451712,
+        "name": "Xinjiang-Weiwu'er-zu"
+      },
+      {
+        "id": 2686517248,
+        "name": "Xizang"
+      },
+      {
+        "id": 2686582784,
+        "name": "Macao"
+      },
+      {
+        "id": 2686648320,
+        "name": "Hong Kong"
+      }
+    ]
+  },
+  {
+    "code": "AE",
+    "name": "U.A.E.",
+    "regions": [
+      {
+        "id": 2818572288,
+        "name": "—"
+      },
+      {
+        "id": 2818703360,
+        "name": "Abu Dhabi"
+      },
+      {
+        "id": 2818768896,
+        "name": "Ajman"
+      },
+      {
+        "id": 2818834432,
+        "name": "Ash Shariqah"
+      },
+      {
+        "id": 2818899968,
+        "name": "Ras al-Khaimah"
+      },
+      {
+        "id": 2818965504,
+        "name": "Dubai"
+      },
+      {
+        "id": 2819031040,
+        "name": "Al Fujayrah"
+      },
+      {
+        "id": 2819096576,
+        "name": "Umm al Qaywayn"
+      }
+    ]
+  },
+  {
+    "code": "SA",
+    "name": "Saudi Arabia",
+    "regions": [
+      {
+        "id": 2919235584,
+        "name": "—"
+      },
+      {
+        "id": 2919366656,
+        "name": "Ar Riyad"
+      },
+      {
+        "id": 2919432192,
+        "name": "Al Bahah"
+      },
+      {
+        "id": 2919497728,
+        "name": "Al Madinah"
+      },
+      {
+        "id": 2919563264,
+        "name": "Ash Sharqiyah"
+      },
+      {
+        "id": 2919628800,
+        "name": "Al Qasim"
+      },
+      {
+        "id": 2919694336,
+        "name": "'Asir"
+      },
+      {
+        "id": 2919759872,
+        "name": "Ha'il"
+      },
+      {
+        "id": 2919825408,
+        "name": "Makkah"
+      },
+      {
+        "id": 2919890944,
+        "name": "Al Hudud ash Shamaliyah"
+      },
+      {
+        "id": 2919956480,
+        "name": "Najran"
+      },
+      {
+        "id": 2920022016,
+        "name": "Jizan"
+      },
+      {
+        "id": 2920087552,
+        "name": "Tabuk"
+      },
+      {
+        "id": 2920153088,
+        "name": "Al Jawf"
+      }
+    ]
+  },
+  {
+    "code": "SM",
+    "name": "San Marino",
+    "regions": [
+      {
+        "id": 3087007744,
+        "name": "—"
+      },
+      {
+        "id": 3087073280,
+        "name": "San Marino"
+      }
+    ]
+  },
+  {
+    "code": "VA",
+    "name": "Vatican City",
+    "regions": [
+      {
+        "id": 3103784960,
+        "name": "—"
+      },
+      {
+        "id": 3103850496,
+        "name": "Vatican City"
+      }
+    ]
+  },
+  {
+    "code": "BM",
+    "name": "Bermuda",
+    "regions": [
+      {
+        "id": 3120562176,
+        "name": "—"
+      },
+      {
+        "id": 3120627712,
+        "name": "Bermuda"
+      }
+    ]
+  }
+]

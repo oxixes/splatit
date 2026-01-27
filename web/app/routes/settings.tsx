@@ -10,8 +10,9 @@ import { useState, useEffect } from "react";
 import { useAppConfig } from "~/hooks/useAppConfig";
 import { getAgreements, saveAgreement, deleteAgreement } from "~/lib/agreements";
 import { AgreementEditor } from "~/components/agreements/AgreementEditor";
-import type { Agreement } from "~/types/agreement";
+import type { Agreement, AgreementsFilters, SortColumn } from "~/types/agreement";
 import { AGREEMENT_TYPES } from "~/constants/agreement-types";
+import { SortableHeader } from "~/components/ui/sortable-header";
 import countriesLanguages from "~/data/countries_languages.json";
 import {
   AlertDialog,
@@ -35,21 +36,30 @@ export default function Settings() {
   const { config } = useAppConfig();
 
   const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [pagination, setPagination] = useState({ totalItems: 0, totalPages: 0, currentPage: 1 });
   const [isLoading, setIsLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
 
+  // Filters and sorting
+  const [filters, setFilters] = useState<AgreementsFilters>({
+    page: 0,
+    pageSize: 10,
+    sort: "type_asc"
+  });
+
   useEffect(() => {
     loadAgreements();
-  }, []);
+  }, [filters]);
 
   const loadAgreements = async () => {
     try {
       setIsLoading(true);
-      const agreementsList = await getAgreements(config);
-      setAgreements(agreementsList);
+      const response = await getAgreements(config, filters);
+      setAgreements(response.agreements);
+      setPagination(response.pagination);
     } catch (error) {
       console.error("Error loading agreements:", error);
     } finally {
@@ -116,6 +126,21 @@ export default function Settings() {
     return languageCode;
   };
 
+  const handleSort = (key: string) => {
+    const column = key as SortColumn;
+    const currentSort = filters.sort;
+    let newSort: typeof filters.sort = `${column}_desc`;
+    if (currentSort?.startsWith(column)) {
+      newSort = currentSort.endsWith("_asc") ? `${column}_desc` : `${column}_asc`;
+    }
+    setFilters({ ...filters, sort: newSort, page: 0 });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setFilters({ ...filters, page: newPage });
+  };
+
+
   return (
       <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -171,61 +196,106 @@ export default function Settings() {
                           </div>
 
                           <div className="space-y-2">
-                              <div className="grid grid-cols-[1.5fr_1.5fr_1.5fr_0.8fr_100px] gap-4 font-medium text-sm border-b pb-2">
-                                  <div>Type</div>
-                                  <div>Country</div>
-                                  <div>Language</div>
-                                  <div>Version</div>
-                                  <div>Actions</div>
+                              <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                      <thead>
+                                          <tr className="border-b">
+                                              <SortableHeader label="Type" sortKey="type" currentSort={filters.sort} onSort={handleSort} />
+                                              <SortableHeader label="Country" sortKey="country" currentSort={filters.sort} onSort={handleSort} />
+                                              <SortableHeader label="Language" sortKey="language" currentSort={filters.sort} onSort={handleSort} />
+                                              <SortableHeader label="Version" sortKey="version" currentSort={filters.sort} onSort={handleSort} />
+                                              <th className="text-left py-2 px-2 text-sm font-medium">Actions</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          {isLoading ? (
+                                              <tr>
+                                                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                      Loading agreements...
+                                                  </td>
+                                              </tr>
+                                          ) : agreements.length === 0 ? (
+                                              <tr>
+                                                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                      <div>No agreements configured</div>
+                                                      <div className="text-sm mt-2">Click "Add Agreement" to create your first EULA and Privacy Policy</div>
+                                                  </td>
+                                              </tr>
+                                          ) : (
+                                              agreements.map((agreement) => (
+                                                  <tr
+                                                      key={`${agreement.type}-${agreement.version}-${agreement.country}-${agreement.language}`}
+                                                      className="border-b last:border-0 hover:bg-muted/50"
+                                                  >
+                                                      <td className="py-3 px-2">
+                                                          <div className="font-medium">{getAgreementTypeLabel(agreement.type)}</div>
+                                                      </td>
+                                                      <td className="py-3 px-2">
+                                                          <div className="text-sm">{getCountryName(agreement.country)}</div>
+                                                          <div className="text-xs text-muted-foreground">{agreement.country}</div>
+                                                      </td>
+                                                      <td className="py-3 px-2">
+                                                          <div className="text-sm">{getLanguageName(agreement.country, agreement.language)} ({agreement.language.toUpperCase()})</div>
+                                                          <div className="text-xs text-muted-foreground">{agreement.languageName}</div>
+                                                      </td>
+                                                      <td className="py-3 px-2 font-medium">{agreement.version}</td>
+                                                      <td className="py-3 px-2">
+                                                          <div className="flex gap-2">
+                                                              <Button
+                                                                  variant="ghost"
+                                                                  size="sm"
+                                                                  onClick={() => handleEditAgreement(agreement)}
+                                                              >
+                                                                  <Pencil className="h-4 w-4" />
+                                                              </Button>
+                                                              <Button
+                                                                  variant="ghost"
+                                                                  size="sm"
+                                                                  onClick={() => handleDeleteClick(agreement)}
+                                                              >
+                                                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                                              </Button>
+                                                          </div>
+                                                      </td>
+                                                  </tr>
+                                              ))
+                                          )}
+                                      </tbody>
+                                  </table>
                               </div>
-
-                              {isLoading ? (
-                                  <div className="text-center py-8 text-muted-foreground">
-                                      <p>Loading agreements...</p>
-                                  </div>
-                              ) : agreements.length === 0 ? (
-                                  <div className="text-center py-8 text-muted-foreground">
-                                      <p>No agreements configured</p>
-                                      <p className="text-sm mt-2">Click "Add Agreement" to create your first EULA and Privacy Policy</p>
-                                  </div>
-                              ) : (
-                                  agreements.map((agreement) => (
-                                      <div
-                                          key={`${agreement.type}-${agreement.version}-${agreement.country}-${agreement.language}`}
-                                          className="grid grid-cols-[1.5fr_1.5fr_1.5fr_0.8fr_100px] gap-4 items-center py-3 border-b last:border-0"
-                                      >
-                                          <div>
-                                              <div className="font-medium">{getAgreementTypeLabel(agreement.type)}</div>
-                                          </div>
-                                          <div>
-                                              <div className="text-sm">{getCountryName(agreement.country)}</div>
-                                              <div className="text-xs text-muted-foreground">{agreement.country}</div>
-                                          </div>
-                                          <div>
-                                              <div className="text-sm">{getLanguageName(agreement.country, agreement.language)} ({agreement.language.toUpperCase()})</div>
-                                              <div className="text-xs text-muted-foreground">{agreement.languageName}</div>
-                                          </div>
-                                          <div className="font-medium">{agreement.version}</div>
-                                          <div className="flex gap-2">
-                                              <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => handleEditAgreement(agreement)}
-                                              >
-                                                  <Pencil className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => handleDeleteClick(agreement)}
-                                              >
-                                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                              </Button>
-                                          </div>
-                                      </div>
-                                  ))
-                              )}
                           </div>
+
+                          {/* Pagination Controls */}
+                          {pagination.totalPages > 1 && (
+                              <div className="flex items-center justify-between pt-4 border-t">
+                                  <div className="text-sm text-muted-foreground">
+                                      Showing {pagination.currentPage * (filters.pageSize || 10) + 1} to{" "}
+                                      {Math.min((pagination.currentPage + 1) * (filters.pageSize || 10), pagination.totalItems)} of{" "}
+                                      {pagination.totalItems} agreements
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handlePageChange(pagination.currentPage - 1)}
+                                          disabled={pagination.currentPage === 0}
+                                      >
+                                          Previous
+                                      </Button>
+                                      <div className="text-sm">
+                                          Page {pagination.currentPage + 1} of {pagination.totalPages}
+                                      </div>
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handlePageChange(pagination.currentPage + 1)}
+                                          disabled={pagination.currentPage === pagination.totalPages - 1}
+                                      >
+                                          Next
+                                      </Button>
+                                  </div>
+                              </div>
+                          )}
                       </CardContent>
                   </Card>
 

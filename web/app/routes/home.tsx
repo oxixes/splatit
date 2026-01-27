@@ -1,9 +1,10 @@
 import type { Route } from "./+types/home"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "~/components/ui/card";
-import {Activity, Users, Gamepad2, Server} from "lucide-react";
+import {Activity, Gamepad2, Server} from "lucide-react";
 import {Badge} from "~/components/ui/badge";
 import { ServerStatusCard } from "~/components/server-status-card";
 import { useServerStatusData } from "~/contexts/ServerStatusContext";
+import { TotalAccountsCard } from "~/components/stats/TotalAccountsCard";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -91,18 +92,7 @@ export default function Home() {
                   </CardContent>
               </Card>
 
-              <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                      <div className="text-2xl font-bold">0</div>
-                      <p className="text-xs text-muted-foreground">
-                          Registered accounts
-                      </p>
-                  </CardContent>
-              </Card>
+              <TotalAccountsCard />
 
               <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

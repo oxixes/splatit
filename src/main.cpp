@@ -20,6 +20,7 @@
 #include "nex/splatoon/splatoonSecure.hpp"
 #include "boss/utils.hpp"
 #include "http/management/management.hpp"
+#include "util/globalTaskScheduler.hpp"
 
 std::atomic<bool> shouldStop = false;
 
@@ -330,7 +331,6 @@ int main(int argc, char** argv) {
             grpcimpl::gRPCServerData serverPtrs {
                 settingsMgr,
                 accountsDB,
-
                 httpServer,
                 friendsAuthRMC,
                 splatoonAuthRMC,
@@ -359,6 +359,8 @@ int main(int argc, char** argv) {
         }
     }
 
+    util::GlobalTaskScheduler::createInstance(accountsDB, logger, settingsMgr);
+
 #ifdef _WIN32
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
@@ -381,8 +383,10 @@ int main(int argc, char** argv) {
         if (friendsSecureSrv != nullptr) tasksMgr.push(friendsSecureSrv->process());
         if (splatoonAuthSrv != nullptr) tasksMgr.push(splatoonAuthSrv->process());
         if (splatoonSecureSrv != nullptr) tasksMgr.push(splatoonSecureSrv->process());
+        tasksMgr.push(util::GlobalTaskScheduler::getInstance().process());
     }
 
+    util::GlobalTaskScheduler::getInstance().stop();
     if (grpcServer != nullptr) grpcServer->stop();
     if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
     if (friendsSecureDB != nullptr) friendsSecureDB->close();

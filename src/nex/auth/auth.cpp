@@ -357,4 +357,17 @@ Task<std::optional<std::string>> AuthRMC::getOrRegisterUserPassword(uint32_t pid
     co_return std::nullopt;
 }
 
+Task<bool> AuthRMC::deleteGameServerAccess(uint32_t pid) const {
+    auto dbCmd = db::Database::craftDeleteGameServerAccessCommand(pid);
+    const db::Result result = co_await db->runCommand(std::move(dbCmd));
+
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete game server access for PID " + std::to_string(pid));
+        co_return false;
+    }
+
+    logger->log(Logger::level::INFO, logGroup, "Deleted game server access for PID " + std::to_string(pid));
+    co_return true;
+}
+
 } // namespace nex::rmc

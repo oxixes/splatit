@@ -189,6 +189,7 @@ async::Task<bool> checkOauthToken(const std::shared_ptr<http::Request>& req, con
                                   const std::shared_ptr<db::Database>& db, crypto::AccountToken& token);
 async::Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database> db,
                                                           std::shared_ptr<http::Context> ctx);
+async::Task<bool> checkDeviceBanned(uint32_t deviceId, const std::shared_ptr<db::Database>& db);
 
 bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
                         const std::shared_ptr<CertManager>& certManager, std::unique_ptr<http::Response>& resOut,
@@ -203,6 +204,11 @@ bool init(const std::shared_ptr<Logger::Logger>& logger);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db);
+
+async::Task<bool> deleteFriendsServerAccountForAccount(
+    uint32_t pid,
+    const std::shared_ptr<SettingsManager>& settingsManager,
+    const std::shared_ptr<Logger::Logger>& logger);
 
 } // namespace acc
 

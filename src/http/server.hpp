@@ -14,6 +14,7 @@
 #include "../db/database.hpp"
 #include "../util/task.hpp"
 #include "../util/scheduler.hpp"
+#include "../util/taskRunner.hpp"
 
 #define MAX_PAYLOAD_SIZE 0x6400000 // 100 MiB
 
@@ -28,11 +29,11 @@ struct Context {
     std::shared_ptr<async::Scheduler> scheduler;
 };
 
-class Server {
+class Server : public async::TaskRunner {
 public:
     Server(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<SocketManager> socketMgr,
            sock::IPv4Addr listenDir, int keepAliveTimeout, bool ssl, EVP_PKEY* key = nullptr, X509* cert = nullptr);
-    ~Server();
+    ~Server() override;
 
     void listen(int workerCount, const std::function<void()>& closeFunc);
     void stop();
@@ -50,7 +51,7 @@ public:
 
     void sendResponse(std::shared_ptr<Context> context, std::unique_ptr<Response> response, bool keepAlive = false) const;
 
-    void scheduleArbitraryFunction(async::Task<void>&& task) const;
+    void scheduleArbitraryFunction(async::Task<void>&& task) const override;
 
 private:
     std::shared_ptr<Logger::Logger> logger;

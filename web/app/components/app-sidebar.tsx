@@ -1,4 +1,4 @@
-import {Home, Users, Settings, Activity, Gamepad2, Info} from "lucide-react"
+import {Home, Users, Settings, Activity, Gamepad2, Info, Smartphone} from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -36,6 +36,11 @@ const mainItems = [
         title: "Players",
         url: "/players",
         icon: Users,
+    },
+    {
+        title: "Devices",
+        url: "/devices",
+        icon: Smartphone,
     },
 ]
 

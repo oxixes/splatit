@@ -18,6 +18,7 @@ enum class Method {
     M_PUT,
     M_DELETE,
     M_HEAD,
+    M_PATCH,
     M_OPTIONS
 };
 

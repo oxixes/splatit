@@ -42,7 +42,6 @@ enum class DBCommandType {
     GET_USER_BY_PID,
     GET_USER_BY_USERNAME,
     GET_GAME_SERVER_ACCESS,
-    INSERT_GAME_SERVER_ACCESS,
     GET_USER_INFO_BY_PID,
     GET_USER_INFO_BY_USERNAME,
     GET_FRIENDS_INFO,
@@ -57,15 +56,18 @@ enum class DBCommandType {
     GET_ALL_AGREEMENTS,
     GET_AGREEMENT,
     GET_DEVICE,
-    GET_LATEST_PID,
     GET_OWNERSHIP,
     GET_LATEST_OWNERSHIP,
     HAS_ACTIVE_OWNERSHIP,
     GET_OWNERSHIPS,
     GET_PERSISTENT_NOTIFICATIONS,
+    GET_SIGNED_AGREEMENTS,
+    LIST_DEVICES,
+    LIST_ACCOUNTS,
     INSERT_USER_INFO,
     ADD_FRIEND,
     BLOCK_FRIEND,
+    INSERT_GAME_SERVER_ACCESS,
     INSERT_OR_UPDATE_PERSISTENT_NOTIFICATION,
     INSERT_OR_UPDATE_DEVICE,
     INSERT_OR_UPDATE_USER_AGREEMENT,
@@ -79,17 +81,37 @@ enum class DBCommandType {
     UPDATE_USER_INFO,
     UPDATE_USER_PROFILE,
     INACTIVATE_DEVICE_OWNERSHIPS,
+    INACTIVATE_ALL_USER_OWNERSHIPS,
     DELETE_MII,
     DELETE_EMAIL,
     DELETE_USER,
     DELETE_USER_OWNERSHIPS,
     DELETE_USER_AGREEMENTS,
     DELETE_USER_DEVICE_ATTRIBUTES,
+    DELETE_USER_DEVICE_ATTRIBUTE,
+    DELETE_DEVICE_ATTRIBUTES_FOR_OWNERSHIP,
+    DELETE_DEVICE,
+    DELETE_DEVICE_OWNERSHIPS,
+    DELETE_DEVICE_ATTRIBUTES,
+    DELETE_OWNERSHIP,
+    DELETE_USER_AGREEMENT,
     DELETE_AGREEMENT,
     DELETE_FRIEND,
     DELETE_FRIEND_REQUEST,
+    DELETE_ALL_BLOCKS_BY_PID,
+    DELETE_ALL_FRIEND_REQUESTS_BY_PID,
+    DELETE_ALL_FRIENDSHIPS_BY_PID,
+    DELETE_ALL_NOTIFICATIONS_BY_PID,
+    DELETE_USER_INFO_BY_PID,
     DELETE_PERSISTENT_NOTIFICATION,
-    UNBLOCK_FRIEND
+    DELETE_GAME_SERVER_ACCESS,
+    UNBLOCK_FRIEND,
+    COUNT_AGREEMENTS,
+    COUNT_DEVICES,
+    COUNT_ACCOUNTS,
+    INSERT_TASK,
+    GET_ALL_TASKS,
+    DELETE_TASK
 };
 
 enum class DBResultStatus {
@@ -141,6 +163,18 @@ struct DBDeviceAttributesQuery {
     uint32_t deviceId;
 };
 
+struct DBAgreementsQuery {
+    std::optional<std::string> type;
+    std::optional<std::string> country;
+    std::optional<std::string> language;
+    std::optional<int> version;
+
+    std::vector<std::pair<std::string, bool>> sortBy{};
+
+    uint64_t pageSize{};
+    uint64_t pageNumber{};
+};
+
 struct DBAgreementQuery {
     std::string type;
     std::string country;
@@ -163,6 +197,7 @@ struct DBDeviceInsertOrUpdateQuery {
     std::string type;
     std::string updatedBy;
     std::string status;
+    bool banned;
     datetime_t lastUpdated;
 };
 
@@ -197,7 +232,6 @@ struct DBEmailInsertOrUpdateQuery {
 };
 
 struct DBUserProfileInsertQuery {
-    uint32_t pid;
     std::string username;
     std::string password;
     int64_t emailId;
@@ -263,6 +297,49 @@ struct DBDeviceAttributesInsertOrUpdateQuery {
     std::string name;
     std::string value;
     datetime_t createdDate;
+};
+
+struct DBDeviceAttributeDeleteQuery {
+    uint32_t deviceId;
+    uint32_t pid;
+    std::string name;
+};
+
+struct DBDevicesListQuery {
+    std::optional<uint32_t> platform;
+    std::optional<uint32_t> region;
+    std::optional<bool> banned;
+    std::optional<std::string> serialNumber;
+    std::optional<std::string> type;
+    std::vector<std::pair<std::string, bool>> sortBy{};
+    uint64_t pageSize{};
+    uint64_t pageNumber{};
+};
+
+struct DBAccountsListQuery {
+    std::optional<std::string> username;
+    std::optional<bool> gender;
+    std::optional<uint64_t> region;
+    std::optional<bool> active;
+    std::vector<std::pair<std::string, bool>> sortBy{};
+    uint64_t pageSize{};
+    uint64_t pageNumber{};
+};
+
+struct DBUserAgreementsQuery {
+    uint32_t pid;
+};
+
+struct DBOwnershipDeleteQuery {
+    uint32_t pid;
+    uint32_t deviceId;
+};
+
+struct DBUserAgreementDeleteQuery {
+    uint32_t pid;
+    std::string type;
+    int version;
+    std::string country;
 };
 
 struct DBOwnershipInsertOrUpdateQuery {
@@ -439,6 +516,7 @@ struct DBDeviceData {
     std::string type;
     std::string updatedBy;
     std::string status;
+    bool banned;
     datetime_t lastUpdated;
 };
 
@@ -447,6 +525,24 @@ struct DBOwnershipData {
     uint32_t deviceId;
     std::string status;
     datetime_t lastUpdated;
+};
+
+struct DBTaskInsertQuery {
+    int type;
+    std::string params;
+};
+
+struct DBTaskData {
+    int64_t id;
+    int type;
+    std::string params;
+};
+
+struct DBUserAgreementData {
+    std::string type;
+    int version;
+    std::string country;
+    datetime_t signedAt;
 };
 
 class Result {
@@ -568,16 +664,46 @@ public:
     static std::unique_ptr<Command> craftGetUserMiiCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetUserEmailCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetDeviceAttributesCommand(uint32_t pid, uint32_t deviceId);
-    static std::unique_ptr<Command> craftGetAllAgreementsCommand();
+    static std::unique_ptr<Command> craftGetAllAgreementsCommand(std::optional<std::string> type = std::nullopt,
+                                                                std::optional<std::string> country = std::nullopt,
+                                                                std::optional<std::string> language = std::nullopt,
+                                                                std::optional<int> version = std::nullopt,
+                                                                std::vector<std::pair<std::string, bool>> sortBy = {{"type", true}, {"version", true}},
+                                                                uint64_t pageSize = std::numeric_limits<uint64_t>::max(),
+                                                                uint64_t pageNumber = 0);
     static std::unique_ptr<Command> craftGetAgreementCommand(const std::string& type, const std::string& country,
                                                              const std::string& language, std::optional<int> version = std::nullopt);
     static std::unique_ptr<Command> craftGetDeviceCommand(uint32_t deviceId);
-    static std::unique_ptr<Command> craftGetLatestPidCommand();
     static std::unique_ptr<Command> craftGetOwnershipCommand(uint32_t pid, uint32_t deviceId);
     static std::unique_ptr<Command> craftGetPersistentNotificationsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetLatestOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetOwnershipsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetSignedAgreementsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftListDevicesCommand(std::optional<uint32_t> platform = std::nullopt,
+                                                           std::optional<uint32_t> region = std::nullopt,
+                                                           std::optional<bool> banned = std::nullopt,
+                                                           std::optional<std::string> serialNumber = std::nullopt,
+                                                           std::optional<std::string> type = std::nullopt,
+                                                           std::vector<std::pair<std::string, bool>> sortBy = {{"id", false}},
+                                                           uint64_t pageSize = std::numeric_limits<uint64_t>::max(),
+                                                           uint64_t pageNumber = 0);
+    static std::unique_ptr<Command> craftListAccountsCommand(std::optional<std::string> username = std::nullopt,
+                                                            std::optional<bool> gender = std::nullopt,
+                                                            std::optional<uint64_t> region = std::nullopt,
+                                                            std::optional<bool> active = std::nullopt,
+                                                            std::vector<std::pair<std::string, bool>> sortBy = {{"pid", false}},
+                                                            uint64_t pageSize = std::numeric_limits<uint64_t>::max(),
+                                                            uint64_t pageNumber = 0);
+    static std::unique_ptr<Command> craftCountDevicesCommand(std::optional<uint32_t> platform = std::nullopt,
+                                                            std::optional<uint32_t> region = std::nullopt,
+                                                            std::optional<bool> banned = std::nullopt,
+                                                            std::optional<std::string> serialNumber = std::nullopt,
+                                                            std::optional<std::string> type = std::nullopt);
+    static std::unique_ptr<Command> craftCountAccountsCommand(std::optional<std::string> username = std::nullopt,
+                                                             std::optional<bool> gender = std::nullopt,
+                                                             std::optional<uint64_t> region = std::nullopt,
+                                                             std::optional<bool> active = std::nullopt);
     static std::unique_ptr<Command> craftInactivateDeviceOwnershipsCommand(uint32_t deviceId);
     static std::unique_ptr<Command> craftInsertOrUpdatePersistentNotificationCommand(std::optional<int64_t>id, uint32_t forPid,
                                                                            int64_t value1, uint32_t value2, uint32_t value3,
@@ -589,6 +715,7 @@ public:
                                                                      const std::string& type,
                                                                      const std::string& updatedBy,
                                                                      const std::string& status,
+                                                                     bool banned,
                                                                      datetime_t lastUpdated);
     static std::unique_ptr<Command> craftInsertOrUpdateUserAgreementCommand(uint32_t pid, const std::string& type,
                                                                             int version, const std::string& country,
@@ -614,7 +741,7 @@ public:
                                                                     const std::string& updatedBy,
                                                                     bool validated, datetime_t validatedAt,
                                                                     const std::string& validationCode);
-    static std::unique_ptr<Command> craftInsertProfileCommand(uint32_t pid, const std::string& username,
+    static std::unique_ptr<Command> craftInsertProfileCommand(const std::string& username,
                                                               const std::string& password, int64_t emailId,
                                                               int64_t miiId, bool gender, int64_t region,
                                                               const std::string& tz, const std::string& language,
@@ -652,12 +779,33 @@ public:
     static std::unique_ptr<Command> craftDeleteUserOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserAgreementsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteUserDeviceAttributesCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteUserDeviceAttributeCommand(uint32_t pid, uint32_t deviceId, const std::string& name);
+    static std::unique_ptr<Command> craftDeleteDeviceAttributesForOwnershipCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftDeleteDeviceCommand(uint32_t deviceId);
+    static std::unique_ptr<Command> craftDeleteDeviceOwnershipsCommand(uint32_t deviceId);
+    static std::unique_ptr<Command> craftDeleteDeviceAttributesCommand(uint32_t deviceId);
+    static std::unique_ptr<Command> craftDeleteOwnershipCommand(uint32_t pid, uint32_t deviceId);
+    static std::unique_ptr<Command> craftDeleteUserAgreementCommand(uint32_t pid, const std::string& type, int version, const std::string& country);
+    static std::unique_ptr<Command> craftInactivateAllUserOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeleteAgreementCommand(const std::string& type, const std::string& country,
                                                                 const std::string& language, std::optional<int> version = std::nullopt);
     static std::unique_ptr<Command> craftDeleteFriendCommand(uint32_t pid, uint32_t friendPid);
     static std::unique_ptr<Command> craftDeleteFriendRequestCommand(int64_t id);
+    static std::unique_ptr<Command> craftDeleteAllBlocksByPidCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteAllFriendRequestsByPidCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteAllFriendshipsByPidCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteAllNotificationsByPidCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftDeleteUserInfoByPidCommand(uint32_t pid);
     static std::unique_ptr<Command> craftDeletePersistentNotificationCommand(int64_t id);
+    static std::unique_ptr<Command> craftDeleteGameServerAccessCommand(uint32_t pid);
     static std::unique_ptr<Command> craftUnblockFriendCommand(uint32_t pid, uint32_t blockedPid);
+    static std::unique_ptr<Command> craftCountAgreementsCommand(std::optional<std::string> type = std::nullopt,
+                                                                std::optional<std::string> country = std::nullopt,
+                                                                std::optional<std::string> language = std::nullopt,
+                                                                std::optional<int> version = std::nullopt);
+    static std::unique_ptr<Command> craftInsertTaskCommand(int type, const std::string& params);
+    static std::unique_ptr<Command> craftGetAllTasksCommand();
+    static std::unique_ptr<Command> craftDeleteTaskCommand(int64_t id);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

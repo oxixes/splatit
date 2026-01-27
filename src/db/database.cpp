@@ -266,9 +266,24 @@ std::unique_ptr<Command> Database::craftGetDeviceAttributesCommand(uint32_t pid,
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftGetAllAgreementsCommand() {
+std::unique_ptr<Command> Database::craftGetAllAgreementsCommand(std::optional<std::string> type,
+                                                            std::optional<std::string> country,
+                                                            std::optional<std::string> language,
+                                                            std::optional<int> version,
+                                                            std::vector<std::pair<std::string, bool>> sortBy,
+                                                            uint64_t pageSize, uint64_t pageNumber) {
+    DBAgreementsQuery query {
+        .type = std::move(type),
+        .country = std::move(country),
+        .language = std::move(language),
+        .version = version,
+        .sortBy = std::move(sortBy),
+        .pageSize = pageSize,
+        .pageNumber = pageNumber
+    };
+
     auto dbCommand = std::make_unique<Command>(DBCommandType::GET_ALL_AGREEMENTS,
-                                               std::any());
+                                               std::any(query));
     return dbCommand;
 }
 
@@ -294,11 +309,6 @@ std::unique_ptr<Command> Database::craftGetDeviceCommand(uint32_t deviceId) {
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::GET_DEVICE, std::any(query));
 
-    return dbCommand;
-}
-
-std::unique_ptr<Command> Database::craftGetLatestPidCommand() {
-    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_LATEST_PID, std::any());
     return dbCommand;
 }
 
@@ -393,6 +403,7 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateDeviceCommand(uint32_t dev
                                                                     const std::string& type,
                                                                     const std::string& updatedBy,
                                                                     const std::string& status,
+                                                                    bool banned,
                                                                     datetime_t lastUpdated) {
     DBDeviceInsertOrUpdateQuery query {
         .deviceId = deviceId,
@@ -404,6 +415,7 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateDeviceCommand(uint32_t dev
         .type = type,
         .updatedBy = updatedBy,
         .status = status,
+        .banned = banned,
         .lastUpdated = lastUpdated
     };
 
@@ -506,7 +518,7 @@ std::unique_ptr<Command> Database::craftInsertOrUpdateEmailCommand(std::optional
     return dbCommand;
 }
 
-std::unique_ptr<Command> Database::craftInsertProfileCommand(uint32_t pid, const std::string& username,
+std::unique_ptr<Command> Database::craftInsertProfileCommand(const std::string& username,
                                                              const std::string& password, int64_t emailId,
                                                              int64_t miiId, bool gender, int64_t region,
                                                              const std::string& tz, const std::string& language,
@@ -514,7 +526,6 @@ std::unique_ptr<Command> Database::craftInsertProfileCommand(uint32_t pid, const
                                                              const std::string& birthdate, const std::string& country,
                                                              datetime_t created, datetime_t updated) {
     DBUserProfileInsertQuery query {
-        .pid = pid,
         .username = username,
         .password = password,
         .emailId = emailId,
@@ -726,6 +737,15 @@ std::unique_ptr<Command> Database::craftDeletePersistentNotificationCommand(int6
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftDeleteGameServerAccessCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_GAME_SERVER_ACCESS, std::any(query));
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftUnblockFriendCommand(uint32_t pid, uint32_t blockedPid) {
     DBFriendDeleteQuery query {
         .pid = pid,
@@ -733,6 +753,255 @@ std::unique_ptr<Command> Database::craftUnblockFriendCommand(uint32_t pid, uint3
     };
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::UNBLOCK_FRIEND, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetSignedAgreementsCommand(uint32_t pid) {
+    DBUserAgreementsQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_SIGNED_AGREEMENTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftListDevicesCommand(std::optional<uint32_t> platform,
+                                                           std::optional<uint32_t> region,
+                                                           std::optional<bool> banned,
+                                                           std::optional<std::string> serialNumber,
+                                                           std::optional<std::string> type,
+                                                           std::vector<std::pair<std::string, bool>> sortBy,
+                                                           uint64_t pageSize,
+                                                           uint64_t pageNumber) {
+    DBDevicesListQuery query {
+        .platform = platform,
+        .region = region,
+        .banned = banned,
+        .serialNumber = std::move(serialNumber),
+        .type = std::move(type),
+        .sortBy = std::move(sortBy),
+        .pageSize = pageSize,
+        .pageNumber = pageNumber
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::LIST_DEVICES, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftListAccountsCommand(std::optional<std::string> username,
+                                                            std::optional<bool> gender,
+                                                            std::optional<uint64_t> region,
+                                                            std::optional<bool> active,
+                                                            std::vector<std::pair<std::string, bool>> sortBy,
+                                                            uint64_t pageSize,
+                                                            uint64_t pageNumber) {
+    DBAccountsListQuery query {
+        .username = std::move(username),
+        .gender = gender,
+        .region = region,
+        .active = active,
+        .sortBy = std::move(sortBy),
+        .pageSize = pageSize,
+        .pageNumber = pageNumber
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::LIST_ACCOUNTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftCountDevicesCommand(std::optional<uint32_t> platform,
+                                                            std::optional<uint32_t> region,
+                                                            std::optional<bool> banned,
+                                                            std::optional<std::string> serialNumber,
+                                                            std::optional<std::string> type) {
+    DBDevicesListQuery query {
+        .platform = platform,
+        .region = region,
+        .banned = banned,
+        .serialNumber = std::move(serialNumber),
+        .type = std::move(type)
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::COUNT_DEVICES, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftCountAccountsCommand(std::optional<std::string> username,
+                                                             std::optional<bool> gender,
+                                                             std::optional<uint64_t> region,
+                                                             std::optional<bool> active) {
+    DBAccountsListQuery query {
+        .username = std::move(username),
+        .gender = gender,
+        .region = region,
+        .active = active
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::COUNT_ACCOUNTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserDeviceAttributeCommand(uint32_t pid, uint32_t deviceId, const std::string& name) {
+    DBDeviceAttributeDeleteQuery query {
+        .deviceId = deviceId,
+        .pid = pid,
+        .name = name
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_DEVICE_ATTRIBUTE, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteDeviceAttributesForOwnershipCommand(uint32_t pid, uint32_t deviceId) {
+    DBOwnershipDeleteQuery query {
+        .pid = pid,
+        .deviceId = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_DEVICE_ATTRIBUTES_FOR_OWNERSHIP, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteAllBlocksByPidCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_ALL_BLOCKS_BY_PID, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteAllFriendRequestsByPidCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_ALL_FRIEND_REQUESTS_BY_PID, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteAllFriendshipsByPidCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_ALL_FRIENDSHIPS_BY_PID, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteAllNotificationsByPidCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_ALL_NOTIFICATIONS_BY_PID, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserInfoByPidCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_INFO_BY_PID, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteDeviceCommand(uint32_t deviceId) {
+    DBIdQuery query {
+        .id = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_DEVICE, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteDeviceOwnershipsCommand(uint32_t deviceId) {
+    DBIdQuery query {
+        .id = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_DEVICE_OWNERSHIPS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteDeviceAttributesCommand(uint32_t deviceId) {
+    DBIdQuery query {
+        .id = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_DEVICE_ATTRIBUTES, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteOwnershipCommand(uint32_t pid, uint32_t deviceId) {
+    DBOwnershipDeleteQuery query {
+        .pid = pid,
+        .deviceId = deviceId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_OWNERSHIP, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteUserAgreementCommand(uint32_t pid, const std::string& type,
+                                                                   int version, const std::string& country) {
+    DBUserAgreementDeleteQuery query {
+        .pid = pid,
+        .type = type,
+        .version = version,
+        .country = country
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_USER_AGREEMENT, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInactivateAllUserOwnershipsCommand(uint32_t pid) {
+    DBPidQuery query {
+        .pid = pid
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INACTIVATE_ALL_USER_OWNERSHIPS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftCountAgreementsCommand(std::optional<std::string> type,
+                                                                std::optional<std::string> country,
+                                                                std::optional<std::string> language,
+                                                                std::optional<int> version) {
+    DBAgreementsQuery query {
+        .type = std::move(type),
+        .country = std::move(country),
+        .language = std::move(language),
+        .version = version
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::COUNT_AGREEMENTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInsertTaskCommand(int type, const std::string& params) {
+    DBTaskInsertQuery query {
+        .type = type,
+        .params = params
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_TASK, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetAllTasksCommand() {
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_ALL_TASKS, std::any());
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftDeleteTaskCommand(int64_t id) {
+    DBIdQuery query {
+        .id = id
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::DELETE_TASK, std::any(query));
     return dbCommand;
 }
 
@@ -794,6 +1063,12 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::GET_RECEIVED_FRIEND_REQUESTS: // Gets the received friend requests of a user by PID.
         case DBCommandType::GET_PERSISTENT_NOTIFICATIONS: // Gets the persistent notifications of a user by PID.
         case DBCommandType::GET_BLOCKED_FRIENDS: // Gets the blocked friends of a user by PID.
+        case DBCommandType::DELETE_GAME_SERVER_ACCESS: // Deletes the game server access of a user by PID.
+        case DBCommandType::DELETE_ALL_BLOCKS_BY_PID:
+        case DBCommandType::DELETE_ALL_FRIEND_REQUESTS_BY_PID:
+        case DBCommandType::DELETE_ALL_FRIENDSHIPS_BY_PID:
+        case DBCommandType::DELETE_ALL_NOTIFICATIONS_BY_PID:
+        case DBCommandType::DELETE_USER_INFO_BY_PID:
             if (command->data.type() != typeid(DBPidQuery)) {
                 return false;
             }
@@ -807,6 +1082,8 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::GET_FRIEND_REQUEST: // Gets a friend request by its ID.
         case DBCommandType::DELETE_FRIEND_REQUEST: // Deletes a friend request by its ID.
         case DBCommandType::DELETE_PERSISTENT_NOTIFICATION: // Deletes a persistent notification by its ID.
+        case DBCommandType::DELETE_DEVICE_ATTRIBUTES: // Deletes all device attributes of a device by its ID.
+        case DBCommandType::DELETE_DEVICE_OWNERSHIPS: // Deletes all ownerships of a device by its ID.
             if (command->data.type() != typeid(DBIdQuery)) {
                 return false;
             }
@@ -862,34 +1139,17 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
-        case DBCommandType::GET_ALL_AGREEMENTS:
-            // Get all agreements commands do not need any data.
-            if (command->data.has_value()) {
+        case DBCommandType::GET_ALL_AGREEMENTS: // Get all agreements commands do not need any data.
+        case DBCommandType::COUNT_AGREEMENTS: // Counts all existing agreements in the database. Does receive the same data as get all agreements to filter the count.
+            if (command->data.type() != typeid(DBAgreementsQuery)) {
                 return false;
             }
 
             break;
 
-        case DBCommandType::GET_AGREEMENT:
-            // Get agreement commands need the type, country, language, and optionally the version of the agreement (latest if not specified).
+        case DBCommandType::GET_AGREEMENT: // Get agreement commands need the type, country, language, and optionally the version of the agreement (latest if not specified).
+        case DBCommandType::DELETE_AGREEMENT: // Delete agreement commands need the type, country, language, and optionally the version (all versions if not specified).
             if (command->data.type() != typeid(DBAgreementQuery)) {
-                return false;
-            }
-
-            break;
-
-        case DBCommandType::DELETE_AGREEMENT:
-            // Delete agreement commands need the type, country, language, and optionally the version (all versions if not specified).
-            if (command->data.type() != typeid(DBAgreementQuery)) {
-                return false;
-            }
-
-            break;
-
-        case DBCommandType::GET_LATEST_PID:
-            // Gets the latest PID in order to assign a new PID to a user.
-            // Get latest PID command does not need any data.
-            if (command->data.has_value()) {
                 return false;
             }
 
@@ -1010,6 +1270,114 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::BLOCK_FRIEND:
             // Blocks a friend for a user.
             if (command->data.type() != typeid(DBBlockInsertQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_SIGNED_AGREEMENTS:
+            // Gets all signed agreements for a user.
+            if (command->data.type() != typeid(DBUserAgreementsQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::LIST_DEVICES:
+            // Lists devices with optional filtering and pagination.
+            if (command->data.type() != typeid(DBDevicesListQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::LIST_ACCOUNTS:
+            // Lists accounts with optional filtering and pagination.
+            if (command->data.type() != typeid(DBAccountsListQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_USER_DEVICE_ATTRIBUTE:
+            // Deletes a specific device attribute for a user.
+            if (command->data.type() != typeid(DBDeviceAttributeDeleteQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_DEVICE_ATTRIBUTES_FOR_OWNERSHIP:
+            // Deletes all device attributes for a specific user-device ownership.
+            if (command->data.type() != typeid(DBOwnershipDeleteQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_DEVICE:
+            // Deletes a device.
+            if (command->data.type() != typeid(DBIdQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_OWNERSHIP:
+            // Deletes an ownership relationship.
+            if (command->data.type() != typeid(DBOwnershipDeleteQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::DELETE_USER_AGREEMENT:
+            // Deletes a specific user agreement.
+            if (command->data.type() != typeid(DBUserAgreementDeleteQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INACTIVATE_ALL_USER_OWNERSHIPS:
+            // Inactivates all ownerships for a user.
+            if (command->data.type() != typeid(DBPidQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::COUNT_DEVICES:
+            // Counts devices with optional filtering.
+            if (command->data.type() != typeid(DBDevicesListQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::COUNT_ACCOUNTS:
+            // Counts accounts with optional filtering.
+            if (command->data.type() != typeid(DBAccountsListQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_TASK:
+            // Inserts a new pending task.
+            if (command->data.type() != typeid(DBTaskInsertQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_ALL_TASKS:
+            // Gets all pending tasks. No data required.
+            break;
+
+        case DBCommandType::DELETE_TASK:
+            // Deletes a task by its ID.
+            if (command->data.type() != typeid(DBIdQuery)) {
                 return false;
             }
 

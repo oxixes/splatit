@@ -17,6 +17,7 @@ public:
     ~AuthRMC() override = default;
 
     async::Task<std::optional<std::string>> getOrRegisterUserPassword(uint32_t pid) const;
+    async::Task<bool> deleteGameServerAccess(uint32_t pid) const;
 
 private:
     async::Task<void> login(ClientInfo client, Request req, std::unique_ptr<String> username);

@@ -59,4 +59,14 @@ namespace http {
 
 } // namespace http
 
+namespace acc {
+
+    class UserBanned : public std::runtime_error {
+    public:
+        explicit UserBanned(const std::string& what_arg) : std::runtime_error(what_arg) {};
+        explicit UserBanned(const char* what_arg) : std::runtime_error(what_arg) {};
+    };
+
+} // namespace acc
+
 #endif //SPLATOON_SERVER_EXCEPTIONS_HPP

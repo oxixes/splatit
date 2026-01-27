@@ -28,9 +28,14 @@ void Server::listen() {
                 serverData.friendsAuthRMC, serverData.splatoonAuthRMC, logger);
     }
 
+    if (serverData.friendsSecureRMC != nullptr) {
+        internalAccountManagementService = std::make_shared<grpcimpl::internalaccountmanagement::v1::InternalAccountManagementServiceImpl>(
+                serverData.friendsSecureRMC, logger);
+    }
+
     if (serverData.settingsManager->isAccountEnabled()) {
         accountManagementService = std::make_shared<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl>(
-                logger, serverData.accountDatabase, serverData.httpServer);
+                logger, serverData.accountDatabase, serverData.httpServer, serverData.settingsManager);
     }
 
     serverStatusService = std::make_shared<grpcimpl::serverstatus::v1::ServerStatusServiceImpl>(
@@ -43,6 +48,7 @@ void Server::listen() {
     builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), grpc::InsecureServerCredentials());
 
     if (authService != nullptr) builder.RegisterService(authService.get());
+    if (internalAccountManagementService != nullptr) builder.RegisterService(internalAccountManagementService.get());
     builder.RegisterService(serverStatusService.get());
     if (accountManagementService != nullptr) builder.RegisterService(accountManagementService.get());
 

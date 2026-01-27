@@ -20,6 +20,10 @@ public:
                                        const GetGameServerCredentialsRequest* request,
                                        GetGameServerCredentialsResponse* reply) override;
 
+    grpc::ServerUnaryReactor* DeleteGameServerCredentials(grpc::CallbackServerContext* context,
+                                       const DeleteGameServerCredentialsRequest* request,
+                                       google::protobuf::Empty* _) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuth;

@@ -68,10 +68,8 @@ private:
     sqlite3_stmt* getUserMiiStatement = nullptr;
     sqlite3_stmt* getUserEmailStatement = nullptr;
     sqlite3_stmt* getDeviceAttributesStatement = nullptr;
-    sqlite3_stmt* getAllAgreementsStatement = nullptr;
     sqlite3_stmt* getAgreementStatement = nullptr;
     sqlite3_stmt* getDeviceStatement = nullptr;
-    sqlite3_stmt* getLatestPIDStatement = nullptr;
     sqlite3_stmt* getOwnershipStatement = nullptr;
     sqlite3_stmt* getLatestOwnershipStatement = nullptr;
     sqlite3_stmt* hasActiveOwnershipStatement = nullptr;
@@ -102,7 +100,24 @@ private:
     sqlite3_stmt* deleteFriendStatement = nullptr;
     sqlite3_stmt* deleteFriendRequestStatement = nullptr;
     sqlite3_stmt* deletePersistentNotificationStatement = nullptr;
+    sqlite3_stmt* deleteAttributeStatement = nullptr;
+    sqlite3_stmt* deleteAttributesStatement = nullptr;
+    sqlite3_stmt* deleteDeviceStatement = nullptr;
+    sqlite3_stmt* deleteDeviceOwnershipsStatement = nullptr;
+    sqlite3_stmt* deleteDeviceAttributesStatement = nullptr;
+    sqlite3_stmt* deleteOwnershipStatement = nullptr;
+    sqlite3_stmt* deleteUserAgreementStatement = nullptr;
+    sqlite3_stmt* deleteGameServerAccessStatement = nullptr;
+    sqlite3_stmt* inactivateOwnershipsStatement = nullptr;
     sqlite3_stmt* unblockFriendStatement = nullptr;
+    sqlite3_stmt* deleteAllBlocksByPidStatement = nullptr;
+    sqlite3_stmt* deleteAllFriendRequestsByPidStatement = nullptr;
+    sqlite3_stmt* deleteAllFriendshipsByPidStatement = nullptr;
+    sqlite3_stmt* deleteAllNotificationsByPidStatement = nullptr;
+    sqlite3_stmt* deleteUserInfoByPidStatement = nullptr;
+    sqlite3_stmt* insertTaskStatement = nullptr;
+    sqlite3_stmt* getAllTasksStatement = nullptr;
+    sqlite3_stmt* deleteTaskStatement = nullptr;
 
     bool isSession = false;
 

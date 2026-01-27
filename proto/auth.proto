@@ -2,9 +2,14 @@ syntax = "proto3";
 
 package grpcimpl.auth.v1;
 
+import "google/protobuf/empty.proto";
+
 service AuthService {
   // Retrieves the game server credentials for a given PID.
   rpc GetGameServerCredentials(GetGameServerCredentialsRequest) returns (GetGameServerCredentialsResponse);
+
+  // Deletes the game server credentials for a given PID.
+  rpc DeleteGameServerCredentials(DeleteGameServerCredentialsRequest) returns (google.protobuf.Empty);
 }
 
 message GetGameServerCredentialsRequest {
@@ -15,4 +20,9 @@ message GetGameServerCredentialsRequest {
 message GetGameServerCredentialsResponse {
   bool success = 1;
   optional string password = 2;
+}
+
+message DeleteGameServerCredentialsRequest {
+  uint32 pid = 1;
+  string gameServerId = 2;
 }

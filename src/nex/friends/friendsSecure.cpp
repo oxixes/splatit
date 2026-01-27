@@ -2806,4 +2806,62 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     co_await Server::onDisconnect(address);
 }
 
+Task<bool> FriendsSecureRMC::deleteAccount(uint32_t pid) const {
+    auto session = db->createSession();
+    if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to begin transaction for deleting account " + std::to_string(pid) + ".");
+        co_return false;
+    }
+
+    auto deleteNotificationsCmd = db::Database::craftDeleteAllNotificationsByPidCommand(pid);
+    db::Result deleteNotificationsResult = co_await session->runCommand(std::move(deleteNotificationsCmd));
+    if (deleteNotificationsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete notifications for account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    auto deleteBlocksCmd = db::Database::craftDeleteAllBlocksByPidCommand(pid);
+    db::Result deleteBlocksResult = co_await session->runCommand(std::move(deleteBlocksCmd));
+    if (deleteBlocksResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete blocks for account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    auto deleteFriendRequestsCmd = db::Database::craftDeleteAllFriendRequestsByPidCommand(pid);
+    db::Result deleteFriendRequestsResult = co_await session->runCommand(std::move(deleteFriendRequestsCmd));
+    if (deleteFriendRequestsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete friend requests for account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    auto deleteFriendsCmd = db::Database::craftDeleteAllFriendshipsByPidCommand(pid);
+    db::Result deleteFriendsResult = co_await session->runCommand(std::move(deleteFriendsCmd));
+    if (deleteFriendsResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete friends for account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    auto deleteUserInfoCmd = db::Database::craftDeleteUserInfoByPidCommand(pid);
+    db::Result deleteUserInfoResult = co_await session->runCommand(std::move(deleteUserInfoCmd));
+    if (deleteUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to delete user info for account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to commit transaction for deleting account " + std::to_string(pid) + ".");
+        co_await session->rollbackTransaction();
+        co_return false;
+    }
+
+    logger->log(Logger::level::INFO, logGroup, "Successfully deleted friends server account " + std::to_string(pid) + ".");
+
+    co_return true;
+}
+
 } // namespace nex::rmc

@@ -483,6 +483,21 @@
             }
           }
         },
+        "secureServerGrpcAddresses": {
+          "description": "Mapping of server ids to secure server gRPC addresses",
+          "type": "object",
+          "patternProperties": {
+            "^[A-F0-9]{8}$": {
+              "description": "gRPC addresses for a specific server ID",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+              },
+              "minItems": 1
+            }
+          }
+        },
         "allowRealWiiU": {
             "description": "Allow real Wii U consoles to connect",
             "type": "boolean"
@@ -609,7 +624,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "email"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "secureServerGrpcAddresses" ,"db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "email"]
       },
       "required": ["enabled"]
     },

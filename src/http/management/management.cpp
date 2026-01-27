@@ -169,6 +169,9 @@ async::Task<void> errorHandler(http::Server* srv, std::shared_ptr<http::Context>
     bool keepAlive = false;
     std::unique_ptr<http::Response> res;
     switch (ctx->status) {
+        case HTTP_STATUS_BAD_REQUEST:
+            res = std::move(createError(ctx, ManagementError::BAD_REQUEST, "Bad Request", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, ctx->status));
+            break;
         case HTTP_STATUS_NOT_FOUND:
             res = std::move(createError(ctx, ManagementError::NOT_FOUND, "Not Found", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, ctx->status));
             break;
@@ -219,6 +222,28 @@ std::unique_ptr<http::Response> prepareCORSPreflightResponse(const std::shared_p
     return res;
 }
 
+namespace {
+std::vector<std::string> splitPath(const std::string& path) {
+    auto parts = util::split(path, "/");
+    std::vector<std::string> out;
+    out.reserve(parts.size());
+    for (const auto& p : parts) {
+        if (!p.empty()) out.push_back(p);
+    }
+    return out;
+}
+
+std::optional<uint32_t> parseU32(const std::string& s) {
+    try {
+        const unsigned long v = std::stoul(s);
+        if (v > std::numeric_limits<uint32_t>::max()) return std::nullopt;
+        return static_cast<uint32_t>(v);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+} // namespace
+
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
                     std::shared_ptr<db::Database> db) {
     channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getManagementgRPCConnectionPoolMaxSize());
@@ -250,6 +275,138 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                              }
 
                              return mgm_get_agreements(srv, std::move(ctx), settingsMgr);
+                         });
+
+    // Devices collection
+    server->registerRoute("*", "/api/v1/devices",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_POST) return mgm_create_device(srv, std::move(ctx), settingsMgr);
+                             return mgm_list_devices(srv, std::move(ctx), settingsMgr);
+                         });
+
+    // Accounts collection
+    server->registerRoute("*", "/api/v1/accounts",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_POST) return mgm_create_account(srv, std::move(ctx), settingsMgr);
+                             return mgm_list_accounts(srv, std::move(ctx), settingsMgr);
+                         });
+
+    // Lookup by username
+    server->registerRoute("*", "/api/v1/accounts:by-username",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_account_by_username(srv, std::move(ctx), settingsMgr);
+                         });
+
+    // Generic prefix routing for subresources
+    // NOTE: Any route that includes params/wildcards must use registerRegexRoute.
+    server->registerRegexRoute("*", R"(^/api/v1/devices/([0-9]+)$)",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                             const auto parts = splitPath(ctx->request->getPath());
+                             // expected: api v1 devices {id}
+                             if (parts.size() < 4) {
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+                             auto id = parseU32(parts[3]);
+                             if (!id) {
+                                 ctx->status =  HTTP_STATUS_BAD_REQUEST;
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_GET) {
+                                 return mgm_get_device(srv, std::move(ctx), settingsMgr, *id);
+                             }
+                             if (method == http::Method::M_DELETE) {
+                                 return mgm_delete_device(srv, std::move(ctx), settingsMgr, *id);
+                             }
+                             // PATCH/PUT for update
+                             return mgm_update_device(srv, std::move(ctx), settingsMgr, *id);
+                         });
+
+    server->registerRegexRoute("*", R"(^/api/v1/accounts/([0-9]+)(/.*)?$)",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                             const auto parts = splitPath(ctx->request->getPath());
+                             // api v1 accounts {pid} ...
+                             if (parts.size() < 4) {
+                                 ctx->status = HTTP_STATUS_NOT_FOUND;
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+
+                             auto pid = parseU32(parts[3]);
+                             if (!pid) {
+                                 ctx->status =  HTTP_STATUS_BAD_REQUEST;
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+
+                             // /api/v1/accounts/{pid}
+                             if (parts.size() == 4) {
+                                 auto method = ctx->request->getMethod();
+                                 if (method == http::Method::M_GET) {
+                                     return mgm_get_account(srv, std::move(ctx), settingsMgr, *pid);
+                                 }
+                                 if (method == http::Method::M_DELETE) {
+                                     return mgm_delete_account(srv, std::move(ctx), settingsMgr, *pid);
+                                 }
+                                 return mgm_update_account(srv, std::move(ctx), settingsMgr, *pid);
+                             }
+
+                             // subresources
+                             const std::string& sub = parts[4];
+                             if (sub == "email") {
+                                 return mgm_update_account_email(srv, std::move(ctx), settingsMgr, *pid);
+                             }
+
+                             if (sub == "mii") {
+                                 return mgm_set_account_mii(srv, std::move(ctx), settingsMgr, *pid);
+                             }
+
+                             if (sub == "agreements") {
+                                 auto method = ctx->request->getMethod();
+                                 if (method == http::Method::M_POST) {
+                                     return mgm_add_account_agreement(srv, std::move(ctx), settingsMgr, *pid);
+                                 }
+                                 return mgm_remove_account_agreement(srv, std::move(ctx), settingsMgr, *pid);
+                             }
+
+                             if (sub == "devices") {
+                                 // /api/v1/accounts/{pid}/devices
+                                 if (parts.size() == 5) {
+                                     return mgm_link_device_to_account(srv, std::move(ctx), settingsMgr, *pid);
+                                 }
+                                 // /api/v1/accounts/{pid}/devices/{deviceId}[/attributes[/name]]
+                                 auto deviceId = parseU32(parts[5]);
+                                 if (!deviceId) {
+                                     ctx->status = HTTP_STATUS_BAD_REQUEST;
+                                     return errorHandler(srv, std::move(ctx), settingsMgr);
+                                 }
+
+                                 if (parts.size() == 6) {
+                                     // unlink
+                                     return mgm_unlink_device_from_account(srv, std::move(ctx), settingsMgr, *pid, *deviceId);
+                                 }
+
+                                 const std::string& sub2 = parts[6];
+                                 if (sub2 == "status") {
+                                     return mgm_update_account_device_status(srv, std::move(ctx), settingsMgr, *pid, *deviceId);
+                                 }
+
+                                 if (sub2 == "attributes") {
+                                     if (parts.size() == 7) {
+                                         return mgm_list_account_device_attributes(srv, std::move(ctx), settingsMgr, *pid, *deviceId);
+                                     }
+                                     const std::string& attrName = parts[7];
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_PUT) {
+                                         return mgm_set_account_device_attribute(srv, std::move(ctx), settingsMgr, *pid, *deviceId, attrName);
+                                     }
+                                     return mgm_remove_account_device_attribute(srv, std::move(ctx), settingsMgr, *pid, *deviceId, attrName);
+                                 }
+                             }
+
+                             ctx->status = HTTP_STATUS_NOT_FOUND;
+                             return errorHandler(srv, std::move(ctx), settingsMgr);
                          });
 
     server->registerErrorPage("*",

@@ -7,6 +7,8 @@
 #include <date/tz.h>
 #include <mailio/smtp.hpp>
 
+#include "../../exceptions.hpp"
+
 // TODO Replace use of time_t with date EVERYWHERE. I write this here because it's the first time I use date in the project.
 
 namespace acc {
@@ -407,7 +409,11 @@ Task<bool> checkOauthToken(const std::shared_ptr<http::Request>& req, const std:
 
     auto cmd = db::Database::craftGetOwnershipCommand(token.pid, token.deviceId);
     const db::Result res = co_await db->runCommand(std::move(cmd));
-    if (res.getStatus() != db::DBResultStatus::SUCCESS || !res.hasData() || res.getData<db::DBOwnershipData>().status != "ACTIVE") {
+    if (res.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (!res.hasData() || res.getData<db::DBOwnershipData>().status != "ACTIVE") {
         co_return false; // Database error or ownership not found
     }
 
@@ -456,6 +462,15 @@ Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database>
 
     auto userData = std::move(res.getData<db::DBUserData>());
 
+    auto getProfileCmd = db::Database::craftGetUserProfileCommand(userData.pid);
+    db::Result profileRes = co_await db->runCommand(std::move(getProfileCmd));
+    if (profileRes.getStatus() != db::DBResultStatus::SUCCESS || !profileRes.hasData()
+        || !profileRes.getData<db::DBUserProfileData>().active) {
+        ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userData.username + " tried to log in but is banned "
+                                                                          "(client " + util::ipv4ToString(ctx->client) + ").");
+        throw UserBanned("User is banned");
+    }
+
     std::string nintendoPasswordHash = crypto::genNintendoPasswordHash(userData.pid, password);
     if (!crypto::verifyPassword(nintendoPasswordHash, userData.password)) {
         ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userData.username + " tried to log in with "
@@ -466,6 +481,21 @@ Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Database>
     ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + userData.username + " logged in successfully.");
 
     co_return userData.pid; // Valid credentials, return the user ID
+}
+
+Task<bool> checkDeviceBanned(uint32_t deviceId, const std::shared_ptr<db::Database>& db) {
+    auto getDeviceCmd = db::Database::craftGetDeviceCommand(deviceId);
+
+    db::Result deviceRes = co_await db->runCommand(std::move(getDeviceCmd));
+    if (deviceRes.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    if (deviceRes.hasData() && deviceRes.getData<db::DBDeviceData>().banned) {
+        co_return true;
+    }
+
+    co_return false;
 }
 
 bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
