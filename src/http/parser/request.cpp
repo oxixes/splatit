@@ -203,6 +203,9 @@ std::vector<uint8_t> Request::serialize() const {
         case Method::M_HEAD:
             methodStr = "HEAD";
             break;
+        case Method::M_PATCH:
+            methodStr = "PATCH";
+            break;
         case Method::M_OPTIONS:
             methodStr = "OPTIONS";
             break;

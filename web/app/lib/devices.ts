@@ -41,6 +41,7 @@ export interface CreateDeviceRequest {
   region: string;
   systemVersion: string;
   type: string;
+  banned?: boolean;
 }
 
 export interface DeviceResponse {
@@ -89,13 +90,11 @@ export async function updateDevice(
   return apiClient.put<DeviceResponse>(`/api/v1/devices/${deviceId}`, data);
 }
 
-export async function banDevice(config: AppConfig, deviceId: number): Promise<{ status: "ok" }> {
-  const apiClient = createApiClient(config);
-  return apiClient.post<{ status: "ok" }>(`/api/v1/devices/${deviceId}/ban`, {});
+export async function banDevice(config: AppConfig, deviceId: number): Promise<DeviceResponse> {
+  return updateDevice(config, deviceId, { banned: true });
 }
 
-export async function unbanDevice(config: AppConfig, deviceId: number): Promise<{ status: "ok" }> {
-  const apiClient = createApiClient(config);
-  return apiClient.post<{ status: "ok" }>(`/api/v1/devices/${deviceId}/unban`, {});
+export async function unbanDevice(config: AppConfig, deviceId: number): Promise<DeviceResponse> {
+  return updateDevice(config, deviceId, { banned: false });
 }
 

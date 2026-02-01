@@ -87,7 +87,6 @@ service AccountManagementService {
   // Updates device status for an account (will deactivate other devices if set to active)
   rpc UpdateDeviceStatus(UpdateDeviceStatusRequest) returns (google.protobuf.Empty);
 
-
   // Account-Device Attribute Management
   // Adds or updates a device attribute for an account-device relationship
   rpc SetAccountDeviceAttribute(SetAccountDeviceAttributeRequest) returns (google.protobuf.Empty);
@@ -97,6 +96,10 @@ service AccountManagementService {
 
   // Lists device attributes for an account-device relationship
   rpc ListAccountDeviceAttributes(ListAccountDeviceAttributesRequest) returns (ListAccountDeviceAttributesResponse);
+
+  // Cemu files
+  // Gets the Cemu files for an account
+  rpc GetCemuFiles(CemuFilesGetRequest) returns (CemuFilesResponse);
 }
 
 message SecurityStatus {
@@ -497,4 +500,20 @@ message ListAccountDeviceAttributesRequest {
 
 message ListAccountDeviceAttributesResponse {
   repeated DeviceAttribute attributes = 1;
+}
+
+message CemuFilesGetRequest {
+  uint32 pid = 1;
+  string password = 2;
+}
+
+message CemuFilesResponse {
+  bytes accountDat = 4;
+  bytes otp = 5;
+  bytes seeprom = 6;
+  bytes clientCert = 7;
+  bytes clientKey = 8;
+  bytes serverCert = 9;
+  bytes networkServices = 10;
+  string persistentId = 11;
 }

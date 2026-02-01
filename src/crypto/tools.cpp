@@ -219,6 +219,37 @@ std::vector<uint8_t> AES_128_CTR(const std::vector<uint8_t>& key, const std::vec
     return result;
 }
 
+std::vector<uint8_t> AES_128_CBC_ENC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& iv, const std::vector<uint8_t>& data) {
+    assert(data.size() % 16 == 0);
+
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_CIPHER_CTX: " + util::getOpenSSLError());
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), nullptr, key.data(), iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize AES-128-CBC: " + util::getOpenSSLError());
+    }
+
+    std::vector<uint8_t> result(data.size());
+    int length = 0;
+    if (EVP_EncryptUpdate(ctx, result.data(), &length, data.data(), (int) data.size()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to encrypt data with AES-128-CBC: " + util::getOpenSSLError());
+    }
+
+    int finalLength = 0;
+    if (EVP_EncryptFinal_ex(ctx, result.data() + length, &finalLength) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize encryption with AES-128-CBC: " + util::getOpenSSLError());
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    return result;
+}
+
 std::vector<uint8_t> AES_192_ECB_ENC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {

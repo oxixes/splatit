@@ -16,6 +16,7 @@ import type { AppConfig } from "~/hooks/useAppConfig";
 import type { UpdateAccountRequest } from "~/types/account";
 import { updateAccount, deleteAccount, getAccount } from "~/lib/accounts";
 import type { Account } from "~/types/account";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 import countriesLanguages from "~/data/countries_languages.json";
 import timezones from "~/data/timezones.json";
@@ -86,7 +87,17 @@ export function EditPlayerDialog({
         setOffDevice(acc.offDevice ?? false);
         setActive(acc.active);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error loading account");
+        if (e instanceof ApiError) {
+          switch (e.code) {
+            case ManagementError.NOT_FOUND:
+              setError("Account not found");
+              break;
+            default:
+              setError(e.message || "Error loading account");
+          }
+        } else {
+          setError(e instanceof Error ? e.message : "Error loading account");
+        }
       } finally {
         setLoading(false);
       }
@@ -139,7 +150,23 @@ export function EditPlayerDialog({
       onOpenChange(false);
       onUpdated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error updating user");
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.NOT_FOUND:
+            setError("Account not found");
+            break;
+          case ManagementError.BAD_REQUEST:
+            setError(e.message || "Invalid input. Please check your data.");
+            break;
+          case ManagementError.CONFLICT:
+            setError(e.message || "Username or email already exists");
+            break;
+          default:
+            setError(e.message || "Error updating user");
+        }
+      } else {
+        setError(e instanceof Error ? e.message : "Error updating user");
+      }
     } finally {
       setSaving(false);
     }
@@ -155,7 +182,19 @@ export function EditPlayerDialog({
       onOpenChange(false);
       onUpdated?.();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Error deleting user");
+      let errorMsg = "Error deleting user";
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.NOT_FOUND:
+            errorMsg = "Account not found";
+            break;
+          default:
+            errorMsg = e.message || errorMsg;
+        }
+      } else if (e instanceof Error) {
+        errorMsg = e.message;
+      }
+      alert(errorMsg);
     } finally {
       setSaving(false);
     }

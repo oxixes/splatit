@@ -30,6 +30,7 @@ std::vector<uint8_t> HMAC_SHA256(const std::vector<uint8_t>& key, const std::vec
 std::vector<uint8_t> HMAC_MD5(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 std::vector<uint8_t> MD5(const std::vector<uint8_t>& data);
 std::vector<uint8_t> AES_128_CTR(const std::vector<uint8_t>& key, const std::vector<uint8_t>& iv, const std::vector<uint8_t>& data);
+std::vector<uint8_t> AES_128_CBC_ENC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& iv, const std::vector<uint8_t>& data);
 std::vector<uint8_t> AES_192_ECB_ENC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 std::vector<uint8_t> AES_192_ECB_DEC(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 std::string signJWT(const std::string& base64Key, const json& payload);

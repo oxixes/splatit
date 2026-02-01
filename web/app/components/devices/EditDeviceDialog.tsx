@@ -15,6 +15,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import type { AppConfig } from "~/hooks/useAppConfig";
 import { getDevice, updateDevice, deleteDevice, banDevice, unbanDevice } from "~/lib/devices";
 import type { Device } from "~/lib/devices";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 
 export function EditDeviceDialog({
@@ -61,7 +62,17 @@ export function EditDeviceDialog({
         setType(dev.type);
         setBanned(dev.banned);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error loading device");
+        if (e instanceof ApiError) {
+          switch (e.code) {
+            case ManagementError.NOT_FOUND:
+              setError("Device not found");
+              break;
+            default:
+              setError(e.message || "Error loading device");
+          }
+        } else {
+          setError(e instanceof Error ? e.message : "Error loading device");
+        }
       } finally {
         setLoading(false);
       }
@@ -91,7 +102,23 @@ export function EditDeviceDialog({
       onOpenChange(false);
       onUpdated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error updating device");
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.NOT_FOUND:
+            setError("Device not found");
+            break;
+          case ManagementError.BAD_REQUEST:
+            setError(e.message || "Invalid input. Please check your data.");
+            break;
+          case ManagementError.CONFLICT:
+            setError(e.message || "Device with this serial number already exists");
+            break;
+          default:
+            setError(e.message || "Error updating device");
+        }
+      } else {
+        setError(e instanceof Error ? e.message : "Error updating device");
+      }
     } finally {
       setSaving(false);
     }
@@ -107,7 +134,19 @@ export function EditDeviceDialog({
       onOpenChange(false);
       onUpdated?.();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Error deleting device");
+      let errorMsg = "Error deleting device";
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.NOT_FOUND:
+            errorMsg = "Device not found";
+            break;
+          default:
+            errorMsg = e.message || errorMsg;
+        }
+      } else if (e instanceof Error) {
+        errorMsg = e.message;
+      }
+      alert(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -129,7 +168,19 @@ export function EditDeviceDialog({
       setBanned(res.device.banned);
       setDevice(res.device);
     } catch (e) {
-      alert(e instanceof Error ? e.message : `Error ${banned ? "unbanning" : "banning"} device`);
+      let errorMsg = `Error ${banned ? "unbanning" : "banning"} device`;
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.NOT_FOUND:
+            errorMsg = "Device not found";
+            break;
+          default:
+            errorMsg = e.message || errorMsg;
+        }
+      } else if (e instanceof Error) {
+        errorMsg = e.message;
+      }
+      alert(errorMsg);
     } finally {
       setSaving(false);
     }

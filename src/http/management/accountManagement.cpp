@@ -1,12 +1,14 @@
 #include "management.hpp"
 
 #include "../../util/util.hpp"
+#include "../../crypto/tools.hpp"
 #include "../../grpc/asyncRequest.hpp"
-#include <google/protobuf/empty.pb.h>
 #include "../../../cmake-build-debug/generated/accountManagement.grpc.pb.h"
 
 #include <limits>
 #include <optional>
+
+#include <google/protobuf/empty.pb.h>
 
 namespace mgm {
 
@@ -307,7 +309,10 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callAccountServe
                     timeoutMs
                 );
 
-            if (response.second.ok()) {
+            // As long as the server responds, consider it a success
+            // (even if the gRPC status is not OK). Errors will be treated in the
+            // caller.
+            if (response.first != nullptr) {
                 // Success! Update round-robin index
                 serverHostsIndexRoundRobin[ServerType::ACCOUNT] = (currentIndex + 1) % hostList.size();
                 co_return response;
@@ -2267,6 +2272,97 @@ async::Task<void> mgm_remove_account_device_attribute(http::Server* srv, std::sh
     }
 
     json responseBody = {{"status", "ok"}};
+    bool keepAlive = false;
+    auto res = prepareResponse(ctx, responseBody, keepAlive, settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+}
+
+async::Task<void> mgm_get_cemu_files(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid) {
+    if (ctx->request->getMethod() != http::Method::M_POST && ctx->request->getMethod() != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        auto res = prepareCORSPreflightResponse(ctx, settingsMgr, "POST, OPTIONS", keepAlive);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    bool sent = false;
+    json body = parseJsonBodyOrError(srv, ctx, settingsMgr, sent);
+    if (sent) co_return;
+
+    if (!body.contains("password") || !body["password"].is_string()) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::BAD_REQUEST, "Missing or invalid password field", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto request = std::make_shared<grpcimpl::accountmanagement::v1::CemuFilesGetRequest>();
+    request->set_pid(pid);
+    request->set_password(body["password"].get<std::string>());
+
+    auto response = co_await callAccountServerWithFallback<
+        grpcimpl::accountmanagement::v1::AccountManagementService,
+        void (grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::*)(
+            grpc::ClientContext*,
+            const grpcimpl::accountmanagement::v1::CemuFilesGetRequest*,
+            grpcimpl::accountmanagement::v1::CemuFilesResponse*,
+            std::function<void(grpc::Status)>
+        ),
+        grpcimpl::accountmanagement::v1::CemuFilesGetRequest,
+        grpcimpl::accountmanagement::v1::CemuFilesResponse
+    >(
+        ctx,
+        &grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::GetCemuFiles,
+        request,
+        settingsMgr->getManagementgRPCRequestTimeout()
+    );
+
+    if (!response.second.ok()) {
+        bool keepAlive = false;
+
+        if (response.second.error_code() == grpc::StatusCode::NOT_FOUND) {
+            auto res = createError(ctx, ManagementError::NOT_FOUND, "Account or device not found", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_NOT_FOUND);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
+        if (response.second.error_code() == grpc::StatusCode::PERMISSION_DENIED) {
+            auto res = createError(ctx, ManagementError::PERMISSION_DENIED, "Invalid password", settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_UNAUTHORIZED);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
+        if (response.second.error_code() == grpc::StatusCode::FAILED_PRECONDITION) {
+            auto res = createError(ctx, ManagementError::INTERNAL_ERROR, response.second.error_message(), settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
+            srv->sendResponse(std::move(ctx), std::move(res), false);
+            co_return;
+        }
+
+        auto res = createError(ctx, ManagementError::BAD_GATEWAY, "Failed to get CEMU files: " + response.second.error_message(), settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    // Convert binary data to base64 for JSON response
+    const auto& cemuFiles = *response.first;
+    
+    json responseBody;
+    responseBody["accountDat"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.accountdat().begin(), cemuFiles.accountdat().end()));
+    responseBody["otp"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.otp().begin(), cemuFiles.otp().end()));
+    responseBody["seeprom"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.seeprom().begin(), cemuFiles.seeprom().end()));
+    responseBody["clientCert"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.clientcert().begin(), cemuFiles.clientcert().end()));
+    responseBody["clientKey"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.clientkey().begin(), cemuFiles.clientkey().end()));
+    responseBody["serverCert"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.servercert().begin(), cemuFiles.servercert().end()));
+    responseBody["networkServices"] = crypto::base64Encode(std::vector<uint8_t>(cemuFiles.networkservices().begin(), cemuFiles.networkservices().end()));
+    responseBody["persistentId"] = cemuFiles.persistentid();
+
     bool keepAlive = false;
     auto res = prepareResponse(ctx, responseBody, keepAlive, settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
     srv->sendResponse(std::move(ctx), std::move(res), keepAlive);

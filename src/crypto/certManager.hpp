@@ -18,8 +18,19 @@
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/engine.h>
+#include <openssl/core_names.h>
 
 namespace fs = std::filesystem;
+
+namespace crypto {
+
+struct DeviceCemuFiles {
+    std::vector<uint8_t> otp;
+    std::vector<uint8_t> seeprom;
+    std::vector<uint8_t> clientCert;
+    std::vector<uint8_t> clientKey;
+    std::vector<uint8_t> serverCA;
+};
 
 class CertManager {
 public:
@@ -30,6 +41,7 @@ public:
     EVP_PKEY* getSSLKey();
     X509* getSSLCert();
     EVP_PKEY* getDeviceKey();
+    DeviceCemuFiles genDeviceCemuFiles(uint32_t deviceId, uint8_t region, const std::string& serialNumber);
     void cleanup();
 
 private:
@@ -53,15 +65,18 @@ private:
     bool validateCA(X509* crt, EVP_PKEY* pKey);
     bool validateSSLCert(X509* crt, EVP_PKEY* pKey, X509* CAcrt, const std::vector<std::string>& domains);
 
-    bool genRSAKey(EVP_PKEY** pKey);
-    bool genECDSAKey(EVP_PKEY** pKey);
+    bool genRSAKey(EVP_PKEY** pKey, Logger::group logGroup = Logger::group::SETUP);
+    bool genECDSAKey(EVP_PKEY** pKey, Logger::group logGroup = Logger::group::SETUP);
 
     bool createCA(const fs::path& crtFile, const fs::path& keyFile, EVP_PKEY* pKey, X509** outCert);
     bool createSSLServerCert(X509* caCert, EVP_PKEY* caKey, const fs::path& crtFile,
                              const fs::path& keyFile, const std::vector<std::string>& domains,
                              EVP_PKEY* pKey, X509** outCert);
+    bool createClientCert(X509* caCert, EVP_PKEY* caKey, const std::string& commonName,
+                          EVP_PKEY* pKey, X509** outCert);
 
     static void addExtToCert(X509* ca, X509* cert, int nid, const std::string& value);
 };
+} // namespace crypto
 
 #endif //SPLATOON_SERVER_CERTMANAGER_HPP

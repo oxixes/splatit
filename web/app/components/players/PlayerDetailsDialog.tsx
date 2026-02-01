@@ -24,6 +24,7 @@ import {
   unlinkDeviceFromAccount,
   updateAccountDeviceStatus,
 } from "~/lib/accounts";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 function safeNumber(v: string): number | null {
   const n = Number(v);
@@ -70,7 +71,17 @@ export function PlayerDetailsDialog({
         const res = await getAccount(config, pid);
         setAccount(res.account);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error loading account");
+        if (e instanceof ApiError) {
+          switch (e.code) {
+            case ManagementError.NOT_FOUND:
+              setError("Account not found");
+              break;
+            default:
+              setError(e.message || "Error loading account");
+          }
+        } else {
+          setError(e instanceof Error ? e.message : "Error loading account");
+        }
       } finally {
         setLoading(false);
       }

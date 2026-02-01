@@ -3,6 +3,7 @@
 #include "../../constants.hpp"
 
 #include <unordered_map>
+#include <regex>
 #include <auth.grpc.pb.h>
 #include <date/tz.h>
 #include <mailio/smtp.hpp>
@@ -30,7 +31,7 @@ json timezones;
 Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                   std::shared_ptr<db::Database> db,
                                   std::shared_ptr<SettingsManager> settingsManager,
-                                  std::shared_ptr<CertManager> certManager) {
+                                  std::shared_ptr<crypto::CertManager> certManager) {
 
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -216,7 +217,7 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
 Task<void> mii_image(http::Server* srv, std::shared_ptr<http::Context> ctx,
                      std::shared_ptr<db::Database> db,
                      std::shared_ptr<SettingsManager> settingsManager,
-                     std::shared_ptr<CertManager> certManager) {
+                     std::shared_ptr<crypto::CertManager> certManager) {
 
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
@@ -499,7 +500,7 @@ Task<bool> checkDeviceBanned(uint32_t deviceId, const std::shared_ptr<db::Databa
 }
 
 bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                        const std::shared_ptr<CertManager>& certManager, std::unique_ptr<http::Response>& resOut,
+                        const std::shared_ptr<crypto::CertManager>& certManager, std::unique_ptr<http::Response>& resOut,
                         bool checkDevice) {
     if (!req->hasHeader("x-nintendo-device-id")) {
         resOut = createError(req->getVersion(), 2, "X-Nintendo-Device-ID is invalid", "X-Nintendo-Device-ID", HTTP_STATUS_BAD_REQUEST);
@@ -556,6 +557,11 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
 
     try {
         uint32_t region = std::stoul(req->getHeader("x-nintendo-region")[0]);
+
+        if (region != 1 && region != 2 && region != 4 && region != 8 && region != 16 && region != 32 && region != 64) {
+            resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
+            return false;
+        }
     } catch (const std::invalid_argument&) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
         return false;
@@ -570,7 +576,11 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
     }
 
     const std::string serialNumber = req->getHeader("x-nintendo-serial-number")[0];
-    if (serialNumber.length() > 16) {
+
+    // Check serial number format
+    std::regex serialRegex("^[FG][EJW]([FHM])?\\d{9}$");
+
+    if (!std::regex_match(serialNumber, serialRegex)) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Serial-Number", HTTP_STATUS_BAD_REQUEST);
         return false;
     }
@@ -690,7 +700,7 @@ bool init(const std::shared_ptr<Logger::Logger>& logger) {
 }
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<CertManager> certMgr, std::shared_ptr<db::Database> db) {
+                    std::shared_ptr<crypto::CertManager> certMgr, std::shared_ptr<db::Database> db) {
 
     channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getAccountsgRPCConnectionPoolMaxSize());
     gameServerHosts = std::move(settingsMgr->getGameServerHosts());

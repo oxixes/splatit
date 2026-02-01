@@ -9,6 +9,7 @@
 #include "../../db/database.hpp"
 #include "../../http/server.hpp"
 #include "../../settingsManager.hpp"
+#include "../../crypto/certManager.hpp"
 
 namespace grpcimpl::accountmanagement::v1 {
 
@@ -16,9 +17,11 @@ class AccountManagementServiceImpl final : public AccountManagementService::Call
 public:
     explicit AccountManagementServiceImpl(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> accountDb,
                                           std::shared_ptr<http::Server> httpServer,
-                                          std::shared_ptr<SettingsManager> settingsManager) :
+                                          std::shared_ptr<SettingsManager> settingsManager,
+                                          std::shared_ptr<crypto::CertManager> certManager) :
                                           logger(std::move(logger)), db(std::move(accountDb)),
-                                          httpServer(std::move(httpServer)), settingsManager(std::move(settingsManager)) {}
+                                          httpServer(std::move(httpServer)), settingsManager(std::move(settingsManager)),
+                                          certManager(std::move(certManager)) {}
 
     grpc::ServerUnaryReactor* GetSecurityStatus(grpc::CallbackServerContext* context,
         const google::protobuf::Empty* _, SecurityStatus* reply) override;
@@ -105,11 +108,15 @@ public:
     grpc::ServerUnaryReactor* ListAccountDeviceAttributes(grpc::CallbackServerContext* context,
         const ListAccountDeviceAttributesRequest* request, ListAccountDeviceAttributesResponse* reply) override;
 
+    grpc::ServerUnaryReactor* GetCemuFiles(grpc::CallbackServerContext* context,
+        const CemuFilesGetRequest* request, CemuFilesResponse* reply) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<db::Database> db;
     std::shared_ptr<http::Server> httpServer;
     std::shared_ptr<SettingsManager> settingsManager;
+    std::shared_ptr<crypto::CertManager> certManager;
 };
 
 } // namespace grpcimpl::accountmanagement::v1

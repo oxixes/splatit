@@ -15,6 +15,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import type { AppConfig } from "~/hooks/useAppConfig";
 import type { CreateAccountRequest } from "~/types/account";
 import { createAccount } from "~/lib/accounts";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 import countriesLanguages from "~/data/countries_languages.json";
 import timezones from "~/data/timezones.json";
@@ -103,7 +104,20 @@ export function CreatePlayerDialog({
       setPassword("");
       setEmail("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error creating user");
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.BAD_REQUEST:
+            setError(e.message || "Invalid input. Please check your data.");
+            break;
+          case ManagementError.CONFLICT:
+            setError(e.message || "Username or email already exists");
+            break;
+          default:
+            setError(e.message || "Error creating user");
+        }
+      } else {
+        setError(e instanceof Error ? e.message : "Error creating user");
+      }
     } finally {
       setSaving(false);
     }

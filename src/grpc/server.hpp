@@ -20,6 +20,7 @@ namespace grpcimpl {
 
 struct gRPCServerData {
     std::shared_ptr<SettingsManager> settingsManager;
+    std::shared_ptr<crypto::CertManager> certManager;
     std::shared_ptr<db::Database> accountDatabase;
 
     std::shared_ptr<http::Server> httpServer;

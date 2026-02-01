@@ -35,7 +35,7 @@ void Server::listen() {
 
     if (serverData.settingsManager->isAccountEnabled()) {
         accountManagementService = std::make_shared<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl>(
-                logger, serverData.accountDatabase, serverData.httpServer, serverData.settingsManager);
+                logger, serverData.accountDatabase, serverData.httpServer, serverData.settingsManager, serverData.certManager);
     }
 
     serverStatusService = std::make_shared<grpcimpl::serverstatus::v1::ServerStatusServiceImpl>(

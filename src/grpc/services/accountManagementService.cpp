@@ -1,5 +1,10 @@
 #include "accountManagementService.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include "../../exceptions.hpp"
 #include "../../util/task.hpp"
 #include "../../util/globalTaskScheduler.hpp"
 #include "../../crypto/tools.hpp"
@@ -2284,6 +2289,491 @@ grpc::ServerUnaryReactor* AccountManagementServiceImpl::ListAccountDeviceAttribu
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
 
     auto task = completeListAccountDeviceAttributes(reactor, request, reply, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
+
+    return reactor;
+}
+
+Task<void> completeGetCemuFiles(grpc::ServerUnaryReactor* reactor, const CemuFilesGetRequest* request,
+                               CemuFilesResponse* reply, const std::shared_ptr<db::Database> db,
+                               const std::shared_ptr<crypto::CertManager> certManager,
+                               const std::shared_ptr<SettingsManager> settingsManager) {
+    // Get user data to verify password
+    auto getUserCmd = db::Database::craftGetUserByPIDCommand(request->pid());
+    const db::Result userResult = co_await db->runCommand(std::move(getUserCmd));
+    if (userResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error retrieving user"));
+        co_return;
+    }
+
+    if (!userResult.hasData()) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::NOT_FOUND, "Account not found"));
+        co_return;
+    }
+
+    db::DBUserData userData = userResult.getData<db::DBUserData>();
+
+    // Verify password
+    std::string nintendoPasswordHash = crypto::genNintendoPasswordHash(request->pid(), request->password());
+    if (!crypto::verifyPassword(nintendoPasswordHash, userData.password)) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::PERMISSION_DENIED, "Invalid password"));
+        co_return;
+    }
+
+    // Get user profile to verify account is active and get data
+    auto getProfileCmd = db::Database::craftGetUserProfileCommand(request->pid());
+    const db::Result profileResult = co_await db->runCommand(std::move(getProfileCmd));
+    if (profileResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error retrieving profile"));
+        co_return;
+    }
+
+    if (!profileResult.hasData()) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::NOT_FOUND, "Profile not found"));
+        co_return;
+    }
+
+    db::DBUserProfileData profileData = profileResult.getData<db::DBUserProfileData>();
+
+    // Get user active device ownership
+    auto getOwnershipCmd = db::Database::craftGetOwnershipsCommand(request->pid());
+    const db::Result ownershipResult = co_await db->runCommand(std::move(getOwnershipCmd));
+    if (ownershipResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error retrieving ownerships"));
+        co_return;
+    }
+
+    std::optional<int64_t> activeDeviceId = std::nullopt;
+    if (ownershipResult.hasData()) {
+        const auto ownerships = ownershipResult.getData<std::vector<db::DBOwnershipData>>();
+        for (const auto& ownership : ownerships) {
+            if (ownership.status == "ACTIVE") {
+                activeDeviceId = ownership.deviceId;
+                break;
+            }
+        }
+    }
+
+    if (!activeDeviceId.has_value()) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::NOT_FOUND, "No active device ownership found for account"));
+        co_return;
+    }
+
+    // Get the device info
+    auto getDeviceCmd = db::Database::craftGetDeviceCommand(activeDeviceId.value());
+    const db::Result deviceResult = co_await db->runCommand(std::move(getDeviceCmd));
+    if (deviceResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error retrieving device"));
+        co_return;
+    }
+
+    if (!deviceResult.hasData()) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::NOT_FOUND, "Device not found"));
+        co_return;
+    }
+
+    db::DBDeviceData deviceData = deviceResult.getData<db::DBDeviceData>();
+
+    // Get attributes for the active device
+    auto getAttributesCmd = db::Database::craftGetDeviceAttributesCommand(request->pid(), activeDeviceId.value());
+    const db::Result attributesResult = co_await db->runCommand(std::move(getAttributesCmd));
+    if (attributesResult.getStatus() != db::DBResultStatus::SUCCESS) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error retrieving device attributes"));
+        co_return;
+    }
+
+    // Get the persistent_id and uuid_account attributes
+    std::optional<std::string> persistentId = std::nullopt;
+    std::optional<std::string> uuidAccount = std::nullopt;
+
+    if (attributesResult.hasData()) {
+        const auto attributes = attributesResult.getData<std::vector<db::DBDeviceAttributeData>>();
+        for (const auto& attribute : attributes) {
+            if (attribute.name == "persistent_id") {
+                persistentId = attribute.value;
+            } else if (attribute.name == "uuid_account") {
+                uuidAccount = attribute.value;
+            }
+        }
+    }
+
+    if (!persistentId.has_value()) {
+        // Save a new persistent_id (80000001) if not found
+        persistentId = "80000001";
+
+        const db::datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+        auto insertPersistentIdCmd = db::Database::craftInsertOrUpdateDeviceAttributesCommand(
+            activeDeviceId.value(),
+            request->pid(),
+            "persistent_id",
+            persistentId.value(),
+            now
+        );
+
+        const db::Result insertResult = co_await db->runCommand(std::move(insertPersistentIdCmd));
+        if (insertResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error storing persistent_id"));
+            co_return;
+        }
+    }
+
+    if (!uuidAccount.has_value()) {
+        // If uuid_account is not found, generate a new one and store it
+        boost::uuids::random_generator gen;
+        boost::uuids::uuid uuid = gen();
+        std::string uuidStr = boost::uuids::to_string(uuid);
+
+        // Turn uuid lowercase
+        std::ranges::transform(uuidStr, uuidStr.begin(), tolower);
+
+        const db::datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+        auto insertUuidCmd = db::Database::craftInsertOrUpdateDeviceAttributesCommand(
+            activeDeviceId.value(),
+            request->pid(),
+            "uuid_account",
+            uuidStr,
+            now
+        );
+
+        const db::Result insertResult = co_await db->runCommand(std::move(insertUuidCmd));
+        if (insertResult.getStatus() != db::DBResultStatus::SUCCESS) {
+            reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Database error storing uuid_account"));
+            co_return;
+        }
+
+        uuidAccount = uuidStr;
+    }
+
+    std::string cleanUuid = uuidAccount.value();
+    std::erase(cleanUuid, '-');
+
+    std::vector<uint8_t> miiData = crypto::base64Decode(profileData.miiData);
+    std::vector<uint8_t> miiName(22, 0);
+    std::memcpy(miiName.data() + 1, miiData.data() + 26, miiName.size() - 2);
+
+    // Convert to hex strings
+    std::string miiDataHex;
+    for (uint8_t byte : miiData) {
+        char buf[3];
+        std::snprintf(buf, sizeof(buf), "%02X", byte);
+        miiDataHex += buf;
+    }
+
+    std::ranges::transform(miiDataHex, miiDataHex.begin(), tolower);
+
+    std::string miiNameHex;
+    for (uint8_t byte : miiName) {
+        char buf[3];
+        std::snprintf(buf, sizeof(buf), "%02X", byte);
+        miiNameHex += buf;
+    }
+
+    std::ranges::transform(miiNameHex, miiNameHex.begin(), tolower);
+
+    // Get birthdate fields in hex
+    std::vector<std::string> birthdateParts = util::split(profileData.birthdate, "-");
+    std::string birthYearHex = "0";
+    std::string birthMonthHex = "0";
+    std::string birthDayHex = "0";
+
+    try {
+        if (birthdateParts.size() == 3) {
+            int year = std::stoi(birthdateParts[0]);
+            int month = std::stoi(birthdateParts[1]);
+            int day = std::stoi(birthdateParts[2]);
+
+            char buf[5];
+            std::snprintf(buf, sizeof(buf), "%04X", year);
+            birthYearHex = buf;
+
+            std::snprintf(buf, sizeof(buf), "%02X", month);
+            birthMonthHex = buf;
+
+            std::snprintf(buf, sizeof(buf), "%02X", day);
+            birthDayHex = buf;
+        }
+    } catch (...) {
+        // In case of any error, leave the fields empty
+    }
+
+    std::ranges::transform(birthYearHex, birthYearHex.begin(), tolower);
+    std::ranges::transform(birthMonthHex, birthMonthHex.begin(), tolower);
+    std::ranges::transform(birthDayHex, birthDayHex.begin(), tolower);
+
+    // Remove leading zeros from birthdate hex strings
+    {
+        size_t start = birthYearHex.find_first_not_of('0');
+        if (start != std::string::npos) birthYearHex = birthYearHex.substr(start);
+        else birthYearHex = "0";
+    }
+    {
+        size_t start = birthMonthHex.find_first_not_of('0');
+        if (start != std::string::npos) birthMonthHex = birthMonthHex.substr(start);
+        else birthMonthHex = "0";
+    }
+    {
+        size_t start = birthDayHex.find_first_not_of('0');
+        if (start != std::string::npos) birthDayHex = birthDayHex.substr(start);
+        else birthDayHex = "0";
+    }
+
+    const std::unordered_map<std::string, uint32_t> countryTable = {
+        {"JP",1},
+        {"AI",8},
+        {"AG",9},
+        {"AR",10},
+        {"AW",11},
+        {"BS",12},
+        {"BB",13},
+        {"BZ",14},
+        {"BO",15},
+        {"BR",16},
+        {"VG",17},
+        {"CA",18},
+        {"KY",19},
+        {"CL",20},
+        {"CO",21},
+        {"CR",22},
+        {"DM",23},
+        {"DO",24},
+        {"EC",25},
+        {"SV",26},
+        {"GF",27},
+        {"GD",28},
+        {"GP",29},
+        {"GT",30},
+        {"GY",31},
+        {"HT",32},
+        {"HN",33},
+        {"JM",34},
+        {"MQ",35},
+        {"MX",36},
+        {"MS",37},
+        {"AN",38},
+        {"NI",39},
+        {"PA",40},
+        {"PY",41},
+        {"PE",42},
+        {"KN",43},
+        {"LC",44},
+        {"VC",45},
+        {"SR",46},
+        {"TT",47},
+        {"TC",48},
+        {"US",49},
+        {"UY",50},
+        {"VI",51},
+        {"VE",52},
+        {"AL",64},
+        {"AU",65},
+        {"AT",66},
+        {"BE",67},
+        {"BA",68},
+        {"BW",69},
+        {"BG",70},
+        {"HR",71},
+        {"CY",72},
+        {"CZ",73},
+        {"DK",74},
+        {"EE",75},
+        {"FI",76},
+        {"FR",77},
+        {"DE",78},
+        {"GR",79},
+        {"HU",80},
+        {"IS",81},
+        {"IE",82},
+        {"IT",83},
+        {"LV",84},
+        {"LS",85},
+        {"LI",86},
+        {"LT",87},
+        {"LU",88},
+        {"MK",89},
+        {"MT",90},
+        {"ME",91},
+        {"MZ",92},
+        {"NA",93},
+        {"NL",94},
+        {"NZ",95},
+        {"NO",96},
+        {"PL",97},
+        {"PT",98},
+        {"RO",99},
+        {"RU",100},
+        {"RS",101},
+        {"SK",102},
+        {"SI",103},
+        {"ZA",104},
+        {"ES",105},
+        {"SZ",106},
+        {"SE",107},
+        {"CH",108},
+        {"TR",109},
+        {"GB",110},
+        {"ZM",111},
+        {"ZW",112},
+        {"AZ",113},
+        {"MR",114},
+        {"ML",115},
+        {"NE",116},
+        {"TD",117},
+        {"SD",118},
+        {"ER",119},
+        {"DJ",120},
+        {"SO",121},
+        {"AD",122},
+        {"GI",123},
+        {"GG",124},
+        {"IM",125},
+        {"JE",126},
+        {"MC",127},
+        {"TW",128},
+        {"KR",136},
+        {"HK",144},
+        {"MO",145},
+        {"ID",152},
+        {"SG",153},
+        {"TH",154},
+        {"PH",155},
+        {"MY",156},
+        {"CN",160},
+        {"AE",168},
+        {"EG",170},
+        {"OM",171},
+        {"QA",172},
+        {"KW",173},
+        {"SA",174},
+        {"SY",175},
+        {"BH",176},
+        {"JO",177},
+        {"SM",184},
+        {"VA",185},
+        {"BM",186},
+        {"IN",187},
+        {"NG",192},
+        {"AO",193},
+        {"GH",194}
+    };
+
+    uint32_t countryCode = countryTable.contains(profileData.country) ? countryTable.at(profileData.country) : 0;
+
+    // Convert country code to hex
+    char countryBuf[3];
+    std::snprintf(countryBuf, sizeof(countryBuf), "%02X", countryCode);
+    std::string countryHex = countryBuf;
+
+    std::ranges::transform(countryHex, countryHex.begin(), tolower);
+
+    {
+        size_t start = countryHex.find_first_not_of('0');
+        if (start != std::string::npos) countryHex = countryHex.substr(start);
+        else countryHex = "0";
+    }
+
+    // Convert PID to hex (big endian)
+    char pidBuf[9];
+    std::snprintf(pidBuf, sizeof(pidBuf), "%08X", request->pid());
+    std::string pidHex = pidBuf;
+
+    std::ranges::transform(pidHex, pidHex.begin(), tolower);
+
+    {
+        size_t start = pidHex.find_first_not_of('0');
+        if (start != std::string::npos) pidHex = pidHex.substr(start);
+        else pidHex = "0";
+    }
+
+    // Generate account.dat file
+    std::string accountDatText = "AccountInstance_20120705\r\n"; // The number does not matter, one is chosen arbitrarily
+    accountDatText += "PersistentId=" + persistentId.value() + "\r\n";
+    accountDatText += "TransferableIdBase=0\r\n";
+    accountDatText += "Uuid=" + cleanUuid + "\r\n";
+    accountDatText += "MiiData=" + miiDataHex + "\r\n";
+    accountDatText += "MiiName=" + miiNameHex + "\r\n";
+    accountDatText += "AccountId=" + profileData.username + "\r\n";
+    accountDatText += "BirthYear=" + birthYearHex + "\r\n";
+    accountDatText += "BirthMonth=" + birthMonthHex + "\r\n";
+    accountDatText += "BirthDay=" + birthDayHex + "\r\n";
+    accountDatText += "Gender=" + std::string(profileData.gender ? "0" : "1") + "\r\n";
+    accountDatText += "EmailAddress=" + profileData.email + "\r\n";
+    accountDatText += "Country=" + countryHex + "\r\n";
+    accountDatText += "SimpleAddressId=0\r\n";
+    accountDatText += "PrincipalId=" + pidHex + "\r\n";
+    accountDatText += "IsPasswordCacheEnabled=1\r\n";
+    accountDatText += "AccountPasswordCache=" + nintendoPasswordHash + "\r\n";
+
+    std::vector<uint8_t> accountDatBytes(accountDatText.begin(), accountDatText.end());
+    reply->set_accountdat(accountDatBytes.data(), accountDatBytes.size());
+
+    // Generate network_services.xml file
+    std::string domain = settingsManager->getTopDomain();
+
+    pugi::xml_document networkServicesDoc;
+
+    pugi::xml_node decl = networkServicesDoc.prepend_child(pugi::node_declaration);
+    decl.append_attribute("version") = "1.0";
+    decl.append_attribute("encoding") = "UTF-8";
+    decl.append_attribute("standalone") = "yes";
+
+    pugi::xml_node root = networkServicesDoc.append_child("content");
+    root.append_child("networkname").text().set("SplatIt");
+    root.append_child("disablesslverification").text().set("false");
+
+    pugi::xml_node urls = root.append_child("urls");
+    urls.append_child("act").text().set("https://account." + domain);
+    urls.append_child("ecs").text().set("https://ecs.wup.shop." + domain + "/ecs/services/ECommerceSOAP");
+    urls.append_child("nus").text().set("https://nus.wup.shop." + domain + "/nus/services/NetUpdateSOAP");
+    urls.append_child("ias").text().set("https://ias.wup.shop." + domain + "/ias/services/IdentityAuthenticationSOAP");
+    urls.append_child("ccsu").text().set("https://ccs.wup.shop." + domain + "/ccs/download");
+    urls.append_child("ccs").text().set("http://ccs.cdn.wup.shop." + domain + "/ccs/download");
+    urls.append_child("idbe").text().set("https://idbe-wup.cdn." + domain + "/icondata");
+    urls.append_child("boss").text().set("https://npts.app." + domain + "/p01/tasksheet");
+    urls.append_child("tagaya").text().set("https://tagaya.wup.shop." + domain + "/tagaya/versionlist");
+    urls.append_child("olv").text().set("https://discovery.olv." + domain + "/v1/endpoint");
+
+    std::stringstream ss;
+    networkServicesDoc.save(ss);
+
+    std::string networkServicesStr = ss.str();
+    std::vector<uint8_t> networkServicesVec(networkServicesStr.begin(), networkServicesStr.end());
+
+    reply->set_networkservices(networkServicesVec.data(), networkServicesVec.size());
+
+    // Generate Device CEMU files
+    crypto::DeviceCemuFiles devCemuFiles;
+    try {
+        devCemuFiles = std::move(certManager->genDeviceCemuFiles(deviceData.deviceId, deviceData.region, deviceData.serialNumber));
+    } catch (crypto::CAKeyNotProvidedException&) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "CA private key not provided, cannot generate CEMU files"));
+        co_return;
+    } catch (const std::exception& e) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, std::string("Error generating CEMU files: ") + e.what()));
+        co_return;
+    }
+
+    reply->set_otp(devCemuFiles.otp.data(), devCemuFiles.otp.size());
+    reply->set_seeprom(devCemuFiles.seeprom.data(), devCemuFiles.seeprom.size());
+    reply->set_clientcert(devCemuFiles.clientCert.data(), devCemuFiles.clientCert.size());
+    reply->set_clientkey(devCemuFiles.clientKey.data(), devCemuFiles.clientKey.size());
+    reply->set_servercert(devCemuFiles.serverCA.data(), devCemuFiles.serverCA.size());
+
+    reply->set_persistentid(persistentId.value());
+
+    reactor->Finish(grpc::Status::OK);
+}
+
+grpc::ServerUnaryReactor* AccountManagementServiceImpl::GetCemuFiles(grpc::CallbackServerContext* context,
+    const CemuFilesGetRequest* request, CemuFilesResponse *reply) {
+
+    logger->log(Logger::level::DEBUG, Logger::group::GRPC,
+               "[" + std::string(AccountManagementService::service_full_name()) + "] GetCemuFiles called for PID: " +
+               std::to_string(request->pid()));
+
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
+
+    auto task = completeGetCemuFiles(reactor, request, reply, db, certManager, settingsManager);
     task.setContext(reactor);
     httpServer->scheduleArbitraryFunction(std::move(task));
 

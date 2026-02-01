@@ -45,6 +45,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "isbot": "^5.1.33",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
     "react": "^19.2.3",
@@ -62,6 +63,7 @@
   "devDependencies": {
     "@react-router/dev": "^7.13.0",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/jszip": "^3.4.1",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",

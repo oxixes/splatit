@@ -45,6 +45,7 @@ public:
     [[nodiscard]] bool isgRPCEnabled() const;
     [[nodiscard]] bool isManagementEnabled() const;
 
+    [[nodiscard]] bool hasCAKey() const;
     [[nodiscard]] fs::path getSSLCertPath() const;
     [[nodiscard]] fs::path getSSLCACertPath() const;
     [[nodiscard]] fs::path getSSLKeyPath() const;

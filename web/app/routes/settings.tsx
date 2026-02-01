@@ -221,45 +221,52 @@ export default function Settings() {
                                                       <div className="text-sm mt-2">Click "Add Agreement" to create your first EULA and Privacy Policy</div>
                                                   </td>
                                               </tr>
-                                          ) : (
-                                              agreements.map((agreement) => (
-                                                  <tr
-                                                      key={`${agreement.type}-${agreement.version}-${agreement.country}-${agreement.language}`}
-                                                      className="border-b last:border-0 hover:bg-muted/50"
-                                                  >
-                                                      <td className="py-3 px-2">
-                                                          <div className="font-medium">{getAgreementTypeLabel(agreement.type)}</div>
-                                                      </td>
-                                                      <td className="py-3 px-2">
-                                                          <div className="text-sm">{getCountryName(agreement.country)}</div>
-                                                          <div className="text-xs text-muted-foreground">{agreement.country}</div>
-                                                      </td>
-                                                      <td className="py-3 px-2">
-                                                          <div className="text-sm">{getLanguageName(agreement.country, agreement.language)} ({agreement.language.toUpperCase()})</div>
-                                                          <div className="text-xs text-muted-foreground">{agreement.languageName}</div>
-                                                      </td>
-                                                      <td className="py-3 px-2 font-medium">{agreement.version}</td>
-                                                      <td className="py-3 px-2">
-                                                          <div className="flex gap-2">
-                                                              <Button
-                                                                  variant="ghost"
-                                                                  size="sm"
-                                                                  onClick={() => handleEditAgreement(agreement)}
-                                                              >
-                                                                  <Pencil className="h-4 w-4" />
-                                                              </Button>
-                                                              <Button
-                                                                  variant="ghost"
-                                                                  size="sm"
-                                                                  onClick={() => handleDeleteClick(agreement)}
-                                                              >
-                                                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                                              </Button>
-                                                          </div>
-                                                      </td>
-                                                  </tr>
-                                              ))
-                                          )}
+                                      ) : (
+                                          agreements.map((agreement) => (
+                                              <tr
+                                                  key={`${agreement.type}-${agreement.version}-${agreement.country}-${agreement.language}`}
+                                                  className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                                                  onClick={() => handleEditAgreement(agreement)}
+                                              >
+                                                  <td className="py-3 px-2">
+                                                      <div className="font-medium">{getAgreementTypeLabel(agreement.type)}</div>
+                                                  </td>
+                                                  <td className="py-3 px-2">
+                                                      <div className="text-sm">{getCountryName(agreement.country)}</div>
+                                                      <div className="text-xs text-muted-foreground">{agreement.country}</div>
+                                                  </td>
+                                                  <td className="py-3 px-2">
+                                                      <div className="text-sm">{getLanguageName(agreement.country, agreement.language)} ({agreement.language.toUpperCase()})</div>
+                                                      <div className="text-xs text-muted-foreground">{agreement.languageName}</div>
+                                                  </td>
+                                                  <td className="py-3 px-2 font-medium">{agreement.version}</td>
+                                                  <td className="py-3 px-2">
+                                                      <div className="flex gap-2">
+                                                          <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleEditAgreement(agreement);
+                                                              }}
+                                                          >
+                                                              <Pencil className="h-4 w-4" />
+                                                          </Button>
+                                                          <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleDeleteClick(agreement);
+                                                              }}
+                                                          >
+                                                              <Trash2 className="h-4 w-4 text-destructive" />
+                                                          </Button>
+                                                      </div>
+                                                  </td>
+                                              </tr>
+                                          ))
+                                      )}
                                       </tbody>
                                   </table>
                               </div>

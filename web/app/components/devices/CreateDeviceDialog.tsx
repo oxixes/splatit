@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import type { AppConfig } from "~/hooks/useAppConfig";
 import type { CreateDeviceRequest } from "~/lib/devices";
 import { createDevice } from "~/lib/devices";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 export function CreateDeviceDialog({
   config,
@@ -58,7 +59,20 @@ export function CreateDeviceDialog({
       setSerialNumber("");
       setSystemVersion("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error creating device");
+      if (e instanceof ApiError) {
+        switch (e.code) {
+          case ManagementError.BAD_REQUEST:
+            setError(e.message || "Invalid input. Please check your data.");
+            break;
+          case ManagementError.CONFLICT:
+            setError(e.message || "Device with this serial number already exists");
+            break;
+          default:
+            setError(e.message || "Error creating device");
+        }
+      } else {
+        setError(e instanceof Error ? e.message : "Error creating device");
+      }
     } finally {
       setSaving(false);
     }

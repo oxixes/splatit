@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useConfig } from "~/contexts/AppConfigContext";
-import { createApiClient } from "~/lib/api-client";
+import { createApiClient, ApiError } from "~/lib/api-client";
 
 export interface ServerInfo {
   address: string;
@@ -41,7 +41,11 @@ export function ServerStatusProvider({ children }: { children: ReactNode }) {
       setServers(data.servers);
     } catch (err) {
       console.error("Failed to fetch server status:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch server status");
+      if (err instanceof ApiError) {
+        setError(err.message || "Failed to fetch server status");
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to fetch server status");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

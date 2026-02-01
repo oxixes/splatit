@@ -13,7 +13,7 @@ using namespace async;
 Task<void> v1_api_support_validate_email(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                          std::shared_ptr<db::Database> db,
                                          std::shared_ptr<SettingsManager> settingsManager,
-                                         std::shared_ptr<CertManager> certManager) {
+                                         std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -60,7 +60,7 @@ Task<void> v1_api_support_email_confirmation(http::Server* srv, std::shared_ptr<
                                              std::string pid, std::string validationCode,
                                              std::shared_ptr<db::Database> db,
                                              std::shared_ptr<SettingsManager> settingsManager,
-                                             std::shared_ptr<CertManager> certManager) {
+                                             std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_PUT) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -137,7 +137,7 @@ Task<void> v1_api_support_email_confirmation(http::Server* srv, std::shared_ptr<
 Task<void> v1_api_support_forgotten_password(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                               std::string pid, std::shared_ptr<db::Database> db,
                                               std::shared_ptr<SettingsManager> settingsManager,
-                                              std::shared_ptr<CertManager> certManager) {
+                                              std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -262,7 +262,7 @@ Task<void> v1_api_support_forgotten_password(http::Server* srv, std::shared_ptr<
 Task<void> v1_api_support_resend_confirmation(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                               std::shared_ptr<db::Database> db,
                                               std::shared_ptr<SettingsManager> settingsManager,
-                                              std::shared_ptr<CertManager> certManager) {
+                                              std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -355,7 +355,7 @@ Task<void> v1_api_support_resend_confirmation(http::Server* srv, std::shared_ptr
 Task<void> v1_api_support_send_confirmation_pin(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                                   std::string email, std::shared_ptr<db::Database> db,
                                                   std::shared_ptr<SettingsManager> settingsManager,
-                                                  std::shared_ptr<CertManager> certManager) {
+                                                  std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -408,7 +408,7 @@ Task<void> v1_api_support_send_confirmation_pin(http::Server* srv, std::shared_p
 Task<void> v1_api_support_send_forgotten_pin(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                              std::string email, std::string pin, std::shared_ptr<db::Database> db,
                                              std::shared_ptr<SettingsManager> settingsManager,
-                                             std::shared_ptr<CertManager> certManager) {
+                                             std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);

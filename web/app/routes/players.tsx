@@ -1,6 +1,6 @@
 import type { Route } from "./+types/players"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Users } from "lucide-react";
+import { Users, Download, Pencil } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -12,8 +12,10 @@ import { listAccounts } from "~/lib/accounts";
 import { PlayerDetailsDialog } from "~/components/players/PlayerDetailsDialog";
 import { CreatePlayerDialog } from "~/components/players/CreatePlayerDialog";
 import { EditPlayerDialog } from "~/components/players/EditPlayerDialog";
+import { DownloadCemuDialog } from "~/components/players/DownloadCemuDialog";
 import { TotalAccountsCard } from "~/components/stats/TotalAccountsCard";
 import { SortableHeader } from "~/components/ui/sortable-header";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -44,6 +46,10 @@ export default function Players() {
 
   const [createOpen, setCreateOpen] = useState(false);
 
+  const [downloadCemuOpen, setDownloadCemuOpen] = useState(false);
+  const [downloadCemuPid, setDownloadCemuPid] = useState<number | null>(null);
+  const [downloadCemuUsername, setDownloadCemuUsername] = useState<string | null>(null);
+
   const loadAccounts = async () => {
     try {
       setLoading(true);
@@ -52,7 +58,11 @@ export default function Players() {
       setAccounts(res.accounts);
       setPagination(res.pagination);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error loading accounts");
+      if (e instanceof ApiError) {
+        setError(e.message || "Error loading accounts");
+      } else {
+        setError(e instanceof Error ? e.message : "Error loading accounts");
+      }
     } finally {
       setLoading(false);
     }
@@ -80,6 +90,13 @@ export default function Players() {
     if (pid == null) return;
     setSelectedPid(pid);
     setEditOpen(true);
+  };
+
+  const openDownloadCemu = (pid: number, username: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDownloadCemuPid(pid);
+    setDownloadCemuUsername(username);
+    setDownloadCemuOpen(true);
   };
 
   const handleDetailsClose = (open: boolean) => {
@@ -205,6 +222,7 @@ export default function Players() {
                     <SortableHeader label="Username" sortKey="username" currentSort={filters.sort} onSort={handleSort} />
                     <SortableHeader label="Active" sortKey="active" currentSort={filters.sort} onSort={handleSort} />
                     <SortableHeader label="Email" sortKey="email" currentSort={filters.sort} onSort={handleSort} />
+                    <th className="py-3 px-2 text-left text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -218,6 +236,31 @@ export default function Players() {
                       <td className="py-3 px-2 font-medium">{a.username}</td>
                       <td className="py-3 px-2 text-sm">{a.active ? "Yes" : "No"}</td>
                       <td className="py-3 px-2 text-sm truncate max-w-xs">{a.primaryEmail?.address ?? "—"}</td>
+                      <td className="py-3 px-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(a.pid);
+                            }}
+                            disabled={!a.pid}
+                            title="Edit account"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => a.pid && openDownloadCemu(a.pid, a.username, e)}
+                            disabled={!a.pid}
+                            title="Download CEMU files"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -262,6 +305,14 @@ export default function Players() {
         onOpenChange={setEditOpen}
         pid={selectedPid}
         onUpdated={() => void loadAccounts()}
+      />
+
+      <DownloadCemuDialog
+        config={config}
+        pid={downloadCemuPid}
+        username={downloadCemuUsername}
+        open={downloadCemuOpen}
+        onOpenChange={setDownloadCemuOpen}
       />
     </div>
   )

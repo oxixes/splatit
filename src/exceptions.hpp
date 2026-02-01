@@ -69,4 +69,13 @@ namespace acc {
 
 } // namespace acc
 
+namespace crypto {
+
+    class CAKeyNotProvidedException : public std::runtime_error {
+    public:
+        CAKeyNotProvidedException() : std::runtime_error("CA key not provided") {}
+    };
+
+} // namespace crypto
+
 #endif //SPLATOON_SERVER_EXCEPTIONS_HPP

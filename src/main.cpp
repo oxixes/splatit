@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     logger->setMinLevel(serverOptions.minLogLevel);
 
     std::shared_ptr<SettingsManager> settingsMgr(new SettingsManager(logger));
-    std::shared_ptr<CertManager> certManager(new CertManager(settingsMgr, logger));
+    std::shared_ptr<crypto::CertManager> certManager(new crypto::CertManager(settingsMgr, logger));
     if (!settingsMgr->init(serverOptions) || !certManager->init()) {
         sock::cleanup();
         return 1;
@@ -330,6 +330,7 @@ int main(int argc, char** argv) {
         try {
             grpcimpl::gRPCServerData serverPtrs {
                 settingsMgr,
+                certManager,
                 accountsDB,
                 httpServer,
                 friendsAuthRMC,

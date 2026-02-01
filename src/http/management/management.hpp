@@ -15,6 +15,7 @@ using json = nlohmann::json;
 enum class ManagementError {
     SUCCESS = 0,
     BAD_REQUEST = 4000,
+    PERMISSION_DENIED = 4010,
     NOT_FOUND = 4040,
     METHOD_NOT_ALLOWED = 4050,
     CONFLICT = 4090,
@@ -52,6 +53,9 @@ async::Task<void> mgm_get_account_by_username(http::Server* srv, std::shared_ptr
 // Account email & mii
 async::Task<void> mgm_update_account_email(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
 async::Task<void> mgm_set_account_mii(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
+
+// Account CEMU files
+async::Task<void> mgm_get_cemu_files(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);
 
 // Account agreements
 async::Task<void> mgm_add_account_agreement(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid);

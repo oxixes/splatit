@@ -43,6 +43,9 @@ target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)
 find_package(date CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE date::date date::date-tz)
 
+find_package(Boost REQUIRED COMPONENTS uuid)
+target_link_libraries(splatoon_server PRIVATE Boost::uuid)
+
 # Add STB image library
 target_include_directories(splatoon_server PRIVATE lib/stb)
 

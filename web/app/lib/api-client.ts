@@ -1,6 +1,45 @@
 import type { AppConfig } from "~/hooks/useAppConfig";
 
 /**
+ * Management API error codes
+ */
+export enum ManagementError {
+  SUCCESS = 0,
+  BAD_REQUEST = 4000,
+  PERMISSION_DENIED = 4010,
+  NOT_FOUND = 4040,
+  METHOD_NOT_ALLOWED = 4050,
+  CONFLICT = 4090,
+  INTERNAL_ERROR = 5000,
+  BAD_GATEWAY = 5020,
+}
+
+/**
+ * Error response from the API
+ */
+export interface ApiErrorResponse {
+  error: {
+    code: ManagementError;
+    message: string;
+  };
+}
+
+/**
+ * Custom error class for API errors
+ */
+export class ApiError extends Error {
+  public code: ManagementError;
+  public httpStatus: number;
+
+  constructor(code: ManagementError, message: string, httpStatus: number) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+/**
  * API client for making requests to the Management UI server
  */
 export class ApiClient {
@@ -22,7 +61,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      await this.handleErrorResponse(response);
     }
 
     return response.json();
@@ -41,7 +80,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      await this.handleErrorResponse(response);
     }
 
     return response.json();
@@ -60,7 +99,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      await this.handleErrorResponse(response);
     }
 
     return response.json();
@@ -78,7 +117,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      await this.handleErrorResponse(response);
     }
 
     return response.json();
@@ -97,10 +136,26 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      await this.handleErrorResponse(response);
     }
 
     return response.json();
+  }
+
+  /**
+   * Handle error response from API
+   */
+  private async handleErrorResponse(response: Response): Promise<never> {
+    try {
+      const errorData = await response.json() as ApiErrorResponse;
+      throw new ApiError(errorData.error.code, errorData.error.message, response.status);
+    } catch (error) {
+      // If JSON parsing fails, throw generic error
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(ManagementError.INTERNAL_ERROR, `API request failed: ${response.statusText}`, response.status);
+    }
   }
 }
 

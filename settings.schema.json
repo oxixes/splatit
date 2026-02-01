@@ -30,7 +30,7 @@
           "type": "string"
         }
       },
-      "required": ["caCert", "cert", "caKey", "key"]
+      "required": ["caCert", "cert", "key"]
     },
     "http": {
       "description": "HTTP settings (apply to the account and BOSS servers)",

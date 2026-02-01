@@ -362,6 +362,10 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                  return mgm_set_account_mii(srv, std::move(ctx), settingsMgr, *pid);
                              }
 
+                             if (sub == "cemu-files") {
+                                 return mgm_get_cemu_files(srv, std::move(ctx), settingsMgr, *pid);
+                             }
+
                              if (sub == "agreements") {
                                  auto method = ctx->request->getMethod();
                                  if (method == http::Method::M_POST) {

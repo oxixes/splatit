@@ -363,6 +363,10 @@ bool SettingsManager::isManagementEnabled() const {
     return settings["management"]["enabled"];
 }
 
+bool SettingsManager::hasCAKey() const {
+    return settings["ssl"].contains("caKey");
+}
+
 fs::path SettingsManager::getSSLCertPath() const {
     return settings["ssl"]["cert"];
 }

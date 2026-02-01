@@ -177,7 +177,7 @@ Task<void> v1_api_people_nnid(http::Server* srv, std::shared_ptr<http::Context> 
                               std::string nnid,
                               std::shared_ptr<db::Database> db,
                               std::shared_ptr<SettingsManager> settingsManager,
-                              std::shared_ptr<CertManager> certManager) {
+                              std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -223,7 +223,7 @@ Task<void> v1_api_people_nnid(http::Server* srv, std::shared_ptr<http::Context> 
 Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
                          std::shared_ptr<db::Database> db,
                          std::shared_ptr<SettingsManager> settingsManager,
-                         std::shared_ptr<CertManager> certManager) {
+                         std::shared_ptr<crypto::CertManager> certManager) {
     // TODO Limit registration to 12 active accounts per device
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -642,7 +642,7 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
 Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
                             std::shared_ptr<db::Database> db,
                             std::shared_ptr<SettingsManager> settingsManager,
-                            std::shared_ptr<CertManager> certManager) {
+                            std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_PUT) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -936,7 +936,7 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
 Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                    std::shared_ptr<db::Database> db,
                                    std::shared_ptr<SettingsManager> settingsManager,
-                                   std::shared_ptr<CertManager> certManager) {
+                                   std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1003,7 +1003,7 @@ Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Cont
 Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                          std::shared_ptr<db::Database> db,
                                          std::shared_ptr<SettingsManager> settingsManager,
-                                         std::shared_ptr<CertManager> certManager) {
+                                         std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_PUT) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1120,7 +1120,7 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
 Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                                        std::shared_ptr<db::Database> db,
                                                        std::shared_ptr<SettingsManager> settingsManager,
-                                                       std::shared_ptr<CertManager> certManager) {
+                                                       std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1220,7 +1220,7 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
 Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                        std::shared_ptr<db::Database> db,
                                        std::shared_ptr<SettingsManager> settingsManager,
-                                       std::shared_ptr<CertManager> certManager) {
+                                       std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1301,7 +1301,7 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
 Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                     std::shared_ptr<db::Database> db,
                                     std::shared_ptr<SettingsManager> settingsManager,
-                                    std::shared_ptr<CertManager> certManager,
+                                    std::shared_ptr<crypto::CertManager> certManager,
                                     std::optional<uint32_t> pid) {
     if (!pid.has_value()) {
         if (ctx->request->getMethod() != http::Method::M_GET) {
@@ -1485,7 +1485,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
 Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                           std::shared_ptr<db::Database> db,
                                           std::shared_ptr<SettingsManager> settingsManager,
-                                          std::shared_ptr<CertManager> certManager) {
+                                          std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1532,7 +1532,7 @@ Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<htt
 Task<void> v1_api_people_me_devices_get(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                         std::shared_ptr<db::Database> db,
                                         std::shared_ptr<SettingsManager> settingsManager,
-                                        std::shared_ptr<CertManager> certManager) {
+                                        std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1610,7 +1610,7 @@ Task<void> v1_api_people_me_devices_get(http::Server* srv, std::shared_ptr<http:
 Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                          std::shared_ptr<db::Database> db,
                                          std::shared_ptr<SettingsManager> settingsManager,
-                                         std::shared_ptr<CertManager> certManager) {
+                                         std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1764,7 +1764,7 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
 Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                                        std::shared_ptr<db::Database> db,
                                                        std::shared_ptr<SettingsManager> settingsManager,
-                                                       std::shared_ptr<CertManager> certManager) {
+                                                       std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_PUT) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -1833,7 +1833,7 @@ Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::s
 Task<void> v1_api_people_me_deletion(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                        std::shared_ptr<db::Database> db,
                                        std::shared_ptr<SettingsManager> settingsManager,
-                                       std::shared_ptr<CertManager> certManager) {
+                                       std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_POST) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_METHOD_NOT_ALLOWED);
         srv->sendResponse(std::move(ctx), std::move(res), false);

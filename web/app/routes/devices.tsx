@@ -1,6 +1,6 @@
 import type { Route } from "./+types/devices";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Pencil } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -12,6 +12,7 @@ import { listDevices } from "~/lib/devices";
 import { CreateDeviceDialog } from "~/components/devices/CreateDeviceDialog";
 import { EditDeviceDialog } from "~/components/devices/EditDeviceDialog";
 import { SortableHeader } from "~/components/ui/sortable-header";
+import { ApiError, ManagementError } from "~/lib/api-client";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -66,7 +67,11 @@ export default function Devices() {
       setDevices(res.devices);
       setPagination(res.pagination);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error loading devices");
+      if (e instanceof ApiError) {
+        setError(e.message || "Error loading devices");
+      } else {
+        setError(e instanceof Error ? e.message : "Error loading devices");
+      }
     } finally {
       setLoading(false);
     }
@@ -182,6 +187,7 @@ export default function Devices() {
                     <th className="text-left py-2 px-2 text-sm font-medium">Region</th>
                     <th className="text-left py-2 px-2 text-sm font-medium">System Ver.</th>
                     <th className="text-left py-2 px-2 text-sm font-medium">Banned</th>
+                    <th className="text-left py-2 px-2 text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,6 +199,19 @@ export default function Devices() {
                       <td className="py-3 px-2 text-sm">{REGION_NAMES[d.region] ?? d.region}</td>
                       <td className="py-3 px-2 text-sm">{d.systemVersion}</td>
                       <td className="py-3 px-2 text-sm">{d.banned ? "Yes" : "No"}</td>
+                      <td className="py-3 px-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(d.id);
+                          }}
+                          title="Edit device"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

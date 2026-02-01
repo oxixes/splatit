@@ -14,7 +14,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
                                      std::string type, std::string country, std::string version,
                                      std::shared_ptr<db::Database> db,
                                      std::shared_ptr<SettingsManager> settingsManager,
-                                     std::shared_ptr<CertManager> certManager) {
+                                     std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -218,7 +218,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
 Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                     std::string country, std::string language,
                                     std::shared_ptr<SettingsManager> settingsManager,
-                                    std::shared_ptr<CertManager> certManager) {
+                                    std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
         std::unique_ptr<http::Response> res = createError(ctx->request->getVersion(), 9, "Method Not Allowed", "", HTTP_STATUS_NOT_FOUND);
         srv->sendResponse(std::move(ctx), std::move(res), false);

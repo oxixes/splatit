@@ -104,3 +104,24 @@ export async function removeAccountDeviceAttribute(
     `/api/v1/accounts/${pid}/devices/${deviceId}/attributes/${encodeURIComponent(attributeName)}`,
   );
 }
+
+export interface CemuFilesResponse {
+  accountDat: string;
+  otp: string;
+  seeprom: string;
+  clientCert: string;
+  clientKey: string;
+  serverCert: string;
+  networkServices: string;
+  persistentId: string;
+}
+
+export async function getCemuFiles(
+  config: AppConfig,
+  pid: number,
+  password: string,
+): Promise<CemuFilesResponse> {
+  const apiClient = createApiClient(config);
+  return apiClient.post<CemuFilesResponse>(`/api/v1/accounts/${pid}/cemu-files`, { password });
+}
+

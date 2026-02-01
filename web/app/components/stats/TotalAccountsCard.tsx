@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Users } from "lucide-react";
 import { useAppConfig } from "~/hooks/useAppConfig";
 import { listAccounts } from "~/lib/accounts";
+import { ApiError } from "~/lib/api-client";
 
 export function TotalAccountsCard() {
   const { config } = useAppConfig();
@@ -17,7 +18,11 @@ export function TotalAccountsCard() {
         const res = await listAccounts(config, { page: 0, pageSize: 1 });
         setTotal(res.pagination.totalItems);
       } catch (e) {
-        console.error("Error loading total accounts:", e);
+        if (e instanceof ApiError) {
+          console.error("Error loading total accounts:", e.message);
+        } else {
+          console.error("Error loading total accounts:", e);
+        }
       } finally {
         setLoading(false);
       }

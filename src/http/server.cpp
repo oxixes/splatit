@@ -121,6 +121,9 @@ void Server::onDataReceived(uint32_t sockId, std::vector<uint8_t> data) {
                 case Method::M_DELETE:
                     method = "DELETE";
                     break;
+                case Method::M_PATCH:
+                    method = "PATCH";
+                    break;
                 case Method::M_OPTIONS:
                     method = "OPTIONS";
                     break;
