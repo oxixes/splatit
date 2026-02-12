@@ -40,10 +40,10 @@
         "pattern": "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
       },
       "listenPort": {
-          "description": "Port to listen to",
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535
+        "description": "Port to listen to",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
       },
       "workerCount": {
         "description": "Number of worker threads to use",
@@ -75,7 +75,13 @@
           "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})$"
         }
       },
-      "required": ["tokenKey"]
+      "serverId": {
+        "description": "The server ID to use in NEX servers",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "required": ["tokenKey", "serverId"]
     },
     "grpc": {
       "description": "gRPC settings",
@@ -99,6 +105,10 @@
           "description": "Enable or disable gRPC reflection",
           "type": "boolean",
           "default": false
+        },
+        "publicFacingAddress": {
+          "description": "Public facing address for other servers to connect to",
+          "type": "string"
         }
       },
       "if": {
@@ -107,7 +117,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port"]
+        "required": ["listenAddress", "port", "publicFacingAddress"]
       },
       "required": ["enabled"]
     },
@@ -338,6 +348,16 @@
           "type": "integer",
           "minimum": 1
         },
+        "grpcRequestTimeout": {
+          "description": "Timeout for gRPC requests (in milliseconds)",
+          "type": "integer",
+          "minimum": 1
+        },
+        "grpcConnectionPoolMaxSize": {
+          "description": "Maximum size of the gRPC connection pool",
+          "type": "integer",
+          "minimum": 1
+        },
         "db": {
           "description": "Database settings",
           "type": "object",
@@ -395,7 +415,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount", "db"]
+        "required": ["listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "db"]
       },
       "required": ["enabled"]
     },
@@ -758,6 +778,90 @@
         "required": ["listenAddress", "listenPort", "workerCount", "keepAliveTimeout", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "corsOrigin", "servers"]
       },
       "required": ["enabled"]
+    },
+    "sharedState": {
+      "description": "Shared state configuration for distributed server instances",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "The type of shared state to use",
+          "type": "string",
+          "enum": ["local", "redis"]
+        },
+        "redis": {
+          "description": "Redis configuration (required if type is 'redis')",
+          "type": "object",
+          "properties": {
+            "host": {
+              "description": "Redis server hostname or IP address",
+              "type": "string"
+            },
+            "port": {
+              "description": "Redis server port",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "password": {
+              "description": "Redis password (leave empty for no authentication)",
+              "type": "string"
+            },
+            "database": {
+              "description": "Redis database number",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 15
+            },
+            "connectionTimeoutMs": {
+              "description": "Maximum time to wait for connection establishment (milliseconds)",
+              "type": "integer",
+              "minimum": 100
+            },
+            "commandTimeoutMs": {
+              "description": "Maximum time to wait for Redis commands (milliseconds)",
+              "type": "integer",
+              "minimum": 100
+            },
+            "useSSL": {
+              "description": "Enable SSL/TLS encryption",
+              "type": "boolean"
+            },
+            "caCertPath": {
+              "description": "Path to CA certificate file (for SSL)",
+              "type": "string"
+            },
+            "certPath": {
+              "description": "Path to client certificate file (for SSL)",
+              "type": "string"
+            },
+            "keyPath": {
+              "description": "Path to client key file (for SSL)",
+              "type": "string"
+            },
+            "workerThreads": {
+              "description": "Number of worker threads for processing Redis operations",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "clientTTLSeconds": {
+              "description": "TTL for registered clients in seconds",
+              "type": "integer",
+              "minimum": 60
+            }
+          },
+          "required": ["host", "port", "database", "connectionTimeoutMs", "commandTimeoutMs", "useSSL", "workerThreads", "clientTTLSeconds"]
+        }
+      },
+      "required": ["type"],
+      "if": {
+        "properties": {
+          "type": { "const": "redis" }
+        }
+      },
+      "then": {
+        "required": ["redis"]
+      }
     }
   },
   "anyOf": [
@@ -922,6 +1026,36 @@
       },
       "then": {
           "required": ["ssl"]
+      }
+    },
+    {
+      "if": {
+        "required": ["friendsSecure"],
+        "properties": {
+          "friendsSecure": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["sharedState"]
+      }
+    },
+    {
+      "if": {
+        "required": ["splatoonSecure"],
+        "properties": {
+          "splatoonSecure": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["sharedState"]
       }
     }
   ]

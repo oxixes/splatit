@@ -6,4 +6,6 @@ target_sources(splatoon_server PRIVATE
         serverStatusService.cpp
         serverStatusService.hpp
         accountManagementService.cpp
-        accountManagementService.hpp)
+        accountManagementService.hpp
+        friendsService.cpp
+        friendsService.hpp)

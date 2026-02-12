@@ -6,7 +6,7 @@
 
 namespace nex::rmc {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger) : logger(std::move(logger)) {
+Server::Server(std::shared_ptr<Logger::Logger> logger, uint32_t serverId) : logger(std::move(logger)), serverId(serverId) {
     this->scheduler = std::make_shared<async::Scheduler>(queueCV);
 }
 
@@ -96,7 +96,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
 
         logger->log(Logger::level::DEBUG, logGroup, ss.str());
 
-        sendMsg(ClientInfo{addr, minor_version, substreamId},
+        sendMsg(ClientInfo{addr, minor_version, substreamId, serverId},
                 createError(request, Error::CORE__NOT_IMPLEMENTED), {});
         return;
     }
@@ -113,7 +113,7 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
             pid = pidIt->second;
         }
 
-        requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, pid},
+        requestsQueue.push(RequestInfo{ClientInfo{addr, minor_version, substreamId, serverId, pid},
                                        request, std::move(params)});
         lock.unlock();
 
@@ -123,14 +123,14 @@ void Server::onData(prudp::PRUDPAddress addr, uint8_t minor_version, uint8_t sub
                                                     util::ipv4ToString(addr.address) + ": " +
                                                     std::string(e.what()));
 
-        sendMsg(ClientInfo{addr, minor_version, substreamId, 0},
+        sendMsg(ClientInfo{addr, minor_version, substreamId, serverId, 0},
                 createError(request, Error::CORE__INVALID_ARGUMENT), {});
     } catch (const std::exception& e) {
         logger->log(Logger::level::WARN, logGroup, "An exception occurred while parsing the parameters of a request from " +
                                                     util::ipv4ToString(addr.address) + ": " +
                                                     std::string(e.what()));
 
-        sendMsg(ClientInfo{addr, minor_version, substreamId, 0},
+        sendMsg(ClientInfo{addr, minor_version, substreamId, serverId, 0},
                 createError(request, Error::CORE__EXCEPTION), {});
     }
 }

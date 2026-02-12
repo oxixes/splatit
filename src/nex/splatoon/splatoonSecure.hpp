@@ -14,6 +14,7 @@
 #include "../types/splatoonSecure/createMatchmakeSessionParam.hpp"
 #include "../types/splatoonSecure/competitionRankingGetParam.hpp"
 #include "../types/splatoonSecure/competitionRankingUploadScoreParam.hpp"
+#include "../../sharedState/sharedState.hpp"
 
 namespace nex::rmc {
 
@@ -39,7 +40,8 @@ struct SessionInfo {
 
 class SplatoonSecureRMC : public Server {
 public:
-    explicit SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db);
+    explicit SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
+                               std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId);
     ~SplatoonSecureRMC() override = default;
 
 private:
@@ -100,6 +102,7 @@ private:
     void removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg = "", bool disconnected = false);
 
     std::shared_ptr<db::Database> db;
+    std::shared_ptr<ss::SharedState> sharedState;
 
     uint32_t nextRVConnId = 1;
     std::mutex rvConnIdMutex;

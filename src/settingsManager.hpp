@@ -74,6 +74,8 @@ public:
     [[nodiscard]] sock::IPv4Addr getFriendsAuthListenAddress() const;
     [[nodiscard]] int getFriendsAuthWorkerCount() const;
     [[nodiscard]] sock::IPv4Addr getFriendsSecureServerAddress() const;
+    [[nodiscard]] int getFriendsSecuregRPCRequestTimeout() const;
+    [[nodiscard]] int getFriendsSecuregRPCConnectionPoolMaxSize() const;
 
     [[nodiscard]] sock::IPv4Addr getFriendsSecureListenAddress() const;
     [[nodiscard]] int getFriendsSecureWorkerCount() const;
@@ -86,6 +88,7 @@ public:
     [[nodiscard]] int getSplatoonSecureWorkerCount() const;
 
     [[nodiscard]] sock::IPv4Addr getgRPCListenAddress() const;
+    [[nodiscard]] std::string getgRCPPublicFacingAddress() const;
     [[nodiscard]] bool isgRPCReflectionEnabled() const;
 
     [[nodiscard]] std::vector<std::string> getDomains() const;
@@ -94,6 +97,8 @@ public:
     [[nodiscard]] std::string getTokenKey() const;
     [[nodiscard]] std::string getRefreshTokenKey() const;
     [[nodiscard]] std::string getNEXTokenKey() const;
+
+    [[nodiscard]] uint32_t getNEXServerID() const;
 
     [[nodiscard]] std::map<std::string, std::vector<std::pair<std::string, std::string>>> getGameServerHosts() const;
     [[nodiscard]] std::map<std::string, std::vector<std::string>> getGameServergRPCHosts() const;
@@ -107,6 +112,9 @@ public:
 
     [[nodiscard]] bool isAccountsEmailEnabled() const;
     [[nodiscard]] json getAccountsEmailSettings() const;
+
+    [[nodiscard]] std::string getSharedStateType() const;
+    [[nodiscard]] json getSharedStateRedisSettings() const;
 
 private:
     json settings;

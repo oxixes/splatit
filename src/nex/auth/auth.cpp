@@ -14,8 +14,8 @@ using namespace async;
 
 AuthRMC::AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<db::Database> db,
                  sock::IPv4Addr secureAddr, std::string serverId, std::vector<uint8_t> secureServerKey,
-                 std::string build, std::string base64JWTKey, bool friends) :
-        Server(std::move(logger)), db(std::move(db)), secureAddr(secureAddr), serverId(std::move(serverId)),
+                 std::string build, std::string base64JWTKey, bool friends, uint32_t nexServerId) :
+        Server(std::move(logger), nexServerId), db(std::move(db)), secureAddr(secureAddr), serverId(std::move(serverId)),
         secureServerKey(std::move(secureServerKey)), build(std::move(build)), base64JWTKey(std::move(base64JWTKey)),
         friends(friends) {
     this->logGroup = logGroup;

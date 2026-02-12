@@ -15,6 +15,8 @@
 #include "../types/friendsSecure/comment.hpp"
 #include "../types/friendsSecure/friendRequestMsg.hpp"
 #include "../types/friendsSecure/persistentNotification.hpp"
+#include "../../sharedState/sharedState.hpp"
+#include "../../grpc/channelPool.hpp"
 
 #define FRIENDS_SETTING_STATUS 0
 
@@ -40,11 +42,14 @@ struct FriendsRegisteredClientInfo {
 class FriendsSecureRMC : public Server {
 public:
     explicit FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
-                              std::string base64JWTKey);
+                              std::string base64JWTKey, std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
+                              int gRCPPoolMaxSize, int gRCPRequestTimeout);
     ~FriendsSecureRMC() override = default;
 
     async::Task<bool> deleteAccount(uint32_t pid) const;
 
+    async::Task<bool> sendNotification(const ClientInfo &client, NintendoNotificationType type, uint32_t sender,
+        const AnyDataHolder& data, bool dontResend = false);
 private:
     async::Task<void> register_(ClientInfo client, Request req,
                                 std::unique_ptr<List<StationURL>> urls);
@@ -79,7 +84,6 @@ private:
 
     async::Task<void> onDisconnect(prudp::PRUDPAddress address) override;
 
-    void sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender, const AnyDataHolder& data);
     async::Task<bool> cleanupExpiredFriendRequests(uint32_t pid) const;
     async::Task<void> createBecameFriendsPersistentNotification(uint32_t pid, uint32_t friendPid) const;
 
@@ -87,13 +91,15 @@ private:
 
     std::shared_ptr<db::Database> db;
     std::string base64JWTKey;
+    std::shared_ptr<ss::SharedState> sharedState;
 
     uint32_t nextRVConnId = 0;
     std::mutex rvConnIdMutex;
     uint32_t nextCallId = 0;
     std::mutex callIdMutex;
-    std::unordered_map<uint32_t, FriendsRegisteredClientInfo> registeredClients;
-    std::recursive_mutex registeredClientsMutex;
+
+    std::shared_ptr<grpcimpl::ChannelPool> channelPool;
+    int gRCPRequestTimeout;
 };
 
 } // namespace nex::rmc

@@ -11,8 +11,9 @@ namespace nex::rmc {
 
 using namespace async;
 
-SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db) :
-                                        Server(std::move(logger)), db(std::move(db)) {
+SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
+                                     std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId):
+                                        Server(std::move(logger), serverId), db(std::move(db)), sharedState(std::move(sharedState)) {
     logGroup = Logger::group::SPLATOON_SECURE;
 
     // Protocol 3 - NAT Traversal

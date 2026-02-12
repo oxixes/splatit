@@ -70,9 +70,18 @@ namespace nex::rmc {
             return obj;
         }
 
+        std::vector<uint8_t> getRaw() const {
+            return objData;
+        }
+
         template <typename T> requires std::is_base_of_v<Type, T>
         void set(const T& obj, const std::string& typeName) {
             objData = obj.encode();
+            type = typeName;
+        }
+
+        void setRaw(const std::vector<uint8_t>& data, const std::string& typeName) {
+            objData = data;
             type = typeName;
         }
 

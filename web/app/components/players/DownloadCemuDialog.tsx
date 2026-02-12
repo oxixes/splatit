@@ -15,6 +15,7 @@ import { getCemuFiles } from "~/lib/accounts";
 import { ApiError, ManagementError } from "~/lib/api-client";
 import JSZip from "jszip";
 import { Download, Loader2 } from "lucide-react";
+import {Card, CardContent, CardHeader, CardTitle} from "~/components/ui/card";
 
 interface DownloadCemuDialogProps {
   config: AppConfig;
@@ -218,6 +219,15 @@ export function DownloadCemuDialog({ config, pid, username, open, onOpenChange }
             Enter the account password to download CEMU emulator files for {username || `PID ${pid}`}.
           </DialogDescription>
         </DialogHeader>
+
+        <Card className="border-red-500/50 bg-blue-500/5">
+          <CardHeader>
+            <CardTitle className="text-red-500">Disclaimer</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p>These files will only work with CEMU to connect to this specific sever. They will <strong>NOT</strong> work with other servers or are meant to work with any other emulator.</p>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">

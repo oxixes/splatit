@@ -58,6 +58,42 @@ private:
     std::shared_ptr<State> state;
 };
 
+template <>
+class ManualTask<void> {
+public:
+    explicit ManualTask() : state(std::make_shared<State>()) {}
+
+    bool await_ready() noexcept { return false; }
+
+    void await_suspend(std::coroutine_handle<> awaiting) noexcept {
+        auto& prom = std::coroutine_handle<Task<void>::promise_type>::from_address(awaiting.address()).promise();
+        state->scheduler = prom.scheduler;
+
+        state->continuation = awaiting;
+        if (state->scheduler && state->result) {
+            state->scheduler->schedule_coroutine(state->continuation, state);
+        }
+    }
+
+    void await_resume() noexcept {}
+
+    void complete() {
+        state->result = true;
+        if (state->continuation && state->scheduler) {
+            state->scheduler->schedule_coroutine(state->continuation, state);
+        }
+    }
+
+private:
+    struct State {
+        std::shared_ptr<Scheduler> scheduler;
+        std::coroutine_handle<> continuation;
+        bool result = false;
+    };
+
+    std::shared_ptr<State> state;
+};
+
 template <typename T>
 Task<std::vector<T>> waitForAll(std::vector<ManualTask<T>>&& tasks) {
     std::vector<T> results;

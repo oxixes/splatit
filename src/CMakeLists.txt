@@ -6,6 +6,7 @@ add_subdirectory(nex)
 add_subdirectory(util)
 add_subdirectory(db)
 add_subdirectory(grpc)
+add_subdirectory(sharedState)
 
 target_sources(splatoon_server PRIVATE
         main.cpp

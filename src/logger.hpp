@@ -30,7 +30,8 @@ enum class group {
     SPLATOON_SECURE,
     GRPC,
     MANAGEMENT,
-    GLOBAL_TASKS
+    GLOBAL_TASKS,
+    REDIS
 };
 
 class Logger {

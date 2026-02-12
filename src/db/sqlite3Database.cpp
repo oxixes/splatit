@@ -679,6 +679,87 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         }
 
         resultsData = std::move(friendRequests);
+    } else if (command->type == DBCommandType::UPDATE_USER_INFO) {
+        std::vector<DBDataType> dataTypes;
+        std::vector<std::shared_ptr<DBData>> data;
+
+        auto* updateData = std::any_cast<DBUserInfoUpdate>(&command->data);
+
+        // Not all data needs to be updated, so we need to check which fields are being updated.
+        // These are given by optionals, so we can just check if they have a value.
+        std::string sqlCommand = "UPDATE user_info SET ";
+        if (updateData->username.has_value()) {
+            sqlCommand += "username = ?, ";
+            dataTypes.push_back(DBDataType::STRING);
+            data.emplace_back(std::make_shared<DBString>(updateData->username.value()));
+        }
+
+        if (updateData->showPresence.has_value()) {
+            sqlCommand += "show_presence = ?, ";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->showPresence.value())));
+        }
+
+        if (updateData->showPlaying.has_value()) {
+            sqlCommand += "show_playing = ?, ";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->showPlaying.value())));
+        }
+
+        if (updateData->blockRequests.has_value()) {
+            sqlCommand += "block_requests = ?, ";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->blockRequests.value())));
+        }
+
+        if (updateData->nnaInfo.has_value()) {
+            sqlCommand += "nna_info = ?, ";
+            dataTypes.push_back(DBDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(updateData->nnaInfo.value()));
+        }
+
+        if (updateData->presence.has_value()) {
+            sqlCommand += "presence = ?, ";
+            dataTypes.push_back(DBDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(updateData->presence.value()));
+        }
+
+        if (updateData->comment.has_value()) {
+            sqlCommand += "comment = ?, ";
+            dataTypes.push_back(DBDataType::BLOB);
+            data.emplace_back(std::make_shared<DBBlob>(updateData->comment.value()));
+        }
+
+        if (updateData->lastOnline.has_value()) {
+            sqlCommand += "last_online = ?, ";
+            dataTypes.push_back(DBDataType::DATETIME);
+            data.emplace_back(std::make_shared<DBDateTime>(updateData->lastOnline.value()));
+        }
+
+        // Remove the last comma and space and add the WHERE clause
+        sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
+
+        dataTypes.push_back(DBDataType::INTEGER);
+        data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->pid)));
+
+        if (!craftStatement(sqlCommand, &statement)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+
+        if (!bindData(statement, dataTypes, data)) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        if (!runStatement(statement, dataTypes, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(statement);
+            goto push_results;
+        }
+
+        sqlite3_finalize(statement);
     } else if (command->type == DBCommandType::INSERT_USER_INFO) {
         if (insertUserInfoStatement == nullptr) {
             if (!craftStatement("INSERT INTO user_info (pid, username, show_presence, show_playing, block_requests, nna_info, presence, comment, last_online) "
@@ -705,7 +786,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             resultStatus = DBResultStatus::FAILURE_DATA;
             sqlite3_clear_bindings(insertUserInfoStatement);
             goto push_results;
-                       }
+        }
 
         if (!runStatement(insertUserInfoStatement, {}, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;

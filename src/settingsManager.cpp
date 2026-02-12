@@ -241,7 +241,11 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
                     {"port", 1999},
-                    {"reflection", false}
+                    {"reflection", false},
+                    {"publicFacingAddress", "127.0.0.1:1999"}
+            }},
+            {"sharedState", {
+                    {"type", "local"}
             }},
             {"friendsAuth", {
                     {"enabled", true},
@@ -279,7 +283,9 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"db", {
                         {"type", "SQLite3"},
                         {"path", (dataDirAbsPath/fs::path("friendsSecure.db")).string()}
-                    }}
+                    }},
+                    {"grpcRequestTimeout", 3000}, // in milliseconds
+                    {"grpcConnectionPoolMaxSize", 1}
             }},
             {"splatoonSecure", {
                    {"enabled", true},
@@ -306,7 +312,8 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    {"corsOrigin", "*"}
            }},
            {"nex", {
-                   {"tokenKey", nexTokenKeyString}
+                   {"tokenKey", nexTokenKeyString},
+                   {"serverId", 0}
            }}
     };
 
@@ -470,6 +477,14 @@ sock::IPv4Addr SettingsManager::getFriendsSecureServerAddress() const {
     return address;
 }
 
+int SettingsManager::getFriendsSecuregRPCRequestTimeout() const {
+    return settings["friendsSecure"]["grpcRequestTimeout"];
+}
+
+int SettingsManager::getFriendsSecuregRPCConnectionPoolMaxSize() const {
+    return settings["friendsSecure"]["grpcConnectionPoolMaxSize"];
+}
+
 sock::IPv4Addr SettingsManager::getFriendsSecureListenAddress() const {
     sock::IPv4Addr address = util::stringToIPv4(settings["friendsSecure"]["listenAddress"].get<std::string>());
     address.port = settings["friendsSecure"]["port"];
@@ -517,12 +532,30 @@ sock::IPv4Addr SettingsManager::getgRPCListenAddress() const {
     return address;
 }
 
+std::string SettingsManager::getgRCPPublicFacingAddress() const {
+    return settings["grpc"]["publicFacingAddress"];
+}
+
 bool SettingsManager::isgRPCReflectionEnabled() const {
     return settings["grpc"].contains("reflection") && settings["grpc"]["reflection"].get<bool>();
 }
 
 json SettingsManager::getAccountsDBSettings() const {
     return settings["accounts"]["db"];
+}
+
+std::string SettingsManager::getSharedStateType() const {
+    if (settings.contains("sharedState") && settings["sharedState"].contains("type")) {
+        return settings["sharedState"]["type"].get<std::string>();
+    }
+    return "local"; // Default to local if not specified
+}
+
+json SettingsManager::getSharedStateRedisSettings() const {
+    if (settings.contains("sharedState") && settings["sharedState"].contains("redis")) {
+        return settings["sharedState"]["redis"];
+    }
+    return json::object(); // Return empty object if not configured
 }
 
 json SettingsManager::getFriendsAuthDBSettings() const {
@@ -559,6 +592,10 @@ std::string SettingsManager::getRefreshTokenKey() const {
 
 std::string SettingsManager::getNEXTokenKey() const {
     return settings["nex"]["tokenKey"];
+}
+
+uint32_t SettingsManager::getNEXServerID() const {
+    return settings["nex"]["serverId"];
 }
 
 std::map<std::string, std::vector<std::pair<std::string, std::string>>> SettingsManager::getGameServerHosts() const {

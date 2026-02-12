@@ -46,6 +46,12 @@ target_link_libraries(splatoon_server PRIVATE date::date date::date-tz)
 find_package(Boost REQUIRED COMPONENTS uuid)
 target_link_libraries(splatoon_server PRIVATE Boost::uuid)
 
+find_package(hiredis CONFIG REQUIRED)
+target_link_libraries(splatoon_server PRIVATE hiredis::hiredis)
+
+find_package(hiredis_ssl CONFIG REQUIRED)
+target_link_libraries(splatoon_server PRIVATE hiredis::hiredis_ssl)
+
 # Add STB image library
 target_include_directories(splatoon_server PRIVATE lib/stb)
 

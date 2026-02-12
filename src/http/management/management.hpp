@@ -10,6 +10,12 @@
 
 namespace mgm {
 
+// TODO - Add authentication & authorization
+// TODO - Allow for SSL
+// TODO - Security Status for accounts server
+// TODO - Splatfest and map rotation management
+// TODO - Lobby and live tracking
+
 using json = nlohmann::json;
 
 enum class ManagementError {

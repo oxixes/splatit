@@ -22,6 +22,7 @@ struct ClientInfo {
     prudp::PRUDPAddress address;
     uint8_t minorVersion;
     uint8_t substreamId;
+    uint32_t serverId;
     uint32_t pid = 0;
 };
 
@@ -74,7 +75,7 @@ public:
     void scheduleArbitraryFunction(async::Task<void>&& task) const override;
 
 protected:
-    explicit Server(std::shared_ptr<Logger::Logger> logger);
+    explicit Server(std::shared_ptr<Logger::Logger> logger, uint32_t serverId);
 
     template<typename T, typename F>
     void registerCall(T* self, F callback, uint8_t protoId, uint32_t methodId, uint16_t extProtoId = 0) {
@@ -112,6 +113,8 @@ protected:
     virtual async::Task<void> onDisconnect(prudp::PRUDPAddress address);
 
     static Response createError(const Request& req, Error error);
+
+    uint32_t serverId;
 
     std::shared_ptr<Logger::Logger> logger;
     Logger::group logGroup = Logger::group::SETUP; // This should be set by the constructor of the derived class

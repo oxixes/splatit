@@ -75,6 +75,8 @@ std::string Logger::getGroupName(group group) {
             return "MANAGEMENT";
         case group::GLOBAL_TASKS:
             return "GLOBAL TASKS";
+        case group::REDIS:
+            return "REDIS";
         default:
             return "UNKNOWN";
     }

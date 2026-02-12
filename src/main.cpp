@@ -21,6 +21,8 @@
 #include "boss/utils.hpp"
 #include "http/management/management.hpp"
 #include "util/globalTaskScheduler.hpp"
+#include "sharedState/localSharedState.hpp"
+#include "sharedState/redisSharedState.hpp"
 
 std::atomic<bool> shouldStop = false;
 
@@ -40,7 +42,7 @@ void signalHandler(const int signal) {
 }
 
 int main(int argc, char** argv) {
-    std::shared_ptr<Logger::Logger> logger(new Logger::Logger());
+    std::shared_ptr<Logger::Logger> logger = std::make_shared<Logger::Logger>();
 
     // Initialize sockets (only needed on Windows)
     if (!sock::initialize()) {
@@ -97,10 +99,67 @@ int main(int argc, char** argv) {
         friendsAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::FRIENDS_AUTH, friendsAuthDB,
                                                              secureAddr, FRIENDS_SERVER_ID,
                                                              FRIENDS_SECURE_SERVER_KEY,
-                                                             FRIENDS_SERVER_BUILD, "", true);
+                                                             FRIENDS_SERVER_BUILD, "", true, settingsMgr->getNEXServerID());
         friendsAuthRMC->registerPRUDPServer(friendsAuthSrv, 1, settingsMgr->getFriendsAuthWorkerCount());
 
         friendsAuthSrv->listen(stop);
+    }
+
+    // Initialize SharedState if friendsSecure or splatoonSecure are enabled
+    std::shared_ptr<ss::SharedState> sharedState = nullptr;
+    if (settingsMgr->isFriendsSecureEnabled() || settingsMgr->isSplatoonSecureEnabled()) {
+        std::string sharedStateType = settingsMgr->getSharedStateType();
+
+        if (sharedStateType == "redis") {
+            json redisSettings = settingsMgr->getSharedStateRedisSettings();
+
+            ss::RedisConfig redisConfig;
+            redisConfig.host = redisSettings["host"].get<std::string>();
+            redisConfig.port = redisSettings["port"].get<uint16_t>();
+            redisConfig.password = redisSettings.value("password", "");
+            redisConfig.database = redisSettings["database"].get<int>();
+            redisConfig.connectionTimeoutMs = redisSettings["connectionTimeoutMs"].get<uint32_t>();
+            redisConfig.commandTimeoutMs = redisSettings["commandTimeoutMs"].get<uint32_t>();
+            redisConfig.useSSL = redisSettings["useSSL"].get<bool>();
+            redisConfig.caCertPath = redisSettings.value("caCertPath", "");
+            redisConfig.certPath = redisSettings.value("certPath", "");
+            redisConfig.keyPath = redisSettings.value("keyPath", "");
+            redisConfig.workerThreads = redisSettings["workerThreads"].get<uint32_t>();
+            redisConfig.clientTTLSeconds = redisSettings["clientTTLSeconds"].get<uint32_t>();
+
+            sharedState = std::make_shared<ss::RedisSharedState>(logger, redisConfig, settingsMgr->getNEXServerID(), settingsMgr->getgRCPPublicFacingAddress());
+
+            if (!sharedState->init()) {
+                logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                            "Failed to initialize Redis SharedState");
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+
+            logger->log(Logger::level::INFO, Logger::group::SETUP,
+                        "Redis SharedState initialized successfully");
+        } else {
+            // Default to local
+            sharedState = std::make_shared<ss::LocalSharedState>(logger, settingsMgr->getNEXServerID(), settingsMgr->getgRCPPublicFacingAddress());
+
+            if (!sharedState->init()) {
+                logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                            "Failed to initialize Local SharedState");
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+
+            logger->log(Logger::level::INFO, Logger::group::SETUP,
+                        "Local SharedState initialized successfully");
+        }
     }
 
     std::shared_ptr<db::Database> friendsSecureDB = nullptr;
@@ -110,6 +169,7 @@ int main(int argc, char** argv) {
         friendsSecureDB = db::Database::createDatabase(settingsMgr->getFriendsSecureDBSettings(), logger);
         if (!friendsSecureDB->init() || !friendsSecureDB->run()) {
             friendsSecureDB->close();
+            if (sharedState != nullptr) sharedState->close();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
             if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
             socketManager->cleanup();
@@ -122,6 +182,7 @@ int main(int argc, char** argv) {
             if (!db::migrations::migrate(logger, friendsSecureDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_SECURE,
                                          friendsSecureDB->getVersion())) {
                 friendsSecureDB->close();
+                if (sharedState != nullptr) sharedState->close();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
                 if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
                 socketManager->cleanup();
@@ -137,7 +198,10 @@ int main(int argc, char** argv) {
                                                                 false, 2, FRIENDS_SECURE_SERVER_KEY,
                                                                 true);
 
-        friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, friendsSecureDB, settingsMgr->getNEXTokenKey());
+        friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, friendsSecureDB,
+                                                                         settingsMgr->getNEXTokenKey(), sharedState, settingsMgr->getNEXServerID(),
+                                                                         settingsMgr->getFriendsSecuregRPCConnectionPoolMaxSize(),
+                                                                         settingsMgr->getFriendsSecuregRPCRequestTimeout());
         friendsSecureRMC->registerPRUDPServer(friendsSecureSrv, 1, settingsMgr->getFriendsSecureWorkerCount());
 
         friendsSecureSrv->listen(stop);
@@ -150,6 +214,7 @@ int main(int argc, char** argv) {
         splatoonAuthDB = db::Database::createDatabase(settingsMgr->getSplatoonAuthDBSettings(), logger);
         if (!splatoonAuthDB->init() || !splatoonAuthDB->run()) {
             splatoonAuthDB->close();
+            if (sharedState != nullptr) sharedState->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -164,6 +229,7 @@ int main(int argc, char** argv) {
             if (!db::migrations::migrate(logger, splatoonAuthDB, db::DBType::SQLITE3, db::SystemType::SPLATOON_AUTH,
                                          splatoonAuthDB->getVersion())) {
                 splatoonAuthDB->close();
+                if (sharedState != nullptr) sharedState->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -185,7 +251,7 @@ int main(int argc, char** argv) {
         splatoonAuthRMC = std::make_shared<nex::rmc::AuthRMC>(logger, Logger::group::SPLATOON_AUTH, splatoonAuthDB,
                                                              secureAddr, SPLATOON_SERVER_ID,
                                                              SPLATOON_SECURE_SERVER_KEY,
-                                                             SPLATOON_SERVER_BUILD, settingsMgr->getNEXTokenKey(), false);
+                                                             SPLATOON_SERVER_BUILD, settingsMgr->getNEXTokenKey(), false, settingsMgr->getNEXServerID());
         splatoonAuthRMC->registerPRUDPServer(splatoonAuthSrv, 1, settingsMgr->getSplatoonAuthWorkerCount());
 
         splatoonAuthSrv->listen(stop);
@@ -200,7 +266,7 @@ int main(int argc, char** argv) {
                                                                  false, 2, SPLATOON_SECURE_SERVER_KEY,
                                                                  false);
 
-        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr);
+        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr, sharedState, settingsMgr->getNEXServerID());
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
         splatoonSecureSrv->listen(stop);
@@ -213,6 +279,7 @@ int main(int argc, char** argv) {
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
         if (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr)) {
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (sharedState != nullptr) sharedState->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -233,6 +300,7 @@ int main(int argc, char** argv) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         std::string("An error occurred while initializing the HTTP server: ") + e.what());
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (sharedState != nullptr) sharedState->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -249,6 +317,7 @@ int main(int argc, char** argv) {
                 accountsDB->close();
                 httpServer->stop();
                 if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (sharedState != nullptr) sharedState->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -265,6 +334,7 @@ int main(int argc, char** argv) {
                     accountsDB->close();
                     httpServer->stop();
                     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                    if (sharedState != nullptr) sharedState->close();
                     if (friendsSecureDB != nullptr) friendsSecureDB->close();
                     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                     if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -380,6 +450,7 @@ int main(int argc, char** argv) {
 
     while (!shouldStop) {
         tasksMgr.push(socketManager->process(tasksMgr.get()));
+        if (sharedState != nullptr) tasksMgr.push(sharedState->process());
         if (friendsAuthSrv != nullptr) tasksMgr.push(friendsAuthSrv->process());
         if (friendsSecureSrv != nullptr) tasksMgr.push(friendsSecureSrv->process());
         if (splatoonAuthSrv != nullptr) tasksMgr.push(splatoonAuthSrv->process());
@@ -389,6 +460,7 @@ int main(int argc, char** argv) {
 
     util::GlobalTaskScheduler::getInstance().stop();
     if (grpcServer != nullptr) grpcServer->stop();
+    if (sharedState != nullptr) sharedState->close();
     if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
     if (friendsSecureDB != nullptr) friendsSecureDB->close();
     if (friendsAuthDB != nullptr) friendsAuthDB->close();

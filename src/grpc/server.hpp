@@ -14,6 +14,7 @@
 #include "services/authService.hpp"
 #include "services/serverStatusService.hpp"
 #include "services/accountManagementService.hpp"
+#include "services/friendsService.hpp"
 #include "services/internalAccountManagementService.hpp"
 
 namespace grpcimpl {
@@ -54,6 +55,7 @@ private:
     std::shared_ptr<grpcimpl::internalaccountmanagement::v1::InternalAccountManagementServiceImpl> internalAccountManagementService;
     std::shared_ptr<grpcimpl::serverstatus::v1::ServerStatusServiceImpl> serverStatusService;
     std::shared_ptr<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl> accountManagementService;
+    std::shared_ptr<grpcimpl::friends::v1::FriendsServiceImpl> friendsService;
 
     bool reflectionEnabled = false;
 };

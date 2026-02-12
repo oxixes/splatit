@@ -29,6 +29,11 @@ void Server::listen() {
     }
 
     if (serverData.friendsSecureRMC != nullptr) {
+        friendsService = std::make_shared<grpcimpl::friends::v1::FriendsServiceImpl>(
+                logger, serverData.friendsSecureRMC);
+    }
+
+    if (serverData.friendsSecureRMC != nullptr) {
         internalAccountManagementService = std::make_shared<grpcimpl::internalaccountmanagement::v1::InternalAccountManagementServiceImpl>(
                 serverData.friendsSecureRMC, logger);
     }
@@ -51,6 +56,7 @@ void Server::listen() {
     if (internalAccountManagementService != nullptr) builder.RegisterService(internalAccountManagementService.get());
     builder.RegisterService(serverStatusService.get());
     if (accountManagementService != nullptr) builder.RegisterService(accountManagementService.get());
+    if (friendsService != nullptr) builder.RegisterService(friendsService.get());
 
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {

@@ -2,8 +2,11 @@
 
 #include <utility>
 
+#include <friends.grpc.pb.h>
+
 #include "../../crypto/tools.hpp"
 #include "../../constants.hpp"
+#include "../../grpc/asyncRequest.hpp"
 #include "../types/common/result.hpp"
 #include "../types/friendsSecure/principalPreference.hpp"
 #include "../types/friendsSecure/friendRequest.hpp"
@@ -21,9 +24,14 @@ namespace nex::rmc {
 using namespace async;
 
 FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
-                                   std::string base64JWTKey) :
-        Server(std::move(logger)), db(std::move(db)), base64JWTKey(std::move(base64JWTKey)) {
+                                   std::string base64JWTKey, std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
+                                   int gRCPPoolMaxSize, int gRCPRequestTimeout):
+        Server(std::move(logger), serverId), db(std::move(db)), base64JWTKey(std::move(base64JWTKey)),
+        sharedState(std::move(sharedState)) {
     logGroup = Logger::group::FRIENDS_SECURE;
+
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize);
+    this->gRCPRequestTimeout = gRCPRequestTimeout;
 
     // Protocol 11 - Secure connection
     REGISTER_CALL(FriendsSecureRMC::register_, 11, 1);
@@ -240,9 +248,14 @@ Task<void> FriendsSecureRMC::registerEx(ClientInfo client,
         clientInfo.friends.insert(friendData.friendPid);
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    registeredClients.insert(std::make_pair(client.pid, std::move(clientInfo)));
-    registeredClientsLock.unlock();
+    // Store in shared state
+    auto setTask = sharedState->setFriendsRegisteredClientInfo(std::move(clientInfo));
+    auto setResult = co_await setTask;
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to store client info in shared state for PID " + std::to_string(client.pid));
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
     logger->log(Logger::level::INFO, logGroup, "Registered " + std::to_string(client.pid) + " from "
                                                + util::ipv4ToString(client.address.address) + ":" + std::to_string(client.address.address.port));
@@ -373,15 +386,20 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
-        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
+    // Check if client is registered in shared state
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to get client info from shared state for PID " + std::to_string(client.pid));
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
+    if (!clientInfoOpt.has_value()) {
+        logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -574,31 +592,35 @@ Task<void> FriendsSecureRMC::updateAndGetAllInformation(ClientInfo client, Reque
     bool miiChanged = nnaInfo->info.mii.encode() != dbUserData.info.mii.encode();
 
     // Send presence (any possibly mii change) update to connected friends
-    if (clientIt->second.userData.preference.showOnline || miiChanged) {
-        registeredClientsLock.lock();
-        clientIt = registeredClients.find(client.pid);
-        for (auto& friendPid : clientIt->second.friends) {
+    // Use sharedState for friends list
+    const auto& clientInfo = clientInfoOpt.value();
+    if (clientInfo.userData.preference.showOnline || miiChanged) {
+        for (auto& friendPid : clientInfo.friends) {
             AnyDataHolder data;
             presence->pid = client.pid;
             presence->online = true;
             data.set(*presence, "NintendoPresenceV2");
 
-            auto friendIt = registeredClients.find(friendPid);
-            if (friendIt == registeredClients.end()) continue;
+            // Get friend's client info from shared state
+            auto friendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+            auto [friendResult, friendInfoOpt] = co_await friendTask;
+            if (friendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-            if (clientIt->second.userData.preference.showOnline && clientIt->second.userData.preference.showPlaying) {
-                sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
-            } else if (clientIt->second.userData.preference.showOnline) {
+            const auto& friendInfoState = friendInfoOpt.value();
+
+            if (clientInfo.userData.preference.showOnline && clientInfo.userData.preference.showPlaying) {
+                co_await sendNotification(friendInfoState.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+            } else if (clientInfo.userData.preference.showOnline) {
                 NintendoPresenceV2 presenceUpdate(client.minorVersion);
                 presenceUpdate.online = presence->online;
                 presenceUpdate.pid = client.pid;
                 data.set(*presence, "NintendoPresenceV2");
-                sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+                co_await sendNotification(friendInfoState.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
             }
 
             if (miiChanged) {
                 data.set(*nnaInfo, "NNAInfo");
-                sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
+                co_await sendNotification(friendInfoState.client, NintendoNotificationType::MII_CHANGED, client.pid, data);
             }
         }
     }
@@ -621,28 +643,26 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
 
-    uint32_t numFriends = clientIt->second.friends.size();
+    uint32_t numFriends = clientInfoOpt->friends.size();
 
-    for (auto& friendPid : clientIt->second.friends) {
+    for (auto& friendPid : clientInfoOpt->friends) {
         if (friendPid == *pid) {
             logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to add already existing friend "
                                                        + std::to_string(*pid));
 
             sendMsg(client, createError(req, Error::FPD__FRIEND_ALREADY_EXISTS), {});
-            registeredClientsLock.unlock();
             co_return;
         }
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -896,19 +916,19 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         params[0] = std::make_unique<FriendRequest>(std::move(friendRequest));
         params[1] = std::make_unique<FriendInfo>(std::move(friendInfo));
 
-        registeredClientsLock.lock();
-        clientIt = registeredClients.find(client.pid);
-        if (clientIt != registeredClients.end()) {
-            clientIt->second.friends.insert(*pid);
-        }
-        registeredClientsLock.unlock();
+        // Update shared state to add friend
+        auto addFriendTask = sharedState->addFriendToRegisteredClientInfo(client.pid, *pid);
+        co_await addFriendTask;
 
         sendMsg(client, res, params);
 
-        registeredClientsLock.lock();
-        auto friendIt = registeredClients.find(*pid);
-        if (friendIt != registeredClients.end()) {
-            friendIt->second.friends.insert(client.pid);
+        // Check if friend is online to send notification
+        auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(*pid);
+        auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+        if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
+            // Also add to friend's friend list
+            auto addFriendTask2 = sharedState->addFriendToRegisteredClientInfo(*pid, client.pid);
+            co_await addFriendTask2;
 
             // Send friend added notification to the other user
             AnyDataHolder data;
@@ -939,7 +959,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
 
             data.set(notificationFriendInfo, "FriendInfo");
 
-            sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REQUEST_ACCEPTED, client.pid, data);
+            co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REQUEST_ACCEPTED, client.pid, data);
         }
     } else {
         if (message != nullptr && friendInfoResult.getData<db::DBUserInfoData>().blockRequests) {
@@ -1016,9 +1036,10 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
         sendMsg(client, res, params);
 
         if (messageProvided && !rejectRequest) {
-            registeredClientsLock.lock();
-            auto friendIt = registeredClients.find(*pid);
-            if (friendIt != registeredClients.end()) {
+            // Check if friend is online to send notification
+            auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(*pid);
+            auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+            if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
                 // Send friend request notification to the other user
                 auto selfDataRequest = db::Database::craftGetUserInfoByPidCommand(client.pid);
                 const db::Result selfDataResult = co_await db->runCommand(std::move(selfDataRequest));
@@ -1045,7 +1066,7 @@ Task<void> FriendsSecureRMC::addFriendInternal(ClientInfo client, Request req, s
                 AnyDataHolder notificationFriendRequestData;
                 notificationFriendRequestData.set(notificationFriendRequest, "FriendRequest");
 
-                sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REQUEST_RECEIVED,
+                co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REQUEST_RECEIVED,
                                  client.pid, notificationFriendRequestData);
             }
         }
@@ -1086,9 +1107,9 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
@@ -1096,13 +1117,12 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
     }
 
     bool hasFriend = false;
-    for (auto& friendPid : clientIt->second.friends) {
+    for (auto& friendPid : clientInfoOpt->friends) {
         if (friendPid == *pid) {
             hasFriend = true;
             break;
         }
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1164,9 +1184,10 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
 
         auto year2000 = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(946684800));
         if (friendRequestExpiration > year2000) {
-            registeredClientsLock.lock();
-            auto formerFriendIt = registeredClients.find(*pid);
-            if (formerFriendIt != registeredClients.end()) {
+            // Check if former friend is online to send notification
+            auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(*pid);
+            auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+            if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
                 // Send friend removed notification to the other user
                 NintendoNotificationEventGeneral event(client.minorVersion);
                 event.u32_param = *pid;
@@ -1178,9 +1199,8 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
                 AnyDataHolder data;
                 data.set(event, "NintendoNotificationEventGeneral");
 
-                sendNotification(formerFriendIt->second.client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
+                co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
             }
-            registeredClientsLock.unlock();
         }
     } else {
         auto getSelfNotificationsCmd = db::Database::craftGetPersistentNotificationsCommand(client.pid);
@@ -1276,16 +1296,17 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
 
         sendMsg(client, res, {});
 
-        registeredClientsLock.lock();
-        clientIt = registeredClients.find(client.pid);
-        if (clientIt != registeredClients.end()) {
-            clientIt->second.friends.erase(*pid);
-        }
+        // Remove friend from shared state
+        auto removeFriendTask = sharedState->removeFriendFromRegisteredClientInfo(client.pid, *pid);
+        co_await removeFriendTask;
 
-        auto formerFriendIt = registeredClients.find(*pid);
-        if (formerFriendIt != registeredClients.end()) {
-            // Remove friend from the client's friend list
-            formerFriendIt->second.friends.erase(client.pid);
+        // Check if former friend is online
+        auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(*pid);
+        auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+        if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
+            // Remove friend from the friend's friend list
+            auto removeFriendTask2 = sharedState->removeFriendFromRegisteredClientInfo(*pid, client.pid);
+            co_await removeFriendTask2;
 
             // Send friend removed notification to the other user
             NintendoNotificationEventGeneral event(client.minorVersion);
@@ -1297,9 +1318,8 @@ Task<void> FriendsSecureRMC::removeFriend(ClientInfo client, Request req, std::u
             AnyDataHolder data;
             data.set(event, "NintendoNotificationEventGeneral");
 
-            sendNotification(formerFriendIt->second.client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
+            co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
         }
-        registeredClientsLock.unlock();
     }
 }
 
@@ -1329,15 +1349,14 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1385,9 +1404,10 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
             requestMsg.decode(requestData.data);
 
             if (requestData.expiresAt > year2000 && requestMsg.id != static_cast<uint64_t>(0xFFFFFFFFFFFFFFFF)) {
-                registeredClientsLock.lock();
-                auto friendIt = registeredClients.find(requestData.toPid);
-                if (friendIt != registeredClients.end()) {
+                // Check if friend is online to send notification
+                auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(requestData.toPid);
+                auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+                if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
                     NintendoNotificationEventGeneral event(client.minorVersion);
                     event.u32_param = requestData.toPid;
                     event.u64_param1 = requestData.id;
@@ -1398,9 +1418,8 @@ Task<void> FriendsSecureRMC::cancelFriendRequest(ClientInfo client, Request req,
                     AnyDataHolder data;
                     data.set(event, "NintendoNotificationEventGeneral");
 
-                    sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
+                    co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REMOVED, client.pid, data);
                 }
-                registeredClientsLock.unlock();
             }
 
             co_return;
@@ -1416,15 +1435,14 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1542,19 +1560,19 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
             std::vector<T_ptr> params(1);
             params[0] = std::make_unique<FriendInfo>(std::move(friendInfo));
 
-            registeredClientsLock.lock();
-            clientIt = registeredClients.find(client.pid);
-            if (clientIt != registeredClients.end()) {
-                clientIt->second.friends.insert(requestData.fromPid);
-            }
-            registeredClientsLock.unlock();
+            // Update shared state to add friend
+            auto addFriendTask = sharedState->addFriendToRegisteredClientInfo(client.pid, requestData.fromPid);
+            co_await addFriendTask;
 
             sendMsg(client, res, params);
 
-            registeredClientsLock.lock();
-            auto friendIt = registeredClients.find(requestData.fromPid);
-            if (friendIt != registeredClients.end()) {
-                friendIt->second.friends.insert(client.pid);
+            // Check if friend is online to send notification
+            auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(requestData.fromPid);
+            auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+            if (getFriendResult == ss::Result::SUCCESS && friendInfoOpt.has_value()) {
+                // Also add to friend's friend list
+                auto addFriendTask2 = sharedState->addFriendToRegisteredClientInfo(requestData.fromPid, client.pid);
+                co_await addFriendTask2;
 
                 auto selfDataRequest = db::Database::craftGetUserInfoByPidCommand(client.pid);
                 const db::Result selfDataResult = co_await db->runCommand(std::move(selfDataRequest));
@@ -1583,9 +1601,8 @@ Task<void> FriendsSecureRMC::acceptFriendRequest(ClientInfo client, Request req,
                 AnyDataHolder data;
                 data.set(notificationFriendInfo, "FriendInfo");
 
-                sendNotification(friendIt->second.client, NintendoNotificationType::FRIEND_REQUEST_ACCEPTED, client.pid, data);
+                co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::FRIEND_REQUEST_ACCEPTED, client.pid, data);
             }
-            registeredClientsLock.unlock();
             co_return;
         }
     }
@@ -1599,15 +1616,14 @@ Task<void> FriendsSecureRMC::deleteFriendRequest(ClientInfo client, Request req,
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1676,15 +1692,14 @@ Task<void> FriendsSecureRMC::denyFriendRequest(ClientInfo client, Request req, s
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1736,15 +1751,14 @@ Task<void> FriendsSecureRMC::markFriendRequestsAsReceived(ClientInfo client, Req
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -1840,16 +1854,16 @@ Task<void> FriendsSecureRMC::addBlackList(ClientInfo client, Request req, std::u
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
 
-    for (const auto& friendPid : clientIt->second.friends) {
+    for (const auto& friendPid : clientInfoOpt->friends) {
         if (friendPid == blacklist->principalBasicInfo.pid) {
             logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " tried to block already existing friend "
                                                        + std::to_string(blacklist->principalBasicInfo.pid));
@@ -1858,7 +1872,6 @@ Task<void> FriendsSecureRMC::addBlackList(ClientInfo client, Request req, std::u
             co_return;
         }
     }
-    registeredClientsLock.unlock();
 
     if (!co_await cleanupExpiredFriendRequests(client.pid)) {
         logger->log(Logger::level::WARN, logGroup, "Failed to cleanup expired friend requests for " + std::to_string(client.pid)
@@ -2041,15 +2054,14 @@ Task<void> FriendsSecureRMC::removeBlackList(ClientInfo client, Request req, std
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     auto getBlockedFriendsCmd = db::Database::craftGetBlockedFriendsCommand(client.pid);
     const db::Result getBlockedFriendsResult = co_await db->runCommand(std::move(getBlockedFriendsCmd));
@@ -2105,15 +2117,14 @@ Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std:
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(client.pid, std::nullopt,
                                                                       std::nullopt, std::nullopt,
@@ -2140,25 +2151,24 @@ Task<void> FriendsSecureRMC::updatePresence(ClientInfo client, Request req, std:
 
     sendMsg(client, res, {});
 
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
     // Send presence update to connected friends
-    for (auto& friendPid : clientIt->second.friends) {
+    for (auto& friendPid : clientInfoOpt->friends) {
         AnyDataHolder data;
         presence->pid = client.pid;
         presence->online = true;
         data.set(*presence, "NintendoPresenceV2");
 
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+        auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+        auto [getFriendResult, friendInfoOpt2] = co_await getFriendTask;
+        if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt2.has_value()) continue;
 
-        if (clientIt->second.userData.preference.showOnline && clientIt->second.userData.preference.showPlaying) {
-            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
-        } else if (clientIt->second.userData.preference.showOnline) {
+        if (clientInfoOpt->userData.preference.showOnline && clientInfoOpt->userData.preference.showPlaying) {
+            co_await sendNotification(friendInfoOpt2->client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+        } else if (clientInfoOpt->userData.preference.showOnline) {
             NintendoPresenceV2 presenceUpdate(client.minorVersion);
             presenceUpdate.online = presence->online;
             data.set(*presence, "NintendoPresenceV2");
-            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
+            co_await sendNotification(friendInfoOpt2->client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
         }
     }
 }
@@ -2169,15 +2179,14 @@ Task<void> FriendsSecureRMC::updateMii(ClientInfo client, Request req, std::uniq
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
     const db::Result getUserInfoResult = co_await db->runCommand(std::move(getUserInfoCmd));
@@ -2229,17 +2238,15 @@ Task<void> FriendsSecureRMC::updateMii(ClientInfo client, Request req, std::uniq
     sendMsg(client, res, params);
 
     // Send Mii change notification to connected friends
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
-
     AnyDataHolder notificationData;
     notificationData.set(nnaInfo, "NNAInfo");
 
-    for (auto& friendPid : clientIt->second.friends) {
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+    for (auto& friendPid : clientInfoOpt->friends) {
+        auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+        auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+        if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::MII_CHANGED, client.pid, notificationData);
+        co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::MII_CHANGED, client.pid, notificationData);
     }
 }
 
@@ -2249,15 +2256,14 @@ Task<void> FriendsSecureRMC::updateComment(ClientInfo client, Request req, std::
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     db::datetime_t now = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
     comment->lastModified = Datetime(client.minorVersion, now);
@@ -2287,9 +2293,6 @@ Task<void> FriendsSecureRMC::updateComment(ClientInfo client, Request req, std::
     sendMsg(client, res, params);
 
     // Send comment update notification to connected friends
-    registeredClientsLock.lock();
-    clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) co_return;
     AnyDataHolder notificationData;
     NintendoNotificationEventGeneral generalEvent(0);
     generalEvent.u32_param = comment->unk1;
@@ -2297,11 +2300,12 @@ Task<void> FriendsSecureRMC::updateComment(ClientInfo client, Request req, std::
     generalEvent.str_param = comment->message;
     notificationData.set(generalEvent, "NintendoNotificationEventGeneral");
 
-    for (auto& friendPid : clientIt->second.friends) {
-        auto friendIt = registeredClients.find(friendPid);
-        if (friendIt == registeredClients.end()) continue;
+    for (auto& friendPid : clientInfoOpt->friends) {
+        auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+        auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+        if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-        sendNotification(friendIt->second.client, NintendoNotificationType::COMMENT_CHANGED, client.pid, notificationData);
+        co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::COMMENT_CHANGED, client.pid, notificationData);
     }
 }
 
@@ -2311,16 +2315,15 @@ Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, st
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    bool wasOnline = clientIt->second.userData.preference.showOnline;
-    registeredClientsLock.unlock();
+    bool wasOnline = clientInfoOpt->userData.preference.showOnline;
 
     auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(
         client.pid, std::nullopt, preference->showOnline, preference->showPlaying, preference->blockFriendRequest,
@@ -2343,24 +2346,26 @@ Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, st
 
     sendMsg(client, res, {});
 
+    // Update preference in shared state
+    UserPreference userPref{preference->showOnline, preference->showPlaying, preference->blockFriendRequest};
+    auto updatePrefTask = sharedState->updatePreferenceInRegisteredClientInfo(client.pid, userPref);
+    co_await updatePrefTask;
+
     if (wasOnline && !preference->showOnline) {
         // Send offline notification to connected friends
-        registeredClientsLock.lock();
-        clientIt = registeredClients.find(client.pid);
-        if (clientIt == registeredClients.end()) co_return;
-
         NintendoNotificationEventGeneral generalEvent(0);
         generalEvent.u64_param2.decode(Datetime(0,
             std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now())).encode());
 
-        for (auto& friendPid : clientIt->second.friends) {
+        for (auto& friendPid : clientInfoOpt->friends) {
             AnyDataHolder data;
             data.set(generalEvent, "NintendoNotificationEventGeneral");
 
-            auto friendIt = registeredClients.find(friendPid);
-            if (friendIt == registeredClients.end()) continue;
+            auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+            auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+            if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-            sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
+            co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::WENT_OFFLINE, client.pid, data);
         }
     } else if (!wasOnline && preference->showOnline) {
         auto getUserInfoCmd = db::Database::craftGetUserInfoByPidCommand(client.pid);
@@ -2389,15 +2394,12 @@ Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, st
         data.set(presence, "NintendoPresenceV2");
 
         // Send online notification to connected friends
-        registeredClientsLock.lock();
-        clientIt = registeredClients.find(client.pid);
-        if (clientIt == registeredClients.end()) co_return;
+        for (auto& friendPid : clientInfoOpt->friends) {
+            auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+            auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+            if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-        for (auto& friendPid : clientIt->second.friends) {
-            auto friendIt = registeredClients.find(friendPid);
-            if (friendIt == registeredClients.end()) continue;
-
-            sendNotification(friendIt->second.client, NintendoNotificationType::PRESENCE_UPDATED, clientIt->second.client.pid, data);
+            co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::PRESENCE_UPDATED, client.pid, data);
         }
     }
 }
@@ -2460,15 +2462,14 @@ Task<void> FriendsSecureRMC::deletePersistentNotification(ClientInfo client, Req
         co_return;
     }
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(client.pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult != ss::Result::SUCCESS || !clientInfoOpt.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Client " + std::to_string(client.pid) + " not registered");
 
         sendMsg(client, createError(req, Error::CORE__ACCESS_DENIED), {});
         co_return;
     }
-    registeredClientsLock.unlock();
 
     auto session = db->createSession();
     if ((co_await session->startTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
@@ -2620,8 +2621,11 @@ Task<void> FriendsSecureRMC::getRequestBlockSettings(ClientInfo client, Request 
     sendMsg(client, res, params);
 }
 
-void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationType type, uint32_t sender,
-                                        const AnyDataHolder& data) {
+Task<bool> FriendsSecureRMC::sendNotification(const ClientInfo& client, const NintendoNotificationType type, const uint32_t sender,
+                                              const AnyDataHolder& data, bool dontResend) {
+    logger->log(Logger::level::DEBUG, logGroup, "Sending notification of type " + std::to_string(static_cast<int>(type)) + " from "
+                                               + std::to_string(sender) + " to " + std::to_string(client.pid));
+
     Request req;
     req.protocolId = 100; // Nintendo Notification Event Protocol
     req.extendedProtocolId = 0;
@@ -2638,7 +2642,81 @@ void FriendsSecureRMC::sendNotification(ClientInfo client, NintendoNotificationT
     std::vector<T_ptr> params;
     params.push_back(std::make_unique<NintendoNotificationEvent>(notificationEvent));
 
-    sendMsg(client, req, params);
+    std::unique_lock pidMapLock(pidMapMutex);
+    if (client.serverId == serverId || dontResend) {
+        if (pidMap.contains(client.address)) {
+            sendMsg(client, req, params);
+        } else {
+            logger->log(Logger::level::WARN, logGroup, "Failed to send notification to " + std::to_string(client.pid)
+                                                       + " because they are not connected");
+            co_return false;
+        }
+    } else {
+        auto serverGRPCAddrResult = co_await sharedState->getPublicFacingRPCAddress(client.serverId);
+        if (serverGRPCAddrResult.first != ss::Result::SUCCESS || !serverGRPCAddrResult.second.has_value()) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get RPC address for server " + std::to_string(client.serverId)
+                                                       + " to send notification to " + std::to_string(client.pid));
+            co_return false;
+        }
+
+        std::string serverGRPCAddr = serverGRPCAddrResult.second.value();
+        auto channel = channelPool->getChannel(serverGRPCAddr);
+        if (!channel) {
+            logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                             "Failed to get channel for server " + std::to_string(client.serverId) + " to send notification to " + std::to_string(client.pid));
+            co_return false;
+        }
+
+        auto request = std::make_shared<grpcimpl::friends::v1::SendNotificationRequest>();
+        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_a(client.address.address.a);
+        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_b(client.address.address.b);
+        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_c(client.address.address.c);
+        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_d(client.address.address.d);
+        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_port(client.address.address.port);
+        request->mutable_clientinfo()->mutable_address()->set_vport(client.address.vPort);
+        request->mutable_clientinfo()->mutable_address()->set_streamtype(client.address.streamType);
+        request->mutable_clientinfo()->mutable_address()->set_srcvport(client.address.srcVPort);
+        request->mutable_clientinfo()->mutable_address()->set_srcstreamtype(client.address.srcStreamType);
+        request->mutable_clientinfo()->set_minorversion(client.minorVersion);
+        request->mutable_clientinfo()->set_substreamid(client.substreamId);
+        request->mutable_clientinfo()->set_serverid(client.serverId);
+        request->mutable_clientinfo()->set_pid(client.pid);
+        request->set_type(static_cast<grpcimpl::friends::v1::NintendoNotificationType>(type));
+        request->set_sender(sender);
+        request->mutable_data()->set_type(data.getType());
+
+        std::vector<uint8_t> encodedDataResult = data.getRaw();
+        request->mutable_data()->set_data(encodedDataResult.data(), encodedDataResult.size());
+
+        auto stub = grpcimpl::friends::v1::FriendsService::NewStub(channel);
+
+        std::pair<std::shared_ptr<google::protobuf::Empty>, grpc::Status> response =
+            co_await grpcimpl::callAsync<
+                grpcimpl::friends::v1::FriendsService::Stub,
+                void (grpcimpl::friends::v1::FriendsService::Stub::async::*)(
+                    grpc::ClientContext*,
+                    const grpcimpl::friends::v1::SendNotificationRequest*,
+                    google::protobuf::Empty*,
+                    std::function<void(grpc::Status)>
+                ),
+                grpcimpl::friends::v1::SendNotificationRequest,
+                google::protobuf::Empty
+            >(
+                stub,
+                &grpcimpl::friends::v1::FriendsService::Stub::async::SendNotification,
+                std::move(request),
+                gRCPRequestTimeout
+            );
+
+        if (!response.second.ok()) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to send notification to " + std::to_string(client.pid)
+                                                       + " on server " + std::to_string(client.serverId)
+                                                       + ": " + response.second.error_message());
+            co_return false;
+        }
+    }
+
+    co_return true;
 }
 
 Task<bool> FriendsSecureRMC::cleanupExpiredFriendRequests(const uint32_t pid) const {
@@ -2765,11 +2843,15 @@ Task<void> FriendsSecureRMC::createBecameFriendsPersistentNotification(const uin
 Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
     const NintendoPresenceV2 presence(0);
 
-    std::unique_lock registeredClientsLock(registeredClientsMutex);
-    auto clientIt = registeredClients.find(pidMap[address]);
-    if (clientIt != registeredClients.end()) {
+    std::unique_lock pidMapLock(pidMapMutex);
+    uint32_t pid = pidMap[address];
+    pidMapLock.unlock();
+
+    auto getTask = sharedState->getFriendsRegisteredClientInfo(pid);
+    auto [getResult, clientInfoOpt] = co_await getTask;
+    if (getResult == ss::Result::SUCCESS && clientInfoOpt.has_value()) {
         db::datetime_t lastOnline = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
-        auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(clientIt->second.client.pid, std::nullopt,
+        auto updateUserInfoCmd = db::Database::craftUpdateUserInfoCommand(clientInfoOpt->client.pid, std::nullopt,
                                                                           std::nullopt, std::nullopt,
                                                                           std::nullopt, std::nullopt,
                                                                           std::move(presence.encode()),
@@ -2777,31 +2859,32 @@ Task<void> FriendsSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
         db::Result updateUserInfoResult = co_await db->runCommand(std::move(updateUserInfoCmd));
 
         if (updateUserInfoResult.getStatus() != db::DBResultStatus::SUCCESS) {
-            logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(clientIt->second.client.pid)
-                                                       + " from " + util::ipv4ToString(clientIt->second.client.address.address) + ":"
-                                                       + std::to_string(clientIt->second.client.address.address.port));
+            logger->log(Logger::level::WARN, logGroup, "Failed to update user info for " + std::to_string(clientInfoOpt->client.pid)
+                                                       + " from " + util::ipv4ToString(clientInfoOpt->client.address.address) + ":"
+                                                       + std::to_string(clientInfoOpt->client.address.address.port));
         }
 
-        if (clientIt->second.userData.preference.showOnline) {
+        if (clientInfoOpt->userData.preference.showOnline) {
             // Send presence update to connected friends
             NintendoNotificationEventGeneral generalEvent(0);
             generalEvent.u64_param2.decode(Datetime(0, lastOnline).encode());
 
-            for (auto& friendPid : clientIt->second.friends) {
+            for (auto& friendPid : clientInfoOpt->friends) {
                 AnyDataHolder data;
                 data.set(generalEvent, "NintendoNotificationEventGeneral");
 
-                auto friendIt = registeredClients.find(friendPid);
-                if (friendIt == registeredClients.end()) continue;
+                auto getFriendTask = sharedState->getFriendsRegisteredClientInfo(friendPid);
+                auto [getFriendResult, friendInfoOpt] = co_await getFriendTask;
+                if (getFriendResult != ss::Result::SUCCESS || !friendInfoOpt.has_value()) continue;
 
-
-                sendNotification(friendIt->second.client, NintendoNotificationType::WENT_OFFLINE, clientIt->second.client.pid, data);
+                co_await sendNotification(friendInfoOpt->client, NintendoNotificationType::WENT_OFFLINE, clientInfoOpt->client.pid, data);
             }
         }
 
-        registeredClients.erase(clientIt);
+        // Delete from shared state
+        auto deleteTask = sharedState->deleteFriendsRegisteredClientInfo(pid);
+        co_await deleteTask;
     }
-    registeredClientsLock.unlock();
 
     co_await Server::onDisconnect(address);
 }

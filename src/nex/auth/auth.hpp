@@ -13,7 +13,7 @@ class AuthRMC : public Server {
 public:
     explicit AuthRMC(std::shared_ptr<Logger::Logger> logger, Logger::group logGroup, std::shared_ptr<db::Database> db,
                      sock::IPv4Addr secureAddr, std::string serverId, std::vector<uint8_t> secureServerKey,
-                     std::string build, std::string base64JWTKey, bool friends);
+                     std::string build, std::string base64JWTKey, bool friends, uint32_t nexServerId);
     ~AuthRMC() override = default;
 
     async::Task<std::optional<std::string>> getOrRegisterUserPassword(uint32_t pid) const;
