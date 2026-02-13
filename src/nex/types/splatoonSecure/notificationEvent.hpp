@@ -8,6 +8,7 @@
 namespace nex::rmc {
 
     enum class NotificationType {
+        NONE = 0,
         NEW_PARTICIPANT = 3001,
         PARTICIPATION_CANCELLED = 3002,
         PARTICIPANT_DISCONNECTED = 3007,
@@ -70,7 +71,7 @@ namespace nex::rmc {
         NotificationEvent& operator=(NotificationEvent&& other) noexcept = default;
 
         PID srcPid;
-        NotificationType type;
+        NotificationType type = NotificationType::NONE;
         UInt32 param1;
         UInt32 param2;
         String strParam;

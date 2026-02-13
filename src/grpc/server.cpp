@@ -33,6 +33,11 @@ void Server::listen() {
                 logger, serverData.friendsSecureRMC);
     }
 
+    if (serverData.splatoonSecureRMC != nullptr) {
+        splatoonService = std::make_shared<grpcimpl::splatoon::v1::SplatoonServiceImpl>(
+                logger, serverData.splatoonSecureRMC);
+    }
+
     if (serverData.friendsSecureRMC != nullptr) {
         internalAccountManagementService = std::make_shared<grpcimpl::internalaccountmanagement::v1::InternalAccountManagementServiceImpl>(
                 serverData.friendsSecureRMC, logger);
@@ -57,6 +62,7 @@ void Server::listen() {
     builder.RegisterService(serverStatusService.get());
     if (accountManagementService != nullptr) builder.RegisterService(accountManagementService.get());
     if (friendsService != nullptr) builder.RegisterService(friendsService.get());
+    if (splatoonService != nullptr) builder.RegisterService(splatoonService.get());
 
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {

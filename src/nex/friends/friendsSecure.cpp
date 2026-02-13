@@ -7,6 +7,7 @@
 #include "../../crypto/tools.hpp"
 #include "../../constants.hpp"
 #include "../../grpc/asyncRequest.hpp"
+#include "../../grpc/services/common.hpp"
 #include "../types/common/result.hpp"
 #include "../types/friendsSecure/principalPreference.hpp"
 #include "../types/friendsSecure/friendRequest.hpp"
@@ -2348,7 +2349,7 @@ Task<void> FriendsSecureRMC::updatePreference(ClientInfo client, Request req, st
 
     // Update preference in shared state
     UserPreference userPref{preference->showOnline, preference->showPlaying, preference->blockFriendRequest};
-    auto updatePrefTask = sharedState->updatePreferenceInRegisteredClientInfo(client.pid, userPref);
+    auto updatePrefTask = sharedState->updatePreferenceInRegisteredFriendsClientInfo(client.pid, userPref);
     co_await updatePrefTask;
 
     if (wasOnline && !preference->showOnline) {
@@ -2642,8 +2643,8 @@ Task<bool> FriendsSecureRMC::sendNotification(const ClientInfo& client, const Ni
     std::vector<T_ptr> params;
     params.push_back(std::make_unique<NintendoNotificationEvent>(notificationEvent));
 
-    std::unique_lock pidMapLock(pidMapMutex);
     if (client.serverId == serverId || dontResend) {
+        std::unique_lock pidMapLock(pidMapMutex);
         if (pidMap.contains(client.address)) {
             sendMsg(client, req, params);
         } else {
@@ -2668,19 +2669,7 @@ Task<bool> FriendsSecureRMC::sendNotification(const ClientInfo& client, const Ni
         }
 
         auto request = std::make_shared<grpcimpl::friends::v1::SendNotificationRequest>();
-        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_a(client.address.address.a);
-        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_b(client.address.address.b);
-        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_c(client.address.address.c);
-        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_d(client.address.address.d);
-        request->mutable_clientinfo()->mutable_address()->mutable_address()->set_port(client.address.address.port);
-        request->mutable_clientinfo()->mutable_address()->set_vport(client.address.vPort);
-        request->mutable_clientinfo()->mutable_address()->set_streamtype(client.address.streamType);
-        request->mutable_clientinfo()->mutable_address()->set_srcvport(client.address.srcVPort);
-        request->mutable_clientinfo()->mutable_address()->set_srcstreamtype(client.address.srcStreamType);
-        request->mutable_clientinfo()->set_minorversion(client.minorVersion);
-        request->mutable_clientinfo()->set_substreamid(client.substreamId);
-        request->mutable_clientinfo()->set_serverid(client.serverId);
-        request->mutable_clientinfo()->set_pid(client.pid);
+        grpcimpl::common::serializeClientInfo(client, request->mutable_clientinfo());
         request->set_type(static_cast<grpcimpl::friends::v1::NintendoNotificationType>(type));
         request->set_sender(sender);
         request->mutable_data()->set_type(data.getType());

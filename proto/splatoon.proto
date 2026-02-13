@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package grpcimpl.splatoon.v1;
+
+import "google/protobuf/empty.proto";
+import "common.proto";
+
+service SplatoonService {
+  rpc SendNotification(SendNotificationRequest) returns (google.protobuf.Empty);
+  rpc RequestProbeInitiationExt(ProbeRequest) returns (google.protobuf.Empty);
+}
+
+message SendNotificationRequest {
+  grpcimpl.common.ClientInfo clientInfo = 1;
+  NotificationType type = 2;
+  uint32 srcPid = 3;
+  uint32 param1 = 4;
+  uint32 param2 = 5;
+  string strParam = 6;
+  uint32 param3 = 7;
+}
+
+enum NotificationType {
+  NONE = 0;
+  NEW_PARTICIPANT = 3001;
+  PARTICIPATION_CANCELLED = 3002;
+  PARTICIPANT_DISCONNECTED = 3007;
+  PARTICIPATION_ENDED = 3008;
+  OWNERSHIP_CHANGED = 4000;
+  GATHERING_UNREGISTERED = 109000;
+  HOST_CHANGED = 110000;
+  MATCHMAKE_REFEREE_ROUND_STARTED = 116000;
+  SYSTEM_PASSWORD_CHANGED = 120000;
+  SYSTEM_PASSWORD_CLEARED = 121000;
+  SWITCH_GATHERING = 122000;
+}
+
+message ProbeRequest {
+  grpcimpl.common.ClientInfo clientInfo = 1;
+  bytes probe = 2;
+}

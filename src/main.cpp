@@ -266,7 +266,8 @@ int main(int argc, char** argv) {
                                                                  false, 2, SPLATOON_SECURE_SERVER_KEY,
                                                                  false);
 
-        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr, sharedState, settingsMgr->getNEXServerID());
+        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr, sharedState, settingsMgr->getNEXServerID(),
+            settingsMgr->getSplatoonSecuregRPCConnectionPoolMaxSize(), settingsMgr->getSplatoonSecuregRPCRequestTimeout());
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
         splatoonSecureSrv->listen(stop);

@@ -1,4 +1,6 @@
 target_sources(splatoon_server PRIVATE
+        common.cpp
+        common.hpp
         authService.cpp
         authService.hpp
         internalAccountManagementService.cpp
@@ -8,4 +10,6 @@ target_sources(splatoon_server PRIVATE
         accountManagementService.cpp
         accountManagementService.hpp
         friendsService.cpp
-        friendsService.hpp)
+        friendsService.hpp
+        splatoonService.cpp
+        splatoonService.hpp)

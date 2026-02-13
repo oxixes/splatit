@@ -2,19 +2,57 @@
 #include "../types/common/result.hpp"
 #include "../types/splatoonSecure/playingSession.hpp"
 #include "../../crypto/tools.hpp"
+#include "../../grpc/services/common.hpp"
+#include "../../grpc/asyncRequest.hpp"
 
 #include <random>
+#include <splatoon.pb.h>
 
+#include "../../grpc/services/splatoonService.hpp"
 #include "../types/splatoonSecure/competitionRankingScoreInfo.hpp"
 
 namespace nex::rmc {
 
 using namespace async;
 
+Task<std::optional<SplatoonRegisteredClientInfo>> getSplatoonRegisteredClientInfo(
+    const std::shared_ptr<ss::SharedState>& sharedState, uint32_t pid) {
+    auto [result, info] = co_await sharedState->getSplatoonRegisteredClientInfo(pid);
+    if (result != ss::Result::SUCCESS || !info.has_value()) {
+        co_return std::nullopt;
+    }
+
+    co_return std::move(info);
+}
+
+Task<std::optional<SessionInfo>> getSplatoonMatchmakeSession(
+    const std::shared_ptr<ss::SharedState>& sharedState, uint32_t gId) {
+    auto [result, sessionInfo] = co_await sharedState->getSplatoonMatchmakeSession(gId);
+    if (result != ss::Result::SUCCESS || !sessionInfo.has_value()) {
+        co_return std::nullopt;
+    }
+
+    co_return std::move(sessionInfo);
+}
+
+Task<std::optional<std::unordered_map<uint32_t, SessionInfo>>> getAllSplatoonMatchmakeSessions(
+    const std::shared_ptr<ss::SharedState>& sharedState) {
+    auto [result, sessions] = co_await sharedState->getAllSplatoonMatchmakeSessions();
+    if (result != ss::Result::SUCCESS) {
+        co_return std::nullopt;
+    }
+
+    co_return std::move(sessions);
+}
+
 SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
-                                     std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId):
-                                        Server(std::move(logger), serverId), db(std::move(db)), sharedState(std::move(sharedState)) {
+                                     std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
+                                     int gRCPPoolMaxSize, int gRCPRequestTimeout):
+                                     Server(std::move(logger), serverId), db(std::move(db)),
+                                     sharedState(std::move(sharedState)), gRCPRequestTimeout(gRCPRequestTimeout) {
     logGroup = Logger::group::SPLATOON_SECURE;
+
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize);
 
     // Protocol 3 - NAT Traversal
     REGISTER_CALL(SplatoonSecureRMC::requestProbeInitiationExt, 3, 3);
@@ -69,30 +107,85 @@ Task<void> SplatoonSecureRMC::requestProbeInitiationExt(ClientInfo client, Reque
             co_return;
         }
 
-        std::unique_lock clientsLock(registeredClientsMutex);
-
-        auto targetClientInfoIt = registeredClients.find(target.PID.value());
-        if (targetClientInfoIt == registeredClients.end()) {
+        auto targetClientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, target.PID.value());
+        if (!targetClientInfo.has_value()) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
             co_return;
         }
 
-        ClientInfo targetClientInfo = targetClientInfoIt->second.client;
+        if (client.serverId == serverId) {
+            Request probeReq;
+            probeReq.protocolId = 3;
+            probeReq.methodId = 2; // InitiateProbe
+            probeReq.extendedProtocolId = 0;
+            std::unique_lock reqCallIdLock(reqCallIdMutex);
+            probeReq.callId = nextReqCallId++;
+            reqCallIdLock.unlock();
 
-        Request probeReq;
-        probeReq.protocolId = 3;
-        probeReq.methodId = 2; // InitiateProbe
-        probeReq.extendedProtocolId = 0;
-        std::unique_lock reqCallIdLock(reqCallIdMutex);
-        probeReq.callId = nextReqCallId++;
-        reqCallIdLock.unlock();
+            std::vector<T_ptr> probeParams(1);
+            probeParams[0] = std::move(probe);
 
-        std::vector<T_ptr> probeParams(1);
-        probeParams[0] = std::move(probe);
+            sendMsg(targetClientInfo->client, probeReq, probeParams);
+        } else {
+            auto serverGRPCAddrResult = co_await sharedState->getPublicFacingRPCAddress(client.serverId);
+            if (serverGRPCAddrResult.first != ss::Result::SUCCESS || !serverGRPCAddrResult.second.has_value()) {
+                logger->log(Logger::level::WARN, logGroup, "Failed to get RPC address for server " + std::to_string(client.serverId)
+                                                           + " to send notification to " + std::to_string(client.pid));
+                res.success = false;
+                res.error = Error::CORE__EXCEPTION;
+                sendMsg(client, res, {});
+                co_return;
+            }
 
-        sendMsg(targetClientInfo, probeReq, probeParams);
+            std::string serverGRPCAddr = serverGRPCAddrResult.second.value();
+            auto channel = channelPool->getChannel(serverGRPCAddr);
+            if (!channel) {
+                logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                                 "Failed to get channel for server " + std::to_string(client.serverId) + " to send notification to " + std::to_string(client.pid));
+                res.success = false;
+                res.error = Error::CORE__EXCEPTION;
+                sendMsg(client, res, {});
+                co_return;
+            }
+
+            auto request = std::make_shared<grpcimpl::splatoon::v1::ProbeRequest>();
+            grpcimpl::common::serializeClientInfo(client, request->mutable_clientinfo());
+
+            std::vector<uint8_t> probeBytes = probe->encode();
+            request->set_probe(probeBytes.data(), probeBytes.size());
+
+            auto stub = grpcimpl::splatoon::v1::SplatoonService::NewStub(channel);
+
+            std::pair<std::shared_ptr<google::protobuf::Empty>, grpc::Status> response =
+                co_await grpcimpl::callAsync<
+                    grpcimpl::splatoon::v1::SplatoonService::Stub,
+                    void (grpcimpl::splatoon::v1::SplatoonService::Stub::async::*)(
+                        grpc::ClientContext*,
+                        const grpcimpl::splatoon::v1::ProbeRequest*,
+                        google::protobuf::Empty*,
+                        std::function<void(grpc::Status)>
+                    ),
+                    grpcimpl::splatoon::v1::ProbeRequest,
+                    google::protobuf::Empty
+                >(
+                    stub,
+                    &grpcimpl::splatoon::v1::SplatoonService::Stub::async::RequestProbeInitiationExt,
+                    std::move(request),
+                    gRCPRequestTimeout
+                );
+
+            if (!response.second.ok()) {
+                logger->log(Logger::level::WARN, logGroup, "Failed to send notification to " + std::to_string(client.pid)
+                                                           + " on server " + std::to_string(client.serverId)
+                                                           + ": " + response.second.error_message());
+                res.success = false;
+                res.error = Error::CORE__EXCEPTION;
+                sendMsg(client, res, {});
+                co_return;
+            }
+        }
     }
 
     sendMsg(client, res, {});
@@ -126,17 +219,22 @@ Task<void> SplatoonSecureRMC::reportNatProperties(ClientInfo client, Request req
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock clientsLock(registeredClientsMutex);
-
-    auto clientIt = registeredClients.find(client.pid);
-    if (clientIt == registeredClients.end()) {
+    auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, client.pid);
+    if (!clientInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
         co_return;
     }
 
-    clientIt->second.lastReportedNATProperties = {*mapping, *filtering, *rtt};
+    const auto updateResult = co_await sharedState->updateSplatoonRegisteredClientLastReportedNATProperties(
+        client.pid, NATProperties{*mapping, *filtering, *rtt});
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup,
+                    "Failed to update NAT properties in shared state for PID " + std::to_string(client.pid));
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
     sendMsg(client, res, {});
 }
@@ -196,10 +294,15 @@ Task<void> SplatoonSecureRMC::secure_register(ClientInfo client, Request req,
     if (nextRVConnId == 0) nextRVConnId++; // 0 is not a valid RVConnID
     rvConnIdLock.unlock();
 
-    sendMsg(client, res, params);
+    const auto setResult = co_await sharedState->setSplatoonRegisteredClientInfo(std::move(clientInfo));
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup,
+                    "Failed to store registered client in shared state for PID " + std::to_string(client.pid));
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
-    std::unique_lock clientsLock(registeredClientsMutex);
-    registeredClients[client.pid] = std::move(clientInfo);
+    sendMsg(client, res, params);
 }
 
 Task<void> SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
@@ -212,25 +315,29 @@ Task<void> SplatoonSecureRMC::replaceUrl(ClientInfo client, Request req,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock clientsLock(registeredClientsMutex);
-
-    auto clientInfoIt = registeredClients.find(client.pid);
-    if (clientInfoIt == registeredClients.end()) {
+    auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, client.pid);
+    if (!clientInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
         co_return;
     }
 
-    auto& clientInfo = clientInfoIt->second;
-
-    const auto urlIt = std::ranges::find(clientInfo.urls, *oldUrl);
-    if (urlIt == clientInfo.urls.end()) {
+    auto updatedURLs = clientInfo->urls;
+    const auto urlIt = std::ranges::find(updatedURLs, *oldUrl);
+    if (urlIt == updatedURLs.end()) {
         sendMsg(client, res, {});
         co_return;
     }
-
     *urlIt = *newUrl;
+
+    const auto updateResult = co_await sharedState->updateSplatoonRegisteredClientURLs(client.pid, updatedURLs);
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup,
+                    "Failed to update client URLs in shared state for PID " + std::to_string(client.pid));
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
     sendMsg(client, res, {});
 }
@@ -271,16 +378,14 @@ Task<void> SplatoonSecureRMC::unregisterGathering(ClientInfo client, Request req
     res.success = true;
     std::vector<T_ptr> params(1);
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end() || sessionIt->second.session->ownerPid != client.pid) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value() || sessionInfo->session->ownerPid != client.pid) {
         params[0] = std::make_unique<Bool>(0, false);
         sendMsg(client, res, params);
         co_return;
     }
 
-    unregisterGathering_internal(*gId, client.pid);
+    co_await unregisterGathering_internal(*gId, client.pid);
 
     params[0] = std::make_unique<Bool>(0, true);
     sendMsg(client, res, params);
@@ -296,15 +401,12 @@ Task<void> SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
     res.success = true;
     std::vector<T_ptr> params(2);
 
-    std::unique_ptr<AnyDataHolder> data;
-
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*id);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *id);
+    if (!sessionInfo.has_value()) {
         params[0] = std::make_unique<Bool>(0, false);
 
         Gathering gathering(client.minorVersion);
+        std::unique_ptr<AnyDataHolder> data = std::make_unique<AnyDataHolder>(client.minorVersion);
         data->set(gathering, "Gathering");
         params[1] = std::move(data);
 
@@ -315,8 +417,9 @@ Task<void> SplatoonSecureRMC::findBySingleId(ClientInfo client, Request req,
     params[0] = std::make_unique<Bool>(0, true);
 
     Gathering gathering(client.minorVersion);
-    gathering = static_cast<Gathering>(*sessionIt->second.session);
+    gathering = static_cast<Gathering>(*sessionInfo->session);
 
+    std::unique_ptr<AnyDataHolder> data = std::make_unique<AnyDataHolder>(client.minorVersion);
     data->set(gathering, "Gathering");
     params[1] = std::move(data);
 
@@ -333,30 +436,32 @@ Task<void> SplatoonSecureRMC::getSessionUrls(ClientInfo client, Request req,
     res.success = true;
     std::vector<T_ptr> params(1);
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, params);
         co_return;
     }
 
-    auto& sessionInfo = sessionIt->second;
-
     std::unique_ptr<List<StationURL>> urls = std::make_unique<List<StationURL>>(client.minorVersion);
+    const uint32_t hostPid = sessionInfo->session->hostPid;
+    auto hostClientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, hostPid);
+    if (!hostClientInfo.has_value() || hostClientInfo->urls.empty()) {
+        res.success = false;
+        res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
+        sendMsg(client, res, {});
+        co_return;
+    }
 
-    std::unique_lock clientsLock(registeredClientsMutex);
-
-    StationURL internalPublicUrl = registeredClients[sessionInfo.session->hostPid].urls[0];
-    StationURL hostPublicUrl = registeredClients[sessionInfo.session->hostPid].publicUrl;
-    uint32_t hostRVCID = registeredClients[sessionInfo.session->hostPid].rvConnId;
+    StationURL internalPublicUrl = hostClientInfo->urls[0];
+    StationURL hostPublicUrl = hostClientInfo->publicUrl;
+    uint32_t hostRVCID = hostClientInfo->rvConnId;
 
     internalPublicUrl.RVCID = hostRVCID;
     hostPublicUrl.RVCID = hostRVCID;
-    internalPublicUrl.PID = sessionInfo.session->hostPid;
-    hostPublicUrl.PID = sessionInfo.session->hostPid;
+    internalPublicUrl.PID = hostPid;
+    hostPublicUrl.PID = hostPid;
 
     urls->push_back(std::move(internalPublicUrl));
     urls->push_back(std::move(hostPublicUrl));
@@ -376,10 +481,8 @@ Task<void> SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         logger->log(Logger::level::DEBUG, logGroup, "Update session host failed: Invalid GID " + std::to_string(*gId) + " for client " + std::to_string(client.pid) + ".");
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
@@ -387,33 +490,35 @@ Task<void> SplatoonSecureRMC::updateSessionHost(ClientInfo client, Request req,
         co_return;
     }
 
-    auto& sessionInfo = sessionIt->second;
-
-    if (!sessionInfo.players.contains(client.pid)) {
+    if (!sessionInfo->players.contains(client.pid)) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    sessionInfo.session->hostPid = client.pid;
-    if (migrateOwner) sessionInfo.session->ownerPid = client.pid;
+    sessionInfo->session->hostPid = client.pid;
+    if (migrateOwner) sessionInfo->session->ownerPid = client.pid;
+
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update session host in shared state for GID " + std::to_string(*gId) + ".");
+    }
 
     sendMsg(client, res, {});
 
-    for (auto& pid : sessionInfo.players) {
-        std::unique_lock clientsLock(registeredClientsMutex);
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) continue;
+    for (auto& pid : sessionInfo->players) {
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
 
-        sendNotification(playerInfoIt->second.client, NotificationType::HOST_CHANGED,
-                         client.pid, sessionInfo.session->id, client.pid, "", 0);
+        co_await sendNotification(playerInfo->client, NotificationType::HOST_CHANGED,
+                         client.pid, sessionInfo->session->id, client.pid, "", 0);
 
         if (migrateOwner) {
             uint64_t msNow = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::system_clock::now().time_since_epoch()).count();
-            sendNotification(playerInfoIt->second.client, NotificationType::OWNERSHIP_CHANGED,
-                             client.pid, sessionInfo.session->id, client.pid,
+            co_await sendNotification(playerInfo->client, NotificationType::OWNERSHIP_CHANGED,
+                             client.pid, sessionInfo->session->id, client.pid,
                              std::to_string(msNow), 0);
         }
     }
@@ -430,10 +535,8 @@ Task<void> SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Reque
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         logger->log(Logger::level::DEBUG, logGroup, "Update session host failed: Invalid GID " + std::to_string(*gId) + " for client " + std::to_string(client.pid) + ".");
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
@@ -441,9 +544,7 @@ Task<void> SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Reque
         co_return;
     }
 
-    auto& sessionInfo = sessionIt->second;
-
-    if (!sessionInfo.players.contains(client.pid)) {
+    if (!sessionInfo->players.contains(client.pid)) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
@@ -453,13 +554,13 @@ Task<void> SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Reque
     std::set<uint32_t> consideredOwners;
 
     for (const auto& pid: *potentialNewOwners) {
-        if (!participantsOnly || sessionInfo.players.contains(pid)) {
+        if (!participantsOnly || sessionInfo->players.contains(pid)) {
             consideredOwners.insert(pid);
         }
     }
 
     // Also add the session players
-    for (const auto& pid : sessionInfo.players) {
+    for (const auto& pid : sessionInfo->players) {
         consideredOwners.insert(pid);
     }
 
@@ -473,15 +574,19 @@ Task<void> SplatoonSecureRMC::migrateGatheringOwnership(ClientInfo client, Reque
 
     uint32_t newOwnerPid = *consideredOwners.begin();
     logger->log(Logger::level::DEBUG, logGroup, "Migrating ownership of session " + std::to_string(*gId) + " to " + std::to_string(newOwnerPid) + " for client " + std::to_string(client.pid) + ".");
-    sessionInfo.session->ownerPid = newOwnerPid;
+    sessionInfo->session->ownerPid = newOwnerPid;
 
-    for (const auto& pid : sessionInfo.players) {
-        std::unique_lock clientsLock(registeredClientsMutex);
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) continue;
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update session owner in shared state for GID " + std::to_string(*gId) + ".");
+    }
 
-        sendNotification(playerInfoIt->second.client, NotificationType::OWNERSHIP_CHANGED,
-                         client.pid, sessionInfo.session->id, newOwnerPid, "", 0);
+    for (const auto& pid : sessionInfo->players) {
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
+
+        co_await sendNotification(playerInfo->client, NotificationType::OWNERSHIP_CHANGED,
+                         client.pid, sessionInfo->session->id, newOwnerPid, "", 0);
     }
 
     sendMsg(client, res, {});
@@ -498,16 +603,14 @@ Task<void> SplatoonSecureRMC::endParticipation(ClientInfo client, Request req,
     res.success = true;
     std::vector<T_ptr> params(1);
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end() || !sessionIt->second.players.contains(client.pid)) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value() || !sessionInfo->players.contains(client.pid)) {
         params[0] = std::make_unique<Bool>(0, false);
         sendMsg(client, res, {});
         co_return;
     }
 
-    removePlayerFromSession(*gId, client.pid, *msg);
+    co_await removePlayerFromSession(*gId, client.pid, *msg);
 
     sendMsg(client, res, {});
 }
@@ -521,24 +624,26 @@ Task<void> SplatoonSecureRMC::closeParticipation(ClientInfo client, Request req,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
         co_return;
     }
 
-    if (sessionIt->second.session->ownerPid != client.pid) {
+    if (sessionInfo->session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    sessionIt->second.session->openParticipation = false;
+    sessionInfo->session->openParticipation = false;
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to close participation in shared state for GID " + std::to_string(*gId) + ".");
+    }
 
     sendMsg(client, res, {});
 }
@@ -552,24 +657,26 @@ Task<void> SplatoonSecureRMC::openParticipation(ClientInfo client, Request req,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
         co_return;
     }
 
-    if (sessionIt->second.session->ownerPid != client.pid) {
+    if (sessionInfo->session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    sessionIt->second.session->openParticipation = true;
+    sessionInfo->session->openParticipation = true;
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to open participation in shared state for GID " + std::to_string(*gId) + ".");
+    }
 
     sendMsg(client, res, {});
 }
@@ -585,26 +692,28 @@ Task<void> SplatoonSecureRMC::modifyCurrentGameAttribute(ClientInfo client, Requ
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
         co_return;
     }
 
-    if (sessionIt->second.session->ownerPid != client.pid) {
+    if (sessionInfo->session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    if (*attribIndex < static_cast<uint32_t>(sessionIt->second.session->attributes.size())) {
+    if (*attribIndex < static_cast<uint32_t>(sessionInfo->session->attributes.size())) {
         logger->log(Logger::level::DEBUG, logGroup, "Modifying attribute " + std::to_string(*attribIndex) + " to " + std::to_string(*newValue) + " in session " + std::to_string(*gId) + " owned by " + std::to_string(client.pid) + ".");
         // sessionIt->second.session->attributes[attribIndex] = newValue;
+    }
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to modify game attributes in shared state for GID " + std::to_string(*gId) + ".");
     }
 
     sendMsg(client, res, {});
@@ -619,14 +728,12 @@ Task<void> SplatoonSecureRMC::getPlayingSessions(ClientInfo client, Request req,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock clientsLock(registeredClientsMutex);
-
     std::unique_ptr<List<PlayingSession>> sessions = std::make_unique<List<PlayingSession>>(client.minorVersion);
     for (const auto& pid : *pids) {
-        auto clientInfoIt = registeredClients.find(pid);
-        if (clientInfoIt == registeredClients.end()) continue;
+        auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!clientInfo.has_value()) continue;
 
-        for (const auto& existingSession : clientInfoIt->second.joinedGatherings) {
+        for (const auto& existingSession : clientInfo->joinedGatherings) {
             PlayingSession session(client.minorVersion);
             session.pid = pid;
             session.gathering = *existingSession;
@@ -652,24 +759,26 @@ Task<void> SplatoonSecureRMC::updateProgressScore(ClientInfo client, Request req
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-
-    auto sessionIt = matchmakeSessions.find(*gId);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, *gId);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
         co_return;
     }
 
-    if (sessionIt->second.session->ownerPid != client.pid) {
+    if (sessionInfo->session->ownerPid != client.pid) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    sessionIt->second.session->progressScore = *score;
+    sessionInfo->session->progressScore = *score;
+    const auto updateResult = co_await sharedState->updateSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (updateResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to update progress score in shared state for GID " + std::to_string(*gId) + ".");
+    }
 
     sendMsg(client, res, {});
 }
@@ -683,11 +792,8 @@ Task<void> SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-    std::unique_lock clientsLock(registeredClientsMutex);
-
-    auto clientInfoIt = registeredClients.find(client.pid);
-    if (clientInfoIt == registeredClients.end()) {
+    auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, client.pid);
+    if (!clientInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
         sendMsg(client, res, {});
@@ -703,20 +809,11 @@ Task<void> SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client,
 
     logger->log(Logger::level::DEBUG, logGroup, "Creating matchmake session with " + std::to_string(param->additionalParticipants.size()) + " additional participants.");
 
-    std::shared_ptr<MatchmakeSession> session = std::make_shared<MatchmakeSession>(param->srcMatchmakeSession);
-    session->id = getNewGatheringId();
-    session->ownerPid = client.pid;
-    session->hostPid = client.pid;
-    session->participationCount = static_cast<uint32_t>(param->additionalParticipants.size()) + 1;
-    session->openParticipation = true;
-    session->sessionKey = Buffer(crypto::genKey());
-    session->startedTime = std::chrono::system_clock::now();
-
     std::vector<uint32_t> playerPids;
     playerPids.push_back(client.pid);
     for (auto& pid : param->additionalParticipants) {
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) {
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
@@ -726,12 +823,27 @@ Task<void> SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client,
         playerPids.push_back(pid);
     }
 
-    if (!session->userPassword.empty()) session->userPasswordEnabled = true; // Why is this not set by the client?
+    std::shared_ptr<MatchmakeSession> session = std::make_shared<MatchmakeSession>(param->srcMatchmakeSession);
+    session->id = co_await getNewGatheringId();
+    session->ownerPid = client.pid;
+    session->hostPid = client.pid;
+    session->participationCount = static_cast<uint32_t>(param->additionalParticipants.size()) + 1;
+    session->openParticipation = true;
+    session->sessionKey = Buffer(crypto::genKey());
+    session->startedTime = std::chrono::system_clock::now();
+
+    if (!session->userPassword.empty()) session->userPasswordEnabled = true; // Why does the client not set this?
 
     logger->log(Logger::level::DEBUG, logGroup, "Matchmake session created with ID " + std::to_string(session->id) + " for " + std::to_string(client.pid) + ":\n" + session->toString());
 
     // All checks passed, add players to session and send success
-    matchmakeSessions[session->id] = {session, std::set<uint32_t>(playerPids.begin(), playerPids.end())};
+    SessionInfo sessionInfo{session, std::set<uint32_t>(playerPids.begin(), playerPids.end())};
+    const auto setResult = co_await sharedState->setSplatoonMatchmakeSession(std::move(sessionInfo));
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to store new matchmake session in shared state for GID " + std::to_string(session->id) + ".");
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
     session->minorVersion = client.minorVersion;
     std::vector<T_ptr> params(1);
@@ -739,17 +851,14 @@ Task<void> SplatoonSecureRMC::createMatchmakeSessionWithParam(ClientInfo client,
 
     sendMsg(client, res, params);
 
-    auto sessionPtr = matchmakeSessions[session->id].session;
     // Send notifications to all players
     // FIXME Actually send only to owner
     for (auto& pid : playerPids) {
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) continue;
-
-        playerInfoIt->second.joinedGatherings.push_back(sessionPtr);
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
 
         for (auto& playerPid : playerPids) {
-            sendNotification(playerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
+            co_await sendNotification(playerInfo->client, NotificationType::NEW_PARTICIPANT,
                              client.pid, session->id, playerPid, param->joinMessage, 1);
         }
     }
@@ -764,25 +873,23 @@ Task<void> SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, R
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-    std::unique_lock clientsLock(registeredClientsMutex);
-    auto clientInfoIt = registeredClients.find(client.pid);
-    if (clientInfoIt == registeredClients.end()) {
+    auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, client.pid);
+    if (!clientInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED;
         sendMsg(client, res, {});
         co_return;
     }
 
-    auto sessionIt = matchmakeSessions.find(param->gid);
-    if (sessionIt == matchmakeSessions.end()) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, param->gid);
+    if (!sessionInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__INVALID_GID;
         sendMsg(client, res, {});
         co_return;
     }
 
-    auto&[session, players] = sessionIt->second;
+    auto& session = sessionInfo->session;
     if (static_cast<uint32_t>(session->participationCount) + param->additionalParticipants.size() >
             static_cast<uint16_t>(session->maxParticipants)) {
         res.success = false;
@@ -808,8 +915,8 @@ Task<void> SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, R
     std::vector<uint32_t> playerPids;
     playerPids.push_back(client.pid);
     for (auto& pid : param->additionalParticipants) {
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) {
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
@@ -820,36 +927,41 @@ Task<void> SplatoonSecureRMC::joinMatchmakeSessionWithParam(ClientInfo client, R
     }
 
     // All checks passed, add players to session and send success
-    sessionIt->second.session->participationCount += static_cast<uint32_t>(playerPids.size());
+    sessionInfo->session->participationCount += static_cast<uint32_t>(playerPids.size());
 
     std::vector<T_ptr> params(1);
-    params[0] = std::make_unique<MatchmakeSession>(*sessionIt->second.session);
+    params[0] = std::make_unique<MatchmakeSession>(*sessionInfo->session);
     params[0]->minorVersion = client.minorVersion;
 
     sendMsg(client, res, params);
 
+    const auto existingPlayers = sessionInfo->players;
     for (auto& pid : playerPids) {
-        auto playerInfoIt = registeredClients.find(pid);
-        playerInfoIt->second.joinedGatherings.push_back(session);
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
 
-        for (auto& existingPlayerPid : sessionIt->second.players) {
-            auto existingPlayerInfoIt = registeredClients.find(existingPlayerPid);
-            if (existingPlayerInfoIt == registeredClients.end()) continue;
+        for (auto& existingPlayerPid : existingPlayers) {
+            auto existingPlayerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, existingPlayerPid);
+            if (!existingPlayerInfo.has_value()) continue;
 
-            sendNotification(existingPlayerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
-                             client.pid, sessionIt->first, pid, param->joinMessage, 1);
+            co_await sendNotification(existingPlayerInfo->client, NotificationType::NEW_PARTICIPANT,
+                             client.pid, param->gid, pid, param->joinMessage, 1);
         }
     }
 
-    sessionIt->second.players.insert(playerPids.begin(), playerPids.end());
+    sessionInfo->players.insert(playerPids.begin(), playerPids.end());
+    const auto setResult = co_await sharedState->setSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to persist joined matchmake session in shared state for GID " + std::to_string(param->gid) + ".");
+    }
 
     for (auto& pid : playerPids) {
-        auto playerInfoIt = registeredClients.find(pid);
-        if (playerInfoIt == registeredClients.end()) continue;
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
 
-        for (auto& existingPlayerPid : sessionIt->second.players) {
-            sendNotification(playerInfoIt->second.client, NotificationType::NEW_PARTICIPANT,
-                             client.pid, sessionIt->first, existingPlayerPid, param->joinMessage, 1);
+        for (auto& existingPlayerPid : sessionInfo->players) {
+            co_await sendNotification(playerInfo->client, NotificationType::NEW_PARTICIPANT,
+                             client.pid, param->gid, existingPlayerPid, param->joinMessage, 1);
         }
     }
 }
@@ -863,11 +975,8 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
     res.callId = req.callId;
     res.success = true;
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-    std::unique_lock clientsLock(registeredClientsMutex);
-
-    auto clientInfoIt = registeredClients.find(client.pid);
-    if (clientInfoIt == registeredClients.end()) {
+    auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, client.pid);
+    if (!clientInfo.has_value()) {
         res.success = false;
         res.error = Error::RENDEZ_VOUS__NOT_AUTHENTICATED; // Guess, probably not what the real server sends
         sendMsg(client, res, {});
@@ -876,16 +985,15 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
 
     if (param->gidForParitipationCheck != UInt32(0)) {
         // Check that the client is already in the gathering
-        auto sessionIt = matchmakeSessions.find(param->gidForParitipationCheck);
-        if (sessionIt == matchmakeSessions.end()) {
+        auto sessionInfoForCheck = co_await getSplatoonMatchmakeSession(sharedState, param->gidForParitipationCheck);
+        if (!sessionInfoForCheck.has_value()) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__INVALID_GID;
             sendMsg(client, res, {});
             co_return;
         }
 
-        auto& sessionInfo = sessionIt->second;
-        if (!sessionInfo.players.contains(client.pid)) {
+        if (!sessionInfoForCheck->players.contains(client.pid)) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__PERMISSION_DENIED;
             sendMsg(client, res, {});
@@ -893,10 +1001,9 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
         }
     }
 
-    auto& clientInfo = clientInfoIt->second;
     for (auto& additionalPlayer : param->additionalParticipants) {
-        auto playerInfoIt = registeredClients.find(additionalPlayer);
-        if (playerInfoIt == registeredClients.end()) {
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, additionalPlayer);
+        if (!playerInfo.has_value()) {
             res.success = false;
             res.error = Error::RENDEZ_VOUS__USER_IS_OFFLINE;
             sendMsg(client, res, {});
@@ -905,8 +1012,8 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
 
         bool foundGathering = false;
 
-        for (auto& clientGathering : clientInfo.joinedGatherings) {
-            for (auto& playerGathering : playerInfoIt->second.joinedGatherings) {
+        for (auto& clientGathering : clientInfo->joinedGatherings) {
+            for (auto& playerGathering : playerInfo->joinedGatherings) {
                 if (clientGathering->id == playerGathering->id) {
                     foundGathering = true;
                     break;
@@ -924,9 +1031,15 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
 
     logger->log(Logger::level::DEBUG, logGroup, "AutoMatchmakeParam from " + std::to_string(client.pid) + ":\n" + param->toString());
 
+    auto allSessions = co_await getAllSplatoonMatchmakeSessions(sharedState);
+    if (!allSessions.has_value()) {
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
+
     // Log all the sessions that are currently available for matchmaking
     logger->log(Logger::level::DEBUG, logGroup, "Current matchmake sessions:");
-    for (const auto &[session, players]: matchmakeSessions | std::views::values) {
+    for (const auto &[session, players]: *allSessions | std::views::values) {
         logger->log(Logger::level::DEBUG, logGroup, session->toString());
     }
 
@@ -934,7 +1047,7 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
         bool valid = true;
 
         // Filter out sessions that are already joined by the client
-        for (auto& clientGathering : clientInfo.joinedGatherings) {
+        for (auto& clientGathering : clientInfo->joinedGatherings) {
             if (clientGathering->id == sessionInfo.session->id) {
                 valid = false;
                 break;
@@ -1010,7 +1123,7 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
     };
 
     std::priority_queue<std::pair<uint32_t, SessionInfo>, std::vector<std::pair<uint32_t, SessionInfo>>, decltype(cmp)> validSessions(cmp);
-    for (auto &val: matchmakeSessions | std::views::values) {
+    for (auto &val: *allSessions | std::views::values) {
         try {
             if (filter(val)) {
                 uint32_t sessionExp = val.session->attributes[1];
@@ -1036,7 +1149,7 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
     if (validSessions.empty()) {
         auto session = std::make_shared<MatchmakeSession>(std::move(param->srcMatchmakeSession));
 
-        session->id = getNewGatheringId();
+        session->id = co_await getNewGatheringId();
         session->ownerPid = client.pid;
         session->hostPid = client.pid;
         if (session->gameMode == static_cast<uint32_t>(12)) { // Festival, I don't know why it is set to not open by default
@@ -1050,22 +1163,33 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
         players.insert(client.pid);
         for (auto& pid : param->additionalParticipants) players.insert(pid);
 
-        matchmakeSessions.insert({session->id, {session, players}});
-        sessionInfo = matchmakeSessions[session->id];
+        sessionInfo = {session, players};
         params[0] = std::make_unique<MatchmakeSession>(*session);
 
         logger->log(Logger::level::INFO, logGroup, "Creating new session " + std::to_string(session->id) + " for " + std::to_string(client.pid) + ":\n" + session->toString());
     } else {
-        auto& session = matchmakeSessions[validSessions.top().second.session->id];
-        session.players.insert(client.pid);
-        for (auto& pid : param->additionalParticipants) session.players.insert(pid);
-        sessionInfo = session;
+        sessionInfo = validSessions.top().second;
+        sessionInfo.players.insert(client.pid);
+        for (auto& pid : param->additionalParticipants) sessionInfo.players.insert(pid);
         params[0] = std::make_unique<MatchmakeSession>(*sessionInfo.session);
 
         logger->log(Logger::level::INFO, logGroup, "Joining existing session " + std::to_string(sessionInfo.session->id) + " for " + std::to_string(client.pid) + ":\n" + sessionInfo.session->toString());
     }
 
     sessionInfo.session->participationCount += static_cast<uint32_t>(param->additionalParticipants.size()) + 1;
+    const uint32_t sessionId = sessionInfo.session->id;
+    const auto setResult = co_await sharedState->setSplatoonMatchmakeSession(std::move(sessionInfo));
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to persist automatch session in shared state for GID " + std::to_string(sessionId) + ".");
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
+
+    auto persistedSessionInfo = co_await getSplatoonMatchmakeSession(sharedState, sessionId);
+    if (!persistedSessionInfo.has_value()) {
+        sendMsg(client, createError(req, Error::CORE__EXCEPTION), {});
+        co_return;
+    }
 
     params[0]->minorVersion = client.minorVersion;
     sendMsg(client, res, params);
@@ -1077,31 +1201,32 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
     // Switch the players to the new gathering
     std::set<uint32_t> switchedPlayers;
     for (auto& playerPid : newPlayers) {
-        auto playerInfoIt = registeredClients.find(playerPid);
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, playerPid);
+        if (!playerInfo.has_value()) continue;
         // We don't need to check if the player is online, because it has been checked before
 
         if (param->gidForParitipationCheck != UInt32(0)) {
             switchedPlayers.insert(playerPid);
 
-            sendNotification(playerInfoIt->second.client, NotificationType::SWITCH_GATHERING,
-                             client.pid, sessionInfo.session->id, playerPid, "", 1);
+            co_await sendNotification(playerInfo->client, NotificationType::SWITCH_GATHERING,
+                             client.pid, persistedSessionInfo->session->id, playerPid, "", 1);
         }
-
-        playerInfoIt->second.joinedGatherings.push_back(sessionInfo.session);
     }
 
     // We notify other players of the new participant(s)
-    for (auto& pid : sessionInfo.players) {
+    for (auto& pid : persistedSessionInfo->players) {
 //        if (newPlayers.contains(pid)) continue;
-        if (sessionInfo.session->ownerPid != pid && client.pid != pid) continue;
-        sendNotification(registeredClients[pid].client, NotificationType::NEW_PARTICIPANT, client.pid,
-                         sessionInfo.session->id, client.pid, "", 1);
+        if (persistedSessionInfo->session->ownerPid != pid && client.pid != pid) continue;
+        auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!playerInfo.has_value()) continue;
+        co_await sendNotification(playerInfo->client, NotificationType::NEW_PARTICIPANT, client.pid,
+                         persistedSessionInfo->session->id, client.pid, "", 1);
     }
 
     // And we also send notifications to the new participant(s), one for each player already in the session (including themselves)
 //    for (auto& pid : sessionInfo.players) {
 //        for (auto& newPlayerPid : newPlayers) {
-//            sendNotification(registeredClients[newPlayerPid].client, NotificationType::NEW_PARTICIPANT, client.pid,
+//            co_await sendNotification(newPlayerInfo->client, NotificationType::NEW_PARTICIPANT, client.pid,
 //                             sessionInfo.session->id, pid, "", 1);
 //        }
 //    }
@@ -1182,25 +1307,34 @@ Task<void> SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, R
 }
 
 Task<void> SplatoonSecureRMC::onDisconnect(prudp::PRUDPAddress address) {
-    std::unique_lock sessionsMutex(matchmakeSessionsMutex);
-    std::unique_lock clientLock(registeredClientsMutex);
     std::unique_lock pidMapLock(pidMapMutex);
-    auto clientIt = registeredClients.find(pidMap[address]);
-    if (clientIt != registeredClients.end()) {
-        for (auto& gathering : clientIt->second.joinedGatherings) {
+    auto pidIt = pidMap.find(address);
+    if (pidIt != pidMap.end()) {
+        const uint32_t pid = pidIt->second;
+        pidMapLock.unlock();
+
+        auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (clientInfo.has_value()) {
+            for (auto& gathering : clientInfo->joinedGatherings) {
             // If the client is in a gathering, we remove them from it
-            removePlayerFromSession(gathering->id, clientIt->second.client.pid, "", true);
+                co_await removePlayerFromSession(gathering->id, pid, "", true);
+            }
         }
+
+        const auto deleteResult = co_await sharedState->deleteSplatoonRegisteredClientInfo(pid);
+        if (deleteResult != ss::Result::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup,
+                        "Failed to delete disconnected client from shared state for PID " + std::to_string(pid));
+        }
+    } else {
+        pidMapLock.unlock();
     }
 
-    if (clientIt != registeredClients.end()) registeredClients.erase(pidMap[address]);
-
-    clientLock.unlock();
     Server::onDisconnect(address);
     co_return;
 }
 
-uint32_t SplatoonSecureRMC::getNewGatheringId() {
+Task<uint32_t> SplatoonSecureRMC::getNewGatheringId() {
     // We choose a random number between 1000 and UINT32_MAX, and if it's already taken, we try again.
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -1208,136 +1342,205 @@ uint32_t SplatoonSecureRMC::getNewGatheringId() {
 
     uint32_t id = dis(gen);
 
-    std::unique_lock sessionsLock(matchmakeSessionsMutex);
-    while (matchmakeSessions.contains(id)) {
+    while (true) {
+        auto [getResult, sessionInfo] = co_await sharedState->getSplatoonMatchmakeSession(id);
+        if (getResult != ss::Result::SUCCESS || !sessionInfo.has_value()) break;
         id = dis(gen);
     }
 
-    return id;
+    co_return id;
 }
 
-void SplatoonSecureRMC::sendNotification(ClientInfo client, NotificationType type, uint32_t srcPid, uint32_t param1,
-                                         uint32_t param2, const std::string& strParam, uint32_t param3) {
-    Request notification;
-    notification.protocolId = 14;
-    notification.methodId = 1;
-    notification.extendedProtocolId = 0;
-    std::unique_lock reqCallIdLock(reqCallIdMutex);
-    notification.callId = nextReqCallId++;
-    reqCallIdLock.unlock();
+Task<bool> SplatoonSecureRMC::sendNotification(ClientInfo client, const NotificationType type, const uint32_t srcPid, const uint32_t param1,
+                                               const uint32_t param2, const std::string& strParam, const uint32_t param3, bool dontResend) {
+    if (client.serverId == serverId || dontResend) {
+        std::unique_lock pidMapLock(pidMapMutex);
+        if (pidMap.contains(client.address)) {
+            Request notification;
+            notification.protocolId = 14;
+            notification.methodId = 1;
+            notification.extendedProtocolId = 0;
+            std::unique_lock reqCallIdLock(reqCallIdMutex);
+            notification.callId = nextReqCallId++;
+            reqCallIdLock.unlock();
 
-    std::vector<T_ptr> params(1);
-    std::unique_ptr<NotificationEvent> event = std::make_unique<NotificationEvent>(client.minorVersion);
-    event->type = type;
-    event->srcPid = srcPid;
-    event->param1 = param1;
-    event->param2 = param2;
-    event->strParam = strParam;
-    event->param3 = param3;
+            std::vector<T_ptr> params(1);
+            std::unique_ptr<NotificationEvent> event = std::make_unique<NotificationEvent>(client.minorVersion);
+            event->type = type;
+            event->srcPid = srcPid;
+            event->param1 = param1;
+            event->param2 = param2;
+            event->strParam = strParam;
+            event->param3 = param3;
 
-    params[0] = std::move(event);
+            params[0] = std::move(event);
 
-    sendMsg(client, notification, params);
-}
+            sendMsg(client, notification, params);
+        } else {
+            logger->log(Logger::level::WARN, logGroup, "Failed to send notification to " + std::to_string(client.pid)
+                                                       + " because they are not connected");
+            co_return false;
+        }
+    } else {
+        auto serverGRPCAddrResult = co_await sharedState->getPublicFacingRPCAddress(client.serverId);
+        if (serverGRPCAddrResult.first != ss::Result::SUCCESS || !serverGRPCAddrResult.second.has_value()) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to get RPC address for server " + std::to_string(client.serverId)
+                                                       + " to send notification to " + std::to_string(client.pid));
+            co_return false;
+        }
 
-void SplatoonSecureRMC::unregisterGathering_internal(uint32_t gId, uint32_t srcPid) {
-    std::unique_lock sessionsMutex(matchmakeSessionsMutex);
-    auto sessionIt = matchmakeSessions.find(gId);
-    if (sessionIt == matchmakeSessions.end()) return;
+        std::string serverGRPCAddr = serverGRPCAddrResult.second.value();
+        auto channel = channelPool->getChannel(serverGRPCAddr);
+        if (!channel) {
+            logger->log(Logger::level::FAILURE, Logger::group::ACCOUNT,
+                             "Failed to get channel for server " + std::to_string(client.serverId) + " to send notification to " + std::to_string(client.pid));
+            co_return false;
+        }
 
-    std::unique_lock clientsMutex(registeredClientsMutex);
-    auto& sessionInfo = sessionIt->second;
-    for (auto& pid : sessionInfo.players) {
-        auto clientIt = registeredClients.find(pid);
+        auto request = std::make_shared<grpcimpl::splatoon::v1::SendNotificationRequest>();
+        grpcimpl::common::serializeClientInfo(client, request->mutable_clientinfo());
+        request->set_type(static_cast<grpcimpl::splatoon::v1::NotificationType>(type));
+        request->set_srcpid(srcPid);
+        request->set_param1(param1);
+        request->set_param2(param2);
+        request->set_strparam(strParam);
+        request->set_param3(param3);
 
-        sendNotification(clientIt->second.client, NotificationType::GATHERING_UNREGISTERED, srcPid, gId, 0, "", 0);
+        auto stub = grpcimpl::splatoon::v1::SplatoonService::NewStub(channel);
 
-        auto& clientInfo = clientIt->second;
-        
-        // Remove the gathering from the client's joinedGatherings
-        auto gatheringIt = std::ranges::find_if(clientInfo.joinedGatherings,
-                                                [gId](const std::shared_ptr<Gathering>& gathering) {
-                                                    return gathering->id == gId;
-                                                });
+        std::pair<std::shared_ptr<google::protobuf::Empty>, grpc::Status> response =
+            co_await grpcimpl::callAsync<
+                grpcimpl::splatoon::v1::SplatoonService::Stub,
+                void (grpcimpl::splatoon::v1::SplatoonService::Stub::async::*)(
+                    grpc::ClientContext*,
+                    const grpcimpl::splatoon::v1::SendNotificationRequest*,
+                    google::protobuf::Empty*,
+                    std::function<void(grpc::Status)>
+                ),
+                grpcimpl::splatoon::v1::SendNotificationRequest,
+                google::protobuf::Empty
+            >(
+                stub,
+                &grpcimpl::splatoon::v1::SplatoonService::Stub::async::SendNotification,
+                std::move(request),
+                gRCPRequestTimeout
+            );
 
-        if (gatheringIt != clientInfo.joinedGatherings.end()) {
-            clientInfo.joinedGatherings.erase(gatheringIt);
+        if (!response.second.ok()) {
+            logger->log(Logger::level::WARN, logGroup, "Failed to send notification to " + std::to_string(client.pid)
+                                                       + " on server " + std::to_string(client.serverId)
+                                                       + ": " + response.second.error_message());
+            co_return false;
         }
     }
 
-    matchmakeSessions.erase(sessionIt);
+    co_return true;
 }
 
-void SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg, bool disconnected) {
-    std::unique_lock sessionsMutex(matchmakeSessionsMutex);
-    auto sessionIt = matchmakeSessions.find(gId);
-    if (sessionIt == matchmakeSessions.end()) return;
+Task<void> SplatoonSecureRMC::unregisterGathering_internal(uint32_t gId, uint32_t srcPid) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, gId);
+    if (!sessionInfo.has_value()) co_return;
 
-    std::unique_lock clientsMutex(registeredClientsMutex);
+    for (auto& pid : sessionInfo->players) {
+        auto clientInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+        if (!clientInfo.has_value()) continue;
 
-    if (!sessionIt->second.players.contains(playerPid)) {
+        co_await sendNotification(clientInfo->client, NotificationType::GATHERING_UNREGISTERED, srcPid, gId, 0, "", 0);
+    }
+
+    const auto deleteResult = co_await sharedState->deleteSplatoonMatchmakeSession(gId);
+    if (deleteResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup,
+                    "Failed to delete gathering in shared state for GID " + std::to_string(gId));
+    }
+}
+
+Task<void> SplatoonSecureRMC::removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg, bool disconnected) {
+    auto sessionInfo = co_await getSplatoonMatchmakeSession(sharedState, gId);
+    if (!sessionInfo.has_value()) co_return;
+
+    if (!sessionInfo->players.contains(playerPid)) {
         logger->log(Logger::level::WARN, logGroup, "Player " + std::to_string(playerPid) + " tried to leave session " + std::to_string(gId) + ", but is not in it.");
-        return;
+        co_return;
     }
 
-    auto clientInfoIt = registeredClients.find(playerPid);
-    if (clientInfoIt == registeredClients.end()) {
+    auto playerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, playerPid);
+    if (!playerInfo.has_value()) {
         logger->log(Logger::level::WARN, logGroup, "Player " + std::to_string(playerPid) + " tried to leave session " + std::to_string(gId) + ", but is not registered.");
-        return;
+        co_return;
     }
 
-    auto& clientInfo = registeredClients[playerPid];
-
-    if (!disconnected) sendNotification(registeredClients[playerPid].client, NotificationType::PARTICIPATION_ENDED,
-                                        playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-
-    sessionIt->second.players.erase(playerPid);
-    sessionIt->second.session->participationCount--;
-
-    // Remove the gathering from the client's joinedGatherings
-    const auto gatheringIt = std::ranges::find_if(clientInfo.joinedGatherings,
-                                            [gId](const std::shared_ptr<Gathering>& gathering) {
-                                                return gathering->id == gId;
-                                            });
-
-    if (gatheringIt != clientInfo.joinedGatherings.end()) {
-        clientInfo.joinedGatherings.erase(gatheringIt);
+    if (!disconnected) {
+        co_await sendNotification(playerInfo->client, NotificationType::PARTICIPATION_ENDED,
+                         playerPid, sessionInfo->session->id, playerPid, msg, 0);
     }
 
-    if (sessionIt->second.players.empty()) {
-        unregisterGathering_internal(gId, playerPid);
-        return;
+    sessionInfo->players.erase(playerPid);
+    sessionInfo->session->participationCount = static_cast<uint32_t>(sessionInfo->players.size());
+
+    if (sessionInfo->players.empty()) {
+        co_await unregisterGathering_internal(gId, playerPid);
+        co_return;
     }
 
-    uint32_t ownerPid = sessionIt->second.session->ownerPid;
-    sendNotification(registeredClients[ownerPid].client, disconnected ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
-                     playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-    // for (auto& pid : sessionIt->second.players) {
-    //     sendNotification(registeredClients[pid].client,
-    //                      (disconnected) ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
-    //                      playerPid, sessionIt->second.session->id, playerPid, msg, 0);
-    // }
+    uint32_t ownerPid = sessionInfo->session->ownerPid;
+    auto ownerInfo = co_await getSplatoonRegisteredClientInfo(sharedState, ownerPid);
+    if (ownerInfo.has_value()) {
+        co_await sendNotification(ownerInfo->client, disconnected ? NotificationType::PARTICIPANT_DISCONNECTED : NotificationType::PARTICIPATION_ENDED,
+                         playerPid, sessionInfo->session->id, playerPid, msg, 0);
+    }
 
-    if (sessionIt->second.session->ownerPid == playerPid) {
+    if (sessionInfo->session->ownerPid == playerPid) {
         // TODO Choose the best player as the new owner
-        sessionIt->second.session->ownerPid = *sessionIt->second.players.begin();
-        for (auto& pid : sessionIt->second.players) {
+        sessionInfo->session->ownerPid = *sessionInfo->players.begin();
+        for (auto& pid : sessionInfo->players) {
             uint64_t msNow = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::system_clock::now().time_since_epoch()).count();
-            sendNotification(registeredClients[pid].client, NotificationType::OWNERSHIP_CHANGED, playerPid,
-                             sessionIt->second.session->id, sessionIt->second.session->ownerPid,
-                             std::to_string(msNow), 0);
+            auto participantInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+            if (!participantInfo.has_value()) continue;
+            co_await sendNotification(participantInfo->client, NotificationType::OWNERSHIP_CHANGED, playerPid,
+                             sessionInfo->session->id, sessionInfo->session->ownerPid, std::to_string(msNow), 0);
         }
     }
 
-    if (sessionIt->second.session->hostPid == playerPid) {
+    if (sessionInfo->session->hostPid == playerPid) {
         // TODO Choose the best player as the new host
-        sessionIt->second.session->hostPid = *sessionIt->second.players.begin();
-        for (auto& pid : sessionIt->second.players) {
-            sendNotification(registeredClients[pid].client, NotificationType::HOST_CHANGED, playerPid,
-                             sessionIt->second.session->id, sessionIt->second.session->hostPid, "", 0);
+        sessionInfo->session->hostPid = *sessionInfo->players.begin();
+        for (auto& pid : sessionInfo->players) {
+            auto participantInfo = co_await getSplatoonRegisteredClientInfo(sharedState, pid);
+            if (!participantInfo.has_value()) continue;
+            co_await sendNotification(participantInfo->client, NotificationType::HOST_CHANGED, playerPid,
+                             sessionInfo->session->id, sessionInfo->session->hostPid, "", 0);
         }
     }
+
+    const auto setResult = co_await sharedState->setSplatoonMatchmakeSession(std::move(*sessionInfo));
+    if (setResult != ss::Result::SUCCESS) {
+        logger->log(Logger::level::WARN, logGroup,
+                    "Failed to update session while removing player in shared state for GID " + std::to_string(gId));
+    }
+}
+
+Task<bool> SplatoonSecureRMC::externalRequestProbeInitiationExt(const ClientInfo client, std::unique_ptr<StationURL> probe) {
+    if (client.serverId != serverId) {
+        logger->log(Logger::level::WARN, logGroup, "Failed to send probe initiation request to " + std::to_string(client.pid)
+                                                   + " because they are not connected to this server.");
+        co_return false;
+    }
+
+    Request probeReq;
+    probeReq.protocolId = 3;
+    probeReq.methodId = 2; // InitiateProbe
+    probeReq.extendedProtocolId = 0;
+    std::unique_lock reqCallIdLock(reqCallIdMutex);
+    probeReq.callId = nextReqCallId++;
+    reqCallIdLock.unlock();
+
+    std::vector<T_ptr> probeParams(1);
+    probeParams[0] = std::move(probe);
+
+    sendMsg(client, probeReq, probeParams);
+    co_return true;
 }
 
 } // namespace nex::rmc

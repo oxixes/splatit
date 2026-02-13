@@ -441,6 +441,16 @@
           "description": "Number of worker threads to use",
           "type": "integer",
           "minimum": 1
+        },
+        "grpcRequestTimeout": {
+          "description": "Timeout for gRPC requests (in milliseconds)",
+          "type": "integer",
+          "minimum": 1
+        },
+        "grpcConnectionPoolMaxSize": {
+          "description": "Maximum size of the gRPC connection pool",
+          "type": "integer",
+          "minimum": 1
         }
       },
       "if": {
@@ -449,7 +459,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount"]
+        "required": ["listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize"]
       },
       "required": ["enabled"]
     },

@@ -12,3 +12,27 @@ message PageResponse {
   uint64 totalPages = 2;
   uint64 currentPage = 3;
 }
+
+message IPv4Address {
+  uint32 a = 1;
+  uint32 b = 2;
+  uint32 c = 3;
+  uint32 d = 4;
+  uint32 port = 5;
+}
+
+message PRUDPAddress {
+  IPv4Address address = 1;
+  uint32 vPort = 2;
+  uint32 streamType = 3;
+  uint32 srcVPort = 4;
+  uint32 srcStreamType = 5;
+}
+
+message ClientInfo {
+  PRUDPAddress address = 1;
+  uint32 minorVersion = 2;
+  uint32 substreamId = 3;
+  uint32 serverId = 4;
+  uint32 pid = 5;
+}

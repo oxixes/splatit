@@ -3,40 +3,17 @@ syntax = "proto3";
 package grpcimpl.friends.v1;
 
 import "google/protobuf/empty.proto";
+import "common.proto";
 
 service FriendsService {
   rpc SendNotification(SendNotificationRequest) returns (google.protobuf.Empty);
 }
 
 message SendNotificationRequest {
-  ClientInfo clientInfo = 1;
+  grpcimpl.common.ClientInfo clientInfo = 1;
   NintendoNotificationType type = 2;
   uint32 sender = 3;
   AnyDataHolder data = 4;
-}
-
-message IPv4Address {
-  uint32 a = 1;
-  uint32 b = 2;
-  uint32 c = 3;
-  uint32 d = 4;
-  uint32 port = 5;
-}
-
-message PRUDPAddress {
-  IPv4Address address = 1;
-  uint32 vPort = 2;
-  uint32 streamType = 3;
-  uint32 srcVPort = 4;
-  uint32 srcStreamType = 5;
-}
-
-message ClientInfo {
-  PRUDPAddress address = 1;
-  uint32 minorVersion = 2;
-  uint32 substreamId = 3;
-  uint32 serverId = 4;
-  uint32 pid = 5;
 }
 
 message AnyDataHolder {

@@ -16,6 +16,7 @@
 #include "services/accountManagementService.hpp"
 #include "services/friendsService.hpp"
 #include "services/internalAccountManagementService.hpp"
+#include "services/splatoonService.hpp"
 
 namespace grpcimpl {
 
@@ -56,6 +57,7 @@ private:
     std::shared_ptr<grpcimpl::serverstatus::v1::ServerStatusServiceImpl> serverStatusService;
     std::shared_ptr<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl> accountManagementService;
     std::shared_ptr<grpcimpl::friends::v1::FriendsServiceImpl> friendsService;
+    std::shared_ptr<grpcimpl::splatoon::v1::SplatoonServiceImpl> splatoonService;
 
     bool reflectionEnabled = false;
 };

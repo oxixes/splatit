@@ -7,7 +7,6 @@
 #include "../types/common/stationURL.hpp"
 #include "../types/common/list.hpp"
 #include "../types/splatoonSecure/gathering.hpp"
-#include "../types/splatoonSecure/matchmakeSession.hpp"
 #include "../types/splatoonSecure/autoMatchmakeParam.hpp"
 #include "../types/splatoonSecure/notificationEvent.hpp"
 #include "../types/splatoonSecure/joinMatchmakeSessionParam.hpp"
@@ -15,34 +14,20 @@
 #include "../types/splatoonSecure/competitionRankingGetParam.hpp"
 #include "../types/splatoonSecure/competitionRankingUploadScoreParam.hpp"
 #include "../../sharedState/sharedState.hpp"
+#include "../../grpc/channelPool.hpp"
 
 namespace nex::rmc {
-
-struct NATProperties {
-    uint32_t mapping;
-    uint32_t filtering;
-    uint32_t rtt;
-};
-
-struct SplatoonRegisteredClientInfo {
-    ClientInfo client;
-    std::vector<StationURL> urls;
-    StationURL publicUrl;
-    uint32_t rvConnId;
-    std::vector<std::shared_ptr<Gathering>> joinedGatherings = {};
-    NATProperties lastReportedNATProperties;
-};
-
-struct SessionInfo {
-    std::shared_ptr<MatchmakeSession> session;
-    std::set<uint32_t> players;
-};
 
 class SplatoonSecureRMC : public Server {
 public:
     explicit SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
-                               std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId);
+                               std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
+                               int gRCPPoolMaxSize, int gRCPRequestTimeout);
     ~SplatoonSecureRMC() override = default;
+
+    async::Task<bool> sendNotification(ClientInfo client, NotificationType type, uint32_t srcPid, uint32_t param1, uint32_t param2,
+                                       const std::string& strParam, uint32_t param3, bool dontResend = false);
+    async::Task<bool> externalRequestProbeInitiationExt(ClientInfo client, std::unique_ptr<StationURL> probe);
 
 private:
     async::Task<void> requestProbeInitiationExt(ClientInfo client, Request req,
@@ -94,12 +79,10 @@ private:
 
     async::Task<void> onDisconnect(prudp::PRUDPAddress address) override;
 
-    uint32_t getNewGatheringId();
-    void sendNotification(ClientInfo client, NotificationType type, uint32_t srcPid, uint32_t param1, uint32_t param2,
-                          const std::string& strParam, uint32_t param3);
-    void unregisterGathering_internal(uint32_t gId, uint32_t srcPid);
+    async::Task<uint32_t> getNewGatheringId();
+    async::Task<void> unregisterGathering_internal(uint32_t gId, uint32_t srcPid);
 //    void addPlayersToSession(uint32_t gId, const std::vector<uint32_t>& playerPids);
-    void removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg = "", bool disconnected = false);
+    async::Task<void> removePlayerFromSession(uint32_t gId, uint32_t playerPid, const std::string& msg = "", bool disconnected = false);
 
     std::shared_ptr<db::Database> db;
     std::shared_ptr<ss::SharedState> sharedState;
@@ -108,10 +91,9 @@ private:
     std::mutex rvConnIdMutex;
     uint32_t nextReqCallId = 0;
     std::mutex reqCallIdMutex;
-    std::unordered_map<uint32_t, SplatoonRegisteredClientInfo> registeredClients;
-    std::recursive_mutex registeredClientsMutex;
-    std::unordered_map<uint32_t, SessionInfo> matchmakeSessions;
-    std::recursive_mutex matchmakeSessionsMutex;
+
+    std::shared_ptr<grpcimpl::ChannelPool> channelPool;
+    int gRCPRequestTimeout;
 };
 
 } // namespace nex::rmc

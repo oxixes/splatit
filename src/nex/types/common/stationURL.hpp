@@ -150,7 +150,7 @@ namespace nex::rmc {
         StationURL& operator=(StationURL&& other) noexcept = default;
 
     private:
-        std::string encodeString() const {
+        [[nodiscard]] std::string encodeString() const {
             std::string url;
 
             if (proto == Protocol::NONE) {

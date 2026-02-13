@@ -291,7 +291,9 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    {"enabled", true},
                    {"listenAddress", "0.0.0.0"},
                    {"port", 1204},
-                   {"workerCount", 3}
+                   {"workerCount", 3},
+                   {"grpcRequestTimeout", 3000}, // in milliseconds
+                   {"grpcConnectionPoolMaxSize", 1}
            }},
            {"management", {
                    {"enabled", true},
@@ -523,6 +525,14 @@ sock::IPv4Addr SettingsManager::getSplatoonSecureListenAddress() const {
 
 int SettingsManager::getSplatoonSecureWorkerCount() const {
     return settings["splatoonSecure"]["workerCount"];
+}
+
+int SettingsManager::getSplatoonSecuregRPCRequestTimeout() const {
+    return settings["splatoonSecure"]["grpcRequestTimeout"];
+}
+
+int SettingsManager::getSplatoonSecuregRPCConnectionPoolMaxSize() const {
+    return settings["splatoonSecure"]["grpcConnectionPoolMaxSize"];
 }
 
 sock::IPv4Addr SettingsManager::getgRPCListenAddress() const {

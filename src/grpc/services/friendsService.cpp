@@ -1,33 +1,12 @@
 #include "friendsService.hpp"
 
+#include "common.hpp"
+
 namespace grpcimpl::friends::v1 {
 
 async::Task<void> completeSendNotification(grpc::ServerUnaryReactor* reactor, const SendNotificationRequest* request,
-                                        const std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsRMC) {
-    sock::IPv4Addr ipv4Addr {
-        .a = static_cast<uint8_t>(request->clientinfo().address().address().a()),
-        .b = static_cast<uint8_t>(request->clientinfo().address().address().b()),
-        .c = static_cast<uint8_t>(request->clientinfo().address().address().c()),
-        .d = static_cast<uint8_t>(request->clientinfo().address().address().d()),
-        .port = static_cast<uint16_t>(request->clientinfo().address().address().port())
-    };
-
-    const nex::prudp::PRUDPAddress prudpAddress {
-        .address = ipv4Addr,
-        .vPort = static_cast<uint8_t>(request->clientinfo().address().vport()),
-        .streamType = static_cast<uint8_t>(request->clientinfo().address().streamtype()),
-        .srcVPort = static_cast<uint8_t>(request->clientinfo().address().srcvport()),
-        .srcStreamType = static_cast<uint8_t>(request->clientinfo().address().srcstreamtype())
-    };
-
-    const nex::rmc::ClientInfo clientInfo {
-        .address = prudpAddress,
-        .minorVersion = static_cast<uint8_t>(request->clientinfo().minorversion()),
-        .substreamId = static_cast<uint8_t>(request->clientinfo().substreamid()),
-        .serverId = request->clientinfo().serverid(),
-        .pid = request->clientinfo().pid()
-    };
-
+                                           const std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsRMC) {
+    const nex::rmc::ClientInfo clientInfo = common::deserializeClientInfo(&request->clientinfo());
     const auto type = static_cast<nex::rmc::NintendoNotificationType>(request->type());
 
     nex::rmc::AnyDataHolder data(clientInfo.minorVersion);

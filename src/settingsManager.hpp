@@ -86,6 +86,8 @@ public:
 
     [[nodiscard]] sock::IPv4Addr getSplatoonSecureListenAddress() const;
     [[nodiscard]] int getSplatoonSecureWorkerCount() const;
+    [[nodiscard]] int getSplatoonSecuregRPCRequestTimeout() const;
+    [[nodiscard]] int getSplatoonSecuregRPCConnectionPoolMaxSize() const;
 
     [[nodiscard]] sock::IPv4Addr getgRPCListenAddress() const;
     [[nodiscard]] std::string getgRCPPublicFacingAddress() const;
