@@ -376,14 +376,6 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     const std::string regionStr = doc->child("person").child_value("region");
     try {
         int64_t region = std::stoll(regionStr);
-
-        // Check that region is 1, 2, 4, 8, 16, 32 or 64
-        if (region != 1 && region != 2 && region != 4 && region != 8 &&
-            region != 16 && region != 32 && region != 64) {
-            res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
-            srv->sendResponse(std::move(ctx), std::move(res), false);
-            co_return;
-        }
     } catch (const std::invalid_argument&) {
         res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
         srv->sendResponse(std::move(ctx), std::move(res), false);
@@ -430,7 +422,18 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     }
 
     const std::string language = ctx->request->getHeader("accept-language")[0];
-    uint32_t region = std::stoul(ctx->request->getHeader("x-nintendo-region")[0]);
+    uint32_t region = 1;
+    try {
+        region = std::stoul(ctx->request->getHeader("x-nintendo-region")[0]);
+    } catch (const std::invalid_argument&) {
+        res = createError(ctx->request->getVersion(), 2, "Bad request header", "x-nintendo-region", HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    } catch (const std::out_of_range&) {
+        res = createError(ctx->request->getVersion(), 2, "Bad request header", "x-nintendo-region", HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
     const std::string serialNumber = ctx->request->getHeader("x-nintendo-serial-number")[0];
     const std::string systemVersion = ctx->request->getHeader("x-nintendo-system-version")[0];
     const std::string deviceId = ctx->request->getHeader("x-nintendo-device-id")[0];
@@ -694,14 +697,6 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
     if (!doc->child("person").child("region").empty()) {
         try {
             region = std::stoll(doc->child("person").child_value("region"));
-
-            // Check that region is 1, 2, 4, 8, 16, 32 or 64
-            if (*region != 1 && *region != 2 && *region != 4 && *region != 8 &&
-                *region != 16 && *region != 32 && *region != 64) {
-                res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
-                srv->sendResponse(std::move(ctx), std::move(res), false);
-                co_return;
-            }
         } catch (const std::invalid_argument&) {
             res = createError(ctx->request->getVersion(), 2, "Bad request body", "region", HTTP_STATUS_BAD_REQUEST);
             srv->sendResponse(std::move(ctx), std::move(res), false);

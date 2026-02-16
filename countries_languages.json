@@ -1,0 +1,5021 @@
+{
+  "countries": {
+    "AD": {
+      "name": "Andorra",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "AE": {
+      "name": "United Arab Emirates",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "AF": {
+      "name": "Afghanistan",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "AG": {
+      "name": "Antigua and Barbuda",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "AI": {
+      "name": "Anguilla",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "AL": {
+      "name": "Albania",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "AM": {
+      "name": "Armenia",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "AO": {
+      "name": "Angola",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "AR": {
+      "name": "Argentina",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "AS": {
+      "name": "American Samoa",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "AT": {
+      "name": "Austria",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "AU": {
+      "name": "Australia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "AW": {
+      "name": "Aruba",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "AZ": {
+      "name": "Azerbaijan",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "BA": {
+      "name": "Bosnia and Herzegovina",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "BB": {
+      "name": "Barbados",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BD": {
+      "name": "Bangladesh",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "BE": {
+      "name": "Belgium",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "BG": {
+      "name": "Bulgaria",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "BH": {
+      "name": "Bahrain",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BJ": {
+      "name": "Benin",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "BM": {
+      "name": "Bermuda",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BO": {
+      "name": "Bolivia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BR": {
+      "name": "Brazil",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BS": {
+      "name": "Bahamas",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "BW": {
+      "name": "Botswana",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "BY": {
+      "name": "Belarus",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "BZ": {
+      "name": "Belize",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "CA": {
+      "name": "Canada",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "CD": {
+      "name": "Congo (DRC)",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CF": {
+      "name": "Central African Republic",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CG": {
+      "name": "Congo",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CH": {
+      "name": "Switzerland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "CL": {
+      "name": "Chile",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "CM": {
+      "name": "Cameroon",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CN": {
+      "name": "China",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "CO": {
+      "name": "Colombia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "CR": {
+      "name": "Costa Rica",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "CU": {
+      "name": "Cuba",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CV": {
+      "name": "Cape Verde",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "CY": {
+      "name": "Cyprus",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "CZ": {
+      "name": "Czech Republic",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "DE": {
+      "name": "Germany",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "DJ": {
+      "name": "Djibouti",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "DK": {
+      "name": "Denmark",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "DM": {
+      "name": "Dominica",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "DO": {
+      "name": "Dominican Republic",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "EC": {
+      "name": "Ecuador",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "EE": {
+      "name": "Estonia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "EG": {
+      "name": "Egypt",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "ER": {
+      "name": "Eritrea",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ES": {
+      "name": "Spain",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "FI": {
+      "name": "Finland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "FJ": {
+      "name": "Fiji",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "FR": {
+      "name": "France",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GA": {
+      "name": "Gabon",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GD": {
+      "name": "Grenada",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "GF": {
+      "name": "French Guiana",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GG": {
+      "name": "Guernsey",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GH": {
+      "name": "Ghana",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GI": {
+      "name": "Gibraltar",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GL": {
+      "name": "Greenland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GP": {
+      "name": "Guadeloupe",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "GQ": {
+      "name": "Equatorial Guinea",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "GR": {
+      "name": "Greece",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "GT": {
+      "name": "Guatemala",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "GU": {
+      "name": "Guam",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "GY": {
+      "name": "Guyana",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "HK": {
+      "name": "Hong Kong",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "HN": {
+      "name": "Honduras",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "HR": {
+      "name": "Croatia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "HT": {
+      "name": "Haiti",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "HU": {
+      "name": "Hungary",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ID": {
+      "name": "Indonesia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "IE": {
+      "name": "Ireland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "IL": {
+      "name": "Israel",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "IM": {
+      "name": "Isle of Man",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "IN": {
+      "name": "India",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "IQ": {
+      "name": "Iraq",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "IR": {
+      "name": "Iran",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "IS": {
+      "name": "Iceland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "IT": {
+      "name": "Italy",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "JE": {
+      "name": "Jersey",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "JM": {
+      "name": "Jamaica",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "JO": {
+      "name": "Jordan",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "JP": {
+      "name": "Japan",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "KE": {
+      "name": "Kenya",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "KN": {
+      "name": "Saint Kitts and Nevis",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "KR": {
+      "name": "South Korea",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "KW": {
+      "name": "Kuwait",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "KY": {
+      "name": "Cayman Islands",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "KZ": {
+      "name": "Kazakhstan",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "LB": {
+      "name": "Lebanon",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "LC": {
+      "name": "Saint Lucia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "LI": {
+      "name": "Liechtenstein",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "LK": {
+      "name": "Sri Lanka",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "LR": {
+      "name": "Liberia",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "LS": {
+      "name": "Lesotho",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "LT": {
+      "name": "Lithuania",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "LU": {
+      "name": "Luxembourg",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "LV": {
+      "name": "Latvia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MA": {
+      "name": "Morocco",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "MC": {
+      "name": "Monaco",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ME": {
+      "name": "Montenegro",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MK": {
+      "name": "North Macedonia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ML": {
+      "name": "Mali",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MM": {
+      "name": "Myanmar",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "MN": {
+      "name": "Mongolia",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "MO": {
+      "name": "Macau",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MQ": {
+      "name": "Martinique",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MR": {
+      "name": "Mauritania",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MS": {
+      "name": "Montserrat",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "MT": {
+      "name": "Malta",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "MX": {
+      "name": "Mexico",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "MY": {
+      "name": "Malaysia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "MZ": {
+      "name": "Mozambique",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NA": {
+      "name": "Namibia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NE": {
+      "name": "Niger",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NG": {
+      "name": "Nigeria",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NI": {
+      "name": "Nicaragua",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "NL": {
+      "name": "Netherlands",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NO": {
+      "name": "Norway",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "NP": {
+      "name": "Nepal",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "NZ": {
+      "name": "New Zealand",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "OM": {
+      "name": "Oman",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "PA": {
+      "name": "Panama",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "PE": {
+      "name": "Peru",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "PG": {
+      "name": "Papua New Guinea",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "PH": {
+      "name": "Philippines",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "PK": {
+      "name": "Pakistan",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "PL": {
+      "name": "Poland",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "PR": {
+      "name": "Puerto Rico",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "PT": {
+      "name": "Portugal",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "PY": {
+      "name": "Paraguay",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "QA": {
+      "name": "Qatar",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "RO": {
+      "name": "Romania",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "RS": {
+      "name": "Serbia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "RU": {
+      "name": "Russia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SA": {
+      "name": "Saudi Arabia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "SD": {
+      "name": "Sudan",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SE": {
+      "name": "Sweden",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SG": {
+      "name": "Singapore",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "SI": {
+      "name": "Slovenia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SK": {
+      "name": "Slovakia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SM": {
+      "name": "San Marino",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SO": {
+      "name": "Somalia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "SR": {
+      "name": "Suriname",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "SV": {
+      "name": "El Salvador",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "SY": {
+      "name": "SY",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "SZ": {
+      "name": "Eswatini",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "TC": {
+      "name": "Turks and Caicos",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "TD": {
+      "name": "Chad",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "TH": {
+      "name": "Thailand",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "TO": {
+      "name": "TO",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "TR": {
+      "name": "Turkey",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "TT": {
+      "name": "Trinidad and Tobago",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "TW": {
+      "name": "Taiwan",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "UA": {
+      "name": "Ukraine",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "UM": {
+      "name": "UM",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "US": {
+      "name": "United States",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "UY": {
+      "name": "Uruguay",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "UZ": {
+      "name": "UZ",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "VA": {
+      "name": "Vatican City",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "VC": {
+      "name": "Saint Vincent",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "VE": {
+      "name": "Venezuela",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "VG": {
+      "name": "British Virgin Islands",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "VI": {
+      "name": "US Virgin Islands",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        }
+      }
+    },
+    "VN": {
+      "name": "Vietnam",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "YE": {
+      "name": "YE",
+      "languages": {
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        }
+      }
+    },
+    "ZA": {
+      "name": "South Africa",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ZM": {
+      "name": "Zambia",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    },
+    "ZW": {
+      "name": "Zimbabwe",
+      "languages": {
+        "en": {
+          "native": "English",
+          "english": "English"
+        },
+        "de": {
+          "native": "Deutsch",
+          "english": "German"
+        },
+        "es": {
+          "native": "Español",
+          "english": "Spanish"
+        },
+        "fr": {
+          "native": "Français",
+          "english": "French"
+        },
+        "it": {
+          "native": "Italiano",
+          "english": "Italian"
+        },
+        "ja": {
+          "native": "日本語",
+          "english": "Japanese"
+        },
+        "nl": {
+          "native": "Nederlands",
+          "english": "Dutch"
+        },
+        "pt": {
+          "native": "Português",
+          "english": "Portuguese"
+        },
+        "ru": {
+          "native": "Русский",
+          "english": "Russian"
+        }
+      }
+    }
+  }
+}

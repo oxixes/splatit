@@ -22,6 +22,9 @@ std::map<std::string, std::vector<std::pair<std::string, std::string>>> gameServ
 std::map<std::string, size_t> gameServerHostIndexRoundRobin;
 
 json timezones;
+json regions;
+json countriesAndLanguages;
+std::string accountSettingsHTML;
 
 /*
  * Handler for POST https://account.<domain>/v1/api/oauth20/access_token/generate
@@ -696,6 +699,53 @@ bool init(const std::shared_ptr<Logger::Logger>& logger) {
         return false;
     }
 
+    fs::path accountSettingsHTMLPath = fs::path("account_settings.html");
+    if (!fs::exists(accountSettingsHTMLPath) || !fs::is_regular_file(accountSettingsHTMLPath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The account settings HTML file does not exist or is not a file, cannot initialize the account server.");
+        return false;
+    }
+
+    try {
+        std::ifstream accountSettingsHTMLFile(accountSettingsHTMLPath);
+        accountSettingsHTML = std::string(std::istreambuf_iterator<char>(accountSettingsHTMLFile), {});
+    } catch (const std::exception& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "Failed to parse account settings HTML file: " + std::string(e.what()));
+        return false;
+    }
+
+    fs::path regionsFilePath = fs::path("regions.json");
+    if (!fs::exists(regionsFilePath) || !fs::is_regular_file(regionsFilePath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The regions file does not exist or is not a file, cannot initialize the account server.");
+        return false;
+    }
+
+    try {
+        std::ifstream regionsFile(regionsFilePath);
+        regions = json::parse(regionsFile);
+    } catch (const std::exception& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "Failed to parse regions file: " + std::string(e.what()));
+        return false;
+    }
+
+    fs::path countriesAndLanguagesFilePath = fs::path("countries_languages.json");
+    if (!fs::exists(countriesAndLanguagesFilePath) || !fs::is_regular_file(countriesAndLanguagesFilePath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The country codes file does not exist or is not a file, cannot initialize the account server.");
+        return false;
+    }
+
+    try {
+        std::ifstream countriesAndLanguagesFile(countriesAndLanguagesFilePath);
+        countriesAndLanguages = json::parse(countriesAndLanguagesFile);
+    } catch (const std::exception& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "Failed to parse countries and languages file: " + std::string(e.what()));
+    }
+
     return true;
 }
 
@@ -901,6 +951,16 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
 
                                    return v1_api_support_send_forgotten_pin(srv, std::move(ctx), email, pin, db, settingsMgr, certMgr);
                                });
+
+    server->registerRoute("account." + domain, "/v1/account-settings/ui/profile",
+                  [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_account_settings_ui_profile(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
+
+    server->registerRoute("account." + domain, "/v1/account-settings/ui/profile/update",
+                  [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                              return v1_api_account_settings_ui_profile_update(srv, std::move(ctx), db, settingsMgr, certMgr);
+                          });
 
     constexpr std::array<std::string_view, 7> miiTypes = {"normal_face", "frustrated_face", "happy_face", "like_face",
                                                           "puzzled_face", "surprised_face", "whole_body"};

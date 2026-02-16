@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SplatIt Account Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 1280px;
+            height: 720px;
+            margin: 0;
+            padding: 0;
+            background: #e8e8e8;
+            font-family: Arial, sans-serif;
+            color: #2a2a2a;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .header {
+            width: 100%;
+            height: 100px;
+            background: -webkit-gradient(linear, left top, left bottom, from(#4a90e2), to(#2e5c99));
+            position: relative;
+        }
+
+        .header-title {
+            line-height: 100px;
+            text-align: center;
+            font-size: 32px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .content-area {
+            padding: 30px 60px;
+            overflow-y: auto;
+            height: 620px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #2a2a2a;
+        }
+
+        .user-display {
+            background: #ffffff;
+            border: 2px solid #cccccc;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        .user-label {
+            font-size: 20px;
+            color: #666666;
+            margin-bottom: 8px;
+        }
+
+        .user-name {
+            font-size: 28px;
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        .instruction-text {
+            font-size: 22px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .settings-section {
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        .settings-section.active {
+            display: block;
+        }
+
+        .menu-grid {
+            display: block;
+        }
+
+        .menu-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            min-height: 140px;
+        }
+
+        .menu-item-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #2a2a2a;
+        }
+
+        .menu-item-description {
+            font-size: 22px;
+            line-height: 1.5;
+            color: #555555;
+            margin-bottom: 10px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 40px;
+            font-size: 24px;
+            text-align: center;
+            border-radius: 25px;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            background: -webkit-gradient(linear, left top, left bottom, from(#ffffff), to(#d0d0d0));
+            color: #2a2a2a;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        .button:hover {
+            background: -webkit-gradient(linear, left top, left bottom, from(#f0f0f0), to(#c0c0c0));
+        }
+
+        .button-primary {
+            background: -webkit-gradient(linear, left top, left bottom, from(#5aa3ef), to(#3d7fcc));
+            color: #ffffff;
+        }
+
+        .button-primary:hover {
+            background: -webkit-gradient(linear, left top, left bottom, from(#4a93df), to(#2d6fbc));
+        }
+
+        .button-secondary {
+            background: -webkit-gradient(linear, left top, left bottom, from(#666666), to(#3a3a3a));
+            color: #ffffff;
+        }
+
+        .button-secondary:hover {
+            background: -webkit-gradient(linear, left top, left bottom, from(#555555), to(#2a2a2a));
+        }
+
+        .action-button-area {
+            text-align: right;
+            margin-top: 15px;
+        }
+
+        .exit-button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .form-area {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: table;
+            width: 100%;
+        }
+
+        .form-label {
+            display: table-cell;
+            width: 250px;
+            font-size: 22px;
+            vertical-align: middle;
+            text-align: right;
+            padding-right: 20px;
+        }
+
+        .form-content {
+            display: table-cell;
+            width: 700px;
+            vertical-align: middle;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 45px;
+            padding: 0 15px;
+            font-size: 22px;
+            border: 2px solid #999999;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .form-select {
+            width: 100%;
+            height: 50px;
+            padding: 0 10px;
+            font-size: 22px;
+            border: 2px solid #999999;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .radio-group {
+            line-height: 40px;
+        }
+
+        .radio-label {
+            display: inline-block;
+            margin-right: 30px;
+            font-size: 22px;
+        }
+
+        .radio-label input {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .form-note {
+            font-size: 18px;
+            color: #888888;
+            margin-top: 5px;
+        }
+
+        .button-row {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .button-row .button {
+            margin: 0 10px;
+            min-width: 200px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            font-size: 22px;
+            color: #4a90e2;
+            text-decoration: none;
+            margin-bottom: 15px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="header-title">SplatIt Account Settings</h1>
+        </div>
+
+        <div class="content-area">
+            <!-- Main Menu Section -->
+            <div id="main-menu" class="settings-section active">
+                <p class="section-title">SplatIt Account ID</p>
+
+                <div class="user-display">
+                    <div class="user-label">Account ID</div>
+                    <div class="user-name"></div>
+                </div>
+
+                <p class="instruction-text">
+                    Choose a setting to configure.
+                </p>
+
+                <div class="menu-grid">
+                    <div class="menu-item">
+                        <h2 class="menu-item-title">Personal Information</h2>
+                        <p class="menu-item-description">Edit your personal details such as region and timezone.</p>
+                        <div class="action-button-area">
+                            <button class="button button-primary" onclick="showSection('personal-info')">Edit</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-item">
+                        <h2 class="menu-item-title">Email Address</h2>
+                        <p class="menu-item-description">Change the email address associated with your account.</p>
+                        <div class="action-button-area">
+                            <button class="button button-primary" onclick="showSection('email-settings')">Change</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-item">
+                        <h2 class="menu-item-title">Email Notifications</h2>
+                        <p class="menu-item-description">Configure whether you want to receive promotional emails and updates.</p>
+                        <div class="action-button-area">
+                            <button class="button button-primary" onclick="handleNotificationClick()">Configure</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-item">
+                        <h2 class="menu-item-title">External Device Access</h2>
+                        <p class="menu-item-description">Allow or deny access to SplatIt services from computers and mobile devices.</p>
+                        <div class="action-button-area">
+                            <button class="button button-primary" onclick="showSection('device-access')">Configure</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exit-button-container">
+                    <button class="button button-secondary" onclick="exitSettings()">Exit</button>
+                </div>
+            </div>
+
+            <!-- Personal Information Section -->
+            <div id="personal-info" class="settings-section">
+                <a href="#" class="back-link" onclick="showSection('main-menu'); return false;">&larr; Back to Menu</a>
+
+                <p class="section-title">Personal Information</p>
+                <p class="instruction-text">Edit your personal information.</p>
+
+                <div class="form-area">
+                    <h2 class="menu-item-title">Basic Information</h2>
+
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth:</label>
+                        <div class="form-content">
+                            <span id="dob-display"></span>
+                            <div class="form-note">(Date of birth cannot be changed once set.)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gender:</label>
+                        <div class="form-content">
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="gender" value="male" id="gender-male"> Male
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="gender" value="female" id="gender-female"> Female
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-area">
+                    <h2 class="menu-item-title">Location</h2>
+
+                    <div class="form-group">
+                        <label class="form-label" for="region-select">Region:</label>
+                        <div class="form-content">
+                            <select id="region-select" class="form-select">
+                                <!-- Options loaded from server JSON -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Country:</label>
+                        <div class="form-content">
+                            <span id="country-display"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-area">
+                    <h2 class="menu-item-title">Timezone</h2>
+
+                    <div class="form-group">
+                        <label class="form-label" for="timezone-select">Timezone:</label>
+                        <div class="form-content">
+                            <select id="timezone-select" class="form-select">
+                                <!-- Options loaded from server JSON -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="button" onclick="showSection('main-menu')">Cancel</button>
+                    <button class="button button-primary" onclick="savePersonalInfo()">Confirm</button>
+                </div>
+            </div>
+
+            <!-- Email Settings Section -->
+            <div id="email-settings" class="settings-section">
+                <a href="#" class="back-link" onclick="showSection('main-menu'); return false;">&larr; Back to Menu</a>
+
+                <p class="section-title">Email Address</p>
+                <p class="instruction-text">Change your registered email address.</p>
+
+                <div class="form-area">
+                    <div class="form-group">
+                        <label class="form-label">Current Email:</label>
+                        <div class="form-content">
+                            <span id="current-email"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="new-email">New Email:</label>
+                        <div class="form-content">
+                            <input type="email" id="new-email" class="form-input" placeholder="Enter new email address">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="confirm-email">Confirm Email:</label>
+                        <div class="form-content">
+                            <input type="email" id="confirm-email" class="form-input" placeholder="Confirm new email address">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="button" onclick="showSection('main-menu')">Cancel</button>
+                    <button class="button button-primary" onclick="saveEmail()">Update Email</button>
+                </div>
+            </div>
+
+            <!-- Email Notifications Section -->
+            <div id="notification-settings" class="settings-section">
+                <a href="#" class="back-link" onclick="showSection('main-menu'); return false;">&larr; Back to Menu</a>
+
+                <p class="section-title">Email Notifications</p>
+                <p class="instruction-text">Configure your email notification preferences.</p>
+
+                <div class="form-area">
+                    <div class="form-group">
+                        <label class="form-label">Promotional Emails:</label>
+                        <div class="form-content">
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="notifications" value="enabled" id="notif-yes"> Yes, send me offers
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="notifications" value="disabled" id="notif-no"> No, do not send
+                                </label>
+                            </div>
+                            <div class="form-note">Receive occasional emails with personalized offers and recommendations.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="button" onclick="showSection('main-menu')">Cancel</button>
+                    <button class="button button-primary" onclick="saveNotifications()">Save Settings</button>
+                </div>
+            </div>
+
+            <!-- Device Access Section -->
+            <div id="device-access" class="settings-section">
+                <a href="#" class="back-link" onclick="showSection('main-menu'); return false;">&larr; Back to Menu</a>
+
+                <p class="section-title">External Device Access</p>
+                <p class="instruction-text">Control access to SplatIt services from external devices.</p>
+
+                <div class="form-area">
+                    <div class="form-group">
+                        <label class="form-label">Device Access:</label>
+                        <div class="form-content">
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="device-access" value="enabled" id="device-yes"> Allow access
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="device-access" value="disabled" id="device-no"> Deny access
+                                </label>
+                            </div>
+                            <div class="form-note">Allow services to be used from computers, mobile phones, and other non-SplatIt devices.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="button" onclick="showSection('main-menu')">Cancel</button>
+                    <button class="button button-primary" onclick="saveDeviceAccess()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Server-replaced JSON configuration
+        var CONFIG = {{CONFIG_JSON}};
+
+        // Store original values for change detection
+        var ORIGINAL_VALUES = {};
+
+        // Wii U Sound helper
+        function playSound(soundName, channel) {
+            if (typeof wiiuSound !== 'undefined') {
+                try {
+                    wiiuSound.playSoundByName(soundName, channel || 1);
+                } catch (e) {
+                    // Sound playing failed, continue silently
+                }
+            }
+        }
+
+        // Wii U Dialog helper with fallback
+        function showAlert(message, buttonText) {
+            if (typeof wiiuDialog !== 'undefined') {
+                try {
+                    wiiuDialog.alert(message, buttonText || 'OK');
+                    return;
+                } catch (e) {
+                    // Fall through to standard alert
+                }
+            }
+            alert(message);
+        }
+
+        // Initialize form values and sound handlers on load
+        window.onload = function() {
+            populateDataFromConfig();
+            initializeForm();
+            initializeSounds();
+
+            // Play background music on load
+            playSound('BGM_ACCOUNT_MAIN_DRC', 1);
+            playSound('BGM_ACCOUNT_MAIN_TV', 2);
+        };
+
+        function populateDataFromConfig() {
+            // Populate username
+            var usernameEl = document.querySelector(".user-name");
+            if (usernameEl && CONFIG.username) {
+                usernameEl.textContent = CONFIG.username;
+            }
+
+            // Populate current email
+            var currentEmailEl = document.getElementById("current-email");
+            if (currentEmailEl && CONFIG.currentEmail) {
+                currentEmailEl.textContent = CONFIG.currentEmail;
+            }
+
+            // Populate date of birth
+            var dobEl = document.getElementById("dob-display");
+            if (dobEl && CONFIG.dateOfBirth) {
+                dobEl.textContent = CONFIG.dateOfBirth;
+            }
+
+            // Populate country
+            var countryEl = document.getElementById("country-display");
+            if (countryEl && CONFIG.country) {
+                countryEl.textContent = CONFIG.country;
+            }
+
+            // Populate region options
+            var regionSelect = document.getElementById("region-select");
+            if (regionSelect && CONFIG.regionOptions) {
+                regionSelect.innerHTML = '';
+                for (var i = 0; i < CONFIG.regionOptions.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = CONFIG.regionOptions[i].value;
+                    option.textContent = CONFIG.regionOptions[i].label;
+                    if (CONFIG.regionOptions[i].value === CONFIG.currentRegion) {
+                        option.selected = true;
+                    }
+                    regionSelect.appendChild(option);
+                }
+            }
+
+            // Populate timezone options
+            var timezoneSelect = document.getElementById("timezone-select");
+            if (timezoneSelect && CONFIG.timezoneOptions) {
+                timezoneSelect.innerHTML = '';
+                for (var j = 0; j < CONFIG.timezoneOptions.length; j++) {
+                    var tzOption = document.createElement('option');
+                    tzOption.value = CONFIG.timezoneOptions[j].value;
+                    tzOption.textContent = CONFIG.timezoneOptions[j].label;
+                    if (CONFIG.timezoneOptions[j].value === CONFIG.currentTimezone) {
+                        tzOption.selected = true;
+                    }
+                    timezoneSelect.appendChild(tzOption);
+                }
+            }
+
+            // Store original values for change tracking
+            ORIGINAL_VALUES = {
+                gender: CONFIG.currentGender,
+                region: CONFIG.currentRegion,
+                timezone: CONFIG.currentTimezone,
+                notifications: CONFIG.notificationEnabled,
+                deviceAccess: CONFIG.deviceAccessEnabled
+            };
+        }
+
+        function initializeForm() {
+            // Set gender radio buttons
+            if (CONFIG.currentGender === "male") {
+                document.getElementById("gender-male").checked = true;
+            } else if (CONFIG.currentGender === "female") {
+                document.getElementById("gender-female").checked = true;
+            }
+
+            // Set notification radio buttons
+            if (CONFIG.notificationEnabled === "enabled") {
+                document.getElementById("notif-yes").checked = true;
+            } else {
+                document.getElementById("notif-no").checked = true;
+            }
+
+            // Set device access radio buttons
+            if (CONFIG.deviceAccessEnabled === "enabled") {
+                document.getElementById("device-yes").checked = true;
+            } else {
+                document.getElementById("device-no").checked = true;
+            }
+        }
+
+        function initializeSounds() {
+            if (typeof wiiuSound === 'undefined') {
+                return; // Not on Wii U, skip sound initialization
+            }
+
+            // Touch/click sound for all buttons
+            var buttons = document.getElementsByTagName("button");
+            for (var i = 0; i < buttons.length; i++) {
+                addTouchSound(buttons[i]);
+            }
+
+            // Touch sound for links
+            var links = document.getElementsByTagName("a");
+            for (var j = 0; j < links.length; j++) {
+                addTouchSound(links[j]);
+            }
+
+            // Touch sound for selects
+            var selects = document.getElementsByTagName("select");
+            for (var k = 0; k < selects.length; k++) {
+                addTouchSound(selects[k]);
+            }
+
+            // Touch sound for inputs
+            var inputs = document.getElementsByTagName("input");
+            for (var m = 0; m < inputs.length; m++) {
+                addTouchSound(inputs[m]);
+
+                // Special sound for radio buttons
+                if (inputs[m].type === "radio") {
+                    addRadioSound(inputs[m]);
+                }
+            }
+
+            // OK sound for primary buttons
+            var primaryButtons = document.getElementsByClassName("button-primary");
+            for (var n = 0; n < primaryButtons.length; n++) {
+                addOkSound(primaryButtons[n]);
+            }
+
+            // Exit sound for secondary buttons
+            var secondaryButtons = document.getElementsByClassName("button-secondary");
+            for (var p = 0; p < secondaryButtons.length; p++) {
+                addExitSound(secondaryButtons[p]);
+            }
+
+            // Cancel sound for regular buttons (non-primary, non-secondary)
+            var regularButtons = document.querySelectorAll(".button:not(.button-primary):not(.button-secondary)");
+            for (var q = 0; q < regularButtons.length; q++) {
+                addCancelSound(regularButtons[q]);
+            }
+        }
+
+        function addTouchSound(element) {
+            if (element.addEventListener) {
+                element.addEventListener('touchstart', function() {
+                    playSound('SE_ACCOUNT_DRC_TOUCH_TRG', 1);
+                }, false);
+            }
+        }
+
+        function addOkSound(element) {
+            if (element.addEventListener) {
+                element.addEventListener('click', function() {
+                    playSound('SE_WAVE_OK', 1);
+                }, false);
+            }
+        }
+
+        function addExitSound(element) {
+            if (element.addEventListener) {
+                element.addEventListener('click', function() {
+                    playSound('SE_WAVE_EXIT', 1);
+                }, false);
+            }
+        }
+
+        function addCancelSound(element) {
+            if (element.addEventListener) {
+                element.addEventListener('click', function() {
+                    playSound('SE_WAVE_CANCEL', 1);
+                }, false);
+            }
+        }
+
+        function addRadioSound(element) {
+            if (element.addEventListener) {
+                element.addEventListener('click', function() {
+                    playSound('SE_WAVE_RADIOBUTTON_CHECK', 1);
+                }, false);
+            }
+        }
+
+        function showSection(sectionId) {
+            var sections = document.getElementsByClassName("settings-section");
+            for (var i = 0; i < sections.length; i++) {
+                sections[i].className = "settings-section";
+            }
+
+            var targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.className = "settings-section active";
+
+                // Reset form values when entering a section
+                if (sectionId === 'personal-info') {
+                    resetPersonalInfoForm();
+                } else if (sectionId === 'email-settings') {
+                    resetEmailForm();
+                } else if (sectionId === 'notification-settings') {
+                    resetNotificationForm();
+                } else if (sectionId === 'device-access') {
+                    resetDeviceAccessForm();
+                }
+            }
+        }
+
+        function resetPersonalInfoForm() {
+            // Reset gender
+            if (CONFIG.currentGender === "male") {
+                document.getElementById("gender-male").checked = true;
+            } else if (CONFIG.currentGender === "female") {
+                document.getElementById("gender-female").checked = true;
+            }
+
+            // Reset region
+            var regionSelect = document.getElementById("region-select");
+            if (regionSelect) {
+                regionSelect.value = CONFIG.currentRegion;
+            }
+
+            // Reset timezone
+            var timezoneSelect = document.getElementById("timezone-select");
+            if (timezoneSelect) {
+                timezoneSelect.value = CONFIG.currentTimezone;
+            }
+        }
+
+        function resetEmailForm() {
+            // Clear email input fields
+            document.getElementById("new-email").value = '';
+            document.getElementById("confirm-email").value = '';
+        }
+
+        function resetNotificationForm() {
+            // Reset notification radio buttons
+            if (CONFIG.notificationEnabled === "enabled") {
+                document.getElementById("notif-yes").checked = true;
+            } else {
+                document.getElementById("notif-no").checked = true;
+            }
+        }
+
+        function resetDeviceAccessForm() {
+            // Reset device access radio buttons
+            if (CONFIG.deviceAccessEnabled === "enabled") {
+                document.getElementById("device-yes").checked = true;
+            } else {
+                document.getElementById("device-no").checked = true;
+            }
+        }
+
+        function handleNotificationClick() {
+            if (!CONFIG.emailConfirmed) {
+                showAlert("Your email address has not been confirmed yet.", "OK");
+            } else {
+                showSection('notification-settings');
+            }
+        }
+
+        function savePersonalInfo() {
+            var genderMale = document.getElementById("gender-male");
+            var gender = genderMale.checked ? "male" : "female";
+            var region = document.getElementById("region-select").value;
+            var timezone = document.getElementById("timezone-select").value;
+
+            var data = {
+                action: "save_personal_info",
+                gender: gender,
+                region: region,
+                timezone: timezone
+            };
+
+            submitData(data);
+        }
+
+        function saveEmail() {
+            var newEmail = document.getElementById("new-email").value;
+            var confirmEmail = document.getElementById("confirm-email").value;
+
+            if (!newEmail || !confirmEmail) {
+                showAlert("Please fill in all fields.", "OK");
+                return;
+            }
+
+            if (newEmail !== confirmEmail) {
+                showAlert("Email addresses do not match.", "OK");
+                return;
+            }
+
+            var data = {
+                action: "save_email",
+                newEmail: newEmail
+            };
+
+            submitData(data);
+        }
+
+        function saveNotifications() {
+            var notifYes = document.getElementById("notif-yes");
+            var enabled = notifYes.checked ? "enabled" : "disabled";
+
+            var data = {
+                action: "save_notifications",
+                notifications: enabled
+            };
+
+            submitData(data);
+        }
+
+        function saveDeviceAccess() {
+            var deviceYes = document.getElementById("device-yes");
+            var enabled = deviceYes.checked ? "enabled" : "disabled";
+
+            var data = {
+                action: "save_device_access",
+                deviceAccess: enabled
+            };
+
+            submitData(data);
+        }
+
+        function submitData(data) {
+            // Build payload with only changed values
+            var changedData = {};
+            var hasChanges = false;
+
+            for (var key in data) {
+                if (data.hasOwnProperty(key) && key !== 'action') {
+                    var originalKey = key;
+                    if (ORIGINAL_VALUES.hasOwnProperty(originalKey) &&
+                        ORIGINAL_VALUES[originalKey] !== data[key]) {
+                        changedData[key] = data[key];
+                        hasChanges = true;
+                    } else if (!ORIGINAL_VALUES.hasOwnProperty(originalKey)) {
+                        // New field, include it
+                        changedData[key] = data[key];
+                        hasChanges = true;
+                    }
+                }
+            }
+
+            if (!hasChanges && data.action !== 'save_email') {
+                showAlert("No changes detected.", "OK");
+                return;
+            }
+
+            // Add action to payload
+            changedData.action = data.action;
+
+            // Submit using XMLHttpRequest
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/v1/account-settings/ui/profile/update', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        handleSubmitSuccess(changedData);
+                    } else {
+                        handleSubmitError(xhr.status, xhr.responseText);
+                    }
+                }
+            };
+
+            xhr.onerror = function() {
+                handleSubmitError(0, 'Network error');
+            };
+
+            xhr.send(JSON.stringify(changedData));
+        }
+
+        function handleSubmitSuccess(changedData) {
+            // Update CONFIG with new values
+            if (changedData.action === 'save_personal_info') {
+                if (changedData.gender !== undefined) CONFIG.currentGender = changedData.gender;
+                if (changedData.region !== undefined) CONFIG.currentRegion = changedData.region;
+                if (changedData.timezone !== undefined) CONFIG.currentTimezone = changedData.timezone;
+            } else if (changedData.action === 'save_email') {
+                if (changedData.newEmail !== undefined) {
+                    CONFIG.emailConfirmed = false;
+                    CONFIG.currentEmail = changedData.newEmail;
+                    document.getElementById("current-email").textContent = CONFIG.currentEmail;
+                }
+            } else if (changedData.action === 'save_notifications') {
+                if (changedData.notifications !== undefined) CONFIG.notificationEnabled = changedData.notifications;
+            } else if (changedData.action === 'save_device_access') {
+                if (changedData.deviceAccess !== undefined) CONFIG.deviceAccessEnabled = changedData.deviceAccess;
+            }
+
+            // Update ORIGINAL_VALUES to reflect new state
+            ORIGINAL_VALUES = {
+                gender: CONFIG.currentGender,
+                region: CONFIG.currentRegion,
+                timezone: CONFIG.currentTimezone,
+                notifications: CONFIG.notificationEnabled,
+                deviceAccess: CONFIG.deviceAccessEnabled,
+                emailConfirmed: CONFIG.emailConfirmed,
+                currentEmail: CONFIG.currentEmail
+            };
+
+            showAlert("Settings saved successfully!", "OK");
+            showSection('main-menu');
+        }
+
+        function handleSubmitError(status, message) {
+            console.error('Submit error:', status, message);
+            showAlert("Failed to save settings. Please try again.", "OK");
+        }
+
+        function exitSettings() {
+            // Use Wii U browser API to exit
+            if (typeof wiiuBrowser !== 'undefined') {
+                try {
+                    wiiuBrowser.jumpToBaristaAccount();
+                    return;
+                } catch (e) {
+                    // Failed to use Wii U browser API
+                }
+            }
+
+            // Fallback for non-Wii U environments
+            showAlert("Exiting account settings...", "OK");
+            // window.location.href = "/exit";
+        }
+    </script>
+</body>
+</html>
+

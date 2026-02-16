@@ -248,6 +248,29 @@ Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<h
     std::string clientId = ctx->request->getQuery("client_id");
     std::string titleId = ctx->request->getHeader("x-nintendo-title-id")[0];
 
+    std::ranges::transform(clientId, clientId.begin(), ::tolower);
+    std::ranges::transform(titleId, titleId.begin(), ::tolower);
+
+    if (clientId == "3f3928cc6f780638d360f0485cef973f") { // Account settings
+        json jwtPayload = {
+            {"exp", time(nullptr) + 3600},
+            {"iss", "account"},
+            {"sub", accountToken.pid},
+            {"clientId", clientId},
+            {"titleId", titleId}
+        };
+
+        const std::string tokenJwt = crypto::signJWT(settingsManager->getNEXTokenKey(), jwtPayload);
+
+        pugi::xml_document doc;
+        pugi::xml_node service_token = doc.append_child("service_token");
+        service_token.append_child("token").text().set(tokenJwt.c_str(), tokenJwt.length());
+
+        res = prepareResponse(ctx->request->getVersion(), doc);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
     // Currently only returning maintenance
     res = createError(ctx->request->getVersion(), 2002, "The requested game server is under maintenance", "", HTTP_STATUS_BAD_REQUEST);
     srv->sendResponse(std::move(ctx), std::move(res), false);

@@ -26,6 +26,9 @@ extern std::shared_ptr<grpcimpl::ChannelPool> channelPool;
 extern std::map<std::string, std::vector<std::pair<std::string, std::string>>> gameServerHosts;
 extern std::map<std::string, size_t> gameServerHostIndexRoundRobin;
 extern json timezones;
+extern json regions;
+extern json countriesAndLanguages;
+extern std::string accountSettingsHTML;
 
 async::Task<void> v1_api_admin_time(const http::Server* srv, std::shared_ptr<http::Context> ctx);
 async::Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Context> ctx,
@@ -176,6 +179,16 @@ async::Task<void> mii_image(http::Server* srv, std::shared_ptr<http::Context> ct
                             std::shared_ptr<db::Database> db,
                             std::shared_ptr<SettingsManager> settingsManager,
                             std::shared_ptr<crypto::CertManager> certManager);
+
+async::Task<void> v1_api_account_settings_ui_profile(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                                     std::shared_ptr<db::Database> db,
+                                                     std::shared_ptr<SettingsManager> settingsManager,
+                                                     std::shared_ptr<crypto::CertManager> certManager);
+
+async::Task<void> v1_api_account_settings_ui_profile_update(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                                            std::shared_ptr<db::Database> db,
+                                                            std::shared_ptr<SettingsManager> settingsManager,
+                                                            std::shared_ptr<crypto::CertManager> certManager);
 
 std::unique_ptr<http::Response> createError(http::Version version, int code, const std::string& message, const std::string& cause, int httpStatus);
 

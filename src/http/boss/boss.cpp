@@ -158,7 +158,7 @@ Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx)
 
     // Get the country
     std::string country = ctx->request->getPath().substr(ctx->request->getPath().find_last_of('/') + 1);
-    if (country.size() != 2) {
+    if (country.size() > 3) {
         std::unique_ptr<http::Response> res = getError(HTTP_STATUS_NOT_FOUND, ctx->request->getVersion());
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
@@ -254,7 +254,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
         }
     }
 
-    server->registerRegexRoute("nppl.app." + domain, R"(^\/p01\/policylist\/1\/1\/[A-Z]{2}$)",
+    server->registerRegexRoute("nppl.app." + domain, R"(^\/p01\/policylist\/1\/1\/[A-Z]{2,3}$)",
                                [](http::Server* srv, std::shared_ptr<http::Context> ctx) {
         return p01_policylist(srv, std::move(ctx));
     });

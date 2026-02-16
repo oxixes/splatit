@@ -7,4 +7,5 @@ target_sources(splatoon_server PRIVATE
         miis.cpp
         devices.cpp
         support.cpp
-        account.hpp)
+        account.hpp
+        account_settings.cpp)
