@@ -5,7 +5,6 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
-#include <cerrno>
 
 // Helper macro to validate Redis context before operations
 #define VALIDATE_REDIS_CONTEXT(ctx, operation_name, return_statement) \
@@ -18,6 +17,99 @@
     } while(0)
 
 namespace ss {
+
+namespace {
+
+bool parseRedisUint64(const redisReply* reply, uint64_t& value) {
+    if (!reply) {
+        return false;
+    }
+
+    if (reply->type == REDIS_REPLY_INTEGER) {
+        if (reply->integer < 0) {
+            return false;
+        }
+        value = static_cast<uint64_t>(reply->integer);
+        return true;
+    }
+
+    if (reply->type == REDIS_REPLY_STRING && reply->str) {
+        try {
+            value = std::stoull(reply->str);
+            return true;
+        } catch (const std::exception&) {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool countKeysByPattern(redisContext* ctx, const std::string& pattern, uint32_t& count, const std::string& exclusionPattern = "") {
+    constexpr const char* scanCountScript = R"LUASCRIPT(
+local result = redis.call('SCAN', ARGV[1], 'MATCH', ARGV[2], 'COUNT', ARGV[3])
+result[2] = #result[2]
+return result
+)LUASCRIPT";
+
+    constexpr const char* scanCountWithExclusionScript = R"LUASCRIPT(
+local result = redis.call('SCAN', ARGV[1], 'MATCH', ARGV[2], 'COUNT', ARGV[3])
+local filtered = {}
+for i, key in ipairs(result[2]) do
+    if not string.match(key, ARGV[4]) then
+        table.insert(filtered, key)
+    end
+end
+result[2] = #filtered
+return result
+)LUASCRIPT";
+
+    std::string cursor = "0";
+    count = 0;
+    const char* scriptToUse = exclusionPattern.empty() ? scanCountScript : scanCountWithExclusionScript;
+
+    do {
+        redisReply* reply = nullptr;
+        if (exclusionPattern.empty()) {
+            reply = static_cast<redisReply*>(redisCommand(
+                ctx, "EVAL %s 0 %s %s %u",
+                scriptToUse, cursor.c_str(), pattern.c_str(), REDIS_SCAN_COUNT_CHUNK_SIZE));
+        } else {
+            reply = static_cast<redisReply*>(redisCommand(
+                ctx, "EVAL %s 0 %s %s %u %s",
+                scriptToUse, cursor.c_str(), pattern.c_str(), REDIS_SCAN_COUNT_CHUNK_SIZE, exclusionPattern.c_str()));
+        }
+
+        if (!reply || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
+            if (reply) {
+                freeReplyObject(reply);
+            }
+            return false;
+        }
+
+        if (reply->element[0]->type == REDIS_REPLY_STRING && reply->element[0]->str) {
+            cursor.assign(reply->element[0]->str, reply->element[0]->len);
+        } else if (reply->element[0]->type == REDIS_REPLY_INTEGER) {
+            cursor = std::to_string(reply->element[0]->integer);
+        } else {
+            freeReplyObject(reply);
+            return false;
+        }
+
+        uint64_t batchCount = 0;
+        if (!parseRedisUint64(reply->element[1], batchCount)) {
+            freeReplyObject(reply);
+            return false;
+        }
+
+        count += batchCount;
+        freeReplyObject(reply);
+    } while (cursor != "0");
+
+    return true;
+}
+
+} // namespace
 
 RedisSharedState::RedisSharedState(std::shared_ptr<Logger::Logger> logger, RedisConfig config, uint32_t serverId, const std::string& publicFacingRPCAddress)
     : SharedState(std::move(logger), SSType::REDIS, serverId, publicFacingRPCAddress), config(std::move(config)), running(false), sslContext(nullptr),
@@ -68,22 +160,6 @@ bool RedisSharedState::init() {
         return false;
     }
 
-    // Enable keyspace notifications for expired events
-    // K = keyspace events (published with __keyspace@<db>__ prefix)
-    // E = keyevent events (published with __keyevent@<db>__ prefix)
-    // x = expired events
-    // We use Kx to get keyspace notifications which include the key name in the channel
-    auto* reply = static_cast<redisReply*>(redisCommand(testCtx, "CONFIG SET notify-keyspace-events KEx"));
-    if (!reply || reply->type == REDIS_REPLY_ERROR) {
-        logger->log(Logger::level::WARN, Logger::group::REDIS,
-            "Failed to enable keyspace notifications (may require admin privileges)");
-        if (reply) freeReplyObject(reply);
-        // Continue anyway - the counter will still work, just won't auto-decrement on expiration
-    } else {
-        logger->log(Logger::level::INFO, Logger::group::REDIS, "Keyspace notifications enabled");
-        freeReplyObject(reply);
-    }
-
     closeConnection(testCtx);
 
     logger->log(Logger::level::INFO, Logger::group::REDIS,
@@ -94,9 +170,6 @@ bool RedisSharedState::init() {
     for (uint32_t i = 0; i < config.workerThreads; ++i) {
         workers.emplace_back(&RedisSharedState::workerThread, this, i);
     }
-
-    // Start expiration listener thread
-    expirationListenerThread = std::thread(&RedisSharedState::expirationListener, this);
 
     logger->log(Logger::level::INFO, Logger::group::REDIS, "Redis shared state initialized successfully");
     return true;
@@ -118,10 +191,6 @@ void RedisSharedState::close() {
         }
     }
     workers.clear();
-
-    if (expirationListenerThread.joinable()) {
-        expirationListenerThread.join();
-    }
 
     if (sslContext) {
         redisFreeSSLContext(sslContext);
@@ -221,323 +290,6 @@ void RedisSharedState::workerThread(uint32_t threadId) {
         "Worker thread " + std::to_string(threadId) + " stopped");
 }
 
-void RedisSharedState::expirationListener() {
-    logger->log(Logger::level::INFO, Logger::group::REDIS, "Expiration listener thread started");
-
-    redisContext* ctx = createConnection();
-    if (!ctx) {
-        logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-            "Expiration listener failed to create connection");
-        return;
-    }
-
-    // Subscribe to keyspace notifications for expired events of splatit:* keys only
-    // Using keyspace (not keyevent) allows us to filter by key pattern
-    std::string pattern = "__keyspace@" + std::to_string(config.database) + "__:splatit:*";
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "PSUBSCRIBE %s", pattern.c_str()));
-    if (!reply || reply->type == REDIS_REPLY_ERROR) {
-        logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-            "Failed to subscribe to expiration events");
-        if (reply) freeReplyObject(reply);
-        closeConnection(ctx);
-        return;
-    }
-    freeReplyObject(reply);
-
-    logger->log(Logger::level::INFO, Logger::group::REDIS,
-        "Subscribed to expiration events on pattern: " + pattern);
-
-    // Listen for expiration events
-    while (running) {
-        reply = nullptr;
-
-        // Use a timeout to allow periodic checking of running flag
-        timeval timeout = {};
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
-
-        // Set receive timeout
-        if (redisSetTimeout(ctx, timeout) != REDIS_OK) {
-            logger->log(Logger::level::WARN, Logger::group::REDIS,
-                "Failed to set timeout on expiration listener");
-        }
-
-        int getReplyResult = redisGetReply(ctx, reinterpret_cast<void**>(&reply));
-
-        if (getReplyResult != REDIS_OK) {
-            if (!running) {
-                break; // Normal shutdown
-            }
-
-            // Check if it's a timeout (which is normal for pub/sub with no messages)
-            // When redisGetReply times out, it may set REDIS_ERR_IO with errno=EAGAIN or EWOULDBLOCK
-            if (ctx->err == REDIS_ERR_IO && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-                // Normal timeout, no messages available
-                continue;
-            }
-
-            // ctx->err == 0 also means no real error
-            if (ctx->err == 0) {
-                continue;
-            }
-
-            // Real connection error (EOF or actual I/O error that's not a timeout)
-            if (ctx->err == REDIS_ERR_IO || ctx->err == REDIS_ERR_EOF) {
-                // Connection lost, try to reconnect
-                logger->log(Logger::level::WARN, Logger::group::REDIS,
-                    "Expiration listener lost connection (err=" + std::to_string(ctx->err) +
-                    ", errno=" + std::to_string(errno) + "), reconnecting...");
-                closeConnection(ctx);
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                ctx = createConnection();
-                if (!ctx) {
-                    logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-                        "Expiration listener failed to reconnect");
-                    return;
-                }
-
-                // Re-subscribe
-                std::string resubPattern = "__keyspace@" + std::to_string(config.database) + "__:splatit:*";
-                reply = static_cast<redisReply*>(redisCommand(ctx, "PSUBSCRIBE %s", resubPattern.c_str()));
-                if (reply) freeReplyObject(reply);
-            }
-
-            // Other error, just continue
-            continue;
-        }
-
-        if (!reply) {
-            continue; // Timeout or no data
-        }
-
-        // Process the message
-        if (reply->type == REDIS_REPLY_ARRAY && reply->elements >= 4) {
-            std::string messageType(reply->element[0]->str, reply->element[0]->len);
-
-            if (messageType == "pmessage") {
-                // Keyspace notification format:
-                // element[0] = "pmessage"
-                // element[1] = pattern matched
-                // element[2] = channel = "__keyspace@{db}__:{key}"
-                // element[3] = event type = "expired"
-
-                std::string channel(reply->element[2]->str, reply->element[2]->len);
-                std::string event(reply->element[3]->str, reply->element[3]->len);
-
-                // Only process "expired" events
-                if (event != "expired") {
-                    freeReplyObject(reply);
-                    continue;
-                }
-
-                // Extract key from channel: "__keyspace@0__:splatit:friends:client:123" -> "splatit:friends:client:123"
-                size_t colonPos = channel.find("__:");
-                if (colonPos == std::string::npos) {
-                    freeReplyObject(reply);
-                    continue;
-                }
-                std::string expiredKey = channel.substr(colonPos + 3); // Skip "__:"
-
-                // Verify it's a splatit friends client key
-                if (expiredKey.find("splatit:friends:client:") == 0) {
-                    // Extract PID from key
-                    std::string pidStr = expiredKey.substr(23); // Skip "splatit:friends:client:"
-
-                    // Check if this looks like a friends list key (skip those)
-                    if (pidStr.find(':') != std::string::npos ||
-                        pidStr.empty() ||
-                        pidStr.find_first_not_of("0123456789") != std::string::npos) {
-                        freeReplyObject(reply);
-                        continue;
-                    }
-
-                    try {
-                        uint32_t pid = std::stoul(pidStr);
-
-                        logger->log(Logger::level::INFO, Logger::group::REDIS,
-                            "Detected expiration of client key for PID " + std::to_string(pid));
-
-                        // Remove from tracked PIDs
-                        {
-                            std::lock_guard lock(registeredPIDsMutex);
-                            registeredPIDs.erase(pid);
-                        }
-
-                        // Use Lua script with marker key to ensure only one server decrements
-                        Task decrementTask;
-                        decrementTask.operation = [this, pid](redisContext* taskCtx) {
-                            // Use a marker key to ensure only one server decrements
-                            std::string markerKey = "splatitexpiration:friends:client:" + std::to_string(pid);
-
-                            // Lua script: SET NX (only if not exists) + DECR
-                            const char* luaScript = R"LUASCRIPT(
-local markerKey = KEYS[1]
-local wasSet = redis.call('SET', markerKey, '1', 'NX', 'EX', 60)
-if wasSet then
-    redis.call('DECR', 'splatit:friends:client:count')
-    return 1
-else
-    return 0
-end
-)LUASCRIPT";
-
-                            auto* decrementReply = static_cast<redisReply*>(
-                                redisCommand(taskCtx, "EVAL %s 1 %s", luaScript, markerKey.c_str()));
-
-                            if (decrementReply && decrementReply->type == REDIS_REPLY_INTEGER) {
-                                if (decrementReply->integer == 1) {
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Counter decremented for expired PID " + std::to_string(pid));
-                                } else {
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Another instance already decremented for PID " + std::to_string(pid));
-                                }
-                            }
-
-                            if (decrementReply) freeReplyObject(decrementReply);
-                        };
-
-                        {
-                            std::lock_guard lock(queueMutex);
-                            taskQueue.push(std::move(decrementTask));
-                        }
-                        queueCV.notify_one();
-
-                    } catch (const std::exception&) {
-                        logger->log(Logger::level::WARN, Logger::group::REDIS,
-                            "Failed to parse PID from expired key: " + expiredKey);
-                    }
-                } else if (expiredKey.find("splatit:splatoon:client:") == 0) {
-                    // Extract PID from key
-                    std::string pidStr = expiredKey.substr(24); // Skip "splatit:splatoon:client:"
-
-                    // Check if this looks like a splatoon subkey (skip those)
-                    if (pidStr.find(':') != std::string::npos ||
-                        pidStr.empty() ||
-                        pidStr.find_first_not_of("0123456789") != std::string::npos) {
-                        freeReplyObject(reply);
-                        continue;
-                    }
-
-                    try {
-                        uint32_t pid = std::stoul(pidStr);
-
-                        logger->log(Logger::level::INFO, Logger::group::REDIS,
-                            "Detected expiration of Splatoon client key for PID " + std::to_string(pid));
-
-                        // Use Lua script with marker key to ensure only one server decrements
-                        Task decrementTask;
-                        decrementTask.operation = [this, pid](redisContext* taskCtx) {
-                            std::string markerKey = "splatitexpiration:splatoon:client:" + std::to_string(pid);
-
-                            const char* luaScript = R"LUASCRIPT(
-local markerKey = KEYS[1]
-local wasSet = redis.call('SET', markerKey, '1', 'NX', 'EX', 60)
-if wasSet then
-    return 1
-else
-    return 0
-end
-)LUASCRIPT";
-
-                            auto* decrementReply = static_cast<redisReply*>(
-                                redisCommand(taskCtx, "EVAL %s 1 %s", luaScript, markerKey.c_str()));
-
-                            if (decrementReply && decrementReply->type == REDIS_REPLY_INTEGER) {
-                                if (decrementReply->integer == 1) {
-                                    decrementSplatoonClientCount(taskCtx);
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Splatoon client counter decremented for expired PID " + std::to_string(pid));
-                                } else {
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Another instance already decremented Splatoon client counter for PID " + std::to_string(pid));
-                                }
-                            }
-
-                            if (decrementReply) freeReplyObject(decrementReply);
-                        };
-
-                        {
-                            std::lock_guard lock(queueMutex);
-                            taskQueue.push(std::move(decrementTask));
-                        }
-                        queueCV.notify_one();
-
-                    } catch (const std::exception&) {
-                        logger->log(Logger::level::WARN, Logger::group::REDIS,
-                            "Failed to parse Splatoon PID from expired key: " + expiredKey);
-                    }
-                } else if (expiredKey.find("splatit:splatoon:session:") == 0) {
-                    // Extract GID from key
-                    std::string gidStr = expiredKey.substr(25); // Skip "splatit:splatoon:session:"
-
-                    // Check if this looks like a splatoon subkey (skip those)
-                    if (gidStr.find(':') != std::string::npos ||
-                        gidStr.empty() ||
-                        gidStr.find_first_not_of("0123456789") != std::string::npos) {
-                        freeReplyObject(reply);
-                        continue;
-                    }
-
-                    try {
-                        uint32_t gId = std::stoul(gidStr);
-
-                        logger->log(Logger::level::INFO, Logger::group::REDIS,
-                            "Detected expiration of Splatoon session key for GID " + std::to_string(gId));
-
-                        // Use Lua script with marker key to ensure only one server decrements
-                        Task decrementTask;
-                        decrementTask.operation = [this, gId](redisContext* taskCtx) {
-                            std::string markerKey = "splatitexpiration:splatoon:session:" + std::to_string(gId);
-
-                            const char* luaScript = R"LUASCRIPT(
-local markerKey = KEYS[1]
-local wasSet = redis.call('SET', markerKey, '1', 'NX', 'EX', 60)
-if wasSet then
-    return 1
-else
-    return 0
-end
-)LUASCRIPT";
-
-                            auto* decrementReply = static_cast<redisReply*>(
-                                redisCommand(taskCtx, "EVAL %s 1 %s", luaScript, markerKey.c_str()));
-
-                            if (decrementReply && decrementReply->type == REDIS_REPLY_INTEGER) {
-                                if (decrementReply->integer == 1) {
-                                    decrementSplatoonGatheringCount(taskCtx);
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Splatoon session counter decremented for expired GID " + std::to_string(gId));
-                                } else {
-                                    logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                                        "Another instance already decremented Splatoon session counter for GID " + std::to_string(gId));
-                                }
-                            }
-
-                            if (decrementReply) freeReplyObject(decrementReply);
-                        };
-
-                        {
-                            std::lock_guard lock(queueMutex);
-                            taskQueue.push(std::move(decrementTask));
-                        }
-                        queueCV.notify_one();
-
-                    } catch (const std::exception&) {
-                        logger->log(Logger::level::WARN, Logger::group::REDIS,
-                            "Failed to parse Splatoon GID from expired key: " + expiredKey);
-                    }
-                }
-            }
-        }
-
-        freeReplyObject(reply);
-    }
-
-    closeConnection(ctx);
-    logger->log(Logger::level::INFO, Logger::group::REDIS, "Expiration listener thread stopped");
-}
-
 redisContext* RedisSharedState::createConnection() const {
     auto deadline = std::chrono::steady_clock::now() +
         std::chrono::milliseconds(config.connectionTimeoutMs);
@@ -609,7 +361,7 @@ redisContext* RedisSharedState::createConnection() const {
         }
 
         // Register gRPC public facing address in Redis for service discovery
-        std::string serviceKey = "splatit:server:" + std::to_string(serverId);
+        std::string serviceKey = std::string(REDIS_KEY_PREFIX) + "server:" + std::to_string(serverId);
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "SET %s %s", serviceKey.c_str(), publicFacingRPCAddress.c_str()));
         if (!reply || reply->type == REDIS_REPLY_ERROR) {
             logger->log(Logger::level::WARN, Logger::group::REDIS,
@@ -695,7 +447,7 @@ void RedisSharedState::refreshClientTTLs() {
         }
 
         // Refresh server service key TTL
-        std::string serviceKey = "splatit:server:" + std::to_string(serverId);
+        std::string serviceKey = std::string(REDIS_KEY_PREFIX) + "server:" + std::to_string(serverId);
         uint32_t serviceKeyTTL = config.clientTTLSeconds * 2;
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", serviceKey.c_str(), serviceKeyTTL));
         if (reply) {
@@ -705,23 +457,8 @@ void RedisSharedState::refreshClientTTLs() {
             }
             freeReplyObject(reply);
         }
-
-        // Refresh counter TTL (set to 2x client TTL to ensure it persists longer than any client)
-        uint32_t counterTTL = config.clientTTLSeconds * 2;
-        reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:friends:client:count %u", counterTTL));
-        if (reply) {
-            if (reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
-                logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                    "Counter TTL refreshed to " + std::to_string(counterTTL) + " seconds");
-            }
-            freeReplyObject(reply);
-        }
-
-        reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:client:count %u", config.clientTTLSeconds));
-        if (reply) freeReplyObject(reply);
-        reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:session:count %u", config.clientTTLSeconds));
-        if (reply) freeReplyObject(reply);
-        reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:sessions %u", config.clientTTLSeconds));
+        const std::string sessionsIndexKey = std::string(REDIS_KEY_PREFIX) + "splatoon:sessions";
+        reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", sessionsIndexKey.c_str(), config.clientTTLSeconds));
         if (reply) freeReplyObject(reply);
 
         taskPtr->complete();
@@ -739,8 +476,8 @@ void RedisSharedState::recreateAllClients() {
     std::map<uint32_t, nex::rmc::SplatoonRegisteredClientInfo> splatoonClientsToRecreate;
     std::map<uint32_t, nex::rmc::SessionInfo> splatoonSessionsToRecreate;
     {
-        std::lock_guard lock(localClientCacheMutex);
-        clientsToRecreate = localClientCache;
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        clientsToRecreate = localFriendsClientCache;
     }
     {
         std::lock_guard lock(localSplatoonClientCacheMutex);
@@ -767,10 +504,11 @@ void RedisSharedState::recreateAllClients() {
     redisTask.operation = [this, clientsToRecreate, splatoonClientsToRecreate, splatoonSessionsToRecreate](redisContext* ctx) {
         uint32_t recreatedCount = 0;
         uint32_t refreshedCount = 0;
+        const std::string sessionsIndexKey = std::string(REDIS_KEY_PREFIX) + "splatoon:sessions";
 
         for (const auto& [pid, clientInfo] : clientsToRecreate) {
-            std::string clientKey = "splatit:friends:client:" + std::to_string(pid);
-            std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+            std::string clientKey = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
+            std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
             // Check if the client key still exists
             auto* existsReply = static_cast<redisReply*>(redisCommand(ctx, "EXISTS %s", clientKey.c_str()));
@@ -794,28 +532,10 @@ void RedisSharedState::recreateAllClients() {
                 std::string clientInfoStr = serializeClientInfo(clientInfo.client);
                 std::string preferenceStr = serializeUserPreference(clientInfo.userData.preference);
 
-                // Use Lua script to recreate and increment counter
-                const char* luaScript = R"LUASCRIPT(
-local key = KEYS[1]
-local clientData = ARGV[1]
-local preferenceData = ARGV[2]
-local counterTTL = tonumber(ARGV[3])
-local exists = redis.call('EXISTS', key)
-redis.call('HSET', key, 'client', clientData)
-redis.call('HSET', key, 'preference', preferenceData)
-if exists == 0 then
-    redis.call('INCR', 'splatit:friends:client:count')
-end
-redis.call('EXPIRE', 'splatit:friends:client:count', counterTTL)
-return exists
-)LUASCRIPT";
-
-                uint32_t counterTTL = config.clientTTLSeconds * 2;
-                auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EVAL %s 1 %s %b %b %u",
-                    luaScript, clientKey.c_str(),
+                auto* reply = static_cast<redisReply*>(redisCommand(ctx, "HSET %s client %b preference %b",
+                    clientKey.c_str(),
                     clientInfoStr.c_str(), clientInfoStr.size(),
-                    preferenceStr.c_str(), preferenceStr.size(),
-                    counterTTL));
+                    preferenceStr.c_str(), preferenceStr.size()));
                 if (reply) freeReplyObject(reply);
 
                 // Recreate friends list
@@ -835,11 +555,6 @@ return exists
             }
         }
 
-        // Refresh counter TTL (already done in the Lua script, but ensure it's set)
-        uint32_t counterTTL = config.clientTTLSeconds * 2;
-        auto* expireReply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:friends:client:count %u", counterTTL));
-        if (expireReply) freeReplyObject(expireReply);
-
         uint32_t recreatedSplatoonClients = 0;
         uint32_t refreshedSplatoonClients = 0;
         uint32_t recreatedSplatoonSessions = 0;
@@ -850,14 +565,16 @@ return exists
                 continue;
             }
 
-            const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
+            const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
             auto* existsReply = static_cast<redisReply*>(redisCommand(ctx, "EXISTS %s", sessionKey.c_str()));
             bool exists = existsReply && existsReply->type == REDIS_REPLY_INTEGER && existsReply->integer == 1;
             if (existsReply) freeReplyObject(existsReply);
 
+            if (exists) continue; // Other servers also have control of this, unlike clients, so we shouldn't touch it if it exists
+
             const auto sessionCopy = *sessionInfo.session;
             const std::string sessionBlob = serializeMatchmakeSession(sessionCopy);
-            const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
+            const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
 
             auto* reply = static_cast<redisReply*>(redisCommand(ctx,
                 "HSET %s session %b minorVersion %u openParticipation %u participationCount %u progressScore %u",
@@ -874,15 +591,14 @@ return exists
                 reply = static_cast<redisReply*>(redisCommand(ctx, "SADD %s %u", playersKey.c_str(), pid));
                 if (reply) freeReplyObject(reply);
                 reply = static_cast<redisReply*>(redisCommand(ctx, "SADD %s %u",
-                    ("splatit:splatoon:client:gatherings:" + std::to_string(pid)).c_str(), gId));
+                    (std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid)).c_str(), gId));
                 if (reply) freeReplyObject(reply);
             }
-            reply = static_cast<redisReply*>(redisCommand(ctx, "SADD splatit:splatoon:sessions %u", gId));
+            reply = static_cast<redisReply*>(redisCommand(ctx, "SADD %s %u", sessionsIndexKey.c_str(), gId));
             if (reply) freeReplyObject(reply);
             setSplatoonSessionTTL(ctx, gId);
 
             if (!exists) {
-                incrementSplatoonGatheringCount(ctx);
                 recreatedSplatoonSessions++;
             } else {
                 refreshedSplatoonSessions++;
@@ -890,9 +606,9 @@ return exists
         }
 
         for (const auto& [pid, clientInfo] : splatoonClientsToRecreate) {
-            const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-            const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
-            const std::string gatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(pid);
+            const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+            const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
+            const std::string gatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid);
 
             auto* existsReply = static_cast<redisReply*>(redisCommand(ctx, "EXISTS %s", clientKey.c_str()));
             bool exists = existsReply && existsReply->type == REDIS_REPLY_INTEGER && existsReply->integer == 1;
@@ -932,23 +648,13 @@ return exists
 
             setSplatoonClientTTL(ctx, pid);
             if (!exists) {
-                incrementSplatoonClientCount(ctx);
                 recreatedSplatoonClients++;
             } else {
                 refreshedSplatoonClients++;
             }
         }
 
-        expireReply = static_cast<redisReply*>(redisCommand(ctx, "SET splatit:splatoon:client:count %u", static_cast<uint32_t>(splatoonClientsToRecreate.size())));
-        if (expireReply) freeReplyObject(expireReply);
-        expireReply = static_cast<redisReply*>(redisCommand(ctx, "SET splatit:splatoon:session:count %u", static_cast<uint32_t>(splatoonSessionsToRecreate.size())));
-        if (expireReply) freeReplyObject(expireReply);
-
-        expireReply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:sessions %u", config.clientTTLSeconds));
-        if (expireReply) freeReplyObject(expireReply);
-        expireReply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:client:count %u", config.clientTTLSeconds));
-        if (expireReply) freeReplyObject(expireReply);
-        expireReply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:session:count %u", config.clientTTLSeconds));
+        auto* expireReply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", sessionsIndexKey.c_str(), config.clientTTLSeconds));
         if (expireReply) freeReplyObject(expireReply);
 
         logger->log(Logger::level::INFO, Logger::group::REDIS,
@@ -968,20 +674,19 @@ return exists
 }
 
 void RedisSharedState::setTTL(redisContext* ctx, uint32_t pid) {
-    std::string clientKey = "splatit:friends:client:" + std::to_string(pid);
-    std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+    std::string clientKey = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
+    std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
     // Set TTL for both keys
     auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u",
         clientKey.c_str(), config.clientTTLSeconds));
     if (reply) {
         if (reply->type == REDIS_REPLY_INTEGER && reply->integer == 0) {
-            // Key doesn't exist, remove from tracked PIDs and decrement counter
+            // Key doesn't exist, remove from tracked PIDs.
             std::lock_guard lock(registeredPIDsMutex);
             registeredPIDs.erase(pid);
             logger->log(Logger::level::DEBUG, Logger::group::REDIS,
                 "PID " + std::to_string(pid) + " key expired, removed from tracking");
-            // Note: Counter was already decremented when key expired naturally
         }
         freeReplyObject(reply);
     }
@@ -992,9 +697,9 @@ void RedisSharedState::setTTL(redisContext* ctx, uint32_t pid) {
 }
 
 void RedisSharedState::setSplatoonClientTTL(redisContext* ctx, uint32_t pid) const {
-    const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-    const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
-    const std::string gatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(pid);
+    const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+    const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
+    const std::string gatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid);
 
     auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", clientKey.c_str(), config.clientTTLSeconds));
     if (reply) freeReplyObject(reply);
@@ -1007,97 +712,13 @@ void RedisSharedState::setSplatoonClientTTL(redisContext* ctx, uint32_t pid) con
 }
 
 void RedisSharedState::setSplatoonSessionTTL(redisContext* ctx, uint32_t gId) const {
-    const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-    const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
+    const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+    const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
 
     auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", sessionKey.c_str(), config.clientTTLSeconds));
     if (reply) freeReplyObject(reply);
 
     reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE %s %u", playersKey.c_str(), config.clientTTLSeconds));
-    if (reply) freeReplyObject(reply);
-}
-
-void RedisSharedState::incrementClientCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "INCR splatit:friends:client:count"));
-    if (reply) {
-        if (reply->type == REDIS_REPLY_INTEGER) {
-            logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                "Client count incremented to " + std::to_string(reply->integer));
-        }
-        freeReplyObject(reply);
-    }
-
-    // Set/refresh TTL on counter (2x client TTL to ensure it persists longer than any client)
-    uint32_t counterTTL = config.clientTTLSeconds * 2;
-    reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:friends:client:count %u", counterTTL));
-    if (reply) freeReplyObject(reply);
-}
-
-void RedisSharedState::decrementClientCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "DECR splatit:friends:client:count"));
-    if (reply) {
-        if (reply->type == REDIS_REPLY_INTEGER) {
-            logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                "Client count decremented to " + std::to_string(reply->integer));
-
-            // Ensure count doesn't go negative
-            if (reply->integer < 0) {
-                freeReplyObject(reply);
-                reply = static_cast<redisReply*>(redisCommand(ctx, "SET splatit:friends:client:count 0"));
-                if (reply) freeReplyObject(reply);
-                logger->log(Logger::level::WARN, Logger::group::REDIS,
-                    "Client count was negative, reset to 0");
-            }
-        }
-        freeReplyObject(reply);
-    }
-}
-
-void RedisSharedState::incrementSplatoonClientCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "INCR splatit:splatoon:client:count"));
-    if (reply) freeReplyObject(reply);
-    reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:client:count %u", config.clientTTLSeconds));
-    if (reply) freeReplyObject(reply);
-}
-
-void RedisSharedState::decrementSplatoonClientCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "DECR splatit:splatoon:client:count"));
-    if (reply) {
-        if (reply->type == REDIS_REPLY_INTEGER && reply->integer < 0) {
-            freeReplyObject(reply);
-            reply = static_cast<redisReply*>(redisCommand(ctx, "SET splatit:splatoon:client:count 0"));
-            if (reply) freeReplyObject(reply);
-            reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:client:count %u", config.clientTTLSeconds));
-            if (reply) freeReplyObject(reply);
-            return;
-        }
-        freeReplyObject(reply);
-    }
-    reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:client:count %u", config.clientTTLSeconds));
-    if (reply) freeReplyObject(reply);
-}
-
-void RedisSharedState::incrementSplatoonGatheringCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "INCR splatit:splatoon:session:count"));
-    if (reply) freeReplyObject(reply);
-    reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:session:count %u", config.clientTTLSeconds));
-    if (reply) freeReplyObject(reply);
-}
-
-void RedisSharedState::decrementSplatoonGatheringCount(redisContext* ctx) const {
-    auto* reply = static_cast<redisReply*>(redisCommand(ctx, "DECR splatit:splatoon:session:count"));
-    if (reply) {
-        if (reply->type == REDIS_REPLY_INTEGER && reply->integer < 0) {
-            freeReplyObject(reply);
-            reply = static_cast<redisReply*>(redisCommand(ctx, "SET splatit:splatoon:session:count 0"));
-            if (reply) freeReplyObject(reply);
-            reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:session:count %u", config.clientTTLSeconds));
-            if (reply) freeReplyObject(reply);
-            return;
-        }
-        freeReplyObject(reply);
-    }
-    reply = static_cast<redisReply*>(redisCommand(ctx, "EXPIRE splatit:splatoon:session:count %u", config.clientTTLSeconds));
     if (reply) freeReplyObject(reply);
 }
 
@@ -1250,7 +871,7 @@ async::ManualTask<std::pair<Result, std::optional<std::string>>> RedisSharedStat
         VALIDATE_REDIS_CONTEXT(ctx, "getPublicFacingRPCAddress",
             taskPtr->complete(std::make_pair(Result::FAILURE, std::nullopt)); return);
 
-        std::string serviceKey = "splatit:server:" + std::to_string(serverId);
+        std::string serviceKey = std::string(REDIS_KEY_PREFIX) + "server:" + std::to_string(serverId);
         const auto* reply = static_cast<redisReply*>(redisCommand(ctx, "GET %s", serviceKey.c_str()));
         if (!reply) {
             taskPtr->complete(std::make_pair(Result::FAILURE, std::nullopt));
@@ -1293,54 +914,24 @@ async::ManualTask<Result> RedisSharedState::setFriendsRegisteredClientInfo(
 
     // Store in local cache for recreation after reconnection
     {
-        std::lock_guard lock(localClientCacheMutex);
-        localClientCache[pid] = info;
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        localFriendsClientCache[pid] = info;
     }
 
     Task redisTask;
     redisTask.operation = [this, taskPtr, pid, clientInfoStr, preferenceStr, friends](redisContext* ctx) {
         VALIDATE_REDIS_CONTEXT(ctx, "setFriendsRegisteredClientInfo", taskPtr->complete(Result::FAILURE); return);
 
-        std::string key = "splatit:friends:client:" + std::to_string(pid);
-        std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+        std::string key = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
+        std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "setFriendsRegisteredClientInfo for PID " + std::to_string(pid));
 
-        // Use Lua script for atomic EXISTS + SET + conditional INCR
-        // This prevents race conditions in multi-instance environments
-        // Always refresh counter TTL to ensure it persists even if all servers disconnect
-        const char* luaScript = R"LUASCRIPT(
-local key = KEYS[1]
-local clientData = ARGV[1]
-local preferenceData = ARGV[2]
-local counterTTL = tonumber(ARGV[3])
-local exists = redis.call('EXISTS', key)
-redis.call('HSET', key, 'client', clientData)
-redis.call('HSET', key, 'preference', preferenceData)
-if exists == 0 then
-    redis.call('INCR', 'splatit:friends:client:count')
-end
-redis.call('EXPIRE', 'splatit:friends:client:count', counterTTL)
-return exists
-)LUASCRIPT";
-
-        uint32_t counterTTL = config.clientTTLSeconds * 2;
-        auto* reply = static_cast<redisReply*>(redisCommand(ctx, "EVAL %s 1 %s %b %b %u",
-            luaScript, key.c_str(),
+        auto* reply = static_cast<redisReply*>(redisCommand(ctx, "HSET %s client %b preference %b",
+            key.c_str(),
             clientInfoStr.c_str(), clientInfoStr.size(),
-            preferenceStr.c_str(), preferenceStr.size(),
-            counterTTL));
-
-        if (reply && reply->type == REDIS_REPLY_INTEGER) {
-            if (reply->integer == 0) {
-                logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                    "Client " + std::to_string(pid) + " is new, counter incremented and TTL refreshed");
-            } else {
-                logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-                    "Client " + std::to_string(pid) + " already exists, updated and counter TTL refreshed");
-            }
-        }
+            preferenceStr.c_str(), preferenceStr.size()));
         if (reply) freeReplyObject(reply);
 
         // Set friends list
@@ -1375,10 +966,10 @@ RedisSharedState::getFriendsRegisteredClientInfo(uint32_t pid) {
 
     auto task = std::make_shared<async::ManualTask<std::pair<Result, std::optional<nex::rmc::FriendsRegisteredClientInfo>>>>();
     {
-        std::lock_guard lock(localClientCacheMutex);
-        if (localClientCache.contains(pid)) {
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        if (localFriendsClientCache.contains(pid)) {
             logger->log(Logger::level::DEBUG, Logger::group::REDIS, "getFriendsRegisteredClientInfo cache hit for PID " + std::to_string(pid));
-            task->complete(std::make_pair(Result::SUCCESS, localClientCache[pid]));
+            task->complete(std::make_pair(Result::SUCCESS, localFriendsClientCache[pid]));
             return *task;
         }
     }
@@ -1390,7 +981,7 @@ RedisSharedState::getFriendsRegisteredClientInfo(uint32_t pid) {
         VALIDATE_REDIS_CONTEXT(ctx, "getFriendsRegisteredClientInfo",
             taskPtr->complete(std::make_pair(Result::FAILURE, std::nullopt)); return);
 
-        std::string key = "splatit:friends:client:" + std::to_string(pid);
+        std::string key = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getFriendsRegisteredClientInfo for PID " + std::to_string(pid));
@@ -1445,7 +1036,7 @@ RedisSharedState::getFriendsRegisteredClientInfo(uint32_t pid) {
 
         // Get friends list
         reply = static_cast<redisReply*>(redisCommand(ctx, "SMEMBERS %s",
-            ("splatit:friends:list:" + std::to_string(pid)).c_str()));
+            (std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid)).c_str()));
         if (!reply) {
             logger->log(Logger::level::FAILURE, Logger::group::REDIS,
                 "SMEMBERS failed for getFriendsRegisteredClientInfo");
@@ -1494,8 +1085,8 @@ async::ManualTask<Result> RedisSharedState::deleteFriendsRegisteredClientInfo(ui
 
     // Remove from local cache
     {
-        std::lock_guard lock(localClientCacheMutex);
-        localClientCache.erase(pid);
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        localFriendsClientCache.erase(pid);
     }
 
     Task redisTask;
@@ -1505,8 +1096,8 @@ async::ManualTask<Result> RedisSharedState::deleteFriendsRegisteredClientInfo(ui
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "deleteFriendsRegisteredClientInfo for PID " + std::to_string(pid));
 
-        std::string key = "splatit:friends:client:" + std::to_string(pid);
-        std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+        std::string key = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
+        std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
         // Use MULTI/EXEC for atomicity
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "MULTI"));
@@ -1535,9 +1126,6 @@ async::ManualTask<Result> RedisSharedState::deleteFriendsRegisteredClientInfo(ui
         }
         freeReplyObject(reply);
 
-        // Decrement client count
-        decrementClientCount(ctx);
-
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "deleteFriendsRegisteredClientInfo completed for PID " + std::to_string(pid));
         taskPtr->complete(Result::SUCCESS);
@@ -1558,9 +1146,9 @@ async::ManualTask<Result> RedisSharedState::addFriendToRegisteredClientInfo(uint
 
     // Update local cache
     {
-        std::lock_guard lock(localClientCacheMutex);
-        auto it = localClientCache.find(pid);
-        if (it != localClientCache.end()) {
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        auto it = localFriendsClientCache.find(pid);
+        if (it != localFriendsClientCache.end()) {
             it->second.friends.insert(friendPid);
         }
     }
@@ -1572,7 +1160,7 @@ async::ManualTask<Result> RedisSharedState::addFriendToRegisteredClientInfo(uint
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "addFriendToRegisteredClientInfo: PID " + std::to_string(pid) + " adding friend " + std::to_string(friendPid));
 
-        std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+        std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "SADD %s %u",
             friendsKey.c_str(), friendPid));
@@ -1606,9 +1194,9 @@ async::ManualTask<Result> RedisSharedState::removeFriendFromRegisteredClientInfo
 
     // Update local cache
     {
-        std::lock_guard lock(localClientCacheMutex);
-        auto it = localClientCache.find(pid);
-        if (it != localClientCache.end()) {
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        auto it = localFriendsClientCache.find(pid);
+        if (it != localFriendsClientCache.end()) {
             it->second.friends.erase(friendPid);
         }
     }
@@ -1620,7 +1208,7 @@ async::ManualTask<Result> RedisSharedState::removeFriendFromRegisteredClientInfo
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "removeFriendFromRegisteredClientInfo: PID " + std::to_string(pid) + " removing friend " + std::to_string(friendPid));
 
-        std::string friendsKey = "splatit:friends:list:" + std::to_string(pid);
+        std::string friendsKey = std::string(REDIS_KEY_PREFIX) + "friends:list:" + std::to_string(pid);
 
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "SREM %s %u",
             friendsKey.c_str(), friendPid));
@@ -1658,9 +1246,9 @@ async::ManualTask<Result> RedisSharedState::updatePreferenceInRegisteredFriendsC
 
     // Update local cache
     {
-        std::lock_guard lock(localClientCacheMutex);
-        auto it = localClientCache.find(pid);
-        if (it != localClientCache.end()) {
+        std::lock_guard lock(localFriendsClientCacheMutex);
+        auto it = localFriendsClientCache.find(pid);
+        if (it != localFriendsClientCache.end()) {
             it->second.userData.preference = preference;
         }
     }
@@ -1672,7 +1260,7 @@ async::ManualTask<Result> RedisSharedState::updatePreferenceInRegisteredFriendsC
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "updatePreferenceInRegisteredClientInfo for PID " + std::to_string(pid));
 
-        std::string key = "splatit:friends:client:" + std::to_string(pid);
+        std::string key = std::string(REDIS_KEY_PREFIX) + "friends:client:" + std::to_string(pid);
 
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "HSET %s preference %b",
             key.c_str(), preferenceStr.c_str(), preferenceStr.size()));
@@ -1700,54 +1288,28 @@ async::ManualTask<Result> RedisSharedState::updatePreferenceInRegisteredFriendsC
     return *task;
 }
 
-async::ManualTask<std::pair<Result, uint64_t>> RedisSharedState::getFriendsRegisteredClientCount() {
-    auto task = std::make_shared<async::ManualTask<std::pair<Result, uint64_t>>>();
+async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getFriendsRegisteredClientCount() {
+    auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
     const auto& taskPtr = task;
 
     Task redisTask;
     redisTask.operation = [this, taskPtr](redisContext* ctx) {
-        VALIDATE_REDIS_CONTEXT(ctx, "getRegisteredClientCount",
+        VALIDATE_REDIS_CONTEXT(ctx, "getFriendsRegisteredClientCount",
             taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-            "getRegisteredClientCount");
+            "getFriendsRegisteredClientCount");
 
-        auto* reply = static_cast<redisReply*>(redisCommand(ctx, "GET splatit:friends:client:count"));
-
-        if (!reply) {
+        uint32_t count = 0;
+        if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "friends:client:*", count)) {
             logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-                "GET failed for getRegisteredClientCount");
+                "SCAN count failed for getFriendsRegisteredClientCount");
             taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
             return;
         }
-
-        uint64_t count = 0;
-        if (reply->type == REDIS_REPLY_STRING) {
-            try {
-                count = std::stoull(reply->str);
-            } catch (const std::exception& e) {
-                logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-                    "Failed to parse client count: " + std::string(e.what()));
-                freeReplyObject(reply);
-                taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
-                return;
-            }
-        } else if (reply->type == REDIS_REPLY_INTEGER) {
-            count = static_cast<uint64_t>(reply->integer);
-        } else if (reply->type == REDIS_REPLY_NIL) {
-            // Key doesn't exist, count is 0
-            count = 0;
-        } else {
-            logger->log(Logger::level::FAILURE, Logger::group::REDIS,
-                "Unexpected reply type for getRegisteredClientCount");
-            freeReplyObject(reply);
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
-            return;
-        }
-        freeReplyObject(reply);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
-            "getRegisteredClientCount completed, count: " + std::to_string(count));
+            "getFriendsRegisteredClientCount completed, count: " + std::to_string(count));
         taskPtr->complete(std::make_pair(Result::SUCCESS, count));
     };
 
@@ -1801,16 +1363,14 @@ async::ManualTask<Result> RedisSharedState::setSplatoonRegisteredClientInfo(
             " (urls=" + std::to_string(encodedUrls.size()) +
             ", gatherings=" + std::to_string(gatheringIds.size()) + ")");
 
-        const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-        const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
-        const std::string gatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(pid);
+        const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+        const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
+        const std::string gatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid);
 
         const std::string luaScript = R"LUASCRIPT(
 local clientKey=KEYS[1]
 local urlsKey=KEYS[2]
 local gatheringsKey=KEYS[3]
-local clientCountKey=KEYS[4]
-local exists=redis.call('EXISTS', clientKey)
 redis.call('HSET', clientKey,
     'client', ARGV[1],
     'publicUrl', ARGV[2],
@@ -1833,25 +1393,20 @@ for i=1,gatheringCount do
     redis.call('SADD', gatheringsKey, ARGV[idx])
     idx = idx + 1
 end
-if exists == 0 then
-    redis.call('INCR', clientCountKey)
-end
 redis.call('EXPIRE', clientKey, ttl)
 redis.call('EXPIRE', urlsKey, ttl)
 redis.call('EXPIRE', gatheringsKey, ttl)
-redis.call('EXPIRE', clientCountKey, ttl)
-return exists
+return 1
 )LUASCRIPT";
 
         std::vector<std::string> args;
-        args.reserve(14 + encodedUrls.size() + gatheringIds.size());
+        args.reserve(13 + encodedUrls.size() + gatheringIds.size());
         args.emplace_back("EVAL");
         args.push_back(luaScript);
-        args.emplace_back("4");
+        args.emplace_back("3");
         args.push_back(clientKey);
         args.push_back(urlsKey);
         args.push_back(gatheringsKey);
-        args.emplace_back("splatit:splatoon:client:count");
         args.push_back(clientInfoStr);
         args.push_back(publicUrlStr);
         args.push_back(std::to_string(rvConnId));
@@ -1903,6 +1458,15 @@ RedisSharedState::getSplatoonRegisteredClientInfo(uint32_t pid) {
     auto task = std::make_shared<async::ManualTask<std::pair<Result, std::optional<nex::rmc::SplatoonRegisteredClientInfo>>>>();
     const auto& taskPtr = task;
 
+    {
+        std::lock_guard lock(localSplatoonClientCacheMutex);
+        if (localSplatoonClientCache.contains(pid)) {
+            logger->log(Logger::level::DEBUG, Logger::group::REDIS, "getSplatoonRegisteredClientInfo cache hit for PID " + std::to_string(pid));
+            task->complete(std::make_pair(Result::SUCCESS, localSplatoonClientCache[pid]));
+            return *task;
+        }
+    }
+
     Task redisTask;
     redisTask.operation = [this, taskPtr, pid](redisContext* ctx) {
         VALIDATE_REDIS_CONTEXT(ctx, "getSplatoonRegisteredClientInfo",
@@ -1911,9 +1475,9 @@ RedisSharedState::getSplatoonRegisteredClientInfo(uint32_t pid) {
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getSplatoonRegisteredClientInfo for PID " + std::to_string(pid));
 
-        const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-        const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
-        const std::string gatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(pid);
+        const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+        const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
+        const std::string gatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid);
 
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "HGETALL %s", clientKey.c_str()));
         if (!reply) {
@@ -1998,7 +1562,7 @@ RedisSharedState::getSplatoonRegisteredClientInfo(uint32_t pid) {
         if (reply->type == REDIS_REPLY_ARRAY) {
             for (size_t i = 0; i < reply->elements; ++i) {
                 const uint32_t gId = static_cast<uint32_t>(std::stoul(reply->element[i]->str));
-                const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
+                const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
 
                 auto* sessionReply = static_cast<redisReply*>(redisCommand(ctx, "HGETALL %s", sessionKey.c_str()));
                 if (!sessionReply) {
@@ -2084,20 +1648,20 @@ async::ManualTask<Result> RedisSharedState::deleteSplatoonRegisteredClientInfo(u
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "deleteSplatoonRegisteredClientInfo for PID " + std::to_string(pid));
 
-        const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-        const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
-        const std::string gatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(pid);
+        const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+        const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
+        const std::string gatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(pid);
 
         const char* luaScript = R"LUASCRIPT(
 local clientKey = KEYS[1]
 local urlsKey = KEYS[2]
 local gatheringsKey = KEYS[3]
 local pid = ARGV[1]
+local keyPrefix = ARGV[3]
 local gatherings = redis.call('SMEMBERS', gatheringsKey)
-local existedClient = redis.call('EXISTS', clientKey)
 for _,gid in ipairs(gatherings) do
-    local playersKey = 'splatit:splatoon:session:players:' .. gid
-    local sessionKey = 'splatit:splatoon:session:' .. gid
+    local playersKey = keyPrefix .. 'splatoon:session:players:' .. gid
+    local sessionKey = keyPrefix .. 'splatoon:session:' .. gid
     redis.call('SREM', playersKey, pid)
     local count = redis.call('SCARD', playersKey)
     redis.call('HSET', sessionKey, 'participationCount', count)
@@ -2107,19 +1671,13 @@ end
 redis.call('DEL', clientKey)
 redis.call('DEL', urlsKey)
 redis.call('DEL', gatheringsKey)
-if existedClient == 1 then
-    redis.call('DECR', 'splatit:splatoon:client:count')
-    if tonumber(redis.call('GET', 'splatit:splatoon:client:count') or '0') < 0 then
-        redis.call('SET', 'splatit:splatoon:client:count', '0')
-    end
-end
-redis.call('EXPIRE', 'splatit:splatoon:client:count', tonumber(ARGV[2]))
 return 1
 )LUASCRIPT";
 
         auto* reply = static_cast<redisReply*>(
-            redisCommand(ctx, "EVAL %s 3 %s %s %s %u %u",
-                luaScript, clientKey.c_str(), urlsKey.c_str(), gatheringsKey.c_str(), pid, config.clientTTLSeconds));
+            redisCommand(ctx, "EVAL %s 3 %s %s %s %u %u %s",
+                luaScript, clientKey.c_str(), urlsKey.c_str(), gatheringsKey.c_str(), pid, config.clientTTLSeconds,
+                std::string(REDIS_KEY_PREFIX).c_str()));
         if (!reply || reply->type == REDIS_REPLY_ERROR) {
             if (reply) freeReplyObject(reply);
             taskPtr->complete(Result::FAILURE);
@@ -2168,8 +1726,8 @@ async::ManualTask<Result> RedisSharedState::updateSplatoonRegisteredClientURLs(
             "updateSplatoonRegisteredClientURLs for PID " + std::to_string(pid) +
             " (urls=" + std::to_string(encodedUrls.size()) + ")");
 
-        const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
-        const std::string urlsKey = "splatit:splatoon:client:urls:" + std::to_string(pid);
+        const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
+        const std::string urlsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:urls:" + std::to_string(pid);
 
         auto* existsReply = static_cast<redisReply*>(redisCommand(ctx, "EXISTS %s", clientKey.c_str()));
         if (!existsReply || existsReply->type != REDIS_REPLY_INTEGER || existsReply->integer == 0) {
@@ -2238,7 +1796,7 @@ async::ManualTask<Result> RedisSharedState::updateSplatoonRegisteredClientLastRe
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "updateSplatoonRegisteredClientLastReportedNATProperties for PID " + std::to_string(pid));
 
-        const std::string clientKey = "splatit:splatoon:client:" + std::to_string(pid);
+        const std::string clientKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:" + std::to_string(pid);
         auto* reply = static_cast<redisReply*>(redisCommand(ctx,
             "HSET %s natMapping %u natFiltering %u natRtt %u",
             clientKey.c_str(), natProperties.mapping, natProperties.filtering, natProperties.rtt));
@@ -2261,6 +1819,43 @@ async::ManualTask<Result> RedisSharedState::updateSplatoonRegisteredClientLastRe
         taskQueue.push(std::move(redisTask));
     }
     queueCV.notify_one();
+    return *task;
+}
+
+async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonRegisteredClientCount() {
+    auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
+    const auto& taskPtr = task;
+
+    Task redisTask;
+    redisTask.operation = [this, taskPtr](redisContext* ctx) {
+        VALIDATE_REDIS_CONTEXT(ctx, "getSplatoonRegisteredClientCount",
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
+
+        logger->log(Logger::level::DEBUG, Logger::group::REDIS,
+            "getSplatoonRegisteredClientCount");
+
+        uint32_t count = 0;
+        // Use wildcard pattern but exclude keys with additional colons after "client:"
+        // This excludes splatoon:client:urls:* and splatoon:client:gatherings:*
+        // Pattern matches keys with 4+ colons (prefix:splatoon:client:extra:id)
+        if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "splatoon:client:*", count, ":.*:.*:.*:")) {
+            logger->log(Logger::level::FAILURE, Logger::group::REDIS,
+                "SCAN count failed for getSplatoonRegisteredClientCount");
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
+            return;
+        }
+
+        logger->log(Logger::level::DEBUG, Logger::group::REDIS,
+            "getSplatoonRegisteredClientCount completed, count: " + std::to_string(count));
+        taskPtr->complete(std::make_pair(Result::SUCCESS, count));
+    };
+
+    {
+        std::lock_guard lock(queueMutex);
+        taskQueue.push(std::move(redisTask));
+    }
+    queueCV.notify_one();
+
     return *task;
 }
 
@@ -2311,28 +1906,27 @@ async::ManualTask<Result> RedisSharedState::setSplatoonMatchmakeSession(const ne
             "setSplatoonMatchmakeSession for GID " + std::to_string(gId) +
             " (players=" + std::to_string(players.size()) + ")");
 
-        const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-        const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
-        const std::string sessionsIndexKey = "splatit:splatoon:sessions";
+        const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+        const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
+        const std::string sessionsIndexKey = std::string(REDIS_KEY_PREFIX) + "splatoon:sessions";
         const std::string luaScript = R"LUASCRIPT(
 local sessionKey=KEYS[1]
 local playersKey=KEYS[2]
 local sessionsIndex=KEYS[3]
-local gatheringCountKey=KEYS[4]
 local gid=ARGV[1]
 local ttl=tonumber(ARGV[7])
-local existed=redis.call('EXISTS', sessionKey)
+local keyPrefix=ARGV[8]
 local oldPlayers=redis.call('SMEMBERS', playersKey)
 for _,pid in ipairs(oldPlayers) do
-    redis.call('SREM', 'splatit:splatoon:client:gatherings:' .. pid, gid)
-    redis.call('EXPIRE', 'splatit:splatoon:client:gatherings:' .. pid, ttl)
+    redis.call('SREM', keyPrefix .. 'splatoon:client:gatherings:' .. pid, gid)
+    redis.call('EXPIRE', keyPrefix .. 'splatoon:client:gatherings:' .. pid, ttl)
 end
 redis.call('DEL', playersKey)
-for i=8,#ARGV do
+for i=9,#ARGV do
     local pid=ARGV[i]
     redis.call('SADD', playersKey, pid)
-    redis.call('SADD', 'splatit:splatoon:client:gatherings:' .. pid, gid)
-    redis.call('EXPIRE', 'splatit:splatoon:client:gatherings:' .. pid, ttl)
+    redis.call('SADD', keyPrefix .. 'splatoon:client:gatherings:' .. pid, gid)
+    redis.call('EXPIRE', keyPrefix .. 'splatoon:client:gatherings:' .. pid, ttl)
 end
 redis.call('HSET', sessionKey,
     'session', ARGV[2],
@@ -2341,13 +1935,9 @@ redis.call('HSET', sessionKey,
     'participationCount', ARGV[5],
     'progressScore', ARGV[6])
 redis.call('SADD', sessionsIndex, gid)
-if existed == 0 then
-    redis.call('INCR', gatheringCountKey)
-end
 redis.call('EXPIRE', sessionKey, ttl)
 redis.call('EXPIRE', playersKey, ttl)
 redis.call('EXPIRE', sessionsIndex, ttl)
-redis.call('EXPIRE', gatheringCountKey, ttl)
 return 1
 )LUASCRIPT";
 
@@ -2355,18 +1945,18 @@ return 1
         args.reserve(14 + players.size());
         args.emplace_back("EVAL");
         args.push_back(luaScript);
-        args.emplace_back("4");
+        args.emplace_back("3");
         args.push_back(sessionKey);
         args.push_back(playersKey);
         args.push_back(sessionsIndexKey);
-        args.emplace_back("splatit:splatoon:session:count");
         args.push_back(std::to_string(gId));
         args.push_back(sessionBlob);
         args.push_back(std::to_string(static_cast<uint32_t>(minorVersion)));
-        args.push_back(std::to_string(openParticipation));
+        args.push_back(std::to_string(openParticipation ? 1U : 0U));
         args.push_back(std::to_string(participationCount));
         args.push_back(std::to_string(progressScore));
         args.push_back(std::to_string(config.clientTTLSeconds));
+        args.emplace_back(REDIS_KEY_PREFIX);
         for (uint32_t pid : players) {
             args.push_back(std::to_string(pid));
         }
@@ -2375,8 +1965,8 @@ return 1
         std::vector<size_t> argvlen;
         argv.reserve(args.size());
         argvlen.reserve(args.size());
-        for (const auto& arg : args) {
-            argv.push_back(arg.data());
+        for (auto& arg : args) {
+            argv.push_back(arg.c_str());
             argvlen.push_back(arg.size());
         }
 
@@ -2414,8 +2004,8 @@ RedisSharedState::getSplatoonMatchmakeSession(uint32_t gId) {
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getSplatoonMatchmakeSession for GID " + std::to_string(gId));
 
-        const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-        const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
+        const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+        const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
 
         auto* reply = static_cast<redisReply*>(redisCommand(ctx, "HGETALL %s", sessionKey.c_str()));
         if (!reply) {
@@ -2521,43 +2111,38 @@ async::ManualTask<Result> RedisSharedState::deleteSplatoonMatchmakeSession(uint3
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "deleteSplatoonMatchmakeSession for GID " + std::to_string(gId));
 
-        const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-        const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
-        const std::string sessionsIndexKey = "splatit:splatoon:sessions";
+        const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+        const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
+        const std::string sessionsIndexKey = std::string(REDIS_KEY_PREFIX) + "splatoon:sessions";
 
         const char* luaScript = R"LUASCRIPT(
 local sessionKey = KEYS[1]
 local playersKey = KEYS[2]
 local sessionsIndex = KEYS[3]
-local gatheringCountKey = KEYS[4]
 local gid = ARGV[1]
 local ttl = tonumber(ARGV[2])
-local existed = redis.call('EXISTS', sessionKey)
-local players = redis.call('SMEMBERS', playersKey)
-for _,pid in ipairs(players) do
-    redis.call('SREM', 'splatit:splatoon:client:gatherings:' .. pid, gid)
-    redis.call('EXPIRE', 'splatit:splatoon:client:gatherings:' .. pid, ttl)
+local keyPrefix = ARGV[3]
+if redis.call('EXISTS', sessionKey) == 0 then
+    return -1
 end
 redis.call('DEL', sessionKey)
 redis.call('DEL', playersKey)
 redis.call('SREM', sessionsIndex, gid)
-if existed == 1 then
-    redis.call('DECR', gatheringCountKey)
-    if tonumber(redis.call('GET', gatheringCountKey) or '0') < 0 then
-        redis.call('SET', gatheringCountKey, '0')
-    end
-end
-redis.call('EXPIRE', gatheringCountKey, ttl)
 redis.call('EXPIRE', sessionsIndex, ttl)
-return 1
+return count
 )LUASCRIPT";
 
         auto* reply = static_cast<redisReply*>(
-            redisCommand(ctx, "EVAL %s 4 %s %s %s %s %u %u",
+            redisCommand(ctx, "EVAL %s 3 %s %s %s %u %u %s",
                 luaScript, sessionKey.c_str(), playersKey.c_str(), sessionsIndexKey.c_str(),
-                "splatit:splatoon:session:count", gId, config.clientTTLSeconds));
+                gId, config.clientTTLSeconds, std::string(REDIS_KEY_PREFIX).c_str()));
         if (!reply || reply->type == REDIS_REPLY_ERROR) {
             if (reply) freeReplyObject(reply);
+            taskPtr->complete(Result::FAILURE);
+            return;
+        }
+        if (reply->type != REDIS_REPLY_INTEGER || reply->integer < 0) {
+            freeReplyObject(reply);
             taskPtr->complete(Result::FAILURE);
             return;
         }
@@ -2573,6 +2158,7 @@ return 1
         taskQueue.push(std::move(redisTask));
     }
     queueCV.notify_one();
+
     return *task;
 }
 
@@ -2599,8 +2185,8 @@ RedisSharedState::getAllSplatoonMatchmakeSessions() {
         if (reply->type == REDIS_REPLY_ARRAY) {
             for (size_t i = 0; i < reply->elements; ++i) {
                 uint32_t gId = static_cast<uint32_t>(std::stoul(reply->element[i]->str));
-                const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-                const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
+                const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+                const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
 
                 auto* sessionReply = static_cast<redisReply*>(redisCommand(ctx, "HGETALL %s", sessionKey.c_str()));
                 if (!sessionReply) {
@@ -2711,33 +2297,33 @@ async::ManualTask<Result> RedisSharedState::addPlayersToSplatoonMatchmakeSession
             "addPlayersToSplatoonMatchmakeSession for GID " + std::to_string(gId) +
             " (playersToAdd=" + std::to_string(playerPids.size()) + ")");
 
-        const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-        const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
+        const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+        const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
         const std::string luaScript = R"LUASCRIPT(
 local sessionKey=KEYS[1]
 local playersKey=KEYS[2]
 local gid=ARGV[1]
 local ttl=tonumber(ARGV[2])
+local keyPrefix=ARGV[3]
 if redis.call('EXISTS', sessionKey) == 0 then
     return -1
 end
-for i=3,#ARGV do
+for i=4,#ARGV do
     local pid=ARGV[i]
     redis.call('SADD', playersKey, pid)
-    redis.call('SADD', 'splatit:splatoon:client:gatherings:' .. pid, gid)
-    redis.call('EXPIRE', 'splatit:splatoon:client:gatherings:' .. pid, ttl)
+    redis.call('SADD', keyPrefix .. 'splatoon:client:gatherings:' .. pid, gid)
+    redis.call('EXPIRE', keyPrefix .. 'splatoon:client:gatherings:' .. pid, ttl)
 end
 local count=redis.call('SCARD', playersKey)
 redis.call('HSET', sessionKey, 'participationCount', count)
 redis.call('EXPIRE', sessionKey, ttl)
 redis.call('EXPIRE', playersKey, ttl)
-redis.call('EXPIRE', 'splatit:splatoon:sessions', ttl)
-redis.call('EXPIRE', 'splatit:splatoon:session:count', ttl)
+redis.call('EXPIRE', keyPrefix .. 'splatoon:sessions', ttl)
 return count
 )LUASCRIPT";
 
         std::vector<std::string> args;
-        args.reserve(9 + playerPids.size());
+        args.reserve(10 + playerPids.size());
         args.emplace_back("EVAL");
         args.push_back(luaScript);
         args.emplace_back("2");
@@ -2745,6 +2331,7 @@ return count
         args.push_back(playersKey);
         args.push_back(std::to_string(gId));
         args.push_back(std::to_string(config.clientTTLSeconds));
+        args.emplace_back(REDIS_KEY_PREFIX);
         for (uint32_t pid : playerPids) {
             args.push_back(std::to_string(pid));
         }
@@ -2816,9 +2403,9 @@ async::ManualTask<Result> RedisSharedState::removePlayerFromSplatoonMatchmakeSes
             "removePlayerFromSplatoonMatchmakeSession for GID " + std::to_string(gId) +
             " (playerPid=" + std::to_string(playerPid) + ")");
 
-        const std::string sessionKey = "splatit:splatoon:session:" + std::to_string(gId);
-        const std::string playersKey = "splatit:splatoon:session:players:" + std::to_string(gId);
-        const std::string clientGatheringsKey = "splatit:splatoon:client:gatherings:" + std::to_string(playerPid);
+        const std::string sessionKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:" + std::to_string(gId);
+        const std::string playersKey = std::string(REDIS_KEY_PREFIX) + "splatoon:session:players:" + std::to_string(gId);
+        const std::string clientGatheringsKey = std::string(REDIS_KEY_PREFIX) + "splatoon:client:gatherings:" + std::to_string(playerPid);
 
         const char* luaScript = R"LUASCRIPT(
 local sessionKey = KEYS[1]
@@ -2827,6 +2414,7 @@ local clientGatheringsKey = KEYS[3]
 local gid = ARGV[1]
 local playerPid = ARGV[2]
 local ttl = tonumber(ARGV[3])
+local keyPrefix = ARGV[4]
 if redis.call('EXISTS', sessionKey) == 0 then
     return -1
 end
@@ -2837,15 +2425,14 @@ redis.call('HSET', sessionKey, 'participationCount', count)
 redis.call('EXPIRE', sessionKey, ttl)
 redis.call('EXPIRE', playersKey, ttl)
 redis.call('EXPIRE', clientGatheringsKey, ttl)
-redis.call('EXPIRE', 'splatit:splatoon:sessions', ttl)
-redis.call('EXPIRE', 'splatit:splatoon:session:count', ttl)
+redis.call('EXPIRE', keyPrefix .. 'splatoon:sessions', ttl)
 return count
 )LUASCRIPT";
 
         auto* reply = static_cast<redisReply*>(
-            redisCommand(ctx, "EVAL %s 3 %s %s %s %u %u %u",
+            redisCommand(ctx, "EVAL %s 3 %s %s %s %u %u %u %s",
                 luaScript, sessionKey.c_str(), playersKey.c_str(), clientGatheringsKey.c_str(),
-                gId, playerPid, config.clientTTLSeconds));
+                gId, playerPid, config.clientTTLSeconds, std::string(REDIS_KEY_PREFIX).c_str()));
         if (!reply || reply->type == REDIS_REPLY_ERROR) {
             if (reply) freeReplyObject(reply);
             taskPtr->complete(Result::FAILURE);
@@ -2870,6 +2457,41 @@ return count
         taskQueue.push(std::move(redisTask));
     }
     queueCV.notify_one();
+    return *task;
+}
+
+async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonMatchmakeSessionCount() {
+    auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
+    const auto& taskPtr = task;
+
+    Task redisTask;
+    redisTask.operation = [this, taskPtr](redisContext* ctx) {
+        VALIDATE_REDIS_CONTEXT(ctx, "getSplatoonMatchmakeSessionCount",
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
+
+        logger->log(Logger::level::DEBUG, Logger::group::REDIS,
+            "getSplatoonMatchmakeSessionCount");
+
+        uint32_t count = 0;
+        // Use wildcard pattern but exclude keys with additional colons after "session:"
+        if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "splatoon:session:*", count, ":.*:.*:.*:")) {
+            logger->log(Logger::level::FAILURE, Logger::group::REDIS,
+                "SCAN count failed for getSplatoonRegisteredClientCount");
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
+            return;
+        }
+
+        logger->log(Logger::level::DEBUG, Logger::group::REDIS,
+            "getSplatoonMatchmakeSessionCount completed, count: " + std::to_string(count));
+        taskPtr->complete(std::make_pair(Result::SUCCESS, count));
+    };
+
+    {
+        std::lock_guard lock(queueMutex);
+        taskQueue.push(std::move(redisTask));
+    }
+    queueCV.notify_one();
+
     return *task;
 }
 

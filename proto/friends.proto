@@ -7,6 +7,7 @@ import "common.proto";
 
 service FriendsService {
   rpc SendNotification(SendNotificationRequest) returns (google.protobuf.Empty);
+  rpc GetConnectedClientCount(google.protobuf.Empty) returns (GetConnectedClientCountResponse);
 }
 
 message SendNotificationRequest {
@@ -31,4 +32,8 @@ enum NintendoNotificationType {
   FRIEND_REQUEST_RECEIVED = 27;
   FRIEND_REQUEST_ACCEPTED = 30;
   COMMENT_CHANGED = 33;
+}
+
+message GetConnectedClientCountResponse {
+  uint32 count = 1;
 }

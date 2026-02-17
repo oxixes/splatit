@@ -18,6 +18,10 @@ public:
         const SendNotificationRequest* request,
         google::protobuf::Empty* _) override;
 
+    grpc::ServerUnaryReactor* GetConnectedClientCount(grpc::CallbackServerContext* context,
+        const google::protobuf::Empty* _,
+        GetConnectedClientCountResponse* response) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsRMC;

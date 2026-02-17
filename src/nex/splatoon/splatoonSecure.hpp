@@ -29,6 +29,10 @@ public:
                                        const std::string& strParam, uint32_t param3, bool dontResend = false);
     async::Task<bool> externalRequestProbeInitiationExt(ClientInfo client, std::unique_ptr<StationURL> probe);
 
+    async::Task<uint32_t> getConnectedClientCount() const;
+    async::Task<uint32_t> getLobbyCount() const;
+    async::Task<std::vector<SessionInfo>> getAllSessions() const;
+
 private:
     async::Task<void> requestProbeInitiationExt(ClientInfo client, Request req,
                                                 std::unique_ptr<List<StationURL>> targets, std::unique_ptr<StationURL> probe);

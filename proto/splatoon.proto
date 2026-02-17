@@ -3,11 +3,17 @@ syntax = "proto3";
 package grpcimpl.splatoon.v1;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 import "common.proto";
 
 service SplatoonService {
   rpc SendNotification(SendNotificationRequest) returns (google.protobuf.Empty);
   rpc RequestProbeInitiationExt(ProbeRequest) returns (google.protobuf.Empty);
+  rpc GetConnectedClientCount(google.protobuf.Empty) returns (GetConnectedClientCountResponse);
+  rpc GetLobbyCount(google.protobuf.Empty) returns (GetLobbyCountResponse);
+
+  // This could be optimized in the future by doing pagination or something similar, but for now this is good enough.
+  rpc GetExistingLobbies(google.protobuf.Empty) returns (GetExistingLobbiesResponse);
 }
 
 message SendNotificationRequest {
@@ -38,4 +44,42 @@ enum NotificationType {
 message ProbeRequest {
   grpcimpl.common.ClientInfo clientInfo = 1;
   bytes probe = 2;
+}
+
+message GetConnectedClientCountResponse {
+  uint32 count = 1;
+}
+
+message GetLobbyCountResponse {
+  uint32 count = 1;
+}
+
+message GetExistingLobbiesResponse {
+  repeated Lobby lobbies = 1;
+}
+
+message Lobby {
+  // Gathering info
+  uint32 gId = 1;
+  uint32 ownerPid = 2;
+  uint32 hostPid = 3;
+  uint32 minParticipants = 4;
+  uint32 maxParticipants = 5;
+  uint32 participationPolicy = 6;
+  uint32 policyArgument = 7;
+  uint32 state = 8;
+  string description = 9;
+
+  // Matchmake session info
+  uint32 gameMode = 10;
+  repeated uint32 attributes = 11;
+  bool openParticipation = 12;
+  uint32 matchmakeSystemType = 13;
+  uint32 progressScore = 14; // uint8
+  uint32 option0 = 15;
+  bool userPasswordEnabled = 16;
+  bool systemPasswordEnabled = 17;
+  google.protobuf.Timestamp startedTime = 18;
+
+  repeated uint32 playerPids = 19;
 }

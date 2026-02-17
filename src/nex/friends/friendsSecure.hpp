@@ -50,6 +50,7 @@ public:
 
     async::Task<bool> sendNotification(const ClientInfo &client, NintendoNotificationType type, uint32_t sender,
         const AnyDataHolder& data, bool dontResend = false);
+    async::Task<uint32_t> getConnectedClientCount() const;
 private:
     async::Task<void> register_(ClientInfo client, Request req,
                                 std::unique_ptr<List<StationURL>> urls);

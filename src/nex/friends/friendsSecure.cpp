@@ -2936,4 +2936,14 @@ Task<bool> FriendsSecureRMC::deleteAccount(uint32_t pid) const {
     co_return true;
 }
 
+Task<uint32_t> FriendsSecureRMC::getConnectedClientCount() const {
+    auto [result, count] = co_await sharedState->getFriendsRegisteredClientCount();
+
+    if (result != ss::Result::SUCCESS) {
+        throw std::runtime_error("Failed to get connected client count.");
+    }
+
+    co_return count;
+}
+
 } // namespace nex::rmc

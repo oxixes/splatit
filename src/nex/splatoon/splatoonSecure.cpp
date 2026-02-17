@@ -1543,4 +1543,39 @@ Task<bool> SplatoonSecureRMC::externalRequestProbeInitiationExt(const ClientInfo
     co_return true;
 }
 
+Task<uint32_t> SplatoonSecureRMC::getConnectedClientCount() const {
+    auto [result, count] = co_await sharedState->getSplatoonRegisteredClientCount();
+
+    if (result != ss::Result::SUCCESS) {
+        throw std::runtime_error("Failed to get connected client count.");
+    }
+
+    co_return count;
+}
+
+Task<uint32_t> SplatoonSecureRMC::getLobbyCount() const {
+    auto [result, count] = co_await sharedState->getSplatoonMatchmakeSessionCount();
+
+    if (result != ss::Result::SUCCESS) {
+        throw std::runtime_error("Failed to get lobby count.");
+    }
+
+    co_return count;
+}
+
+Task<std::vector<SessionInfo>> SplatoonSecureRMC::getAllSessions() const {
+    auto [result, sessions] = co_await sharedState->getAllSplatoonMatchmakeSessions();
+
+    if (result != ss::Result::SUCCESS) {
+        throw std::runtime_error("Failed to get sessions.");
+    }
+
+    std::vector<SessionInfo> sessionVec;
+    for (const auto &sessionInfo: sessions | std::views::values) {
+        sessionVec.push_back(sessionInfo);
+    }
+
+    co_return sessionVec;
+}
+
 } // namespace nex::rmc

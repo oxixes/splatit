@@ -104,11 +104,11 @@ async::ManualTask<Result> LocalSharedState::updatePreferenceInRegisteredFriendsC
     return *task;
 }
 
-async::ManualTask<std::pair<Result, uint64_t>> LocalSharedState::getFriendsRegisteredClientCount() {
+async::ManualTask<std::pair<Result, uint32_t>> LocalSharedState::getFriendsRegisteredClientCount() {
     std::scoped_lock lock(mutex);
-    uint64_t count = friendsRegisteredClientInfos.size();
+    uint32_t count = friendsRegisteredClientInfos.size();
 
-    const auto task = std::make_shared<async::ManualTask<std::pair<Result, uint64_t>>>();
+    const auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
     task->complete(std::make_pair(Result::SUCCESS, count));
 
     return *task;
@@ -200,6 +200,16 @@ async::ManualTask<Result> LocalSharedState::updateSplatoonRegisteredClientLastRe
 
     const auto task = std::make_shared<async::ManualTask<Result>>();
     task->complete(Result::SUCCESS);
+    return *task;
+}
+
+async::ManualTask<std::pair<Result, uint32_t>> LocalSharedState::getSplatoonRegisteredClientCount() {
+    std::scoped_lock lock(mutex);
+    uint32_t count = splatoonRegisteredClientInfos.size();
+
+    const auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
+    task->complete(std::make_pair(Result::SUCCESS, count));
+
     return *task;
 }
 
@@ -350,4 +360,14 @@ async::ManualTask<Result> LocalSharedState::removePlayerFromSplatoonMatchmakeSes
     return *task;
 }
 
+async::ManualTask<std::pair<Result, uint32_t>> LocalSharedState::getSplatoonMatchmakeSessionCount() {
+    std::scoped_lock lock(mutex);
+    uint32_t count = splatoonMatchmakeSessions.size();
+
+    const auto task = std::make_shared<async::ManualTask<std::pair<Result, uint32_t>>>();
+    task->complete(std::make_pair(Result::SUCCESS, count));
+
+    return *task;
+}
+    
 } // namespace ss

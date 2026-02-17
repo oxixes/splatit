@@ -22,6 +22,18 @@ public:
         const ProbeRequest* request,
         google::protobuf::Empty* _) override;
 
+    grpc::ServerUnaryReactor* GetConnectedClientCount(grpc::CallbackServerContext* context,
+        const google::protobuf::Empty* _,
+        GetConnectedClientCountResponse* response) override;
+
+    grpc::ServerUnaryReactor* GetLobbyCount(grpc::CallbackServerContext* context,
+        const google::protobuf::Empty* _,
+        GetLobbyCountResponse* response) override;
+
+    grpc::ServerUnaryReactor* GetExistingLobbies(grpc::CallbackServerContext* context,
+        const google::protobuf::Empty* _,
+        GetExistingLobbiesResponse* response) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonRMC;

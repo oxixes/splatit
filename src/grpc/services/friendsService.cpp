@@ -22,7 +22,7 @@ async::Task<void> completeSendNotification(grpc::ServerUnaryReactor* reactor, co
 }
 
 grpc::ServerUnaryReactor* FriendsServiceImpl::SendNotification(grpc::CallbackServerContext* context,
-    const SendNotificationRequest* request, google::protobuf::Empty *_) {
+    const SendNotificationRequest* request, google::protobuf::Empty* _) {
 
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
                 "[" + std::string(FriendsService::service_full_name()) + "] "
@@ -32,6 +32,34 @@ grpc::ServerUnaryReactor* FriendsServiceImpl::SendNotification(grpc::CallbackSer
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
 
     auto task = completeSendNotification(reactor, request, friendsRMC);
+    task.setContext(reactor);
+    friendsRMC->scheduleArbitraryFunction(std::move(task));
+
+    return reactor;
+}
+
+async::Task<void> completeGetConnectedClientCount(grpc::ServerUnaryReactor* reactor,
+    GetConnectedClientCountResponse* response, const std::shared_ptr<nex::rmc::FriendsSecureRMC> friendsRMC) {
+
+    try {
+        response->set_count(co_await friendsRMC->getConnectedClientCount());
+    } catch (const std::exception& e) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, e.what()));
+        co_return;
+    }
+
+    reactor->Finish(grpc::Status::OK);
+}
+
+grpc::ServerUnaryReactor* FriendsServiceImpl::GetConnectedClientCount(grpc::CallbackServerContext* context,
+    const google::protobuf::Empty *_, GetConnectedClientCountResponse *response) {
+
+    logger->log(Logger::level::DEBUG, Logger::group::GRPC, "[" + std::string(FriendsService::service_full_name()) + "] "
+        "GetConnectedClientCount called");
+
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
+
+    auto task = completeGetConnectedClientCount(reactor, response, friendsRMC);
     task.setContext(reactor);
     friendsRMC->scheduleArbitraryFunction(std::move(task));
 
