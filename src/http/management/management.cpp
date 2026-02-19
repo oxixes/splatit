@@ -413,6 +413,22 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                              return errorHandler(srv, std::move(ctx), settingsMgr);
                          });
 
+    server->registerRoute("*", "/api/v1/friends/client_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_friends_client_count(srv, std::move(ctx), settingsMgr);
+                         });
+
+    server->registerRoute("*", "/api/v1/splatoon/client_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_splatoon_client_count(srv, std::move(ctx), settingsMgr);
+                         });
+
+    server->registerRoute("*", "/api/v1/splatoon/lobby_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_splatoon_lobby_count(srv, std::move(ctx), settingsMgr);
+                         });
+
+    server->registerRoute("*", "/api/v1/splatoon/lobbies", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_splatoon_lobbies(srv, std::move(ctx), settingsMgr);
+                         });
+
     server->registerErrorPage("*",
                              [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                  return errorHandler(srv, std::move(ctx), settingsMgr);

@@ -139,6 +139,7 @@ async::Task<void> completeGetExisitingLobbies(grpc::ServerUnaryReactor* reactor,
             lobby->set_maxparticipants(session.session->maxParticipants);
             lobby->set_participationpolicy(session.session->participationPolicy);
             lobby->set_policyargument(session.session->policyArgument);
+            lobby->set_flags(session.session->flags);
             lobby->set_state(session.session->state);
             lobby->set_description(session.session->description);
 

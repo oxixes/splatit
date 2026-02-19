@@ -67,19 +67,20 @@ message Lobby {
   uint32 maxParticipants = 5;
   uint32 participationPolicy = 6;
   uint32 policyArgument = 7;
-  uint32 state = 8;
-  string description = 9;
+  uint32 flags = 8;
+  uint32 state = 9;
+  string description = 10;
 
   // Matchmake session info
-  uint32 gameMode = 10;
-  repeated uint32 attributes = 11;
-  bool openParticipation = 12;
-  uint32 matchmakeSystemType = 13;
-  uint32 progressScore = 14; // uint8
-  uint32 option0 = 15;
-  bool userPasswordEnabled = 16;
-  bool systemPasswordEnabled = 17;
-  google.protobuf.Timestamp startedTime = 18;
+  uint32 gameMode = 11;
+  repeated uint32 attributes = 12;
+  bool openParticipation = 13;
+  uint32 matchmakeSystemType = 14;
+  uint32 progressScore = 15; // uint8
+  uint32 option0 = 16;
+  bool userPasswordEnabled = 17;
+  bool systemPasswordEnabled = 18;
+  google.protobuf.Timestamp startedTime = 19;
 
-  repeated uint32 playerPids = 19;
+  repeated uint32 playerPids = 20;
 }

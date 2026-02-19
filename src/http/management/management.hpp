@@ -77,6 +77,14 @@ async::Task<void> mgm_list_account_device_attributes(http::Server* srv, std::sha
 async::Task<void> mgm_set_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
 async::Task<void> mgm_remove_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
 
+// Friends management endpoints
+async::Task<void> mgm_get_friends_client_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+
+// Splatoon management endpoints
+async::Task<void> mgm_get_splatoon_client_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_get_splatoon_lobby_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_get_splatoon_lobbies(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+
 std::unique_ptr<http::Response> createError(const std::shared_ptr<http::Context>& ctx, ManagementError code, const std::string& message, const std::string& corsOrigin, bool& keepAlive, int httpStatus);
 
 async::Task<void> errorHandler(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);

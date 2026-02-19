@@ -3,11 +3,11 @@
 #include "../../util/util.hpp"
 #include "../../crypto/tools.hpp"
 #include "../../grpc/asyncRequest.hpp"
-#include "../../../cmake-build-debug/generated/accountManagement.grpc.pb.h"
 
 #include <limits>
 #include <optional>
 
+#include <accountManagement.grpc.pb.h>
 #include <google/protobuf/empty.pb.h>
 
 namespace mgm {
@@ -234,37 +234,6 @@ json parseJsonBodyOrError(http::Server* srv, std::shared_ptr<http::Context>& ctx
 }
 
 } // namespace
-
-/*
- * Helper function to try connecting to account servers in round-robin fashion
- * Returns a pair of channel and the address used (empty if all failed)
- */
-std::pair<std::shared_ptr<grpc::Channel>, sock::IPv4Addr> getAccountServerChannel() {
-    auto it = serverHosts.find(ServerType::ACCOUNT);
-    if (it == serverHosts.end() || it->second.empty()) {
-        return {nullptr, sock::IPv4Addr{}};
-    }
-
-    const auto& hostList = it->second;
-    size_t startIndex = serverHostsIndexRoundRobin[ServerType::ACCOUNT];
-    size_t currentIndex = startIndex;
-
-    // Try all servers in round-robin fashion
-    do {
-        const auto& host = hostList[currentIndex];
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
-
-        if (channel) {
-            // Update the round-robin index for next time
-            serverHostsIndexRoundRobin[ServerType::ACCOUNT] = (currentIndex + 1) % hostList.size();
-            return {channel, host};
-        }
-
-        currentIndex = (currentIndex + 1) % hostList.size();
-    } while (currentIndex != startIndex);
-
-    return {nullptr, sock::IPv4Addr{}};
-}
 
 /*
  * Helper function to try a gRPC request with fallback to other account servers

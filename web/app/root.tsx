@@ -12,6 +12,7 @@ import "./app.css";
 import { AppConfigProvider } from "./contexts/AppConfigContext";
 import { ServerStatusGuard } from "./components/server-status-guard";
 import { ServerStatusProvider } from "./contexts/ServerStatusContext";
+import { SplatoonStatsProvider } from "./contexts/SplatoonStatsContext";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -48,9 +49,11 @@ export default function App() {
   return (
     <AppConfigProvider>
       <ServerStatusProvider>
-        <ServerStatusGuard>
-          <Outlet />
-        </ServerStatusGuard>
+        <SplatoonStatsProvider>
+          <ServerStatusGuard>
+            <Outlet />
+          </ServerStatusGuard>
+        </SplatoonStatsProvider>
       </ServerStatusProvider>
     </AppConfigProvider>
   );

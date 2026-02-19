@@ -1,10 +1,12 @@
 import type { Route } from "./+types/home"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "~/components/ui/card";
-import {Activity, Gamepad2, Server} from "lucide-react";
+import {Server} from "lucide-react";
 import {Badge} from "~/components/ui/badge";
 import { ServerStatusCard } from "~/components/server-status-card";
 import { useServerStatusData } from "~/contexts/ServerStatusContext";
 import { TotalAccountsCard } from "~/components/stats/TotalAccountsCard";
+import { ActivePlayersCard } from "~/components/stats/ActivePlayersCard";
+import { ActiveLobbiesCard } from "~/components/stats/ActiveLobbiesCard";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -79,33 +81,11 @@ export default function Home() {
 
           {/* Main Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Active Players</CardTitle>
-                      <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                      <div className="text-2xl font-bold">0</div>
-                      <p className="text-xs text-muted-foreground">
-                          Currently in-game
-                      </p>
-                  </CardContent>
-              </Card>
+              <ActivePlayersCard />
 
               <TotalAccountsCard />
 
-              <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Active Lobbies</CardTitle>
-                      <Gamepad2 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                      <div className="text-2xl font-bold">0</div>
-                      <p className="text-xs text-muted-foreground">
-                          Currently active
-                      </p>
-                  </CardContent>
-              </Card>
+              <ActiveLobbiesCard />
           </div>
 
           {/* Distributed Architecture Status */}
