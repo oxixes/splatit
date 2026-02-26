@@ -1,11 +1,6 @@
 import { createApiClient } from "~/lib/api-client";
 import type { AppConfig } from "~/hooks/useAppConfig";
-
-export interface ServerStatus {
-  version: number;
-  status: "ok" | "down";
-  error?: string;
-}
+import type { ServerStatus } from "~/types/server-status";
 
 export class ServerStatusError extends Error {
   constructor(
