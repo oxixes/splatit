@@ -27,7 +27,8 @@ enum class SystemType {
     ACCOUNTS,
     FRIENDS_AUTH,
     FRIENDS_SECURE,
-    SPLATOON_AUTH
+    SPLATOON_AUTH,
+    BOSS
 };
 
 enum class DBVersion {
@@ -62,6 +63,8 @@ enum class DBCommandType {
     GET_OWNERSHIPS,
     GET_PERSISTENT_NOTIFICATIONS,
     GET_SIGNED_AGREEMENTS,
+    GET_SETTING,
+    GET_FILE,
     LIST_DEVICES,
     LIST_ACCOUNTS,
     INSERT_USER_INFO,
@@ -78,6 +81,8 @@ enum class DBCommandType {
     INSERT_OR_UPDATE_DEVICE_ATTRIBUTES,
     INSERT_OR_UPDATE_OWNERSHIP,
     INSERT_OR_UPDATE_FRIEND_REQUEST,
+    INSERT_OR_UPDATE_SETTING,
+    INSERT_OR_UPDATE_FILE,
     UPDATE_USER_INFO,
     UPDATE_USER_PROFILE,
     INACTIVATE_DEVICE_OWNERSHIPS,
@@ -363,6 +368,24 @@ struct DBFriendDeleteQuery {
     uint32_t friendPid;
 };
 
+struct DBGetSettingQuery {
+    std::string key;
+};
+
+struct DBInsertOrUpdateSettingQuery {
+    std::string key;
+    std::string value;
+};
+
+struct DBGetFileQuery {
+    std::string hash;
+};
+
+struct DBInsertOrUpdateFileQuery {
+    std::string hash;
+    std::vector<uint8_t> data;
+};
+
 struct DBGenericResult {
     std::vector<std::vector<std::shared_ptr<DBData>>> data;
 };
@@ -622,7 +645,7 @@ public:
     virtual bool run() = 0;
     virtual void close() = 0;
 
-    virtual async::ManualTask<Result> startTransaction() = 0;
+    virtual async::ManualTask<Result> startTransaction(bool immediate = false) = 0;
     virtual async::ManualTask<Result> commitTransaction() = 0;
     virtual async::ManualTask<Result> rollbackTransaction() = 0;
 
@@ -680,6 +703,8 @@ public:
     static std::unique_ptr<Command> craftHasActiveOwnershipCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetOwnershipsCommand(uint32_t pid);
     static std::unique_ptr<Command> craftGetSignedAgreementsCommand(uint32_t pid);
+    static std::unique_ptr<Command> craftGetSettingCommand(const std::string& key);
+    static std::unique_ptr<Command> craftGetFileCommand(const std::string& hash);
     static std::unique_ptr<Command> craftListDevicesCommand(std::optional<uint32_t> platform = std::nullopt,
                                                            std::optional<uint32_t> region = std::nullopt,
                                                            std::optional<bool> banned = std::nullopt,
@@ -773,6 +798,8 @@ public:
                                                                   std::optional<std::string> country,
                                                                   std::optional<datetime_t> created,
                                                                   std::optional<datetime_t> updated);
+    static std::unique_ptr<Command> craftInsertOrUpdateSettingCommand(const std::string& key, const std::string& value);
+    static std::unique_ptr<Command> craftInsertOrUpdateFileCommand(const std::string& hash, const std::vector<uint8_t>& data);
     static std::unique_ptr<Command> craftDeleteMiiCommand(int64_t miiId);
     static std::unique_ptr<Command> craftDeleteEmailCommand(int64_t emailId);
     static std::unique_ptr<Command> craftDeleteUserCommand(uint32_t pid);

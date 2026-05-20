@@ -52,13 +52,13 @@ public:
     [[nodiscard]] fs::path getSSLCAKeyPath() const;
     [[nodiscard]] fs::path getDeviceKeyPath() const;
     [[nodiscard]] std::string getTopDomain() const;
-    [[nodiscard]] fs::path getBOSSPath() const;
     [[nodiscard]] fs::path getMiiImagesPath() const;
 
     [[nodiscard]] json getAccountsDBSettings() const;
     [[nodiscard]] json getFriendsAuthDBSettings() const;
     [[nodiscard]] json getFriendsSecureDBSettings() const;
     [[nodiscard]] json getSplatoonAuthDBSettings() const;
+    [[nodiscard]] json getBOSSDBSettings() const;
 
     [[nodiscard]] sock::IPv4Addr getHTTPListenAddress() const;
     [[nodiscard]] int getHTTPWorkerCount() const;

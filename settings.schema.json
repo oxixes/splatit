@@ -665,9 +665,55 @@
           "description": "Enable or disable the BOSS server",
           "type": "boolean"
         },
-        "path": {
-          "description": "Path to the BOSS server files",
-          "type": "string"
+        "db": {
+          "description": "Database settings",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "The database type to use",
+              "type": "string",
+              "enum": ["SQLite3"]
+            },
+            "path": {
+              "description": "Path to the database file",
+              "type": "string"
+            },
+            "host": {
+              "description": "Host of the database",
+              "type": "string"
+            },
+            "port": {
+              "description": "Port of the database",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "user": {
+              "description": "User name of the database",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password of the user in the database",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the database to connect to",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "if": {
+            "properties": {
+              "type": {"const": "SQLite3"}
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          },
+          "else": {
+            "required": ["host", "port", "user", "password", "name"]
+          }
         }
       },
       "if": {
@@ -676,7 +722,7 @@
         }
       },
       "then": {
-        "required": ["path"]
+        "required": ["db"]
       },
       "required": ["enabled"]
     },

@@ -102,6 +102,30 @@ bool sqlite3Database::init() {
         return false;
     }
 
+    sqlite3_finalize(foreignKeysStmt);
+
+    std::string walSql = "PRAGMA journal_mode = WAL;";
+    sqlite3_stmt* walStmt;
+    if (!craftStatement(walSql, &walStmt)) {
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
+                    "Failed to craft timeout statement: " + std::string(sqlite3_errmsg(db)));
+        sqlite3_finalize(walStmt);
+        sqlite3_close(db);
+        return false;
+    }
+
+    if (runStatement(walStmt, {}, nullptr)) {
+        logger->log(Logger::level::DEBUG, Logger::group::DB, "WAL journal mode enabled for SQLite 3 database.");
+    } else {
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
+                    "Failed to set busy timeout: " + std::string(sqlite3_errmsg(db)));
+        sqlite3_finalize(walStmt);
+        sqlite3_close(db);
+        return false;
+    }
+
+    sqlite3_finalize(walStmt);
+
     return true;
 }
 
@@ -153,8 +177,8 @@ async::ManualTask<Result> sqlite3Database::queueCommand(std::unique_ptr<Command>
     return *task;
 }
 
-async::ManualTask<Result> sqlite3Database::startTransaction() {
-    auto command = craftVoidCommand("BEGIN TRANSACTION;");
+async::ManualTask<Result> sqlite3Database::startTransaction(bool immediate) {
+    auto command = craftVoidCommand((immediate) ? "BEGIN IMMEDIATE;" : "BEGIN TRANSACTION;");
     auto task = std::move(queueCommand(std::move(command)));
 
     processQueue();
@@ -1510,6 +1534,66 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         }
 
         resultsData = notifications;
+    } else if (command->type == DBCommandType::GET_SETTING) {
+        if (getSettingStatement == nullptr) {
+            std::string sqlCommand = "SELECT value FROM settings WHERE key = ?;";
+
+            if (!craftStatement(sqlCommand, &getSettingStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBGetSettingQuery>(&command->data);
+
+        if (!bindData(getSettingStatement, {DBDataType::STRING},
+                      {std::make_shared<DBString>(query->key)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(getSettingStatement);
+        }
+
+        if (!runStatement(getSettingStatement, {DBDataType::STRING}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getSettingStatement);
+            sqlite3_clear_bindings(getSettingStatement);
+        }
+
+        if (!returnedData->empty()) {
+            resultsData = std::any_cast<std::string>((*returnedData)[0][0]->data);
+        }
+
+        sqlite3_reset(getSettingStatement);
+        sqlite3_clear_bindings(getSettingStatement);
+    } else if (command->type == DBCommandType::GET_FILE) {
+        if (getFileStatement == nullptr) {
+            std::string sqlCommand = "SELECT data FROM files WHERE hash = ?;";
+
+            if (!craftStatement(sqlCommand, &getFileStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBGetFileQuery>(&command->data);
+
+        if (!bindData(getFileStatement, {DBDataType::STRING},
+                      {std::make_shared<DBString>(query->hash)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(getFileStatement);
+        }
+
+        if (!runStatement(getFileStatement, {DBDataType::BLOB}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_reset(getFileStatement);
+            sqlite3_clear_bindings(getFileStatement);
+        }
+
+        if (!returnedData->empty()) {
+            resultsData = std::any_cast<std::vector<uint8_t>>((*returnedData)[0][0]->data);
+        }
+
+        sqlite3_reset(getFileStatement);
+        sqlite3_clear_bindings(getFileStatement);
     } else if (command->type == DBCommandType::INACTIVATE_DEVICE_OWNERSHIPS) {
         if (inactivateDeviceOwnershipsStatement == nullptr) {
             std::string sqlCommand = "UPDATE ownerships SET status = 'INACTIVE', last_updated = ? "
@@ -2132,6 +2216,64 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(insertOrUpdateFriendRequestStatement);
         sqlite3_clear_bindings(insertOrUpdateFriendRequestStatement);
+    } else if (command->type == DBCommandType::INSERT_OR_UPDATE_SETTING) {
+        if (insertOrUpdateSettingStatement == nullptr) {
+            std::string sqlCommand = "INSERT INTO settings (key, value) "
+                        "VALUES (?, ?) "
+                        "ON CONFLICT(key) DO UPDATE SET "
+                        "value = excluded.value;";
+
+            if (!craftStatement(sqlCommand, &insertOrUpdateSettingStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBInsertOrUpdateSettingQuery>(&command->data);
+
+        if (!bindData(insertOrUpdateSettingStatement, {DBDataType::STRING, DBDataType::STRING},
+                                                      {std::make_shared<DBString>(query->key),
+                                                       std::make_shared<DBString>(query->value)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertOrUpdateSettingStatement);
+            goto push_results;
+        }
+
+        if (!runStatement(insertOrUpdateSettingStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(insertOrUpdateSettingStatement);
+        sqlite3_clear_bindings(insertOrUpdateSettingStatement);
+    } else if (command->type == DBCommandType::INSERT_OR_UPDATE_FILE) {
+        if (insertOrUpdateFileStatement == nullptr) {
+            std::string sqlCommand = "INSERT INTO files (hash, data) "
+                        "VALUES (?, ?) "
+                        "ON CONFLICT(hash) DO UPDATE SET "
+                        "data = excluded.data;";
+
+            if (!craftStatement(sqlCommand, &insertOrUpdateFileStatement)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+        }
+
+        auto* query = std::any_cast<DBInsertOrUpdateFileQuery>(&command->data);
+
+        if (!bindData(insertOrUpdateFileStatement, {DBDataType::STRING, DBDataType::BLOB},
+                                                      {std::make_shared<DBString>(query->hash),
+                                                       std::make_shared<DBBlob>(query->data)})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_clear_bindings(insertOrUpdateFileStatement);
+            goto push_results;
+                                                       }
+
+        if (!runStatement(insertOrUpdateFileStatement, {}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+        }
+
+        sqlite3_reset(insertOrUpdateFileStatement);
+        sqlite3_clear_bindings(insertOrUpdateFileStatement);
     } else if (command->type == DBCommandType::UPDATE_USER_PROFILE) {
         std::vector<DBDataType> dataTypes;
         std::vector<std::shared_ptr<DBData>> data;
@@ -3596,7 +3738,7 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
     }
 
     logger->log(Logger::level::DEBUG, Logger::group::DB, "Running SQLite 3 statement: " +
-                                                         std::string(sqlite3_expanded_sql(statement)));
+                                                         std::string(sqlite3_sql(statement)));
 
     int result = sqlite3_step(statement);
     while (result != SQLITE_DONE) {
@@ -3656,7 +3798,7 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
                         break;
                 }
             }
-        } else {
+        } else if (result != SQLITE_ROW) {
             logger->log(Logger::level::FAILURE, Logger::group::DB,
                         "Failed to run SQLite 3 statement: " + std::string(sqlite3_errmsg(db)));
             return false;
@@ -3672,7 +3814,7 @@ void sqlite3Database::close() {
     if (db == nullptr) return;
 
     if (!isSession) {
-        if (dbThreadHandle->joinable()) {
+        if (dbThreadHandle != nullptr && dbThreadHandle->joinable()) {
             *shouldStop = true;
             dbQueueCV->notify_all();
             dbThreadHandle->join();
@@ -3713,6 +3855,8 @@ void sqlite3Database::close() {
     if (inactivateDeviceOwnershipsStatement != nullptr) sqlite3_finalize(inactivateDeviceOwnershipsStatement);
     if (getLatestOwnershipStatement != nullptr) sqlite3_finalize(getLatestOwnershipStatement);
     if (getLatestAgreementStatement != nullptr) sqlite3_finalize(getLatestAgreementStatement);
+    if (getSettingStatement != nullptr) sqlite3_finalize(getSettingStatement);
+    if (getFileStatement != nullptr) sqlite3_finalize(getFileStatement);
     if (hasActiveOwnershipStatement != nullptr) sqlite3_finalize(hasActiveOwnershipStatement);
     if (addFriendStatement != nullptr) sqlite3_finalize(addFriendStatement);
     if (blockFriendStatement != nullptr) sqlite3_finalize(blockFriendStatement);
@@ -3725,6 +3869,8 @@ void sqlite3Database::close() {
     if (insertOrUpdateDeviceAttributesStatement != nullptr) sqlite3_finalize(insertOrUpdateDeviceAttributesStatement);
     if (insertOrUpdateOwnershipStatement != nullptr) sqlite3_finalize(insertOrUpdateOwnershipStatement);
     if (insertOrUpdateFriendRequestStatement != nullptr) sqlite3_finalize(insertOrUpdateFriendRequestStatement);
+    if (insertOrUpdateSettingStatement != nullptr) sqlite3_finalize(insertOrUpdateSettingStatement);
+    if (insertOrUpdateFileStatement != nullptr) sqlite3_finalize(insertOrUpdateFileStatement);
     if (deleteMiiStatement != nullptr) sqlite3_finalize(deleteMiiStatement);
     if (deleteEmailStatement != nullptr) sqlite3_finalize(deleteEmailStatement);
     if (deleteUserStatement != nullptr) sqlite3_finalize(deleteUserStatement);

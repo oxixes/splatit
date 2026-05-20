@@ -19,19 +19,18 @@ namespace fs = std::filesystem;
 
 namespace boss {
 
-extern json bossManifest; // Defined in /boss/utils.cpp
-
 async::Task<void> p01_tasksheet(http::Server* srv, std::shared_ptr<http::Context> ctx,
-                                std::string titleId, std::string tasksheetId,
-                                std::shared_ptr<SettingsManager> settingsMgr);
-async::Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx, std::string titleId,
-                           std::string tasksheetId, std::string fileHash,
-                           std::shared_ptr<SettingsManager> settingsMgr);
-async::Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx);
+                                std::shared_ptr<SettingsManager> settingsMgr,
+                                std::shared_ptr<db::Database> db);
+async::Task<void> p01_data(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                           std::shared_ptr<db::Database> db);
+async::Task<void> p01_policylist(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                                 std::shared_ptr<db::Database> db);
 
 std::unique_ptr<http::Response> getError(int status, http::Version version);
 
-void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
+void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
+                    std::shared_ptr<db::Database> db);
 void unregisterRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr);
 
 } // namespace boss

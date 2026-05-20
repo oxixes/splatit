@@ -642,6 +642,26 @@ std::unique_ptr<Command> Database::craftUpdateUserProfileCommand(uint32_t pid, s
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftInsertOrUpdateSettingCommand(const std::string& key, const std::string& value) {
+    DBInsertOrUpdateSettingQuery query {
+        .key = key,
+        .value = value
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_SETTING, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftInsertOrUpdateFileCommand(const std::string& hash, const std::vector<uint8_t>& data) {
+    DBInsertOrUpdateFileQuery query {
+        .hash = hash,
+        .data = data
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::INSERT_OR_UPDATE_FILE, std::any(query));
+    return dbCommand;
+}
+
 std::unique_ptr<Command> Database::craftDeleteMiiCommand(int64_t miiId) {
     DBIdQuery query {
         .id = miiId
@@ -762,6 +782,24 @@ std::unique_ptr<Command> Database::craftGetSignedAgreementsCommand(uint32_t pid)
     };
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::GET_SIGNED_AGREEMENTS, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetSettingCommand(const std::string& key) {
+    DBGetSettingQuery query {
+        .key = key
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_SETTING, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetFileCommand(const std::string& hash) {
+    DBGetFileQuery query {
+        .hash = hash
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_FILE, std::any(query));
     return dbCommand;
 }
 
@@ -1107,6 +1145,22 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
 
             break;
 
+        case DBCommandType::GET_SETTING:
+            // Get a server setting.
+            if (command->data.type() != typeid(DBGetSettingQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_FILE:
+            // Get a server file.
+            if (command->data.type() != typeid(DBGetFileQuery)) {
+                return false;
+            }
+
+            break;
+
         case DBCommandType::INSERT_GAME_SERVER_ACCESS:
             // Insert game server access commands need the PID of the user to get and the ID of the game server.
             if (command->data.type() != typeid(DBGameServerAccessData)) {
@@ -1230,6 +1284,22 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::INSERT_OR_UPDATE_FRIEND_REQUEST:
             // Inserts or updates a friend request in the database.
             if (command->data.type() != typeid(DBFriendRequestInsertOrUpdateQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_OR_UPDATE_SETTING:
+            // Inserts or updates a server setting in the database.
+            if (command->data.type() != typeid(DBInsertOrUpdateSettingQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::INSERT_OR_UPDATE_FILE:
+            // Inserts or updates a file in the database.
+            if (command->data.type() != typeid(DBInsertOrUpdateFileQuery)) {
                 return false;
             }
 

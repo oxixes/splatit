@@ -27,7 +27,7 @@ public:
     bool run() override;
     void close() override;
 
-    async::ManualTask<Result> startTransaction() override;
+    async::ManualTask<Result> startTransaction(bool immediate = false) override;
     async::ManualTask<Result> commitTransaction() override;
     async::ManualTask<Result> rollbackTransaction() override;
 
@@ -72,6 +72,8 @@ private:
     sqlite3_stmt* getDeviceStatement = nullptr;
     sqlite3_stmt* getOwnershipStatement = nullptr;
     sqlite3_stmt* getLatestOwnershipStatement = nullptr;
+    sqlite3_stmt* getSettingStatement = nullptr;
+    sqlite3_stmt* getFileStatement = nullptr;
     sqlite3_stmt* hasActiveOwnershipStatement = nullptr;
     sqlite3_stmt* getOwnershipsStatement = nullptr;
     sqlite3_stmt* getPersistentNotificationsStatement = nullptr;
@@ -89,6 +91,8 @@ private:
     sqlite3_stmt* insertOrUpdateDeviceAttributesStatement = nullptr;
     sqlite3_stmt* insertOrUpdateOwnershipStatement = nullptr;
     sqlite3_stmt* insertOrUpdateFriendRequestStatement = nullptr;
+    sqlite3_stmt* insertOrUpdateSettingStatement = nullptr;
+    sqlite3_stmt* insertOrUpdateFileStatement = nullptr;
     sqlite3_stmt* deleteMiiStatement = nullptr;
     sqlite3_stmt* deleteEmailStatement = nullptr;
     sqlite3_stmt* deleteUserStatement = nullptr;

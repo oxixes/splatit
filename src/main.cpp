@@ -18,7 +18,6 @@
 #include "nex/auth/auth.hpp"
 #include "nex/friends/friendsSecure.hpp"
 #include "nex/splatoon/splatoonSecure.hpp"
-#include "boss/utils.hpp"
 #include "http/management/management.hpp"
 #include "util/globalTaskScheduler.hpp"
 #include "sharedState/localSharedState.hpp"
@@ -274,21 +273,42 @@ int main(int argc, char** argv) {
     }
 
     std::shared_ptr<db::Database> accountsDB = nullptr;
+    std::shared_ptr<db::Database> bossDB = nullptr;
     std::shared_ptr<http::Server> httpServer = nullptr;
     std::shared_ptr<http::Server> managementServer = nullptr;
 
     if (settingsMgr->isAccountEnabled() || settingsMgr->isBOSSEnabled()) {
-        if (settingsMgr->isBOSSEnabled() && !boss::init(logger, settingsMgr)) {
-            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
-            if (sharedState != nullptr) sharedState->close();
-            if (friendsSecureDB != nullptr) friendsSecureDB->close();
-            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
-            if (friendsAuthDB != nullptr) friendsAuthDB->close();
-            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
-            socketManager->cleanup();
-            certManager->cleanup();
-            sock::cleanup();
-            return 1;
+        if (settingsMgr->isBOSSEnabled()) {
+            bossDB = db::Database::createDatabase(settingsMgr->getBOSSDBSettings(), logger);
+            if (!bossDB->init() || !bossDB->run()) {
+                bossDB->close();
+                if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (sharedState != nullptr) sharedState->close();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+
+            if (bossDB->getVersion() != db::CURRENT_VERSION) {
+                if (!db::migrations::migrate(logger, bossDB, db::DBType::SQLITE3, db::SystemType::BOSS, bossDB->getVersion())) {
+                    bossDB->close();
+                    if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                    if (sharedState != nullptr) sharedState->close();
+                    if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                    if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                    if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                    if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                    socketManager->cleanup();
+                    certManager->cleanup();
+                    sock::cleanup();
+                    return 1;
+                }
+            }
         }
 
         try {
@@ -365,7 +385,7 @@ int main(int argc, char** argv) {
         }
 
         if (settingsMgr->isBOSSEnabled())
-            boss::registerRoutes(httpServer, settingsMgr);
+            boss::registerRoutes(httpServer, settingsMgr, bossDB);
 
         httpServer->listen(settingsMgr->getHTTPWorkerCount(), stop);
     }
@@ -466,6 +486,7 @@ int main(int argc, char** argv) {
     if (friendsSecureDB != nullptr) friendsSecureDB->close();
     if (friendsAuthDB != nullptr) friendsAuthDB->close();
     if (accountsDB != nullptr) accountsDB->close();
+    if (bossDB != nullptr) bossDB->close();
     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
     if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();

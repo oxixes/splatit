@@ -1280,9 +1280,9 @@ Task<void> SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Requ
 
     scores->push_back(std::move(scoreInfo));
 
-    params[0] = std::move(scores);
-
     logger->log(Logger::level::DEBUG, logGroup, "Returning dummy competition ranking score for client " + std::to_string(client.pid) + ": " + scores->toString());
+
+    params[0] = std::move(scores);
 
     sendMsg(client, res, params);
     co_return;

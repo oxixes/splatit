@@ -8,29 +8,10 @@
 
 namespace boss {
 
-json bossManifest;
-
-bool readManifest(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsMgr) {
-    fs::path bossManifestPath = settingsMgr->getBOSSPath() / "manifest.json";
-
-    if (!fs::exists(bossManifestPath) || !fs::is_regular_file(bossManifestPath)) {
-        logger->log(Logger::level::WARN, Logger::group::SETUP,
-                    "The BOSS manifest file does not exist or is not a file.");
-        return false;
-    }
-
-    try {
-        std::ifstream bossManifestFile(bossManifestPath);
-        bossManifest = json::parse(bossManifestFile);
-    } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "An error occurred while parsing the BOSS manifest file: " + std::string(e.what()));
-        return false;
-    }
-
+bool validateManifest(const std::shared_ptr<Logger::Logger>& logger, const json& bossManifest) {
     fs::path schemaFilePath = fs::path("boss.schema.json");
     if (!fs::exists(schemaFilePath) || !fs::is_regular_file(schemaFilePath)) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::BOSS,
                     "The BOSS manifest schema file does not exist or is not a file, cannot validate BOSS manifest.");
         return false;
     }
@@ -42,7 +23,7 @@ bool readManifest(const std::shared_ptr<Logger::Logger>& logger, const std::shar
         schema = json::parse(schemaFile);
         validator.set_root_schema(schema);
     } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::BOSS,
                     "An error occurred while parsing the BOSS manifest schema file: " + std::string(e.what()));
         return false;
     }
@@ -50,7 +31,7 @@ bool readManifest(const std::shared_ptr<Logger::Logger>& logger, const std::shar
     try {
         validator.validate(bossManifest);
     } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+        logger->log(Logger::level::FAILURE, Logger::group::BOSS,
                     "The BOSS manifest file is invalid: " + std::string(e.what()));
         return false;
     }
@@ -59,10 +40,9 @@ bool readManifest(const std::shared_ptr<Logger::Logger>& logger, const std::shar
 }
 
 // Only called if the manifest file does not exist
-bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsMgr) {
+async::Task<bool> createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, json& bossManifest,
+                                        std::shared_ptr<db::Database> db) {
     logger->log(Logger::level::INFO, Logger::group::SETUP, "Creating default BOSS files.");
-
-    fs::path bossManifestPath = settingsMgr->getBOSSPath() / "manifest.json";
 
     // Open default images
     std::vector<uint8_t> panelTexture;
@@ -76,7 +56,7 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
         if (!panelTextureFile.is_open() || !bodyTeamAFile.is_open() || !bodyTeamBFile.is_open()) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         "Failed to open default images for BOSS.");
-            return false;
+            co_return false;
         }
 
         panelTexture = std::vector<uint8_t>((std::istreambuf_iterator<char>(panelTextureFile)),
@@ -88,7 +68,7 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
     } catch (const std::exception& e) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                     "An error occurred while reading default images for BOSS: " + std::string(e.what()));
-        return false;
+        co_return false;
     }
 
     time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -98,6 +78,7 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
     std::string nowStr = nowBuff;
 
     bossManifest = {
+            {"lastUpdate", now},
             {"tasksheets", {
                     {EU_BOSS_APP_ID, {
                             {"titleId", EU_TITLE_ID},
@@ -255,49 +236,72 @@ bool createDefaultManifest(const std::shared_ptr<Logger::Logger>& logger, const 
         {100, 100, 100, 255},
         std::chrono::system_clock::now(),
         std::chrono::system_clock::now(),
-        std::chrono::system_clock::now() + std::chrono::days(1024),
-        std::chrono::system_clock::now() + std::chrono::days(1025),
-        std::chrono::system_clock::now() + std::chrono::days(1025),
+        std::chrono::system_clock::now(),
+        std::chrono::system_clock::now(),
+        std::chrono::system_clock::now(),
         festival::Language::AMERICAN_ENGLISH
     };
 
     try {
-        createFestival(defaultFestivalInfo, bodyTeamA, bodyTeamB, panelTexture, settingsMgr->getBOSSPath());
-        createVSSetting(std::chrono::system_clock::now(), settingsMgr->getBOSSPath());
+        co_await createFestival(defaultFestivalInfo, bodyTeamA, bodyTeamB, panelTexture, bossManifest, db);
+        co_await createVSSetting(std::chrono::system_clock::now(), bossManifest, db);
     } catch (const std::exception& e) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP, e.what());
-        return false;
+        co_return false;
     }
 
-    // Write the manifest to disk
-    try {
-        std::ofstream bossManifestFile(bossManifestPath);
-        bossManifestFile << bossManifest.dump(4);
-        bossManifestFile.close();
-    } catch (const std::exception& e) {
-        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "An error occurred while writing the BOSS manifest file to disk: " + std::string(e.what()));
-        return false;
-    }
-
-    return true;
+    co_return true;
 }
 
-bool init(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<SettingsManager>& settingsMgr) {
-    fs::path bossManifestPath = settingsMgr->getBOSSPath() / "manifest.json";
+async::Task<json> getManifest(const std::shared_ptr<Logger::Logger>& logger,
+                              const std::shared_ptr<db::Database>& db) {
+    auto getManifestCmd = db::Database::craftGetSettingCommand("manifest");
+    db::Result results = co_await db->runCommand(std::move(getManifestCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
 
-    if (!readManifest(logger, settingsMgr) && fs::exists(bossManifestPath)) {
-        return false;
-    } else if (!fs::exists(bossManifestPath)) {
-        if (!createDefaultManifest(logger, settingsMgr)) {
-            return false;
+    if (results.hasData()) {
+        try {
+            json manifest = json::parse(results.getData<std::string>());
+            if (!validateManifest(logger, manifest)) {
+                throw std::runtime_error("Invalid BOSS manifest");
+            }
+
+            co_return manifest;
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::BOSS,
+                        "Failed to parse BOSS manifest, will be overwritten: " + std::string(e.what()));
         }
     }
 
-    return true;
+    std::shared_ptr<db::Database> session = db->createSession();
+    if ((co_await session->startTransaction(true)).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    json manifest;
+    if (!co_await createDefaultManifest(logger, manifest, session)) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Failed to create default BOSS manifest");
+    }
+
+    // Save the manifest to the database
+    auto saveManifestCmd = db::Database::craftInsertOrUpdateSettingCommand("manifest", manifest.dump());
+    results = co_await session->runCommand(std::move(saveManifestCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_await session->rollbackTransaction();
+        throw std::runtime_error("Database error");
+    }
+
+    if ((co_await session->commitTransaction()).getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error");
+    }
+
+    co_return manifest;
 }
 
-int getNextResourceId() {
+int getNextResourceId(const json& bossManifest) {
     int id = 1000;
     for (const auto& [key, value] : bossManifest["tasksheets"].items()) {
         for (const auto& [tsKey, tsVal]: value["tasksheets"].items()) {
@@ -310,18 +314,9 @@ int getNextResourceId() {
     return id + 1;
 }
 
-void createFestival(const festival::FestivalInfo& festivalInfo, const std::vector<uint8_t>& bodyTeamA,
+async::Task<void> createFestival(const festival::FestivalInfo& festivalInfo, const std::vector<uint8_t>& bodyTeamA,
                     const std::vector<uint8_t>& bodyTeamB, const std::vector<uint8_t>& panelTexture,
-                    const fs::path& bossDir) {
-    // Try to create the data directory if it doesn't exist
-    fs::path dataDir = bossDir / "optdat2";
-    if (!fs::exists(dataDir)) {
-        if (!fs::create_directories(dataDir)) {
-            // Failed to create the directory
-            throw std::runtime_error("Failed to create the data directory for the festival.");
-        }
-    }
-
+                    json& bossManifest, const std::shared_ptr<db::Database>& db) {
     byaml::Byaml festivalByaml = generateFestivalByaml(festivalInfo);
 
     std::string id = std::to_string(festivalInfo.id);
@@ -356,28 +351,25 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
     std::string md5PanelTextureBFRES = util::bin2hex(crypto::MD5(encryptedPanelTextureBFRESData));
     std::string md5HapTextureBFRES = util::bin2hex(crypto::MD5(encryptedHapTextureBFRESData));
 
-    // Write the files to disk
-    fs::path festivalByamlPath = dataDir / "Festival.byaml.boss";
-    fs::path panelTextureBFRESPath = dataDir / "PanelTexture.bfres.boss";
-    fs::path hapTextureBFRESPath = dataDir / "HapTexture.bfres.boss";
-
-    try {
-        std::ofstream festivalByamlFile(festivalByamlPath, std::ios::binary);
-        std::ofstream panelTextureBFRESFile(panelTextureBFRESPath, std::ios::binary);
-        std::ofstream hapTextureBFRESFile(hapTextureBFRESPath, std::ios::binary);
-
-        festivalByamlFile.write(reinterpret_cast<const char*>(encryptedFestivalByamlData.data()), (long) encryptedFestivalByamlData.size());
-        panelTextureBFRESFile.write(reinterpret_cast<const char*>(encryptedPanelTextureBFRESData.data()), (long) encryptedPanelTextureBFRESData.size());
-        hapTextureBFRESFile.write(reinterpret_cast<const char*>(encryptedHapTextureBFRESData.data()), (long) encryptedHapTextureBFRESData.size());
-
-        festivalByamlFile.close();
-        panelTextureBFRESFile.close();
-        hapTextureBFRESFile.close();
-    } catch (const std::exception& e) {
-        throw std::runtime_error("An error occurred while writing the festival files to disk: " + std::string(e.what()));
+    auto saveCmd = db::Database::craftInsertOrUpdateFileCommand(md5PanelTextureBFRES, encryptedPanelTextureBFRESData);
+    db::Result results = co_await db->runCommand(std::move(saveCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error while saving default panel texture for BOSS.");
     }
 
-    int resourceId = getNextResourceId();
+    saveCmd = db::Database::craftInsertOrUpdateFileCommand(md5HapTextureBFRES, encryptedHapTextureBFRESData);
+    results = co_await db->runCommand(std::move(saveCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error while saving default hap texture for BOSS.");
+    }
+
+    saveCmd = db::Database::craftInsertOrUpdateFileCommand(md5FestivalByaml, encryptedFestivalByamlData);
+    results = co_await db->runCommand(std::move(saveCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error while saving default festival byaml for BOSS.");
+    }
+
+    int resourceId = getNextResourceId(bossManifest);
 
     json::object_t optdat2 = {
             {"open", true},
@@ -386,7 +378,7 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
                             {"id", resourceId++},
                             {"type", "AppData"},
                             {"filename", "Festival.byaml"},
-                            {"path", "optdat2/Festival.byaml.boss"},
+                            {"size", encryptedFestivalByamlData.size()},
                             {"notify", {
                                     {"new", "app"},
                                     {"LED", false}
@@ -396,7 +388,7 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
                             {"id", resourceId++},
                             {"type", "AppData"},
                             {"filename", "PanelTexture.bfres"},
-                            {"path", "optdat2/PanelTexture.bfres.boss"},
+                            {"size", encryptedPanelTextureBFRESData.size()},
                             {"notify", {
                                     {"new", "app"},
                                     {"LED", false}
@@ -406,7 +398,7 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
                             {"id", resourceId},
                             {"type", "AppData"},
                             {"filename", "HapTexture.bfres"},
-                            {"path", "optdat2/HapTexture.bfres.boss"},
+                            {"size", encryptedHapTextureBFRESData.size()},
                             {"notify", {
                                     {"new", "app"},
                                     {"LED", false}
@@ -415,23 +407,13 @@ void createFestival(const festival::FestivalInfo& festivalInfo, const std::vecto
             }}
     };
 
-    bossManifest["tasksheets"];
-
     bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
     bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
     bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
 }
 
-void createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTime, const fs::path& bossDir) {
-    // Try to create the data directory if it doesn't exist
-    fs::path dataDir = bossDir / "schdat2";
-    if (!fs::exists(dataDir)) {
-        if (!fs::create_directories(dataDir)) {
-            // Failed to create the directory
-            throw std::runtime_error("Failed to create the data directory for the VSSetting.");
-        }
-    }
-
+async::Task<void> createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTime, json& bossManifest,
+                                  const std::shared_ptr<db::Database>& db) {
     byaml::Byaml vsSettingByaml = generateVSSettingByaml(afterFesBonusStartTime);
 
     std::vector<uint8_t> vsSettingByamlData = vsSettingByaml.serialize();
@@ -442,18 +424,13 @@ void createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTim
     // Calculate the hash
     std::string md5VSSettingByaml = util::bin2hex(crypto::MD5(encryptedVSSettingByamlData));
 
-    // Write the file to disk
-    fs::path vsSettingByamlPath = dataDir / "VSSetting.byaml.boss";
-
-    try {
-        std::ofstream vsSettingByamlFile(vsSettingByamlPath, std::ios::binary);
-        vsSettingByamlFile.write(reinterpret_cast<const char*>(encryptedVSSettingByamlData.data()), (long) encryptedVSSettingByamlData.size());
-        vsSettingByamlFile.close();
-    } catch (const std::exception& e) {
-        throw std::runtime_error("An error occurred while writing the VSSetting file to disk: " + std::string(e.what()));
+    auto saveCmd = db::Database::craftInsertOrUpdateFileCommand(md5VSSettingByaml, encryptedVSSettingByamlData);
+    db::Result results = co_await db->runCommand(std::move(saveCmd));
+    if (results.getStatus() != db::DBResultStatus::SUCCESS) {
+        throw std::runtime_error("Database error while saving default VSSetting byaml for BOSS.");
     }
 
-    int resourceId = getNextResourceId();
+    int resourceId = getNextResourceId(bossManifest);
 
     json::object_t schdat2 = {
             {"open", true},
@@ -462,7 +439,7 @@ void createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTim
                             {"id", resourceId},
                             {"type", "AppData"},
                             {"filename", "VSSetting.byaml"},
-                            {"path", "schdat2/VSSetting.byaml.boss"},
+                            {"size", encryptedVSSettingByamlData.size()},
                             {"notify", {
                                     {"new", "app"},
                                     {"LED", false}

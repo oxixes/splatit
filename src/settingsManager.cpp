@@ -228,7 +228,10 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
             }},
             {"boss", {
                     {"enabled", true},
-                    {"path", (dataDirAbsPath/fs::path("boss")).string()}
+                    {"db", {
+                        {"type", "SQLite3"},
+                        {"path", (dataDirAbsPath/fs::path("boss.db")).string()}
+                    }}
             }},
             {"http", {
                     {"listenAddress", "0.0.0.0"},
@@ -398,10 +401,6 @@ fs::path SettingsManager::getDeviceKeyPath() const {
 
 std::string SettingsManager::getTopDomain() const {
     return settings["domain"];
-}
-
-fs::path SettingsManager::getBOSSPath() const {
-    return settings["boss"]["path"];
 }
 
 fs::path SettingsManager::getMiiImagesPath() const {
@@ -578,6 +577,10 @@ json SettingsManager::getFriendsSecureDBSettings() const {
 
 json SettingsManager::getSplatoonAuthDBSettings() const {
     return settings["splatoonAuth"]["db"];
+}
+
+json SettingsManager::getBOSSDBSettings() const {
+    return settings["boss"]["db"];
 }
 
 std::vector<std::string> SettingsManager::getDomains() const {
