@@ -48,6 +48,11 @@ void Server::listen() {
                 logger, serverData.accountDatabase, serverData.httpServer, serverData.settingsManager, serverData.certManager);
     }
 
+    if (serverData.bossDatabase != nullptr) {
+        bossService = std::make_shared<grpcimpl::boss_config::v1::BossServiceImpl>(
+                logger, serverData.settingsManager, serverData.bossDatabase, serverData.httpServer);
+    }
+
     serverStatusService = std::make_shared<grpcimpl::serverstatus::v1::ServerStatusServiceImpl>(
             logger, serverData.settingsManager);
 
@@ -63,6 +68,7 @@ void Server::listen() {
     if (accountManagementService != nullptr) builder.RegisterService(accountManagementService.get());
     if (friendsService != nullptr) builder.RegisterService(friendsService.get());
     if (splatoonService != nullptr) builder.RegisterService(splatoonService.get());
+    if (bossService != nullptr) builder.RegisterService(bossService.get());
 
     grpcServer = builder.BuildAndStart();
     if (!grpcServer) {

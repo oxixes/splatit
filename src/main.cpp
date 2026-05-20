@@ -423,6 +423,7 @@ int main(int argc, char** argv) {
                 settingsMgr,
                 certManager,
                 accountsDB,
+                bossDB,
                 httpServer,
                 friendsAuthRMC,
                 splatoonAuthRMC,

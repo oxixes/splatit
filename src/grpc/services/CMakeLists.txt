@@ -12,4 +12,6 @@ target_sources(splatoon_server PRIVATE
         friendsService.cpp
         friendsService.hpp
         splatoonService.cpp
-        splatoonService.hpp)
+        splatoonService.hpp
+        bossService.cpp
+        bossService.hpp)

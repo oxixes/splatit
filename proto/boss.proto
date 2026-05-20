@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package grpcimpl.boss_config.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service BossService {
+  rpc SetFestival(SetFestivalRequest) returns (google.protobuf.Empty);
+  rpc SetVSSetting(SetVSSettingRequest) returns (google.protobuf.Empty);
+}
+
+message Color {
+  uint32 r = 1;
+  uint32 g = 2;
+  uint32 b = 3;
+  uint32 a = 4;
+}
+
+message DialogueLine {
+  enum Command { SPEAK_RAW_TEXT = 0; }
+  enum Emotion {
+    NORMAL_TALK = 0;
+    GREETING = 1;
+    HAPPY = 2;
+    ANGRY = 3;
+    SURPRISED = 4;
+    BORED = 5;
+    FEED = 6;
+  }
+  enum Speaker { IDOL_LEFT = 0; IDOL_RIGHT = 1; IDOL_ALL = 2; }
+
+  Command command = 1;
+  Emotion emotion = 2;
+  Speaker speaker = 3;
+  string text = 4;
+  bool wait_button = 5;
+}
+
+message LanguageDialogue {
+  string language = 1;
+  repeated DialogueLine lines = 2;
+}
+
+message TeamInfo {
+  Color color = 1;
+  map<string, string> names = 2;
+  map<string, string> short_names = 3;
+}
+
+message SetFestivalRequest {
+  int32 id = 1;
+  int32 battle_result_rate = 2;
+  bool low_population_not_jp = 3;
+  bool separate_matching_jp = 4;
+  repeated LanguageDialogue announce_news = 5;
+  repeated LanguageDialogue start_news = 6;
+  repeated LanguageDialogue result_a_news = 7;
+  repeated LanguageDialogue result_b_news = 8;
+  string gamemode = 9;
+  repeated uint32 stages = 10;
+  TeamInfo team_a = 11;
+  TeamInfo team_b = 12;
+  Color neutral_color = 13;
+  google.protobuf.Timestamp announce_time = 14;
+  google.protobuf.Timestamp start_time = 15;
+  google.protobuf.Timestamp end_time = 16;
+  google.protobuf.Timestamp result_time = 17;
+  google.protobuf.Timestamp after_fes_bonus_start = 18;
+  string backup_language = 19;
+  bytes body_team_a = 20;
+  bytes body_team_b = 21;
+  bytes panel_texture = 22;
+}
+
+message MapFirstAppearance {
+  uint32 map_id = 1;
+  string date = 2;
+}
+
+message RuleFirstAppearance {
+  string gachi_rule = 1;
+  string date = 2;
+}
+
+message WeaponUnlockEntry {
+  uint32 weapon_set_id = 1;
+  string date = 2;
+}
+
+message VSSettingPhase {
+  string gachi_rule = 1;
+  string regular_rule = 2;
+  repeated uint32 gachi_stages = 3;
+  repeated uint32 regular_stages = 4;
+  uint32 duration = 5;
+}
+
+message VSSettingConfig {
+  uint32 add_first_matching_time = 1;
+  uint32 add_matching_time = 2;
+  google.protobuf.Timestamp after_fes_bonus_start = 3;
+  uint32 bottleneck_threshold_frame = 4;
+  bool disconnect_by_memory_hash = 5;
+  string datetime = 6;
+  repeated MapFirstAppearance map_first_appear = 7;
+  repeated VSSettingPhase phases = 8;
+  repeated RuleFirstAppearance rule_first_appear = 9;
+  uint32 timeout_after_join = 10;
+  uint32 version = 11;
+  uint32 wait_matching_time = 12;
+  repeated WeaponUnlockEntry weapon_unlock = 13;
+  bool web_post = 14;
+}
+
+message SetVSSettingRequest {
+  VSSettingConfig config = 1;
+}

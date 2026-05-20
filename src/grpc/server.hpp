@@ -17,6 +17,7 @@
 #include "services/friendsService.hpp"
 #include "services/internalAccountManagementService.hpp"
 #include "services/splatoonService.hpp"
+#include "services/bossService.hpp"
 
 namespace grpcimpl {
 
@@ -24,6 +25,7 @@ struct gRPCServerData {
     std::shared_ptr<SettingsManager> settingsManager;
     std::shared_ptr<crypto::CertManager> certManager;
     std::shared_ptr<db::Database> accountDatabase;
+    std::shared_ptr<db::Database> bossDatabase;
 
     std::shared_ptr<http::Server> httpServer;
     std::shared_ptr<nex::rmc::AuthRMC> friendsAuthRMC;
@@ -58,6 +60,7 @@ private:
     std::shared_ptr<grpcimpl::accountmanagement::v1::AccountManagementServiceImpl> accountManagementService;
     std::shared_ptr<grpcimpl::friends::v1::FriendsServiceImpl> friendsService;
     std::shared_ptr<grpcimpl::splatoon::v1::SplatoonServiceImpl> splatoonService;
+    std::shared_ptr<grpcimpl::boss_config::v1::BossServiceImpl> bossService;
 
     bool reflectionEnabled = false;
 };

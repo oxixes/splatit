@@ -168,4 +168,119 @@ byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterF
     return byaml::Byaml(root);
 }
 
+byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config) {
+    std::shared_ptr<byaml::IntegerNode> addFirstMatchingTime = std::make_shared<byaml::IntegerNode>(config.addFirstMatchingTime);
+    std::shared_ptr<byaml::IntegerNode> addMatchingTime = std::make_shared<byaml::IntegerNode>(config.addMatchingTime);
+    std::shared_ptr<byaml::StringNode> afterFesBonusStart = std::make_shared<byaml::StringNode>(util::formatTime(config.afterFesBonusStart));
+    std::shared_ptr<byaml::IntegerNode> bottleneckThresholdTime = std::make_shared<byaml::IntegerNode>(config.bottleneckThresholdFrame);
+
+    std::shared_ptr<byaml::StringNode> datetime = std::make_shared<byaml::StringNode>(config.datetime);
+    std::shared_ptr<byaml::BoolNode> disconnectByMemoryHash = std::make_shared<byaml::BoolNode>(config.disconnectByMemoryHash);
+
+    std::vector<std::shared_ptr<byaml::Node>> mapsFirstAppearance;
+    for (const auto& entry : config.mapFirstAppear) {
+        std::shared_ptr<byaml::IntegerNode> mapId = std::make_shared<byaml::IntegerNode>(entry.mapId);
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
+        std::map<std::string, std::shared_ptr<byaml::Node>> mapFirstAppearance = {
+                {"Date", date},
+                {"MapID", mapId}
+        };
+        std::shared_ptr<byaml::DictionaryNode> mapFirstAppearanceDict = std::make_shared<byaml::DictionaryNode>(std::move(mapFirstAppearance));
+        mapsFirstAppearance.push_back(mapFirstAppearanceDict);
+    }
+    std::shared_ptr<byaml::ArrayNode> mapsFirstAppearanceArray = std::make_shared<byaml::ArrayNode>(std::move(mapsFirstAppearance));
+
+    std::vector<std::shared_ptr<byaml::Node>> phases;
+    for (const auto& phaseConfig : config.phases) {
+        std::shared_ptr<byaml::StringNode> gachiRule = std::make_shared<byaml::StringNode>(phaseConfig.gachiRule);
+        std::shared_ptr<byaml::StringNode> regularRule = std::make_shared<byaml::StringNode>(phaseConfig.regularRule);
+
+        std::vector<std::shared_ptr<byaml::Node>> gachiStageNodes;
+        for (uint32_t stage : phaseConfig.gachiStages) {
+            std::shared_ptr<byaml::IntegerNode> stageInt = std::make_shared<byaml::IntegerNode>(stage);
+            std::map<std::string, std::shared_ptr<byaml::Node>> stageMap = {
+                    {"MapID", stageInt}
+            };
+            gachiStageNodes.push_back(std::make_shared<byaml::DictionaryNode>(std::move(stageMap)));
+        }
+        std::shared_ptr<byaml::ArrayNode> gachiStages = std::make_shared<byaml::ArrayNode>(std::move(gachiStageNodes));
+
+        std::vector<std::shared_ptr<byaml::Node>> regularStageNodes;
+        for (uint32_t stage : phaseConfig.regularStages) {
+            std::shared_ptr<byaml::IntegerNode> stageInt = std::make_shared<byaml::IntegerNode>(stage);
+            std::map<std::string, std::shared_ptr<byaml::Node>> stageMap = {
+                    {"MapID", stageInt}
+            };
+            regularStageNodes.push_back(std::make_shared<byaml::DictionaryNode>(std::move(stageMap)));
+        }
+        std::shared_ptr<byaml::ArrayNode> regularStages = std::make_shared<byaml::ArrayNode>(std::move(regularStageNodes));
+
+        std::shared_ptr<byaml::IntegerNode> duration = std::make_shared<byaml::IntegerNode>(phaseConfig.duration);
+
+        std::map<std::string, std::shared_ptr<byaml::Node>> phaseMap = {
+                {"GachiRule", gachiRule},
+                {"GachiStages", gachiStages},
+                {"RegularRule", regularRule},
+                {"RegularStages", regularStages},
+                {"Time", duration}
+        };
+        std::shared_ptr<byaml::DictionaryNode> phase = std::make_shared<byaml::DictionaryNode>(std::move(phaseMap));
+        phases.push_back(phase);
+    }
+    std::shared_ptr<byaml::ArrayNode> phasesArray = std::make_shared<byaml::ArrayNode>(std::move(phases));
+
+    std::vector<std::shared_ptr<byaml::Node>> rulesFirstAppearance;
+    for (const auto& entry : config.ruleFirstAppear) {
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
+        std::shared_ptr<byaml::StringNode> ruleStr = std::make_shared<byaml::StringNode>(entry.gachiRule);
+        std::map<std::string, std::shared_ptr<byaml::Node>> ruleFirstAppearance = {
+                {"Date", date},
+                {"GachiRule", ruleStr}
+        };
+        std::shared_ptr<byaml::DictionaryNode> ruleFirstAppearanceDict = std::make_shared<byaml::DictionaryNode>(std::move(ruleFirstAppearance));
+        rulesFirstAppearance.push_back(ruleFirstAppearanceDict);
+    }
+    std::shared_ptr<byaml::ArrayNode> rulesFirstAppearanceArray = std::make_shared<byaml::ArrayNode>(std::move(rulesFirstAppearance));
+
+    std::shared_ptr<byaml::IntegerNode> timeoutAfterJoin = std::make_shared<byaml::IntegerNode>(config.timeoutAfterJoin);
+    std::shared_ptr<byaml::IntegerNode> version = std::make_shared<byaml::IntegerNode>(config.version);
+    std::shared_ptr<byaml::IntegerNode> waitMatchingTime = std::make_shared<byaml::IntegerNode>(config.waitMatchingTime);
+
+    std::vector<std::shared_ptr<byaml::Node>> weaponUnlock;
+    for (const auto& entry : config.weaponUnlock) {
+        std::shared_ptr<byaml::IntegerNode> set = std::make_shared<byaml::IntegerNode>(entry.weaponSetId);
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
+        std::map<std::string, std::shared_ptr<byaml::Node>> weaponUnlockMap = {
+                {"Date", date},
+                {"WeaponSetID", set}
+        };
+        std::shared_ptr<byaml::DictionaryNode> weaponUnlockDict = std::make_shared<byaml::DictionaryNode>(std::move(weaponUnlockMap));
+        weaponUnlock.push_back(weaponUnlockDict);
+    }
+    std::shared_ptr<byaml::ArrayNode> weaponUnlockArray = std::make_shared<byaml::ArrayNode>(std::move(weaponUnlock));
+
+    std::shared_ptr<byaml::BoolNode> webPost = std::make_shared<byaml::BoolNode>(config.webPost);
+
+    std::map<std::string, std::shared_ptr<byaml::Node>> rootMap = {
+            {"AddFirstMatchingTime", addFirstMatchingTime},
+            {"AddMatchingTime", addMatchingTime},
+            {"AfterFesBonusStart", afterFesBonusStart},
+            {"BottleneckThreasholdFrame", bottleneckThresholdTime},
+            {"DateTime", datetime},
+            {"DisconnectByMemoryHash", disconnectByMemoryHash},
+            {"MapFirstAppear", mapsFirstAppearanceArray},
+            {"Phases", phasesArray},
+            {"RuleFirstAppear", rulesFirstAppearanceArray},
+            {"TimeoutAfterJoin", timeoutAfterJoin},
+            {"Version", version},
+            {"WaitMatchingTime", waitMatchingTime},
+            {"WeaponUnlock", weaponUnlockArray},
+            {"WebPost", webPost}
+    };
+
+    std::shared_ptr<byaml::DictionaryNode> root = std::make_shared<byaml::DictionaryNode>(std::move(rootMap));
+
+    return byaml::Byaml(root);
+}
+
 }  // namespace boss

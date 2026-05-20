@@ -24,6 +24,47 @@
 #define PHASE_DURATION 4
 
 namespace boss {
+
+    struct MapFirstAppearance {
+        uint32_t mapId;
+        std::string date;
+    };
+
+    struct RuleFirstAppearance {
+        std::string gachiRule;
+        std::string date;
+    };
+
+    struct WeaponUnlockEntry {
+        uint32_t weaponSetId;
+        std::string date;
+    };
+
+    struct PhaseConfig {
+        std::string gachiRule;
+        std::string regularRule;
+        std::vector<uint32_t> gachiStages;
+        std::vector<uint32_t> regularStages;
+        uint32_t duration;
+    };
+
+    struct VSSettingFullConfig {
+        uint32_t addFirstMatchingTime;
+        uint32_t addMatchingTime;
+        std::chrono::system_clock::time_point afterFesBonusStart;
+        uint32_t bottleneckThresholdFrame;
+        bool disconnectByMemoryHash;
+        std::string datetime;
+        std::vector<MapFirstAppearance> mapFirstAppear;
+        std::vector<PhaseConfig> phases;
+        std::vector<RuleFirstAppearance> ruleFirstAppear;
+        uint32_t timeoutAfterJoin;
+        uint32_t version;
+        uint32_t waitMatchingTime;
+        std::vector<WeaponUnlockEntry> weaponUnlock;
+        bool webPost;
+    };
+
     inline const std::vector<uint32_t> MAPS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
     inline const std::vector<std::string> RULES = {"cVar", "cVlf", "cVgl"};
@@ -36,6 +77,7 @@ namespace boss {
     };
 
     byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterFesBonusStartTime);
+    byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config);
 }
 
 #endif //SPLATOON_SERVER_VSSETTINGGENERATOR_HPP
