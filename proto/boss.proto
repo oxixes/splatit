@@ -10,6 +10,44 @@ service BossService {
   rpc SetVSSetting(SetVSSettingRequest) returns (google.protobuf.Empty);
 }
 
+enum Language {
+  EUROPEAN_GERMAN = 0;
+  EUROPEAN_ENGLISH = 1;
+  EUROPEAN_SPANISH = 2;
+  EUROPEAN_FRENCH = 3;
+  EUROPEAN_ITALIAN = 4;
+  JAPANESE = 5;
+  AMERICAN_ENGLISH = 6;
+  AMERICAN_SPANISH = 7;
+  AMERICAN_FRENCH = 8;
+}
+
+enum Gamemode {
+  TURF_WAR = 0;
+  SPLAT_ZONES = 1;
+  TOWER_CONTROL = 2;
+  RAINMAKER = 3;
+}
+
+enum Stage {
+  URCHIN_UNDERPASS = 0;
+  WALLEYE_WAREHOUSE = 1;
+  SALTSPRAY_RIG = 2;
+  AROWANA_MALL = 3;
+  BLACKBELLY_SKATEPARK = 4;
+  CAMP_TRIGGERFISH = 5;
+  PORT_MACKEREL = 6;
+  KELP_DOME = 7;
+  MORAY_TOWERS = 8;
+  BLUEFIN_DEPOT = 9;
+  HAMMERHEAD_BRIDGE = 10;
+  FLOUNDER_HEIGHTS = 11;
+  MUSEUM_D_ALFONSINO = 12;
+  ANCHO_V_GAMES = 13;
+  PIRANHA_PIT = 14;
+  MAHIMAHI_RESORT = 15;
+}
+
 message Color {
   uint32 r = 1;
   uint32 g = 2;
@@ -38,14 +76,19 @@ message DialogueLine {
 }
 
 message LanguageDialogue {
-  string language = 1;
+  Language language = 1;
   repeated DialogueLine lines = 2;
+}
+
+message LanguageStringPair {
+  Language language = 1;
+  string value = 2;
 }
 
 message TeamInfo {
   Color color = 1;
-  map<string, string> names = 2;
-  map<string, string> short_names = 3;
+  repeated LanguageStringPair names = 2;
+  repeated LanguageStringPair short_names = 3;
 }
 
 message SetFestivalRequest {
@@ -57,8 +100,8 @@ message SetFestivalRequest {
   repeated LanguageDialogue start_news = 6;
   repeated LanguageDialogue result_a_news = 7;
   repeated LanguageDialogue result_b_news = 8;
-  string gamemode = 9;
-  repeated uint32 stages = 10;
+  Gamemode gamemode = 9;
+  repeated Stage stages = 10;
   TeamInfo team_a = 11;
   TeamInfo team_b = 12;
   Color neutral_color = 13;
@@ -67,7 +110,7 @@ message SetFestivalRequest {
   google.protobuf.Timestamp end_time = 16;
   google.protobuf.Timestamp result_time = 17;
   google.protobuf.Timestamp after_fes_bonus_start = 18;
-  string backup_language = 19;
+  Language backup_language = 19;
   bytes body_team_a = 20;
   bytes body_team_b = 21;
   bytes panel_texture = 22;
@@ -75,22 +118,22 @@ message SetFestivalRequest {
 
 message MapFirstAppearance {
   uint32 map_id = 1;
-  string date = 2;
+  google.protobuf.Timestamp date = 2;
 }
 
 message RuleFirstAppearance {
-  string gachi_rule = 1;
-  string date = 2;
+  Gamemode gachi_rule = 1;
+  google.protobuf.Timestamp date = 2;
 }
 
 message WeaponUnlockEntry {
   uint32 weapon_set_id = 1;
-  string date = 2;
+  google.protobuf.Timestamp date = 2;
 }
 
 message VSSettingPhase {
-  string gachi_rule = 1;
-  string regular_rule = 2;
+  Gamemode gachi_rule = 1;
+  Gamemode regular_rule = 2;
   repeated uint32 gachi_stages = 3;
   repeated uint32 regular_stages = 4;
   uint32 duration = 5;
@@ -102,7 +145,7 @@ message VSSettingConfig {
   google.protobuf.Timestamp after_fes_bonus_start = 3;
   uint32 bottleneck_threshold_frame = 4;
   bool disconnect_by_memory_hash = 5;
-  string datetime = 6;
+  google.protobuf.Timestamp datetime = 6;
   repeated MapFirstAppearance map_first_appear = 7;
   repeated VSSettingPhase phases = 8;
   repeated RuleFirstAppearance rule_first_appear = 9;

@@ -13,17 +13,19 @@ using namespace async;
 
 namespace grpcimpl::boss_config::v1 {
 
-boss::festival::Language protoToFestivalLanguage(const std::string& lang) {
-    if (lang == "EUROPEAN_GERMAN") return boss::festival::Language::EUROPEAN_GERMAN;
-    if (lang == "EUROPEAN_ENGLISH") return boss::festival::Language::EUROPEAN_ENGLISH;
-    if (lang == "EUROPEAN_SPANISH") return boss::festival::Language::EUROPEAN_SPANISH;
-    if (lang == "EUROPEAN_FRENCH") return boss::festival::Language::EUROPEAN_FRENCH;
-    if (lang == "EUROPEAN_ITALIAN") return boss::festival::Language::EUROPEAN_ITALIAN;
-    if (lang == "JAPANESE") return boss::festival::Language::JAPANESE;
-    if (lang == "AMERICAN_ENGLISH") return boss::festival::Language::AMERICAN_ENGLISH;
-    if (lang == "AMERICAN_SPANISH") return boss::festival::Language::AMERICAN_SPANISH;
-    if (lang == "AMERICAN_FRENCH") return boss::festival::Language::AMERICAN_FRENCH;
-    return boss::festival::Language::AMERICAN_ENGLISH;
+boss::festival::Language protoToFestivalLanguage(Language lang) {
+    switch (lang) {
+        case Language::EUROPEAN_GERMAN: return boss::festival::Language::EUROPEAN_GERMAN;
+        case Language::EUROPEAN_ENGLISH: return boss::festival::Language::EUROPEAN_ENGLISH;
+        case Language::EUROPEAN_SPANISH: return boss::festival::Language::EUROPEAN_SPANISH;
+        case Language::EUROPEAN_FRENCH: return boss::festival::Language::EUROPEAN_FRENCH;
+        case Language::EUROPEAN_ITALIAN: return boss::festival::Language::EUROPEAN_ITALIAN;
+        case Language::JAPANESE: return boss::festival::Language::JAPANESE;
+        case Language::AMERICAN_ENGLISH: return boss::festival::Language::AMERICAN_ENGLISH;
+        case Language::AMERICAN_SPANISH: return boss::festival::Language::AMERICAN_SPANISH;
+        case Language::AMERICAN_FRENCH: return boss::festival::Language::AMERICAN_FRENCH;
+        default: return boss::festival::Language::AMERICAN_ENGLISH;
+    }
 }
 
 boss::festival::Speaker protoToFestivalSpeaker(DialogueLine::Speaker speaker) {
@@ -48,32 +50,34 @@ boss::festival::Emotion protoToFestivalEmotion(DialogueLine::Emotion emotion) {
     }
 }
 
-boss::festival::Gamemode protoToFestivalGamemode(const std::string& mode) {
-    if (mode == "TURF_WAR") return boss::festival::Gamemode::TURF_WAR;
-    if (mode == "SPLAT_ZONES") return boss::festival::Gamemode::SPLAT_ZONES;
-    if (mode == "TOWER_CONTROL") return boss::festival::Gamemode::TOWER_CONTROL;
-    if (mode == "RAINMAKER") return boss::festival::Gamemode::RAINMAKER;
-    return boss::festival::Gamemode::TURF_WAR;
+boss::festival::Gamemode protoToFestivalGamemode(Gamemode mode) {
+    switch (mode) {
+        case Gamemode::TURF_WAR: return boss::festival::Gamemode::TURF_WAR;
+        case Gamemode::SPLAT_ZONES: return boss::festival::Gamemode::SPLAT_ZONES;
+        case Gamemode::TOWER_CONTROL: return boss::festival::Gamemode::TOWER_CONTROL;
+        case Gamemode::RAINMAKER: return boss::festival::Gamemode::RAINMAKER;
+        default: return boss::festival::Gamemode::TURF_WAR;
+    }
 }
 
-boss::festival::Stage protoToFestivalStage(uint32_t stage) {
+boss::festival::Stage protoToFestivalStage(Stage stage) {
     switch (stage) {
-        case 0: return boss::festival::Stage::URCHIN_UNDERPASS;
-        case 1: return boss::festival::Stage::WALLEYE_WAREHOUSE;
-        case 2: return boss::festival::Stage::SALTSPRAY_RIG;
-        case 3: return boss::festival::Stage::AROWANA_MALL;
-        case 4: return boss::festival::Stage::BLACKBELLY_SKATEPARK;
-        case 5: return boss::festival::Stage::CAMP_TRIGGERFISH;
-        case 6: return boss::festival::Stage::PORT_MACKEREL;
-        case 7: return boss::festival::Stage::KELP_DOME;
-        case 8: return boss::festival::Stage::MORAY_TOWERS;
-        case 9: return boss::festival::Stage::BLUEFIN_DEPOT;
-        case 10: return boss::festival::Stage::HAMMERHEAD_BRIDGE;
-        case 11: return boss::festival::Stage::FLOUNDER_HEIGHTS;
-        case 12: return boss::festival::Stage::MUSEUM_D_ALFONSINO;
-        case 13: return boss::festival::Stage::ANCHO_V_GAMES;
-        case 14: return boss::festival::Stage::PIRANHA_PIT;
-        case 15: return boss::festival::Stage::MAHIMAHI_RESORT;
+        case Stage::URCHIN_UNDERPASS: return boss::festival::Stage::URCHIN_UNDERPASS;
+        case Stage::WALLEYE_WAREHOUSE: return boss::festival::Stage::WALLEYE_WAREHOUSE;
+        case Stage::SALTSPRAY_RIG: return boss::festival::Stage::SALTSPRAY_RIG;
+        case Stage::AROWANA_MALL: return boss::festival::Stage::AROWANA_MALL;
+        case Stage::BLACKBELLY_SKATEPARK: return boss::festival::Stage::BLACKBELLY_SKATEPARK;
+        case Stage::CAMP_TRIGGERFISH: return boss::festival::Stage::CAMP_TRIGGERFISH;
+        case Stage::PORT_MACKEREL: return boss::festival::Stage::PORT_MACKEREL;
+        case Stage::KELP_DOME: return boss::festival::Stage::KELP_DOME;
+        case Stage::MORAY_TOWERS: return boss::festival::Stage::MORAY_TOWERS;
+        case Stage::BLUEFIN_DEPOT: return boss::festival::Stage::BLUEFIN_DEPOT;
+        case Stage::HAMMERHEAD_BRIDGE: return boss::festival::Stage::HAMMERHEAD_BRIDGE;
+        case Stage::FLOUNDER_HEIGHTS: return boss::festival::Stage::FLOUNDER_HEIGHTS;
+        case Stage::MUSEUM_D_ALFONSINO: return boss::festival::Stage::MUSEUM_D_ALFONSINO;
+        case Stage::ANCHO_V_GAMES: return boss::festival::Stage::ANCHO_V_GAMES;
+        case Stage::PIRANHA_PIT: return boss::festival::Stage::PIRANHA_PIT;
+        case Stage::MAHIMAHI_RESORT: return boss::festival::Stage::MAHIMAHI_RESORT;
         default: return boss::festival::Stage::URCHIN_UNDERPASS;
     }
 }
@@ -109,11 +113,11 @@ boss::festival::Dialogue protoToFestivalDialogue(const google::protobuf::Repeate
 boss::festival::TeamInfo protoToFestivalTeamInfo(const TeamInfo& teamInfo) {
     boss::festival::TeamInfo info;
     info.color = protoToFestivalColor(teamInfo.color());
-    for (const auto& [lang, name] : teamInfo.names()) {
-        info.names[protoToFestivalLanguage(lang)] = name;
+    for (const auto& pair : teamInfo.names()) {
+        info.names[protoToFestivalLanguage(pair.language())] = pair.value();
     }
-    for (const auto& [lang, name] : teamInfo.short_names()) {
-        info.shortNames[protoToFestivalLanguage(lang)] = name;
+    for (const auto& pair : teamInfo.short_names()) {
+        info.shortNames[protoToFestivalLanguage(pair.language())] = pair.value();
     }
     return info;
 }
@@ -134,21 +138,25 @@ boss::VSSettingFullConfig protoToVSSettingConfig(const VSSettingConfig& config) 
     }
     result.bottleneckThresholdFrame = config.bottleneck_threshold_frame();
     result.disconnectByMemoryHash = config.disconnect_by_memory_hash();
-    result.datetime = config.datetime().empty()
-        ? util::formatTime(std::chrono::system_clock::now())
-        : config.datetime();
+    if (config.has_datetime()) {
+        result.datetime = protoToTimePoint(config.datetime());
+    } else {
+        result.datetime = std::chrono::system_clock::now();
+    }
 
     for (const auto& entry : config.map_first_appear()) {
         boss::MapFirstAppearance mfa;
         mfa.mapId = entry.map_id();
-        mfa.date = entry.date();
+        if (entry.has_date()) {
+            mfa.date = protoToTimePoint(entry.date());
+        }
         result.mapFirstAppear.push_back(std::move(mfa));
     }
 
     for (const auto& phase : config.phases()) {
         boss::PhaseConfig pc;
-        pc.gachiRule = phase.gachi_rule();
-        pc.regularRule = phase.regular_rule();
+        pc.gachiRule = protoToFestivalGamemode(phase.gachi_rule());
+        pc.regularRule = protoToFestivalGamemode(phase.regular_rule());
         pc.gachiStages.assign(phase.gachi_stages().begin(), phase.gachi_stages().end());
         pc.regularStages.assign(phase.regular_stages().begin(), phase.regular_stages().end());
         pc.duration = phase.duration();
@@ -157,8 +165,10 @@ boss::VSSettingFullConfig protoToVSSettingConfig(const VSSettingConfig& config) 
 
     for (const auto& entry : config.rule_first_appear()) {
         boss::RuleFirstAppearance rfa;
-        rfa.gachiRule = entry.gachi_rule();
-        rfa.date = entry.date();
+        rfa.gachiRule = protoToFestivalGamemode(entry.gachi_rule());
+        if (entry.has_date()) {
+            rfa.date = protoToTimePoint(entry.date());
+        }
         result.ruleFirstAppear.push_back(std::move(rfa));
     }
 
@@ -169,7 +179,9 @@ boss::VSSettingFullConfig protoToVSSettingConfig(const VSSettingConfig& config) 
     for (const auto& entry : config.weapon_unlock()) {
         boss::WeaponUnlockEntry wue;
         wue.weaponSetId = entry.weapon_set_id();
-        wue.date = entry.date();
+        if (entry.has_date()) {
+            wue.date = protoToTimePoint(entry.date());
+        }
         result.weaponUnlock.push_back(std::move(wue));
     }
 
@@ -230,9 +242,7 @@ Task<void> completeSetFestival(grpc::ServerUnaryReactor* reactor,
             festivalInfo.afterFesBonusStart = protoToTimePoint(request->after_fes_bonus_start());
         }
 
-        if (!request->backup_language().empty()) {
-            festivalInfo.backupLanguage = protoToFestivalLanguage(request->backup_language());
-        }
+        festivalInfo.backupLanguage = protoToFestivalLanguage(request->backup_language());
 
         std::vector<uint8_t> bodyTeamA(request->body_team_a().begin(), request->body_team_a().end());
         std::vector<uint8_t> bodyTeamB(request->body_team_b().begin(), request->body_team_b().end());
@@ -287,6 +297,8 @@ Task<void> completeSetVSSetting(grpc::ServerUnaryReactor* reactor,
                                 const std::shared_ptr<Logger::Logger> logger,
                                 std::shared_ptr<http::Server> httpServer) {
     try {
+        const auto& config = request->config();
+
         auto manifest = co_await boss::getManifest(logger, db);
 
         boss::VSSettingFullConfig vsConfig = protoToVSSettingConfig(request->config());

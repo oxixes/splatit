@@ -6,6 +6,16 @@
 
 namespace boss {
 
+std::string gamemodeToGameString(boss::festival::Gamemode mode) {
+    switch (mode) {
+        case boss::festival::Gamemode::TURF_WAR: return "cPnt";
+        case boss::festival::Gamemode::SPLAT_ZONES: return "cVar";
+        case boss::festival::Gamemode::TOWER_CONTROL: return "cVlf";
+        case boss::festival::Gamemode::RAINMAKER: return "cVgl";
+        default: return "cPnt";
+    }
+}
+
 byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterFesBonusStartTime) {
     std::shared_ptr<byaml::IntegerNode> addFirstMatchingTime = std::make_shared<byaml::IntegerNode>(ADD_FIRST_MATCHING_TIME);
     std::shared_ptr<byaml::IntegerNode> addMatchingTime = std::make_shared<byaml::IntegerNode>(ADD_MATCHING_TIME);
@@ -174,13 +184,13 @@ byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config)
     std::shared_ptr<byaml::StringNode> afterFesBonusStart = std::make_shared<byaml::StringNode>(util::formatTime(config.afterFesBonusStart));
     std::shared_ptr<byaml::IntegerNode> bottleneckThresholdTime = std::make_shared<byaml::IntegerNode>(config.bottleneckThresholdFrame);
 
-    std::shared_ptr<byaml::StringNode> datetime = std::make_shared<byaml::StringNode>(config.datetime);
+    std::shared_ptr<byaml::StringNode> datetime = std::make_shared<byaml::StringNode>(util::formatTime(config.datetime));
     std::shared_ptr<byaml::BoolNode> disconnectByMemoryHash = std::make_shared<byaml::BoolNode>(config.disconnectByMemoryHash);
 
     std::vector<std::shared_ptr<byaml::Node>> mapsFirstAppearance;
     for (const auto& entry : config.mapFirstAppear) {
         std::shared_ptr<byaml::IntegerNode> mapId = std::make_shared<byaml::IntegerNode>(entry.mapId);
-        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(util::formatDate(entry.date));
         std::map<std::string, std::shared_ptr<byaml::Node>> mapFirstAppearance = {
                 {"Date", date},
                 {"MapID", mapId}
@@ -192,8 +202,8 @@ byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config)
 
     std::vector<std::shared_ptr<byaml::Node>> phases;
     for (const auto& phaseConfig : config.phases) {
-        std::shared_ptr<byaml::StringNode> gachiRule = std::make_shared<byaml::StringNode>(phaseConfig.gachiRule);
-        std::shared_ptr<byaml::StringNode> regularRule = std::make_shared<byaml::StringNode>(phaseConfig.regularRule);
+        std::shared_ptr<byaml::StringNode> gachiRule = std::make_shared<byaml::StringNode>(gamemodeToGameString(phaseConfig.gachiRule));
+        std::shared_ptr<byaml::StringNode> regularRule = std::make_shared<byaml::StringNode>(gamemodeToGameString(phaseConfig.regularRule));
 
         std::vector<std::shared_ptr<byaml::Node>> gachiStageNodes;
         for (uint32_t stage : phaseConfig.gachiStages) {
@@ -231,8 +241,8 @@ byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config)
 
     std::vector<std::shared_ptr<byaml::Node>> rulesFirstAppearance;
     for (const auto& entry : config.ruleFirstAppear) {
-        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
-        std::shared_ptr<byaml::StringNode> ruleStr = std::make_shared<byaml::StringNode>(entry.gachiRule);
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(util::formatDate(entry.date));
+        std::shared_ptr<byaml::StringNode> ruleStr = std::make_shared<byaml::StringNode>(gamemodeToGameString(entry.gachiRule));
         std::map<std::string, std::shared_ptr<byaml::Node>> ruleFirstAppearance = {
                 {"Date", date},
                 {"GachiRule", ruleStr}
@@ -249,7 +259,7 @@ byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config)
     std::vector<std::shared_ptr<byaml::Node>> weaponUnlock;
     for (const auto& entry : config.weaponUnlock) {
         std::shared_ptr<byaml::IntegerNode> set = std::make_shared<byaml::IntegerNode>(entry.weaponSetId);
-        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(entry.date);
+        std::shared_ptr<byaml::StringNode> date = std::make_shared<byaml::StringNode>(util::formatDate(entry.date));
         std::map<std::string, std::shared_ptr<byaml::Node>> weaponUnlockMap = {
                 {"Date", date},
                 {"WeaponSetID", set}

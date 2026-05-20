@@ -199,4 +199,11 @@ std::string formatTime(std::chrono::system_clock::time_point time) {
     return ss.str();
 }
 
+std::string formatDate(std::chrono::system_clock::time_point time) {
+    auto time_t = std::chrono::system_clock::to_time_t(time);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%d");
+    return ss.str();
+}
+
 } // namespace util

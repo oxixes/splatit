@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include "byaml.hpp"
+#include "FestivalGenerator.hpp"
 
 // Maybe we could make some of these configurable?
 
@@ -27,22 +28,22 @@ namespace boss {
 
     struct MapFirstAppearance {
         uint32_t mapId;
-        std::string date;
+        std::chrono::system_clock::time_point date;
     };
 
     struct RuleFirstAppearance {
-        std::string gachiRule;
-        std::string date;
+        boss::festival::Gamemode gachiRule;
+        std::chrono::system_clock::time_point date;
     };
 
     struct WeaponUnlockEntry {
         uint32_t weaponSetId;
-        std::string date;
+        std::chrono::system_clock::time_point date;
     };
 
     struct PhaseConfig {
-        std::string gachiRule;
-        std::string regularRule;
+        boss::festival::Gamemode gachiRule;
+        boss::festival::Gamemode regularRule;
         std::vector<uint32_t> gachiStages;
         std::vector<uint32_t> regularStages;
         uint32_t duration;
@@ -54,7 +55,7 @@ namespace boss {
         std::chrono::system_clock::time_point afterFesBonusStart;
         uint32_t bottleneckThresholdFrame;
         bool disconnectByMemoryHash;
-        std::string datetime;
+        std::chrono::system_clock::time_point datetime;
         std::vector<MapFirstAppearance> mapFirstAppear;
         std::vector<PhaseConfig> phases;
         std::vector<RuleFirstAppearance> ruleFirstAppear;
@@ -75,6 +76,8 @@ namespace boss {
         2040, 2041, 3000, 3001, 3002, 3010, 3011, 3020, 3021, 4002, 4012, 4022, 4031, 4040, 4041, 4050,
         4051, 4052, 5000, 5001, 5002, 5010, 5011, 5012, 5020, 5021
     };
+
+    std::string gamemodeToGameString(boss::festival::Gamemode mode);
 
     byaml::Byaml generateVSSettingByaml(std::chrono::system_clock::time_point afterFesBonusStartTime);
     byaml::Byaml generateVSSettingByamlFromConfig(const VSSettingFullConfig& config);

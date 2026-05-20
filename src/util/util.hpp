@@ -42,6 +42,7 @@ namespace util {
     std::string bin2hex(const std::vector<uint8_t>& data);
 
     std::string formatTime(std::chrono::system_clock::time_point time);
+    std::string formatDate(std::chrono::system_clock::time_point time);
 } // namespace util
 
 #endif //SPLATOON_SERVER_UTIL_HPP
