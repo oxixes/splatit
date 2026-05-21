@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        mgm::registerRoutes(managementServer, settingsMgr, accountsDB, managementDB);
+        mgm::registerRoutes(managementServer, settingsMgr, managementDB, logger);
         managementServer->listen(settingsMgr->getManagementWorkerCount(), stop);
     }
 

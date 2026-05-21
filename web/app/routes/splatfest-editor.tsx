@@ -9,9 +9,9 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "~/components/ui/tabs";
 import {Sparkles, Plus, Trash2, Download, AlertCircle, Upload, Image as ImageIcon} from "lucide-react";
 import {Link} from "react-router";
 import {Separator} from "~/components/ui/separator";
-import {useState, useRef} from "react";
+import {useState, useRef, useEffect} from "react";
 import {useAppConfig} from "~/hooks/useAppConfig";
-import {saveFestival} from "~/lib/festivals";
+import {saveFestival, getFestivals} from "~/lib/festivals";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -196,7 +196,7 @@ const toISOString = (datetimeLocal: string): string => {
   return datetimeLocal; // Keep as is for JSON storage
 };
 
-export default function SplatfestEditor() {
+export default function SplatfestEditor({ params }: Route.ComponentProps) {
   const { config } = useAppConfig();
   const [data, setData] = useState<SplatfestData>({
     id: 1000,
@@ -224,7 +224,23 @@ export default function SplatfestEditor() {
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (params.id && params.id !== "new") {
+      const id = parseInt(params.id);
+      if (!isNaN(id)) {
+        setIsLoading(true);
+        getFestivals(config).then((res) => {
+          const found = res.festivals.find((f: any) => f.id === id);
+          if (found) {
+            setData(found as SplatfestData);
+          }
+        }).catch(console.error).finally(() => setIsLoading(false));
+      }
+    }
+  }, [params.id]);
   const teamAImageRef = useRef<HTMLInputElement>(null);
   const teamBImageRef = useRef<HTMLInputElement>(null);
   const panelImageRef = useRef<HTMLInputElement>(null);
@@ -460,7 +476,7 @@ export default function SplatfestEditor() {
                       ← Back to Settings
                   </Link>
                   <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight mt-2">
-                      Create Splatfest
+                      {params.id && params.id !== "new" ? "Edit Splatfest" : "Create Splatfest"}
                   </h1>
                   <p className="text-muted-foreground mt-2">
                       Configure all aspects of your Splatfest event
@@ -927,7 +943,18 @@ export default function SplatfestEditor() {
                                   {LANGUAGES.map(lang => {
                                       const lines = data[newsType.key][lang.id] || [];
 
-                                      return (
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Link to="/settings" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to Settings
+        </Link>
+        <div className="text-center py-12 text-muted-foreground">Loading festival data...</div>
+      </div>
+    );
+  }
+
+  return (
                                           <TabsContent key={lang.id} value={lang.id} className="space-y-3">
                                               <div className="flex items-center justify-between mb-2">
                                                   <Label className="text-sm font-medium">{lang.label}</Label>

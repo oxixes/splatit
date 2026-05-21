@@ -19,7 +19,7 @@ async::Task<void> mgm_get_map_rotation(http::Server* srv, std::shared_ptr<http::
 async::Task<void> mgm_update_map_rotation(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
 async::Task<void> mgm_randomize_map_rotation(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
 
-async::Task<void> initManagementData(const std::shared_ptr<db::Database>& mgmtDb);
+async::Task<void> initManagementData(const std::shared_ptr<db::Database>& mgmtDb, const std::shared_ptr<Logger::Logger>& logger);
 
 } // namespace mgm
 

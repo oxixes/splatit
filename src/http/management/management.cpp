@@ -245,8 +245,8 @@ std::optional<uint32_t> parseU32(const std::string& s) {
 }
 } // namespace
 
-void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<db::Database> db, std::shared_ptr<db::Database> mgmDb) {
+void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
+                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger) {
     channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getManagementgRPCConnectionPoolMaxSize());
     serverHosts = std::move(settingsMgr->getManagementServerAddresses());
     for (const auto& [type, hostList] : serverHosts) {
@@ -485,9 +485,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
 
     // Ensure default festivals and map rotation exist on startup
     if (mgmDb) {
-        auto initTask = initManagementData(mgmDb);
-        initTask.setScheduler(std::make_shared<async::Scheduler>(std::make_shared<std::condition_variable>()));
-        async::Scheduler::run(std::make_unique<async::Task<void>>(std::move(initTask)));
+        server->scheduleArbitraryFunction(initManagementData(mgmDb, logger));
     }
 }
 

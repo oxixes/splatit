@@ -102,8 +102,8 @@ std::unique_ptr<http::Response> prepareResponse(const std::shared_ptr<http::Cont
 std::unique_ptr<http::Response> prepareResponse(const std::shared_ptr<http::Context>& ctx, const json& body, bool& keepAlive, const std::string &corsOrigin, int httpStatus = HTTP_STATUS_OK);
 std::unique_ptr<http::Response> prepareCORSPreflightResponse(const std::shared_ptr<http::Context>& ctx, const std::shared_ptr<SettingsManager>& settingsMgr, const std::string& allowedMethods, bool& keepAlive);
 
-void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<db::Database> db, std::shared_ptr<db::Database> mgmDb = nullptr);
+void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
+                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger);
 
 } // namespace mgm
 

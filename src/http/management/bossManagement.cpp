@@ -3,8 +3,10 @@
 
 #include "../../util/util.hpp"
 #include "../../db/database.hpp"
+#include "../../crypto/tools.hpp"
 
 #include <random>
+#include <fstream>
 
 namespace mgm {
 
@@ -34,6 +36,13 @@ static async::Task<void> queueBossTask(const std::shared_ptr<db::Database>& mgmt
     co_await mgmtDb->runCommand(std::move(cmd));
 }
 
+static std::string loadDefaultImageBase64(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) return "";
+    std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    return crypto::base64Encode(data);
+}
+
 static json generateDefaultFestival() {
     json f;
     f["id"] = 1000;
@@ -55,7 +64,7 @@ static json generateDefaultFestival() {
             {"eu_fr", "Alpha"}, {"eu_it", "Alpha"}, {"jp", "A"},
             {"us_en", "Alpha"}, {"us_es", "Alpha"}, {"us_fr", "Alpha"}
         }},
-        {"albedoImage", ""}
+        {"albedoImage", loadDefaultImageBase64("BodyTeamA.default.png")}
     };
     f["teamB"] = {
         {"color", {{"r", 48}, {"g", 24}, {"b", 12}, {"a", 255}}},
@@ -69,7 +78,7 @@ static json generateDefaultFestival() {
             {"eu_fr", "Bravo"}, {"eu_it", "Bravo"}, {"jp", "B"},
             {"us_en", "Bravo"}, {"us_es", "Bravo"}, {"us_fr", "Bravo"}
         }},
-        {"albedoImage", ""}
+        {"albedoImage", loadDefaultImageBase64("BodyTeamB.default.png")}
     };
     f["neutralColor"] = {{"r", 100}, {"g", 100}, {"b", 100}, {"a", 255}};
 
@@ -105,7 +114,7 @@ static json generateDefaultFestival() {
         f["resultBNews"][lang] = line;
     }
 
-    f["panelImage"] = "";
+    f["panelImage"] = loadDefaultImageBase64("PanelTexture.default.png");
     return f;
 }
 
@@ -151,7 +160,7 @@ static json generateDefaultMapRotation() {
     return rotation;
 }
 
-static async::Task<void> ensureDefaultsExist(const std::shared_ptr<db::Database>& mgmDb) {
+static async::Task<void> ensureDefaultsExist(const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger) {
     json festivals = co_await readSetting(mgmDb, "festivals", json::array());
     if (festivals.empty()) {
         json defaultFes = generateDefaultFestival();
@@ -159,6 +168,8 @@ static async::Task<void> ensureDefaultsExist(const std::shared_ptr<db::Database>
         co_await writeSetting(mgmDb, "festivals", festivals);
         co_await writeSetting(mgmDb, "active_festival_id", 1000);
         co_await queueBossTask(mgmDb, 1, std::to_string(1000));
+
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "No festivals found in database, created default festival with ID 1000.");
     }
 
     int activeId = (co_await readSetting(mgmDb, "active_festival_id", 0)).get<int>();
@@ -179,11 +190,13 @@ static async::Task<void> ensureDefaultsExist(const std::shared_ptr<db::Database>
             std::chrono::system_clock::now().time_since_epoch()).count();
         co_await writeSetting(mgmDb, "last_rotation_time", std::to_string(nowSec));
         co_await queueBossTask(mgmDb, 2, "");
+
+        logger->log(Logger::level::INFO, Logger::group::SETUP, "No map rotation found in database, created default map rotation.");
     }
 }
 
-async::Task<void> initManagementData(const std::shared_ptr<db::Database>& mgmDb) {
-    co_await ensureDefaultsExist(mgmDb);
+async::Task<void> initManagementData(const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger) {
+    co_await ensureDefaultsExist(mgmDb, logger);
 }
 
 /*
