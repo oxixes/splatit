@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useAppConfig } from "~/hooks/useAppConfig";
 import { getAgreements, saveAgreement, deleteAgreement } from "~/lib/agreements";
 import { getFestivals, switchActiveFestival, deleteFestival } from "~/lib/festivals";
+import type { FestivalSummary } from "~/types/festival";
 import { AgreementEditor } from "~/components/agreements/AgreementEditor";
 import type { Agreement, AgreementsFilters, SortColumn } from "~/types/agreement";
 import { AGREEMENT_TYPES } from "~/constants/agreement-types";
@@ -45,7 +46,7 @@ export default function Settings() {
   const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
 
   // Festival state
-  const [festivals, setFestivals] = useState<unknown[]>([]);
+  const [festivals, setFestivals] = useState<FestivalSummary[]>([]);
   const [activeFestivalId, setActiveFestivalId] = useState<number>(0);
   const [festivalsLoading, setFestivalsLoading] = useState(true);
   const [festivalMsg, setFestivalMsg] = useState<string | null>(null);
@@ -186,11 +187,8 @@ export default function Settings() {
     }
   };
 
-  const getTeamNames = (festival: any): string => {
-    const lang = festival.backupLanguage || "us_en";
-    const aName = festival.teamA?.names?.[lang] || "Team A";
-    const bName = festival.teamB?.names?.[lang] || "Team B";
-    return `${aName} vs ${bName}`;
+  const getTeamNames = (f: FestivalSummary): string => {
+    return `${f.teamAName} vs ${f.teamBName}`;
   };
 
 
@@ -473,12 +471,12 @@ export default function Settings() {
                                               </tr>
                                           </thead>
                                           <tbody>
-                                              {festivals.map((f: any) => (
+                                              {festivals.map((f) => (
                                                   <tr key={f.id} className="border-b last:border-0 hover:bg-muted/50">
                                                       <td className="py-3 px-2 font-medium">{f.id}</td>
                                                       <td className="py-3 px-2 text-sm">{getTeamNames(f)}</td>
                                                       <td className="py-3 px-2">
-                                                          {f.id === activeFestivalId ? (
+                                                          {f.active ? (
                                                               <span className="inline-flex items-center gap-1 text-green-600 text-sm font-medium">
                                                                   <Check className="h-3 w-3" /> Active
                                                               </span>
@@ -488,7 +486,7 @@ export default function Settings() {
                                                       </td>
                                                       <td className="py-3 px-2">
                                                           <div className="flex gap-1">
-                                                              {f.id !== activeFestivalId && (
+                                                              {!f.active && (
                                                                   <Button
                                                                       variant="ghost"
                                                                       size="sm"
@@ -503,7 +501,7 @@ export default function Settings() {
                                                                       <Pencil className="h-4 w-4" />
                                                                   </Button>
                                                               </Link>
-                                                              {f.id !== activeFestivalId && (
+                                                              {!f.active && (
                                                                   <Button
                                                                       variant="ghost"
                                                                       size="sm"

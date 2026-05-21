@@ -461,6 +461,10 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
                                  ctx->status = HTTP_STATUS_BAD_REQUEST;
                                  return errorHandler(srv, std::move(ctx), settingsMgr);
                              }
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_GET) {
+                                 return mgm_get_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
+                             }
                              return mgm_delete_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
                          });
 

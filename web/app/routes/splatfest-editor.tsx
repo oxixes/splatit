@@ -11,7 +11,7 @@ import {Link} from "react-router";
 import {Separator} from "~/components/ui/separator";
 import {useState, useRef, useEffect} from "react";
 import {useAppConfig} from "~/hooks/useAppConfig";
-import {saveFestival, getFestivals} from "~/lib/festivals";
+import {saveFestival, getFestival} from "~/lib/festivals";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -232,12 +232,10 @@ export default function SplatfestEditor({ params }: Route.ComponentProps) {
       const id = parseInt(params.id);
       if (!isNaN(id)) {
         setIsLoading(true);
-        getFestivals(config).then((res) => {
-          const found = res.festivals.find((f: any) => f.id === id);
-          if (found) {
-            setData(found as SplatfestData);
-          }
-        }).catch(console.error).finally(() => setIsLoading(false));
+        getFestival(config, id)
+          .then((found) => setData(found as SplatfestData))
+          .catch(console.error)
+          .finally(() => setIsLoading(false));
       }
     }
   }, [params.id]);

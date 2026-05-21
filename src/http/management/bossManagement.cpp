@@ -219,8 +219,26 @@ async::Task<void> mgm_get_festivals(http::Server* srv, std::shared_ptr<http::Con
     json festivals = co_await readSetting(mgmDb, "festivals", json::array());
     int activeId = (co_await readSetting(mgmDb, "active_festival_id", 0)).get<int>();
 
+    // Strip heavy fields for the list view
+    json summary = json::array();
+    for (auto f : festivals) {
+        json entry;
+        entry["id"] = f.value("id", 0);
+        entry["active"] = (f.value("id", 0) == activeId);
+
+        // Pick backup language for team names
+        std::string lang = f.value("backupLanguage", "us_en");
+        if (f.contains("teamA") && f["teamA"].contains("names")) {
+            entry["teamAName"] = f["teamA"]["names"].value(lang, "");
+        }
+        if (f.contains("teamB") && f["teamB"].contains("names")) {
+            entry["teamBName"] = f["teamB"]["names"].value(lang, "");
+        }
+        summary.push_back(entry);
+    }
+
     json responseBody;
-    responseBody["festivals"] = festivals;
+    responseBody["festivals"] = summary;
     responseBody["activeId"] = activeId;
 
     bool keepAlive = false;
@@ -324,6 +342,39 @@ async::Task<void> mgm_save_festival(http::Server* srv, std::shared_ptr<http::Con
     bool keepAlive = false;
     srv->sendResponse(ctx, prepareResponse(ctx, responseBody, keepAlive,
         settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK), keepAlive);
+    co_return;
+}
+
+/*
+ * GET /api/v1/festivals/{id} — full details for editing
+ */
+async::Task<void> mgm_get_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb, int festivalId) {
+    auto method = ctx->request->getMethod();
+    if (method != http::Method::M_GET && method != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        srv->sendResponse(ctx, createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED), false);
+        co_return;
+    }
+    if (method == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        srv->sendResponse(ctx, prepareCORSPreflightResponse(ctx, settingsMgr, "GET, OPTIONS", keepAlive), keepAlive);
+        co_return;
+    }
+
+    json festivals = co_await readSetting(mgmDb, "festivals", json::array());
+    for (const auto& f : festivals) {
+        if (f.value("id", 0) == festivalId) {
+            bool keepAlive = false;
+            srv->sendResponse(ctx, prepareResponse(ctx, f, keepAlive,
+                settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK), keepAlive);
+            co_return;
+        }
+    }
+
+    bool keepAlive = false;
+    srv->sendResponse(ctx, createError(ctx, ManagementError::NOT_FOUND, "Festival not found",
+        settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_NOT_FOUND), false);
     co_return;
 }
 

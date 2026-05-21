@@ -1,19 +1,15 @@
 import {createApiClient} from "~/lib/api-client";
 import type {AppConfig} from "~/hooks/useAppConfig";
-
-export interface FestivalListResponse {
-  festivals: unknown[];
-  activeId: number;
-}
-
-export interface ActiveFestivalResponse {
-  activeId: number;
-  festival: unknown;
-}
+import type {FestivalListResponse, ActiveFestivalResponse} from "~/types/festival";
 
 export async function getFestivals(config: AppConfig): Promise<FestivalListResponse> {
   const apiClient = createApiClient(config);
   return apiClient.get<FestivalListResponse>("/api/v1/festivals");
+}
+
+export async function getFestival(config: AppConfig, id: number): Promise<unknown> {
+  const apiClient = createApiClient(config);
+  return apiClient.get<unknown>(`/api/v1/festivals/${id}`);
 }
 
 export async function getActiveFestival(config: AppConfig): Promise<ActiveFestivalResponse> {

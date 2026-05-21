@@ -12,6 +12,7 @@ namespace mgm {
 async::Task<void> mgm_get_festivals(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
 async::Task<void> mgm_get_active_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
 async::Task<void> mgm_save_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_get_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb, int festivalId);
 async::Task<void> mgm_delete_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb, int festivalId);
 async::Task<void> mgm_switch_active_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
 
