@@ -63,6 +63,8 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     REGISTER_CALL(SplatoonSecureRMC::secure_register, 11, 1);
     REGISTER_CALL(SplatoonSecureRMC::replaceUrl, 11, 7);
     REGISTER_CALL(SplatoonSecureRMC::sendReport, 11, 8);
+    // Game has RequestConnectionData in its code, which given a PID returns the StationURL. Will not implement
+    // for now since it does not seem to be used
 
     // Protocol 21 - Matchmaking
     REGISTER_CALL(SplatoonSecureRMC::unregisterGathering, 21, 2);
@@ -83,6 +85,7 @@ SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std
     REGISTER_CALL(SplatoonSecureRMC::createMatchmakeSessionWithParam, 109, 38);
     REGISTER_CALL(SplatoonSecureRMC::joinMatchmakeSessionWithParam, 109, 39);
     REGISTER_CALL(SplatoonSecureRMC::autoMatchmakeWithParam_Postpone, 109, 40);
+    // TODO Game has FindMatchmakeSessionByGatheringIdDetail, which is just returning the MatchmakeSession given the gId
 
     // Protocol 112 - Ranking
     REGISTER_CALL(SplatoonSecureRMC::getCompetitionRankingScore, 112, 16);
@@ -355,6 +358,7 @@ Task<void> SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
     // We'll just ignore the report for now. It has a header and a payload that is zlib compressed and then encrypted
     // with AES-ECB, with key 901edf193dc5ef3c5290647bff20c385.
 
+    /*
     // Log the report
     std::stringstream reportStream;
     for (auto& byte : report->data) {
@@ -363,6 +367,7 @@ Task<void> SplatoonSecureRMC::sendReport(ClientInfo client, Request req,
     }
     std::string reportStr = reportStream.str();
     std::cout << "Report: " << reportStr << std::endl;
+    */
 
     sendMsg(client, res, {});
     co_return;

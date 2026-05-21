@@ -13,7 +13,6 @@ namespace mgm {
 // TODO - Add authentication & authorization
 // TODO - Allow for SSL
 // TODO - Security Status for accounts server
-// TODO - Lobby and live tracking
 
 using json = nlohmann::json;
 
