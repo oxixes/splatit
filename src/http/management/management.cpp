@@ -1,4 +1,5 @@
 #include "management.hpp"
+#include "bossManagement.hpp"
 
 #include "../../util/util.hpp"
 #include "../../constants.hpp"
@@ -245,7 +246,7 @@ std::optional<uint32_t> parseU32(const std::string& s) {
 } // namespace
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<db::Database> db) {
+                    std::shared_ptr<db::Database> db, std::shared_ptr<db::Database> mgmDb) {
     channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getManagementgRPCConnectionPoolMaxSize());
     serverHosts = std::move(settingsMgr->getManagementServerAddresses());
     for (const auto& [type, hostList] : serverHosts) {
@@ -429,10 +430,65 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                              return mgm_get_splatoon_lobbies(srv, std::move(ctx), settingsMgr);
                          });
 
+    // Boss management: festivals & map rotation
+    server->registerRoute("*", "/api/v1/festivals",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_POST) {
+                                 return mgm_save_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                             }
+                             return mgm_get_festivals(srv, std::move(ctx), settingsMgr, mgmDb);
+                         });
+
+    server->registerRoute("*", "/api/v1/festivals/active",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                         });
+
+    server->registerRoute("*", "/api/v1/festivals/switch",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_switch_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                         });
+
+    server->registerRegexRoute("*", R"(^/api/v1/festivals/([0-9]+)$)",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                             const auto parts = splitPath(ctx->request->getPath());
+                             if (parts.size() < 4) {
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+                             auto id = parseU32(parts[3]);
+                             if (!id) {
+                                 ctx->status = HTTP_STATUS_BAD_REQUEST;
+                                 return errorHandler(srv, std::move(ctx), settingsMgr);
+                             }
+                             return mgm_delete_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
+                         });
+
+    server->registerRoute("*", "/api/v1/map-rotation",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_PUT) {
+                                 return mgm_update_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                             }
+                             return mgm_get_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                         });
+
+    server->registerRoute("*", "/api/v1/map-rotation/randomize",
+                         [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_randomize_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                         });
+
     server->registerErrorPage("*",
                              [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                  return errorHandler(srv, std::move(ctx), settingsMgr);
                              });
+
+    // Ensure default festivals and map rotation exist on startup
+    if (mgmDb) {
+        auto initTask = initManagementData(mgmDb);
+        initTask.setScheduler(std::make_shared<async::Scheduler>(std::make_shared<std::condition_variable>()));
+        async::Scheduler::run(std::make_unique<async::Task<void>>(std::move(initTask)));
+    }
 }
 
 } // namespace mgm

@@ -159,4 +159,21 @@ bool migration_initial_boss(const std::shared_ptr<Logger::Logger>& logger, const
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
 }
 
+bool migration_initial_management(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type) {
+    std::vector<std::string> sqlCmds;
+    switch (type) {
+        case DBType::SQLITE3:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE settings (key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (key));");
+            sqlCmds.emplace_back("CREATE TABLE pending_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, type INTEGER NOT NULL, "
+                                 "params TEXT NOT NULL);");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
+    }
+
+    return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
+}
+
 } // namespace db::migrations

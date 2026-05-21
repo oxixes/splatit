@@ -59,6 +59,7 @@ public:
     [[nodiscard]] json getFriendsSecureDBSettings() const;
     [[nodiscard]] json getSplatoonAuthDBSettings() const;
     [[nodiscard]] json getBOSSDBSettings() const;
+    [[nodiscard]] json getManagementDBSettings() const;
 
     [[nodiscard]] sock::IPv4Addr getHTTPListenAddress() const;
     [[nodiscard]] int getHTTPWorkerCount() const;

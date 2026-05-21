@@ -13,7 +13,6 @@ namespace mgm {
 // TODO - Add authentication & authorization
 // TODO - Allow for SSL
 // TODO - Security Status for accounts server
-// TODO - Splatfest and map rotation management
 // TODO - Lobby and live tracking
 
 using json = nlohmann::json;
@@ -85,6 +84,16 @@ async::Task<void> mgm_get_splatoon_client_count(http::Server* srv, std::shared_p
 async::Task<void> mgm_get_splatoon_lobby_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> mgm_get_splatoon_lobbies(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 
+// Boss management endpoints (festivals & map rotation)
+async::Task<void> mgm_get_festivals(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_get_active_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_save_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_delete_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb, int festivalId);
+async::Task<void> mgm_switch_active_festival(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_get_map_rotation(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_update_map_rotation(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+async::Task<void> mgm_randomize_map_rotation(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);
+
 std::unique_ptr<http::Response> createError(const std::shared_ptr<http::Context>& ctx, ManagementError code, const std::string& message, const std::string& corsOrigin, bool& keepAlive, int httpStatus);
 
 async::Task<void> errorHandler(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
@@ -94,7 +103,7 @@ std::unique_ptr<http::Response> prepareResponse(const std::shared_ptr<http::Cont
 std::unique_ptr<http::Response> prepareCORSPreflightResponse(const std::shared_ptr<http::Context>& ctx, const std::shared_ptr<SettingsManager>& settingsMgr, const std::string& allowedMethods, bool& keepAlive);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<db::Database> db);
+                    std::shared_ptr<db::Database> db, std::shared_ptr<db::Database> mgmDb = nullptr);
 
 } // namespace mgm
 

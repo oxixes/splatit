@@ -9,5 +9,6 @@ export default [
         route("server-status", "routes/server-status.tsx"),
         route("settings", "routes/settings.tsx"),
         route("settings/splatfest/:id", "routes/splatfest-editor.tsx"),
+        route("settings/map-rotation", "routes/map-rotation.tsx"),
     ])
 ] satisfies RouteConfig;

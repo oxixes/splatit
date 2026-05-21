@@ -28,7 +28,8 @@ enum class SystemType {
     FRIENDS_AUTH,
     FRIENDS_SECURE,
     SPLATOON_AUTH,
-    BOSS
+    BOSS,
+    MANAGEMENT
 };
 
 enum class DBVersion {

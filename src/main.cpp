@@ -20,6 +20,7 @@
 #include "nex/splatoon/splatoonSecure.hpp"
 #include "http/management/management.hpp"
 #include "util/globalTaskScheduler.hpp"
+#include "grpc/channelPool.hpp"
 #include "sharedState/localSharedState.hpp"
 #include "sharedState/redisSharedState.hpp"
 
@@ -274,6 +275,7 @@ int main(int argc, char** argv) {
 
     std::shared_ptr<db::Database> accountsDB = nullptr;
     std::shared_ptr<db::Database> bossDB = nullptr;
+    std::shared_ptr<db::Database> managementDB = nullptr;
     std::shared_ptr<http::Server> httpServer = nullptr;
     std::shared_ptr<http::Server> managementServer = nullptr;
 
@@ -391,6 +393,44 @@ int main(int argc, char** argv) {
     }
 
     if (settingsMgr->isManagementEnabled()) {
+        // Create and migrate the management database
+        managementDB = db::Database::createDatabase(settingsMgr->getManagementDBSettings(), logger);
+        if (!managementDB->init() || !managementDB->run()) {
+            managementDB->close();
+            managementDB = nullptr;
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP, "Failed to initialize management database");
+            if (accountsDB != nullptr) accountsDB->close();
+            if (httpServer != nullptr) httpServer->stop();
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (managementDB->getVersion() != db::CURRENT_VERSION) {
+            if (!db::migrations::migrate(logger, managementDB, db::DBType::SQLITE3, db::SystemType::MANAGEMENT,
+                                         managementDB->getVersion())) {
+                managementDB->close();
+                managementDB = nullptr;
+                if (accountsDB != nullptr) accountsDB->close();
+                if (httpServer != nullptr) httpServer->stop();
+                if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+        }
+
         try {
             managementServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getManagementListenAddress(),
                                                               settingsMgr->getManagementKeepAliveTimeout(),
@@ -411,7 +451,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        mgm::registerRoutes(managementServer, settingsMgr, nullptr); // No management database for now
+        mgm::registerRoutes(managementServer, settingsMgr, accountsDB, managementDB);
         managementServer->listen(settingsMgr->getManagementWorkerCount(), stop);
     }
 
@@ -452,7 +492,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    util::GlobalTaskScheduler::createInstance(accountsDB, logger, settingsMgr);
+    // Create a channel pool for the global task scheduler to make boss gRPC calls
+    auto taskSchedulerChannelPool = std::make_shared<grpcimpl::ChannelPool>(10);
+    util::GlobalTaskScheduler::createInstance(accountsDB, logger, settingsMgr, managementDB, taskSchedulerChannelPool);
 
 #ifdef _WIN32
     signal(SIGINT, signalHandler);

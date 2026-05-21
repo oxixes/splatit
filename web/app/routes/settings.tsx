@@ -4,11 +4,12 @@ import {Button} from "~/components/ui/button";
 import {Label} from "~/components/ui/label";
 import {Switch} from "~/components/ui/switch";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "~/components/ui/tabs";
-import {AlertCircle, RefreshCw, Sparkles, Plus, Pencil, Trash2} from "lucide-react";
+import {AlertCircle, RefreshCw, Sparkles, Plus, Pencil, Trash2, Check, Shuffle} from "lucide-react";
 import {Link} from "react-router";
 import { useState, useEffect } from "react";
 import { useAppConfig } from "~/hooks/useAppConfig";
 import { getAgreements, saveAgreement, deleteAgreement } from "~/lib/agreements";
+import { getFestivals, switchActiveFestival, deleteFestival } from "~/lib/festivals";
 import { AgreementEditor } from "~/components/agreements/AgreementEditor";
 import type { Agreement, AgreementsFilters, SortColumn } from "~/types/agreement";
 import { AGREEMENT_TYPES } from "~/constants/agreement-types";
@@ -43,6 +44,12 @@ export default function Settings() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
 
+  // Festival state
+  const [festivals, setFestivals] = useState<unknown[]>([]);
+  const [activeFestivalId, setActiveFestivalId] = useState<number>(0);
+  const [festivalsLoading, setFestivalsLoading] = useState(true);
+  const [festivalMsg, setFestivalMsg] = useState<string | null>(null);
+
   // Filters and sorting
   const [filters, setFilters] = useState<AgreementsFilters>({
     page: 0,
@@ -53,6 +60,23 @@ export default function Settings() {
   useEffect(() => {
     loadAgreements();
   }, [filters]);
+
+  useEffect(() => {
+    loadFestivals();
+  }, []);
+
+  const loadFestivals = async () => {
+    try {
+      setFestivalsLoading(true);
+      const data = await getFestivals(config);
+      setFestivals(data.festivals || []);
+      setActiveFestivalId(data.activeId);
+    } catch (error) {
+      console.error("Error loading festivals:", error);
+    } finally {
+      setFestivalsLoading(false);
+    }
+  };
 
   const loadAgreements = async () => {
     try {
@@ -138,6 +162,35 @@ export default function Settings() {
 
   const handlePageChange = (newPage: number) => {
     setFilters({ ...filters, page: newPage });
+  };
+
+  const handleSwitchFestival = async (id: number) => {
+    try {
+      await switchActiveFestival(config, id);
+      setActiveFestivalId(id);
+      setFestivalMsg(`Switched to festival ${id}`);
+    } catch (error) {
+      console.error("Error switching festival:", error);
+      alert("Failed to switch active festival");
+    }
+  };
+
+  const handleDeleteFestival = async (id: number) => {
+    try {
+      await deleteFestival(config, id);
+      await loadFestivals();
+      setFestivalMsg(`Festival ${id} deleted`);
+    } catch (error) {
+      console.error("Error deleting festival:", error);
+      alert("Failed to delete festival");
+    }
+  };
+
+  const getTeamNames = (festival: any): string => {
+    const lang = festival.backupLanguage || "us_en";
+    const aName = festival.teamA?.names?.[lang] || "Team A";
+    const bName = festival.teamB?.names?.[lang] || "Team B";
+    return `${aName} vs ${bName}`;
   };
 
 
@@ -360,44 +413,113 @@ export default function Settings() {
                                       Manage Splatfest events. One must always be active (even if in the past).
                                   </CardDescription>
                               </div>
-                              <Link to="/settings/splatfest/new">
-                                  <Button>
-                                      <Sparkles className="mr-2 h-4 w-4" />
-                                      Create Splatfest
-                                  </Button>
-                              </Link>
+                              <div className="flex gap-2">
+                                  <Link to="/settings/splatfest/new">
+                                      <Button>
+                                          <Sparkles className="mr-2 h-4 w-4" />
+                                          Create Splatfest
+                                      </Button>
+                                  </Link>
+                                  <Link to="/settings/map-rotation">
+                                      <Button variant="outline">
+                                          <Shuffle className="mr-2 h-4 w-4" />
+                                          Map Rotation
+                                      </Button>
+                                  </Link>
+                              </div>
                           </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                          {festivalMsg && (
+                              <div className="rounded-lg border border-green-500/50 bg-green-500/5 p-4">
+                                  <p className="text-sm text-green-500">{festivalMsg}</p>
+                              </div>
+                          )}
+
                           <div className="rounded-lg border border-blue-500/50 bg-blue-500/5 p-4">
                               <div className="flex items-start gap-3">
                                   <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
                                   <div className="space-y-1">
                                       <p className="text-sm font-medium text-blue-500">Splatfest Requirements</p>
                                       <p className="text-sm text-muted-foreground">
-                                          At least one Splatfest must be marked as "In Use" at all times.
+                                          At least one Splatfest must be active at all times.
                                           The game requires festival data even if the festival has ended.
-                                          Only one can be "In Use" at a time.
+                                          Switch the active festival by clicking the star button.
                                       </p>
                                   </div>
                               </div>
                           </div>
 
                           <div className="space-y-2">
-                              <div className="grid grid-cols-5 gap-4 font-medium text-sm border-b pb-2">
-                                  <div>Festival ID</div>
-                                  <div>Teams</div>
-                                  <div>Period</div>
-                                  <div>Status</div>
-                                  <div>Actions</div>
-                              </div>
-
-                              {/* Placeholder for splatfest list */}
-                              <div className="text-center py-8 text-muted-foreground">
-                                  <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                  <p className="text-lg font-medium">No Splatfests Created</p>
-                                  <p className="text-sm mt-2">Create your first Splatfest to enable the game</p>
-                              </div>
+                              {festivalsLoading ? (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                      Loading festivals...
+                                  </div>
+                              ) : festivals.length === 0 ? (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                      <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                      <p className="text-lg font-medium">No Splatfests Created</p>
+                                      <p className="text-sm mt-2">Create your first Splatfest to enable the game</p>
+                                  </div>
+                              ) : (
+                                  <div className="overflow-x-auto">
+                                      <table className="w-full">
+                                          <thead>
+                                              <tr className="border-b">
+                                                  <th className="text-left py-2 px-2 text-sm font-medium">ID</th>
+                                                  <th className="text-left py-2 px-2 text-sm font-medium">Teams</th>
+                                                  <th className="text-left py-2 px-2 text-sm font-medium">Status</th>
+                                                  <th className="text-left py-2 px-2 text-sm font-medium">Actions</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              {festivals.map((f: any) => (
+                                                  <tr key={f.id} className="border-b last:border-0 hover:bg-muted/50">
+                                                      <td className="py-3 px-2 font-medium">{f.id}</td>
+                                                      <td className="py-3 px-2 text-sm">{getTeamNames(f)}</td>
+                                                      <td className="py-3 px-2">
+                                                          {f.id === activeFestivalId ? (
+                                                              <span className="inline-flex items-center gap-1 text-green-600 text-sm font-medium">
+                                                                  <Check className="h-3 w-3" /> Active
+                                                              </span>
+                                                          ) : (
+                                                              <span className="text-muted-foreground text-sm">Inactive</span>
+                                                          )}
+                                                      </td>
+                                                      <td className="py-3 px-2">
+                                                          <div className="flex gap-1">
+                                                              {f.id !== activeFestivalId && (
+                                                                  <Button
+                                                                      variant="ghost"
+                                                                      size="sm"
+                                                                      onClick={() => handleSwitchFestival(f.id)}
+                                                                      title="Set as active"
+                                                                  >
+                                                                      <Sparkles className="h-4 w-4" />
+                                                                  </Button>
+                                                              )}
+                                                              <Link to={`/settings/splatfest/${f.id}`}>
+                                                                  <Button variant="ghost" size="sm">
+                                                                      <Pencil className="h-4 w-4" />
+                                                                  </Button>
+                                                              </Link>
+                                                              {f.id !== activeFestivalId && (
+                                                                  <Button
+                                                                      variant="ghost"
+                                                                      size="sm"
+                                                                      onClick={() => handleDeleteFestival(f.id)}
+                                                                  >
+                                                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                                                  </Button>
+                                                              )}
+                                                          </div>
+                                                      </td>
+                                                  </tr>
+                                              ))}
+                                          </tbody>
+                                      </table>
+                                  </div>
+                              )}
                           </div>
                       </CardContent>
                   </Card>
@@ -431,22 +553,18 @@ export default function Settings() {
                                   <div className="space-y-1">
                                       <p className="text-sm font-medium text-yellow-500">Warning</p>
                                       <p className="text-sm text-muted-foreground">
-                                          Regenerating the map rotation will reset the current rotation schedule.
+                                          Modifying the map rotation will reset the current rotation schedule.
                                           Players may need to reconnect to see the new rotation.
                                       </p>
                                   </div>
                               </div>
                           </div>
-                          <div className="space-y-2">
-                              <p className="text-sm text-muted-foreground">
-                                  The map rotation is automatically generated and served to clients.
-                                  Custom rotation configuration is not yet available.
-                              </p>
-                              <Button variant="destructive">
+                          <Link to="/settings/map-rotation">
+                              <Button variant="default">
                                   <RefreshCw className="mr-2 h-4 w-4" />
-                                  Regenerate Map Rotation
+                                  Open Map Rotation Editor
                               </Button>
-                          </div>
+                          </Link>
                       </CardContent>
                   </Card>
               </TabsContent>

@@ -371,45 +371,50 @@ async::Task<void> createFestival(const festival::FestivalInfo& festivalInfo, con
 
     int resourceId = getNextResourceId(bossManifest);
 
-    json::object_t optdat2 = {
-            {"open", true},
-            {"files", {
-                    {md5FestivalByaml, {
-                            {"id", resourceId++},
-                            {"type", "AppData"},
-                            {"filename", "Festival.byaml"},
-                            {"size", encryptedFestivalByamlData.size()},
-                            {"notify", {
-                                    {"new", "app"},
-                                    {"LED", false}
-                            }}
-                    }},
-                    {md5PanelTextureBFRES, {
-                            {"id", resourceId++},
-                            {"type", "AppData"},
-                            {"filename", "PanelTexture.bfres"},
-                            {"size", encryptedPanelTextureBFRESData.size()},
-                            {"notify", {
-                                    {"new", "app"},
-                                    {"LED", false}
-                            }}
-                    }},
-                    {md5HapTextureBFRES, {
-                            {"id", resourceId},
-                            {"type", "AppData"},
-                            {"filename", "HapTexture.bfres"},
-                            {"size", encryptedHapTextureBFRESData.size()},
-                            {"notify", {
-                                    {"new", "app"},
-                                    {"LED", false}
-                            }}
-                    }}
-            }}
+    auto makeOptdat2Entry = [&](int startId) {
+        int id = startId;
+        return json::object_t{
+                {"open", true},
+                {"files", {
+                        {md5FestivalByaml, {
+                                {"id", id++},
+                                {"type", "AppData"},
+                                {"filename", "Festival.byaml"},
+                                {"size", encryptedFestivalByamlData.size()},
+                                {"notify", {
+                                        {"new", "app"},
+                                        {"LED", false}
+                                }}
+                        }},
+                        {md5PanelTextureBFRES, {
+                                {"id", id++},
+                                {"type", "AppData"},
+                                {"filename", "PanelTexture.bfres"},
+                                {"size", encryptedPanelTextureBFRESData.size()},
+                                {"notify", {
+                                        {"new", "app"},
+                                        {"LED", false}
+                                }}
+                        }},
+                        {md5HapTextureBFRES, {
+                                {"id", id},
+                                {"type", "AppData"},
+                                {"filename", "HapTexture.bfres"},
+                                {"size", encryptedHapTextureBFRESData.size()},
+                                {"notify", {
+                                        {"new", "app"},
+                                        {"LED", false}
+                                }}
+                        }}
+                }}
+        };
     };
 
-    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
-    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
-    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["optdat2"] = optdat2;
+    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["optdat2"] = makeOptdat2Entry(resourceId);
+    resourceId += 3;
+    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["optdat2"] = makeOptdat2Entry(resourceId);
+    resourceId += 3;
+    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["optdat2"] = makeOptdat2Entry(resourceId);
 }
 
 async::Task<void> createVSSetting(std::chrono::system_clock::time_point afterFesBonusStartTime, json& bossManifest,
@@ -432,25 +437,27 @@ async::Task<void> createVSSetting(std::chrono::system_clock::time_point afterFes
 
     int resourceId = getNextResourceId(bossManifest);
 
-    json::object_t schdat2 = {
-            {"open", true},
-            {"files", {
-                    {md5VSSettingByaml, {
-                            {"id", resourceId},
-                            {"type", "AppData"},
-                            {"filename", "VSSetting.byaml"},
-                            {"size", encryptedVSSettingByamlData.size()},
-                            {"notify", {
-                                    {"new", "app"},
-                                    {"LED", false}
-                            }}
-                    }}
-            }}
+    auto makeSchdat2Entry = [&](int id) {
+        return json::object_t{
+                {"open", true},
+                {"files", {
+                        {md5VSSettingByaml, {
+                                {"id", id},
+                                {"type", "AppData"},
+                                {"filename", "VSSetting.byaml"},
+                                {"size", encryptedVSSettingByamlData.size()},
+                                {"notify", {
+                                        {"new", "app"},
+                                        {"LED", false}
+                                }}
+                        }}
+                }}
+        };
     };
 
-    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
-    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
-    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["schdat2"] = schdat2;
+    bossManifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(resourceId++);
+    bossManifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(resourceId++);
+    bossManifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(resourceId);
 }
 
 

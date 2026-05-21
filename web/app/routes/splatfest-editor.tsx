@@ -10,6 +10,8 @@ import {Sparkles, Plus, Trash2, Download, AlertCircle, Upload, Image as ImageIco
 import {Link} from "react-router";
 import {Separator} from "~/components/ui/separator";
 import {useState, useRef} from "react";
+import {useAppConfig} from "~/hooks/useAppConfig";
+import {saveFestival} from "~/lib/festivals";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -195,6 +197,7 @@ const toISOString = (datetimeLocal: string): string => {
 };
 
 export default function SplatfestEditor() {
+  const { config } = useAppConfig();
   const [data, setData] = useState<SplatfestData>({
     id: 1000,
     battleResultRate: 1,
@@ -219,6 +222,8 @@ export default function SplatfestEditor() {
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const teamAImageRef = useRef<HTMLInputElement>(null);
   const teamBImageRef = useRef<HTMLInputElement>(null);
@@ -389,18 +394,26 @@ export default function SplatfestEditor() {
     reader.readAsText(file);
   };
 
-  const saveSplatfest = () => {
+  const saveSplatfest = async () => {
     const validationErrors = validateData();
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
-      alert('Please fix all errors before saving');
       return;
     }
 
-    // TODO: Send data to server via gRPC
-    console.log('Saving splatfest:', data);
-    alert('Save to server not yet implemented');
+    setIsSaving(true);
+    setSaveMessage(null);
     setErrors([]);
+
+    try {
+      await saveFestival(config, data);
+      setSaveMessage(`Splatfest ${data.id} saved successfully!`);
+    } catch (error) {
+      console.error('Error saving splatfest:', error);
+      setErrors(['Failed to save splatfest to server. Check the console for details.']);
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
       <div className="space-y-6">
@@ -429,6 +442,18 @@ export default function SplatfestEditor() {
               </Card>
           )}
 
+          {/* Save message */}
+          {saveMessage && (
+              <Card className="border-green-500/50 bg-green-500/5">
+                  <CardHeader>
+                      <CardTitle className="text-green-500">Success</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="text-sm text-green-500">{saveMessage}</p>
+                  </CardContent>
+              </Card>
+          )}
+
           <div className="flex items-center justify-between">
               <div>
                   <Link to="/settings" className="text-sm text-muted-foreground hover:text-foreground">
@@ -450,10 +475,10 @@ export default function SplatfestEditor() {
                       <Download className="mr-2 h-4 w-4" />
                       Download JSON
                   </Button>
-                  <Button onClick={saveSplatfest}>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Save Splatfest
-                  </Button>
+                   <Button onClick={saveSplatfest} disabled={isSaving}>
+                       <Sparkles className="mr-2 h-4 w-4" />
+                       {isSaving ? "Saving..." : "Save Splatfest"}
+                   </Button>
               </div>
           </div>
 

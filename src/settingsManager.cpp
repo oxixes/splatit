@@ -583,6 +583,10 @@ json SettingsManager::getBOSSDBSettings() const {
     return settings["boss"]["db"];
 }
 
+json SettingsManager::getManagementDBSettings() const {
+    return settings["management"]["db"];
+}
+
 std::vector<std::string> SettingsManager::getDomains() const {
     std::vector<std::string> usedDomains;
 

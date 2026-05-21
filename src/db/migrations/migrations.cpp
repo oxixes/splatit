@@ -25,6 +25,10 @@ std::vector<bool (*)(const std::shared_ptr<Logger::Logger>&, const std::shared_p
         migration_initial_boss
 };
 
+std::vector<bool (*)(const std::shared_ptr<Logger::Logger>&, const std::shared_ptr<Database>&, DBType)> managementMigrations = {
+        migration_initial_management
+};
+
 bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type, SystemType systemType,
              DBVersion fromVersion) {
     logger->log(Logger::level::INFO, Logger::group::DB,
@@ -48,6 +52,9 @@ bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_pt
                 break;
             case SystemType::BOSS:
                 migrations = &bossMigrations;
+                break;
+            case SystemType::MANAGEMENT:
+                migrations = &managementMigrations;
                 break;
             default:
                 logger->log(Logger::level::FAILURE, Logger::group::DB,

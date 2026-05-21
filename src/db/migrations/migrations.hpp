@@ -11,6 +11,7 @@ bool migration_initial_friendsAuth(const std::shared_ptr<Logger::Logger>& logger
 bool migration_initial_splatoonAuth(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type);
 bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type);
 bool migration_initial_boss(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type);
+bool migration_initial_management(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type);
 
 bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type, SystemType systemType,
              DBVersion fromVersion);

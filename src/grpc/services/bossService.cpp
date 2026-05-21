@@ -8,6 +8,7 @@
 #include "../../util/task.hpp"
 #include "../../util/util.hpp"
 #include "../../crypto/tools.hpp"
+#include "../../constants.hpp"
 
 using namespace async;
 
@@ -331,27 +332,29 @@ Task<void> completeSetVSSetting(grpc::ServerUnaryReactor* reactor,
                 }
             }
         }
-        resourceId++;
 
-        json::object_t schdat2 = {
-                {"open", true},
-                {"files", {
-                        {md5VSSettingByaml, {
-                                {"id", resourceId},
-                                {"type", "AppData"},
-                                {"filename", "VSSetting.byaml"},
-                                {"size", encryptedVSSettingByamlData.size()},
-                                {"notify", {
-                                        {"new", "app"},
-                                        {"LED", false}
-                                }}
-                        }}
-                }}
+        auto makeSchdat2Entry = [&](int id) {
+            json::object_t schdat2 = {
+                    {"open", true},
+                    {"files", {
+                            {md5VSSettingByaml, {
+                                    {"id", id},
+                                    {"type", "AppData"},
+                                    {"filename", "VSSetting.byaml"},
+                                    {"size", encryptedVSSettingByamlData.size()},
+                                    {"notify", {
+                                            {"new", "app"},
+                                            {"LED", false}
+                                    }}
+                            }}
+                    }}
+            };
+            return schdat2;
         };
 
-        manifest["tasksheets"]["0005001010040000"]["tasksheets"]["schdat2"] = schdat2;
-        manifest["tasksheets"]["0005001010040100"]["tasksheets"]["schdat2"] = schdat2;
-        manifest["tasksheets"]["0005001010040200"]["tasksheets"]["schdat2"] = schdat2;
+        manifest["tasksheets"][EU_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(++resourceId);
+        manifest["tasksheets"][US_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(++resourceId);
+        manifest["tasksheets"][JP_BOSS_APP_ID]["tasksheets"]["schdat2"] = makeSchdat2Entry(++resourceId);
 
         auto saveManifestCmd = db::Database::craftInsertOrUpdateSettingCommand("manifest", manifest.dump());
         results = co_await session->runCommand(std::move(saveManifestCmd));
