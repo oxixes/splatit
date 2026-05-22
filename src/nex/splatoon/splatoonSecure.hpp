@@ -32,6 +32,7 @@ public:
     async::Task<uint32_t> getConnectedClientCount() const;
     async::Task<uint32_t> getLobbyCount() const;
     async::Task<std::vector<SessionInfo>> getAllSessions() const;
+    async::Task<std::vector<db::DBFestivalTeamTotalsData>> getFestivalTotals(uint32_t festivalId) const;
 
 private:
     async::Task<void> requestProbeInitiationExt(ClientInfo client, Request req,

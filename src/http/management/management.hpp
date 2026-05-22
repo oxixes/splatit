@@ -82,6 +82,7 @@ async::Task<void> mgm_get_friends_client_count(http::Server* srv, std::shared_pt
 async::Task<void> mgm_get_splatoon_client_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> mgm_get_splatoon_lobby_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> mgm_get_splatoon_lobbies(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_get_festival_totals(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 
 // Boss management endpoints (festivals & map rotation)
 async::Task<void> mgm_get_festivals(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, std::shared_ptr<db::Database> mgmDb);

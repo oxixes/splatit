@@ -430,6 +430,10 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
                              return mgm_get_splatoon_lobbies(srv, std::move(ctx), settingsMgr);
                          });
 
+    server->registerRoute("*", "/api/v1/splatoon/festival_totals", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_get_festival_totals(srv, std::move(ctx), settingsMgr);
+                         });
+
     // Boss management: festivals & map rotation
     server->registerRoute("*", "/api/v1/festivals",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {

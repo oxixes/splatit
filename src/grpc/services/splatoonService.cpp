@@ -182,4 +182,38 @@ grpc::ServerUnaryReactor *SplatoonServiceImpl::GetExistingLobbies(grpc::Callback
     return reactor;
 }
 
+async::Task<void> completeGetFestivalTotals(grpc::ServerUnaryReactor* reactor, const GetFestivalTotalsRequest* request,
+    GetFestivalTotalsResponse* response, const std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonRMC) {
+
+    try {
+        auto totals = co_await splatoonRMC->getFestivalTotals(request->festivalid());
+        for (auto& total : totals) {
+            auto* teamTotal = response->add_totals();
+            teamTotal->set_team(total.team);
+            teamTotal->set_usercount(total.userCount);
+            teamTotal->set_totalwins(total.totalWins);
+        }
+    } catch (const std::exception& e) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, e.what()));
+        co_return;
+    }
+
+    reactor->Finish(grpc::Status::OK);
+}
+
+grpc::ServerUnaryReactor* SplatoonServiceImpl::GetFestivalTotals(grpc::CallbackServerContext* context,
+    const GetFestivalTotalsRequest* request, GetFestivalTotalsResponse* response) {
+
+    logger->log(Logger::level::DEBUG, Logger::group::GRPC, "[" + std::string(SplatoonService::service_full_name()) + "] "
+        "GetFestivalTotals called for festival " + std::to_string(request->festivalid()));
+
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
+
+    auto task = completeGetFestivalTotals(reactor, request, response, splatoonRMC);
+    task.setContext(reactor);
+    splatoonRMC->scheduleArbitraryFunction(std::move(task));
+
+    return reactor;
+}
+
 } // namespace grpcimpl::splatoon::v1

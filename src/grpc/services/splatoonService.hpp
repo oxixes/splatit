@@ -34,6 +34,10 @@ public:
         const google::protobuf::Empty* _,
         GetExistingLobbiesResponse* response) override;
 
+    grpc::ServerUnaryReactor* GetFestivalTotals(grpc::CallbackServerContext* context,
+        const GetFestivalTotalsRequest* request,
+        GetFestivalTotalsResponse* response) override;
+
 private:
     std::shared_ptr<Logger::Logger> logger;
     std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonRMC;

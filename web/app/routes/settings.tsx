@@ -4,7 +4,7 @@ import {Button} from "~/components/ui/button";
 import {Label} from "~/components/ui/label";
 import {Switch} from "~/components/ui/switch";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "~/components/ui/tabs";
-import {AlertCircle, RefreshCw, Sparkles, Plus, Pencil, Trash2, Check, Shuffle} from "lucide-react";
+import {AlertCircle, RefreshCw, Sparkles, Plus, Pencil, Trash2, Check, Shuffle, BarChart3} from "lucide-react";
 import {Link} from "react-router";
 import { useState, useEffect } from "react";
 import { useAppConfig } from "~/hooks/useAppConfig";
@@ -16,6 +16,7 @@ import type { Agreement, AgreementsFilters, SortColumn } from "~/types/agreement
 import { AGREEMENT_TYPES } from "~/constants/agreement-types";
 import { SortableHeader } from "~/components/ui/sortable-header";
 import countriesLanguages from "~/data/countries_languages.json";
+import {FestivalResultsDialog} from "~/components/festivals/FestivalResultsDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,10 @@ export default function Settings() {
   const [activeFestivalId, setActiveFestivalId] = useState<number>(0);
   const [festivalsLoading, setFestivalsLoading] = useState(true);
   const [festivalMsg, setFestivalMsg] = useState<string | null>(null);
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [resultsFestivalId, setResultsFestivalId] = useState(0);
+  const [resultsTeamA, setResultsTeamA] = useState("");
+  const [resultsTeamB, setResultsTeamB] = useState("");
 
   // Filters and sorting
   const [filters, setFilters] = useState<AgreementsFilters>({
@@ -174,6 +179,13 @@ export default function Settings() {
       console.error("Error switching festival:", error);
       alert("Failed to switch active festival");
     }
+  };
+
+  const handleOpenResults = (festival: FestivalSummary) => {
+    setResultsFestivalId(festival.id);
+    setResultsTeamA(festival.teamAName);
+    setResultsTeamB(festival.teamBName);
+    setResultsDialogOpen(true);
   };
 
   const handleDeleteFestival = async (id: number) => {
@@ -486,6 +498,14 @@ export default function Settings() {
                                                       </td>
                                                       <td className="py-3 px-2">
                                                           <div className="flex gap-1">
+                                                              <Button
+                                                                  variant="ghost"
+                                                                  size="sm"
+                                                                  onClick={() => handleOpenResults(f)}
+                                                                  title="View results"
+                                                              >
+                                                                  <BarChart3 className="h-4 w-4" />
+                                                              </Button>
                                                               {!f.active && (
                                                                   <Button
                                                                       variant="ghost"
@@ -522,7 +542,7 @@ export default function Settings() {
                       </CardContent>
                   </Card>
 
-                  {/* Splatfest Info */}
+                   {/* Splatfest Info */}
                   <Card className="border-blue-500/50 bg-blue-500/5">
                       <CardHeader>
                           <CardTitle className="text-blue-500">Festival Configuration</CardTitle>
@@ -535,6 +555,15 @@ export default function Settings() {
                           <p>• <strong>Timing:</strong> Announcement, start, end, result, and bonus periods</p>
                       </CardContent>
                   </Card>
+
+                  <FestivalResultsDialog
+                      config={config}
+                      festivalId={resultsFestivalId}
+                      teamAName={resultsTeamA}
+                      teamBName={resultsTeamB}
+                      open={resultsDialogOpen}
+                      onOpenChange={setResultsDialogOpen}
+                  />
               </TabsContent>
 
               <TabsContent value="boss" className="space-y-4">

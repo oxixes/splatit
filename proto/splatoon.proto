@@ -14,6 +14,8 @@ service SplatoonService {
 
   // This could be optimized in the future by doing pagination or something similar, but for now this is good enough.
   rpc GetExistingLobbies(google.protobuf.Empty) returns (GetExistingLobbiesResponse);
+
+  rpc GetFestivalTotals(GetFestivalTotalsRequest) returns (GetFestivalTotalsResponse);
 }
 
 message SendNotificationRequest {
@@ -83,4 +85,18 @@ message Lobby {
   google.protobuf.Timestamp startedTime = 19;
 
   repeated uint32 playerPids = 20;
+}
+
+message GetFestivalTotalsRequest {
+  uint32 festivalId = 1;
+}
+
+message GetFestivalTotalsResponse {
+  repeated FestivalTeamTotal totals = 1;
+}
+
+message FestivalTeamTotal {
+  uint32 team = 1;
+  uint32 userCount = 2;
+  uint32 totalWins = 3;
 }

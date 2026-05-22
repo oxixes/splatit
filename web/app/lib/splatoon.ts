@@ -1,7 +1,7 @@
 import { createApiClient } from "~/lib/api-client";
 import type { AppConfig } from "~/hooks/useAppConfig";
 import { GAME_MODE_NAMES } from "~/constants/game-modes";
-import type { ClientCountResponse, LobbiesResponse, LobbyCountResponse } from "~/types/splatoon";
+import type { ClientCountResponse, LobbiesResponse, LobbyCountResponse, FestivalTotalsResponse } from "~/types/splatoon";
 
 export async function getClientCount(config: AppConfig): Promise<ClientCountResponse> {
   const apiClient = createApiClient(config);
@@ -16,6 +16,11 @@ export async function getLobbyCount(config: AppConfig): Promise<LobbyCountRespon
 export async function getLobbies(config: AppConfig): Promise<LobbiesResponse> {
   const apiClient = createApiClient(config);
   return apiClient.get<LobbiesResponse>("/api/v1/splatoon/lobbies");
+}
+
+export async function getFestivalTotals(config: AppConfig, festivalId: number): Promise<FestivalTotalsResponse> {
+  const apiClient = createApiClient(config);
+  return apiClient.get<FestivalTotalsResponse>(`/api/v1/splatoon/festival_totals?festivalId=${festivalId}`);
 }
 
 export function getGameModeName(gameMode: number): string {

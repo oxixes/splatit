@@ -1600,4 +1600,18 @@ Task<std::vector<SessionInfo>> SplatoonSecureRMC::getAllSessions() const {
     co_return sessionVec;
 }
 
+Task<std::vector<db::DBFestivalTeamTotalsData>> SplatoonSecureRMC::getFestivalTotals(uint32_t festivalId) const {
+    if (db == nullptr) {
+        co_return {};
+    }
+
+    auto cmd = db::Database::craftGetFestivalTotalsCommand(festivalId);
+    auto result = co_await db->runCommand(std::move(cmd));
+    if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+        co_return {};
+    }
+
+    co_return result.getData<std::vector<db::DBFestivalTeamTotalsData>>();
+}
+
 } // namespace nex::rmc

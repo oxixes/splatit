@@ -31,3 +31,13 @@ export interface Lobby {
 export interface LobbiesResponse {
     lobbies: Lobby[];
 }
+
+export interface FestivalTeamTotal {
+    team: number;
+    userCount: number;
+    totalWins: number;
+}
+
+export interface FestivalTotalsResponse {
+    totals: FestivalTeamTotal[];
+}

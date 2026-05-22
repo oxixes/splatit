@@ -285,4 +285,92 @@ async::Task<void> mgm_get_splatoon_lobbies(http::Server* srv, std::shared_ptr<ht
     co_return;
 }
 
+/*
+ * Handler for GET /api/v1/splatoon/festival_totals?festivalId=X
+ *
+ * Returns the total wins and user counts per team for a festival.
+ */
+async::Task<void> mgm_get_festival_totals(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_GET && ctx->request->getMethod() != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = prepareCORSPreflightResponse(ctx, settingsMgr, "GET, OPTIONS", keepAlive);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    if (!ctx->request->hasQuery("festivalId")) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_REQUEST,
+            "Missing required query parameter: festivalId",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    uint32_t festivalId;
+    try {
+        festivalId = std::stoul(ctx->request->getQuery("festivalId"));
+    } catch (...) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_REQUEST,
+            "Invalid festivalId parameter",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto request = std::make_shared<grpcimpl::splatoon::v1::GetFestivalTotalsRequest>();
+    request->set_festivalid(festivalId);
+
+    auto response = co_await callSplatoonServerWithFallback<
+        grpcimpl::splatoon::v1::SplatoonService,
+        void (grpcimpl::splatoon::v1::SplatoonService::Stub::async::*)(
+            grpc::ClientContext*,
+            const grpcimpl::splatoon::v1::GetFestivalTotalsRequest*,
+            grpcimpl::splatoon::v1::GetFestivalTotalsResponse*,
+            std::function<void(grpc::Status)>
+        ),
+        grpcimpl::splatoon::v1::GetFestivalTotalsRequest,
+        grpcimpl::splatoon::v1::GetFestivalTotalsResponse
+    >(
+        ctx,
+        &grpcimpl::splatoon::v1::SplatoonService::Stub::async::GetFestivalTotals,
+        request,
+        settingsMgr->getManagementgRPCRequestTimeout()
+    );
+
+    if (!response.second.ok()) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_GATEWAY,
+            "Failed to contact Splatoon servers: " + response.second.error_message(),
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    json responseBody;
+    responseBody["totals"] = json::array();
+    for (const auto& total : response.first->totals()) {
+        json totalJson;
+        totalJson["team"] = total.team();
+        totalJson["userCount"] = total.usercount();
+        totalJson["totalWins"] = total.totalwins();
+        responseBody["totals"].push_back(totalJson);
+    }
+
+    bool keepAlive = false;
+    std::unique_ptr<http::Response> res = prepareResponse(ctx, responseBody, keepAlive,
+        settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), false);
+    co_return;
+}
+
 } // namespace mgm
