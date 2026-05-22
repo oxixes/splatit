@@ -1239,9 +1239,6 @@ Task<void> SplatoonSecureRMC::autoMatchmakeWithParam_Postpone(ClientInfo client,
 
 Task<void> SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Request req,
                                                          std::unique_ptr<CompetitionRankingGetParam> param) {
-    // TODO We don't know yet what this should return, so for debugging purposes, we'll just return a dummy value.
-    logger->log(Logger::level::DEBUG, logGroup, "getCompetitionRankingScore called with param: " + param->toString());
-
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
@@ -1251,41 +1248,49 @@ Task<void> SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Requ
 
     std::vector<T_ptr> params(1);
 
+    if (param->festivalIds.size() > 10) {
+        res.success = false;
+        res.error = Error::CORE__INVALID_ARGUMENT;
+        sendMsg(client, res, {});
+        co_return;
+    }
+
     std::unique_ptr<List<CompetitionRankingScoreInfo>> scores = std::make_unique<List<CompetitionRankingScoreInfo>>(client.minorVersion);
-    CompetitionRankingScoreInfo scoreInfo(client.minorVersion);
-    scoreInfo.festivalId = 0x1CE0; // Festival ID
-    scoreInfo.unk1 = 0xCAFE0002;
 
-    List<UInt32> unk_vec_1(client.minorVersion);
-    unk_vec_1.emplace_back(client.minorVersion, 10);
-    unk_vec_1.emplace_back(client.minorVersion, 90);
+    for (auto& festivalId : param->festivalIds) {
+        CompetitionRankingScoreInfo scoreInfo(client.minorVersion);
+        scoreInfo.festivalId = festivalId;
+        scoreInfo.unk1 = 0;
 
-    List<UInt32> unk_vec_2(client.minorVersion);
-    unk_vec_2.emplace_back(client.minorVersion, 40);
-    unk_vec_2.emplace_back(client.minorVersion, 60);
+        if (db != nullptr) {
+            auto cmd = db::Database::craftGetFestivalTotalsCommand(festivalId);
+            auto result = co_await db->runCommand(std::move(cmd));
+            if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+                logger->log(Logger::level::WARN, logGroup,
+                            "Failed to get festival totals for festival " + std::to_string(festivalId));
+                res.success = false;
+                res.error = Error::CORE__EXCEPTION;
+                sendMsg(client, res, {});
+                co_return;
+            }
 
-    scoreInfo.teamWins = std::move(unk_vec_1);
-    scoreInfo.teamVotes = std::move(unk_vec_2);
+            auto totalsData = result.getData<std::vector<db::DBFestivalTeamTotalsData>>();
 
-    List<CompetitionRankingScoreData> scoreData(client.minorVersion);
-    CompetitionRankingScoreData data(client.minorVersion);
-    data.unk1 = 0xCAFE0005;
-    data.userId = 0xCAFE0006;
-    data.score = 0xCAFE0007;
-    Datetime now(client.minorVersion);
-    data.uploadDate = now;
-    data.unk4 = true;
-    qBuffer buffer;
-    std::vector<uint8_t> dummyData = {0xCA, 0xFE, 0x00, 0x09};
-    buffer.data = std::move(dummyData);
-    data.appData = std::move(buffer);
+            List<UInt32> teamWins(client.minorVersion);
+            List<UInt32> teamVotes(client.minorVersion);
+            for (auto& data : totalsData) {
+                teamWins.emplace_back(client.minorVersion, data.totalWins);
+                teamVotes.emplace_back(client.minorVersion, data.userCount);
+            }
+            scoreInfo.teamWins = std::move(teamWins);
+            scoreInfo.teamVotes = std::move(teamVotes);
+        }
 
-    //scoreData.push_back(data);
-    scoreInfo.scoreData = std::move(scoreData);
+        List<CompetitionRankingScoreData> scoreData(client.minorVersion);
+        scoreInfo.scoreData = std::move(scoreData);
 
-    scores->push_back(std::move(scoreInfo));
-
-    logger->log(Logger::level::DEBUG, logGroup, "Returning dummy competition ranking score for client " + std::to_string(client.pid) + ": " + scores->toString());
+        scores->push_back(std::move(scoreInfo));
+    }
 
     params[0] = std::move(scores);
 
@@ -1304,7 +1309,7 @@ Task<void> SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, R
 
     if (db != nullptr) {
         auto cmd = db::Database::craftUploadFestivalScoreCommand(
-            param->festivalId, client.pid, param->teamId, param->teamScore);
+            param->festivalId, client.pid, static_cast<uint32_t>(param->teamId) == 0 ? 0 : 1, param->teamScore);
         auto result = co_await db->runCommand(std::move(cmd));
         if (result.getStatus() != db::DBResultStatus::SUCCESS) {
             logger->log(Logger::level::WARN, logGroup,
