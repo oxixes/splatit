@@ -579,6 +579,10 @@ json SettingsManager::getSplatoonAuthDBSettings() const {
     return settings["splatoonAuth"]["db"];
 }
 
+json SettingsManager::getSplatoonSecureDBSettings() const {
+    return settings["splatoonSecure"]["db"];
+}
+
 json SettingsManager::getBOSSDBSettings() const {
     return settings["boss"]["db"];
 }

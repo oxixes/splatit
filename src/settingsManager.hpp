@@ -58,6 +58,7 @@ public:
     [[nodiscard]] json getFriendsAuthDBSettings() const;
     [[nodiscard]] json getFriendsSecureDBSettings() const;
     [[nodiscard]] json getSplatoonAuthDBSettings() const;
+    [[nodiscard]] json getSplatoonSecureDBSettings() const;
     [[nodiscard]] json getBOSSDBSettings() const;
     [[nodiscard]] json getManagementDBSettings() const;
 

@@ -258,15 +258,51 @@ int main(int argc, char** argv) {
     }
 
     std::shared_ptr<nex::prudp::Server> splatoonSecureSrv = nullptr;
+    std::shared_ptr<db::Database> splatoonSecureDB = nullptr;
     std::shared_ptr<nex::rmc::SplatoonSecureRMC> splatoonSecureRMC;
     if (settingsMgr->isSplatoonSecureEnabled()) {
+        splatoonSecureDB = db::Database::createDatabase(settingsMgr->getSplatoonSecureDBSettings(), logger);
+        if (!splatoonSecureDB->init() || !splatoonSecureDB->run()) {
+            splatoonSecureDB->close();
+            if (sharedState != nullptr) sharedState->close();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
+            if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
+        if (splatoonSecureDB->getVersion() != db::CURRENT_VERSION) {
+            if (!db::migrations::migrate(logger, splatoonSecureDB, db::DBType::SQLITE3, db::SystemType::SPLATOON_SECURE,
+                                         splatoonSecureDB->getVersion())) {
+                splatoonSecureDB->close();
+                if (sharedState != nullptr) sharedState->close();
+                if (friendsSecureDB != nullptr) friendsSecureDB->close();
+                if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+                if (friendsAuthDB != nullptr) friendsAuthDB->close();
+                if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+                if (splatoonAuthDB != nullptr) splatoonAuthDB->close();
+                if (splatoonAuthSrv != nullptr) splatoonAuthSrv->stop();
+                if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
+                socketManager->cleanup();
+                certManager->cleanup();
+                sock::cleanup();
+                return 1;
+            }
+        }
+
         sock::IPv4Addr addr = settingsMgr->getSplatoonSecureListenAddress();
         splatoonSecureSrv = std::make_shared<nex::prudp::Server>(logger, Logger::group::SPLATOON_SECURE, socketManager, settingsMgr,
-                                                                 addr, 1, SPLATOON_ACCESS_KEY,
-                                                                 false, 2, SPLATOON_SECURE_SERVER_KEY,
-                                                                 false);
+                                                                  addr, 1, SPLATOON_ACCESS_KEY,
+                                                                  false, 2, SPLATOON_SECURE_SERVER_KEY,
+                                                                  false);
 
-        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, nullptr, sharedState, settingsMgr->getNEXServerID(),
+        splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, splatoonSecureDB, sharedState, settingsMgr->getNEXServerID(),
             settingsMgr->getSplatoonSecuregRPCConnectionPoolMaxSize(), settingsMgr->getSplatoonSecuregRPCRequestTimeout());
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
@@ -285,6 +321,7 @@ int main(int argc, char** argv) {
             if (!bossDB->init() || !bossDB->run()) {
                 bossDB->close();
                 if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                 if (sharedState != nullptr) sharedState->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
@@ -300,6 +337,7 @@ int main(int argc, char** argv) {
                 if (!db::migrations::migrate(logger, bossDB, db::DBType::SQLITE3, db::SystemType::BOSS, bossDB->getVersion())) {
                     bossDB->close();
                     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                    if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                     if (sharedState != nullptr) sharedState->close();
                     if (friendsSecureDB != nullptr) friendsSecureDB->close();
                     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
@@ -323,6 +361,7 @@ int main(int argc, char** argv) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         std::string("An error occurred while initializing the HTTP server: ") + e.what());
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
             if (sharedState != nullptr) sharedState->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
@@ -340,6 +379,7 @@ int main(int argc, char** argv) {
                 accountsDB->close();
                 httpServer->stop();
                 if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                 if (sharedState != nullptr) sharedState->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
@@ -357,6 +397,7 @@ int main(int argc, char** argv) {
                     accountsDB->close();
                     httpServer->stop();
                     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                    if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                     if (sharedState != nullptr) sharedState->close();
                     if (friendsSecureDB != nullptr) friendsSecureDB->close();
                     if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
@@ -373,6 +414,7 @@ int main(int argc, char** argv) {
                 accountsDB->close();
                 httpServer->stop();
                 if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -402,6 +444,7 @@ int main(int argc, char** argv) {
             if (accountsDB != nullptr) accountsDB->close();
             if (httpServer != nullptr) httpServer->stop();
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -420,6 +463,7 @@ int main(int argc, char** argv) {
                 if (accountsDB != nullptr) accountsDB->close();
                 if (httpServer != nullptr) httpServer->stop();
                 if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+                if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
                 if (friendsSecureDB != nullptr) friendsSecureDB->close();
                 if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
                 if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -441,6 +485,7 @@ int main(int argc, char** argv) {
             if (accountsDB != nullptr) accountsDB->close();
             if (httpServer != nullptr) httpServer->stop();
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();
@@ -481,6 +526,7 @@ int main(int argc, char** argv) {
             if (accountsDB != nullptr) accountsDB->close();
             if (httpServer != nullptr) httpServer->stop();
             if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
             if (friendsSecureDB != nullptr) friendsSecureDB->close();
             if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
             if (friendsAuthDB != nullptr) friendsAuthDB->close();

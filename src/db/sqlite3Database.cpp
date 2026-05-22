@@ -3668,6 +3668,259 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
 
         sqlite3_reset(deleteTaskStatement);
         sqlite3_clear_bindings(deleteTaskStatement);
+    } else if (command->type == DBCommandType::UPLOAD_FESTIVAL_SCORE) {
+        auto* query = std::any_cast<DBFestivalScoreUploadQuery>(&command->data);
+
+        bool ownTransaction = sqlite3_get_autocommit(db) != 0;
+        if (ownTransaction) {
+            std::string beginCmd = "BEGIN IMMEDIATE;";
+            sqlite3_stmt* beginStmt = nullptr;
+            if (!craftStatement(beginCmd, &beginStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                goto push_results;
+            }
+            if (!runStatement(beginStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(beginStmt);
+                goto push_results;
+            }
+            sqlite3_finalize(beginStmt);
+        }
+
+        // Query old team before replacing
+        sqlite3_stmt* getOldTeamStmt = nullptr;
+        if (!craftStatement("SELECT team FROM festival_user_teams WHERE festival_id = ? AND pid = ?;", &getOldTeamStmt)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        if (!bindData(getOldTeamStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->pid))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(getOldTeamStmt);
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        auto oldTeamData = std::make_unique<std::vector<std::vector<std::shared_ptr<DBData>>>>();
+        if (!runStatement(getOldTeamStmt, {DBDataType::INTEGER}, oldTeamData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(getOldTeamStmt);
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        sqlite3_finalize(getOldTeamStmt);
+
+        std::optional<uint8_t> oldTeam;
+        if (!oldTeamData->empty() && !oldTeamData->at(0).empty()) {
+            oldTeam = static_cast<uint8_t>(std::any_cast<int64_t>(oldTeamData->at(0).at(0)->data));
+        }
+
+        sqlite3_stmt* setTeamStmt = nullptr;
+        if (!craftStatement("INSERT OR REPLACE INTO festival_user_teams (festival_id, pid, team) VALUES (?, ?, ?);", &setTeamStmt)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        if (!bindData(setTeamStmt, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->pid)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->team))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(setTeamStmt);
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        if (!runStatement(setTeamStmt, {}, nullptr)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(setTeamStmt);
+            if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            goto push_results;
+        }
+        sqlite3_finalize(setTeamStmt);
+
+        uint8_t newNormalizedTeam = (query->team == 0) ? 0 : 1;
+        uint8_t oldNormalizedTeam = oldTeam.has_value() ? ((oldTeam.value() == 0) ? 0 : 1) : newNormalizedTeam;
+
+        if (!oldTeam.has_value()) {
+            // New user for this festival: increment new team's user count
+            sqlite3_stmt* incUserCountStmt = nullptr;
+            if (!craftStatement("INSERT INTO festival_team_user_counts (festival_id, team, user_count) VALUES (?, ?, 1) "
+                                "ON CONFLICT(festival_id, team) DO UPDATE SET user_count = user_count + 1;", &incUserCountStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!bindData(incUserCountStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                          {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                           std::make_shared<DBInteger>(static_cast<int64_t>(newNormalizedTeam))})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_finalize(incUserCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(incUserCountStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(incUserCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            sqlite3_finalize(incUserCountStmt);
+        } else if (oldNormalizedTeam != newNormalizedTeam) {
+            // User switched teams: decrement old, increment new
+            sqlite3_stmt* decOldCountStmt = nullptr;
+            if (!craftStatement("UPDATE festival_team_user_counts SET user_count = MAX(0, user_count - 1) "
+                                "WHERE festival_id = ? AND team = ?;", &decOldCountStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!bindData(decOldCountStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                          {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                           std::make_shared<DBInteger>(static_cast<int64_t>(oldNormalizedTeam))})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_finalize(decOldCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(decOldCountStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(decOldCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            sqlite3_finalize(decOldCountStmt);
+
+            sqlite3_stmt* incNewCountStmt = nullptr;
+            if (!craftStatement("INSERT INTO festival_team_user_counts (festival_id, team, user_count) VALUES (?, ?, 1) "
+                                "ON CONFLICT(festival_id, team) DO UPDATE SET user_count = user_count + 1;", &incNewCountStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!bindData(incNewCountStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                          {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                           std::make_shared<DBInteger>(static_cast<int64_t>(newNormalizedTeam))})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_finalize(incNewCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(incNewCountStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(incNewCountStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            sqlite3_finalize(incNewCountStmt);
+        }
+
+        if (query->teamScore != 0) {
+            sqlite3_stmt* incUserWinsStmt = nullptr;
+            if (!craftStatement("INSERT INTO festival_user_wins (festival_id, pid, won_matches) VALUES (?, ?, 1) "
+                                "ON CONFLICT(festival_id, pid) DO UPDATE SET won_matches = won_matches + 1;", &incUserWinsStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!bindData(incUserWinsStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                          {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                           std::make_shared<DBInteger>(static_cast<int64_t>(query->pid))})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_finalize(incUserWinsStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(incUserWinsStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(incUserWinsStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            sqlite3_finalize(incUserWinsStmt);
+
+            sqlite3_stmt* incTeamTotalStmt = nullptr;
+            if (!craftStatement("INSERT INTO festival_team_totals (festival_id, team, total_wins) VALUES (?, ?, 1) "
+                                "ON CONFLICT(festival_id, team) DO UPDATE SET total_wins = total_wins + 1;", &incTeamTotalStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!bindData(incTeamTotalStmt, {DBDataType::INTEGER, DBDataType::INTEGER},
+                          {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                           std::make_shared<DBInteger>(static_cast<int64_t>(newNormalizedTeam))})) {
+                resultStatus = DBResultStatus::FAILURE_DATA;
+                sqlite3_finalize(incTeamTotalStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(incTeamTotalStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(incTeamTotalStmt);
+                if (ownTransaction) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            sqlite3_finalize(incTeamTotalStmt);
+        }
+
+        if (ownTransaction) {
+            std::string commitCmd = "COMMIT;";
+            sqlite3_stmt* commitStmt = nullptr;
+            if (!craftStatement(commitCmd, &commitStmt)) {
+                resultStatus = DBResultStatus::FAILURE_STMT;
+                sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                goto push_results;
+            }
+            if (!runStatement(commitStmt, {}, nullptr)) {
+                resultStatus = DBResultStatus::FAILURE_EXEC;
+                sqlite3_finalize(commitStmt);
+                goto push_results;
+            }
+            sqlite3_finalize(commitStmt);
+        }
+    } else if (command->type == DBCommandType::GET_FESTIVAL_TOTALS) {
+        auto* query = std::any_cast<DBFestivalIdQuery>(&command->data);
+
+        sqlite3_stmt* totalsStmt = nullptr;
+        if (!craftStatement(
+                "SELECT t.team, COALESCE(c.user_count, 0) AS user_count, t.total_wins "
+                "FROM festival_team_totals t "
+                "LEFT JOIN festival_team_user_counts c ON t.festival_id = c.festival_id AND t.team = c.team "
+                "WHERE t.festival_id = ? "
+                "UNION ALL "
+                "SELECT c.team, c.user_count, 0 AS total_wins "
+                "FROM festival_team_user_counts c "
+                "WHERE c.festival_id = ? AND c.team NOT IN (SELECT team FROM festival_team_totals WHERE festival_id = ?) "
+                "ORDER BY team;", &totalsStmt)) {
+            resultStatus = DBResultStatus::FAILURE_STMT;
+            goto push_results;
+        }
+        if (!bindData(totalsStmt, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER},
+                      {std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId)),
+                       std::make_shared<DBInteger>(static_cast<int64_t>(query->festivalId))})) {
+            resultStatus = DBResultStatus::FAILURE_DATA;
+            sqlite3_finalize(totalsStmt);
+            goto push_results;
+        }
+        if (!runStatement(totalsStmt, {DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::INTEGER}, returnedData)) {
+            resultStatus = DBResultStatus::FAILURE_EXEC;
+            sqlite3_finalize(totalsStmt);
+            goto push_results;
+        }
+        sqlite3_finalize(totalsStmt);
+
+        std::vector<DBFestivalTeamTotalsData> totalsData;
+        for (const auto& row : *returnedData) {
+            DBFestivalTeamTotalsData data {
+                .team = static_cast<uint8_t>(std::any_cast<int64_t>(row[0]->data)),
+                .userCount = static_cast<uint32_t>(std::any_cast<int64_t>(row[1]->data)),
+                .totalWins = static_cast<uint32_t>(std::any_cast<int64_t>(row[2]->data))
+            };
+            totalsData.push_back(data);
+        }
+
+        resultsData = std::move(totalsData);
     } else {
         logger->log(Logger::level::FAILURE, Logger::group::DB,
                     "Unknown command type: " + std::to_string(static_cast<int>(command->type)));

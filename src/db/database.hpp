@@ -28,6 +28,7 @@ enum class SystemType {
     FRIENDS_AUTH,
     FRIENDS_SECURE,
     SPLATOON_AUTH,
+    SPLATOON_SECURE,
     BOSS,
     MANAGEMENT
 };
@@ -117,7 +118,9 @@ enum class DBCommandType {
     COUNT_ACCOUNTS,
     INSERT_TASK,
     GET_ALL_TASKS,
-    DELETE_TASK
+    DELETE_TASK,
+    UPLOAD_FESTIVAL_SCORE,
+    GET_FESTIVAL_TOTALS
 };
 
 enum class DBResultStatus {
@@ -569,6 +572,23 @@ struct DBUserAgreementData {
     datetime_t signedAt;
 };
 
+struct DBFestivalScoreUploadQuery {
+    uint32_t festivalId;
+    uint32_t pid;
+    uint8_t team;
+    uint32_t teamScore;
+};
+
+struct DBFestivalIdQuery {
+    uint32_t festivalId;
+};
+
+struct DBFestivalTeamTotalsData {
+    uint8_t team;
+    uint32_t userCount;
+    uint32_t totalWins;
+};
+
 class Result {
 protected:
     std::any data;
@@ -834,6 +854,9 @@ public:
     static std::unique_ptr<Command> craftInsertTaskCommand(int type, const std::string& params);
     static std::unique_ptr<Command> craftGetAllTasksCommand();
     static std::unique_ptr<Command> craftDeleteTaskCommand(int64_t id);
+    static std::unique_ptr<Command> craftUploadFestivalScoreCommand(uint32_t festivalId, uint32_t pid,
+                                                                     uint8_t team, uint32_t teamScore);
+    static std::unique_ptr<Command> craftGetFestivalTotalsCommand(uint32_t festivalId);
 
     static std::shared_ptr<Database> createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger);
 

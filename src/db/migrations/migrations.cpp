@@ -29,6 +29,10 @@ std::vector<bool (*)(const std::shared_ptr<Logger::Logger>&, const std::shared_p
         migration_initial_management
 };
 
+std::vector<bool (*)(const std::shared_ptr<Logger::Logger>&, const std::shared_ptr<Database>&, DBType)> splatoonSecureMigrations = {
+        migration_initial_splatoonSecure
+};
+
 bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type, SystemType systemType,
              DBVersion fromVersion) {
     logger->log(Logger::level::INFO, Logger::group::DB,
@@ -55,6 +59,9 @@ bool migrate(const std::shared_ptr<Logger::Logger>& logger, const std::shared_pt
                 break;
             case SystemType::MANAGEMENT:
                 migrations = &managementMigrations;
+                break;
+            case SystemType::SPLATOON_SECURE:
+                migrations = &splatoonSecureMigrations;
                 break;
             default:
                 logger->log(Logger::level::FAILURE, Logger::group::DB,

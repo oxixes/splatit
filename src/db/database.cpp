@@ -1043,6 +1043,28 @@ std::unique_ptr<Command> Database::craftDeleteTaskCommand(int64_t id) {
     return dbCommand;
 }
 
+std::unique_ptr<Command> Database::craftUploadFestivalScoreCommand(uint32_t festivalId, uint32_t pid,
+                                                                    uint8_t team, uint32_t teamScore) {
+    DBFestivalScoreUploadQuery query {
+        .festivalId = festivalId,
+        .pid = pid,
+        .team = team,
+        .teamScore = teamScore
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::UPLOAD_FESTIVAL_SCORE, std::any(query));
+    return dbCommand;
+}
+
+std::unique_ptr<Command> Database::craftGetFestivalTotalsCommand(uint32_t festivalId) {
+    DBFestivalIdQuery query {
+        .festivalId = festivalId
+    };
+
+    auto dbCommand = std::make_unique<Command>(DBCommandType::GET_FESTIVAL_TOTALS, std::any(query));
+    return dbCommand;
+}
+
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(logger, config["path"].get<std::string>());
@@ -1448,6 +1470,22 @@ bool Database::verifyCommandArgs(const std::unique_ptr<Command>& command) {
         case DBCommandType::DELETE_TASK:
             // Deletes a task by its ID.
             if (command->data.type() != typeid(DBIdQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::UPLOAD_FESTIVAL_SCORE:
+            // Uploads a festival score (sets team, optionally increments wins).
+            if (command->data.type() != typeid(DBFestivalScoreUploadQuery)) {
+                return false;
+            }
+
+            break;
+
+        case DBCommandType::GET_FESTIVAL_TOTALS:
+            // Gets the totals (user count and total wins) per team for a festival.
+            if (command->data.type() != typeid(DBFestivalIdQuery)) {
                 return false;
             }
 

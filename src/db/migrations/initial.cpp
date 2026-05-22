@@ -176,4 +176,26 @@ bool migration_initial_management(const std::shared_ptr<Logger::Logger>& logger,
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
 }
 
+bool migration_initial_splatoonSecure(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type) {
+    std::vector<std::string> sqlCmds;
+    switch (type) {
+        case DBType::SQLITE3:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE festival_user_teams (festival_id INTEGER NOT NULL, pid INTEGER NOT NULL, "
+                                 "team INTEGER NOT NULL, PRIMARY KEY (festival_id, pid));");
+            sqlCmds.emplace_back("CREATE TABLE festival_user_wins (festival_id INTEGER NOT NULL, pid INTEGER NOT NULL, "
+                                 "won_matches INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, pid));");
+            sqlCmds.emplace_back("CREATE TABLE festival_team_totals (festival_id INTEGER NOT NULL, team INTEGER NOT NULL, "
+                                 "total_wins INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
+            sqlCmds.emplace_back("CREATE TABLE festival_team_user_counts (festival_id INTEGER NOT NULL, team INTEGER NOT NULL, "
+                                 "user_count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
+    }
+
+    return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
+}
+
 } // namespace db::migrations

@@ -1295,14 +1295,26 @@ Task<void> SplatoonSecureRMC::getCompetitionRankingScore(ClientInfo client, Requ
 
 Task<void> SplatoonSecureRMC::uploadCompetitionRankingScore(ClientInfo client, Request req,
                                                             std::unique_ptr<CompetitionRankingUploadScoreParam> param) {
-    logger->log(Logger::level::DEBUG, logGroup, "UploadCompetitionRankingScore called with param: " + param->toString());
-
     Response res;
     res.protocolId = req.protocolId;
     res.methodId = req.methodId;
     res.extendedProtocolId = req.extendedProtocolId;
     res.callId = req.callId;
     res.success = true;
+
+    if (db != nullptr) {
+        auto cmd = db::Database::craftUploadFestivalScoreCommand(
+            param->festivalId, client.pid, param->teamId, param->teamScore);
+        auto result = co_await db->runCommand(std::move(cmd));
+        if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+            logger->log(Logger::level::WARN, logGroup,
+                        "Failed to upload competition ranking score for PID " + std::to_string(client.pid));
+            res.success = false;
+            res.error = Error::CORE__EXCEPTION;
+            sendMsg(client, res, {});
+            co_return;
+        }
+    }
 
     std::vector<T_ptr> params(1);
     params[0] = std::make_unique<Bool>(client.minorVersion, true);
