@@ -42,7 +42,7 @@ Task<void> v1_api_admin_mapped_ids(http::Server* srv, std::shared_ptr<http::Cont
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

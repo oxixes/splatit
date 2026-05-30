@@ -136,6 +136,7 @@ async::Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<h
 
 async::Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                            std::string country, std::string language,
+                                           std::shared_ptr<db::Database> db,
                                            std::shared_ptr<SettingsManager> settingsManager,
                                            std::shared_ptr<crypto::CertManager> certManager);
 
@@ -204,8 +205,9 @@ async::Task<std::optional<uint32_t>> checkHashedBasicAuth(std::shared_ptr<db::Da
                                                           std::shared_ptr<http::Context> ctx);
 async::Task<bool> checkDeviceBanned(uint32_t deviceId, const std::shared_ptr<db::Database>& db);
 
-bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                        const std::shared_ptr<crypto::CertManager>& certManager, std::unique_ptr<http::Response>& resOut,
+async::Task<bool> checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
+                        const std::shared_ptr<crypto::CertManager>& certManager, const std::shared_ptr<db::Database>& db,
+                        std::unique_ptr<http::Response>& resOut,
                         bool checkDevice = true);
 
 bool checkEmailAddress(const std::string& address);

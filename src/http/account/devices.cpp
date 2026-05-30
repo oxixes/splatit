@@ -45,7 +45,7 @@ Task<void> v1_api_devices_current_status(http::Server* srv, std::shared_ptr<http
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -71,7 +71,7 @@ Task<void> v1_api_devices_current_inactivate(http::Server* srv, std::shared_ptr<
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

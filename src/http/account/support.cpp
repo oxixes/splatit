@@ -21,7 +21,7 @@ Task<void> v1_api_support_validate_email(http::Server* srv, std::shared_ptr<http
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -68,7 +68,7 @@ Task<void> v1_api_support_email_confirmation(http::Server* srv, std::shared_ptr<
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -145,7 +145,7 @@ Task<void> v1_api_support_forgotten_password(http::Server* srv, std::shared_ptr<
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -270,7 +270,7 @@ Task<void> v1_api_support_resend_confirmation(http::Server* srv, std::shared_ptr
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -363,7 +363,7 @@ Task<void> v1_api_support_send_confirmation_pin(http::Server* srv, std::shared_p
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -416,7 +416,7 @@ Task<void> v1_api_support_send_forgotten_pin(http::Server* srv, std::shared_ptr<
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

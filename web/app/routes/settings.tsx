@@ -10,6 +10,8 @@ import { useState, useEffect } from "react";
 import { useAppConfig } from "~/hooks/useAppConfig";
 import { getAgreements, saveAgreement, deleteAgreement } from "~/lib/agreements";
 import { getFestivals, switchActiveFestival, deleteFestival } from "~/lib/festivals";
+import { getSecurityStatus, updateSecurityStatus } from "~/lib/security";
+import type { SecurityStatus } from "~/lib/security";
 import type { FestivalSummary } from "~/types/festival";
 import { AgreementEditor } from "~/components/agreements/AgreementEditor";
 import type { Agreement, AgreementsFilters, SortColumn } from "~/types/agreement";
@@ -56,6 +58,16 @@ export default function Settings() {
   const [resultsTeamA, setResultsTeamA] = useState("");
   const [resultsTeamB, setResultsTeamB] = useState("");
 
+  // Security state
+  const [securitySettings, setSecuritySettings] = useState<SecurityStatus>({
+    allowAccountCreation: true,
+    allowRealWiiU: true,
+    allowGeneratedWiiU: true,
+    maintenanceMode: false,
+  });
+  const [securityLoading, setSecurityLoading] = useState(true);
+  const [securityMsg, setSecurityMsg] = useState<string | null>(null);
+
   // Filters and sorting
   const [filters, setFilters] = useState<AgreementsFilters>({
     page: 0,
@@ -71,6 +83,10 @@ export default function Settings() {
     loadFestivals();
   }, []);
 
+  useEffect(() => {
+    loadSecuritySettings();
+  }, []);
+
   const loadFestivals = async () => {
     try {
       setFestivalsLoading(true);
@@ -81,6 +97,29 @@ export default function Settings() {
       console.error("Error loading festivals:", error);
     } finally {
       setFestivalsLoading(false);
+    }
+  };
+
+  const loadSecuritySettings = async () => {
+    try {
+      setSecurityLoading(true);
+      const data = await getSecurityStatus(config);
+      setSecuritySettings(data);
+    } catch (error) {
+      console.error("Error loading security settings:", error);
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
+  const handleSaveSecuritySettings = async () => {
+    try {
+      await updateSecurityStatus(config, securitySettings);
+      setSecurityMsg("Security settings saved successfully");
+      setTimeout(() => setSecurityMsg(null), 3000);
+    } catch (error) {
+      console.error("Error saving security settings:", error);
+      alert("Failed to save security settings");
     }
   };
 
@@ -603,6 +642,25 @@ export default function Settings() {
                           <CardDescription>Configure which client types can connect</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                          {securityMsg && (
+                              <div className="rounded-lg border border-green-500/50 bg-green-500/5 p-4">
+                                  <p className="text-sm text-green-500">{securityMsg}</p>
+                              </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                              <div className="space-y-0.5">
+                                  <Label>Allow Account Creation</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                      Allow new accounts to be created
+                                  </p>
+                              </div>
+                              <Switch
+                                  checked={securitySettings.allowAccountCreation}
+                                  onCheckedChange={(checked) =>
+                                      setSecuritySettings({ ...securitySettings, allowAccountCreation: checked })
+                                  }
+                              />
+                          </div>
                           <div className="flex items-center justify-between">
                               <div className="space-y-0.5">
                                   <Label>Allow Real Wii U Consoles</Label>
@@ -610,7 +668,12 @@ export default function Settings() {
                                       Allow connections from official Wii U hardware
                                   </p>
                               </div>
-                              <Switch defaultChecked />
+                              <Switch
+                                  checked={securitySettings.allowRealWiiU}
+                                  onCheckedChange={(checked) =>
+                                      setSecuritySettings({ ...securitySettings, allowRealWiiU: checked })
+                                  }
+                              />
                           </div>
                           <div className="flex items-center justify-between">
                               <div className="space-y-0.5">
@@ -619,9 +682,16 @@ export default function Settings() {
                                       Allow connections from CEMU emulator with generated certificates
                                   </p>
                               </div>
-                              <Switch defaultChecked />
+                              <Switch
+                                  checked={securitySettings.allowGeneratedWiiU}
+                                  onCheckedChange={(checked) =>
+                                      setSecuritySettings({ ...securitySettings, allowGeneratedWiiU: checked })
+                                  }
+                              />
                           </div>
-                          <Button>Save Security Settings</Button>
+                          <Button onClick={handleSaveSecuritySettings} disabled={securityLoading}>
+                              Save Security Settings
+                          </Button>
                       </CardContent>
                   </Card>
               </TabsContent>
@@ -634,6 +704,11 @@ export default function Settings() {
                           <CardDescription>Temporarily disable server access for maintenance</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                          {securityMsg && (
+                              <div className="rounded-lg border border-green-500/50 bg-green-500/5 p-4">
+                                  <p className="text-sm text-green-500">{securityMsg}</p>
+                              </div>
+                          )}
                           <div className="flex items-center justify-between">
                               <div className="space-y-0.5">
                                   <Label>Enable Maintenance Mode</Label>
@@ -641,9 +716,16 @@ export default function Settings() {
                                       Prevents players from connecting to all game servers
                                   </p>
                               </div>
-                              <Switch />
+                              <Switch
+                                  checked={securitySettings.maintenanceMode}
+                                  onCheckedChange={(checked) =>
+                                      setSecuritySettings({ ...securitySettings, maintenanceMode: checked })
+                                  }
+                              />
                           </div>
-                          <Button>Save Changes</Button>
+                          <Button onClick={handleSaveSecuritySettings} disabled={securityLoading}>
+                              Save Changes
+                          </Button>
                       </CardContent>
                   </Card>
               </TabsContent>

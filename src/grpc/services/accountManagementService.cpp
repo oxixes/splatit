@@ -79,16 +79,114 @@ bool protoGenderToDb(AccountGender protoGender) {
     return protoGender == GENDER_FEMALE;
 }
 
+Task<void> completeGetSecurityStatus(grpc::ServerUnaryReactor* reactor, SecurityStatus* reply,
+                                      const std::shared_ptr<db::Database> db) {
+    auto getResult = [&]() -> Task<bool> {
+        // Read each setting from the database
+        auto allowAccountCreationCmd = db::Database::craftGetSettingCommand("allowAccountCreation");
+        auto result = co_await db->runCommand(std::move(allowAccountCreationCmd));
+        if (result.getStatus() == db::DBResultStatus::SUCCESS && result.hasData()) {
+            reply->set_allowaccountcreation(result.getData<std::string>() == "true");
+        } else {
+            reply->set_allowaccountcreation(true); // default
+        }
+
+        auto allowRealWiiUCmd = db::Database::craftGetSettingCommand("allowRealWiiU");
+        result = co_await db->runCommand(std::move(allowRealWiiUCmd));
+        if (result.getStatus() == db::DBResultStatus::SUCCESS && result.hasData()) {
+            reply->set_allowrealwiiu(result.getData<std::string>() == "true");
+        } else {
+            reply->set_allowrealwiiu(true); // default
+        }
+
+        auto allowGeneratedWiiUCmd = db::Database::craftGetSettingCommand("allowGeneratedWiiU");
+        result = co_await db->runCommand(std::move(allowGeneratedWiiUCmd));
+        if (result.getStatus() == db::DBResultStatus::SUCCESS && result.hasData()) {
+            reply->set_allowgeneratedwiiu(result.getData<std::string>() == "true");
+        } else {
+            reply->set_allowgeneratedwiiu(true); // default
+        }
+
+        auto maintenanceModeCmd = db::Database::craftGetSettingCommand("maintenanceMode");
+        result = co_await db->runCommand(std::move(maintenanceModeCmd));
+        if (result.getStatus() == db::DBResultStatus::SUCCESS && result.hasData()) {
+            reply->set_maintenancemode(result.getData<std::string>() == "true");
+        } else {
+            reply->set_maintenancemode(false); // default
+        }
+
+        co_return true;
+    };
+
+    co_await getResult();
+    reactor->Finish(grpc::Status::OK);
+}
+
 grpc::ServerUnaryReactor* AccountManagementServiceImpl::GetSecurityStatus(grpc::CallbackServerContext* context,
     const google::protobuf::Empty* _, SecurityStatus* reply) {
 
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
                "[" + std::string(AccountManagementService::service_full_name()) + "] GetSecurityStatus called");
 
-    // Not implemented
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
-    reactor->Finish(grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Not implemented"));
+
+    auto task = completeGetSecurityStatus(reactor, reply, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
+
     return reactor;
+}
+
+Task<void> completeUpdateSecurityStatus(grpc::ServerUnaryReactor* reactor,
+                                         const SecurityStatus* request,
+                                         const std::shared_ptr<db::Database> db) {
+    auto updateResult = [&]() -> Task<bool> {
+        if (request->has_allowaccountcreation()) {
+            auto cmd = db::Database::craftInsertOrUpdateSettingCommand(
+                "allowAccountCreation", request->allowaccountcreation() ? "true" : "false");
+            auto result = co_await db->runCommand(std::move(cmd));
+            if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_return false;
+            }
+        }
+
+        if (request->has_allowrealwiiu()) {
+            auto cmd = db::Database::craftInsertOrUpdateSettingCommand(
+                "allowRealWiiU", request->allowrealwiiu() ? "true" : "false");
+            auto result = co_await db->runCommand(std::move(cmd));
+            if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_return false;
+            }
+        }
+
+        if (request->has_allowgeneratedwiiu()) {
+            auto cmd = db::Database::craftInsertOrUpdateSettingCommand(
+                "allowGeneratedWiiU", request->allowgeneratedwiiu() ? "true" : "false");
+            auto result = co_await db->runCommand(std::move(cmd));
+            if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_return false;
+            }
+        }
+
+        if (request->has_maintenancemode()) {
+            auto cmd = db::Database::craftInsertOrUpdateSettingCommand(
+                "maintenanceMode", request->maintenancemode() ? "true" : "false");
+            auto result = co_await db->runCommand(std::move(cmd));
+            if (result.getStatus() != db::DBResultStatus::SUCCESS) {
+                co_return false;
+            }
+        }
+
+        co_return true;
+    };
+
+    bool success = co_await updateResult();
+    if (!success) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Failed to update security settings"));
+        co_return;
+    }
+
+    reactor->Finish(grpc::Status::OK);
 }
 
 grpc::ServerUnaryReactor* AccountManagementServiceImpl::UpdateSecurityStatus(grpc::CallbackServerContext* context,
@@ -97,9 +195,12 @@ grpc::ServerUnaryReactor* AccountManagementServiceImpl::UpdateSecurityStatus(grp
     logger->log(Logger::level::DEBUG, Logger::group::GRPC,
                "[" + std::string(AccountManagementService::service_full_name()) + "] UpdateSecurityStatus called");
 
-    // Not implemented
     grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
-    reactor->Finish(grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Not implemented"));
+
+    auto task = completeUpdateSecurityStatus(reactor, request, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
+
     return reactor;
 }
 

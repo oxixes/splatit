@@ -188,7 +188,7 @@ static async::Task<void> ensureDefaultsExist(const std::shared_ptr<db::Database>
         co_await writeSetting(mgmDb, "map_rotation", rotation);
         auto nowSec = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
-        co_await writeSetting(mgmDb, "last_rotation_time", std::to_string(nowSec));
+        co_await writeSetting(mgmDb, "last_rotation_time", nowSec);
         co_await queueBossTask(mgmDb, 2, "");
 
         logger->log(Logger::level::INFO, Logger::group::SETUP, "No map rotation found in database, created default map rotation.");

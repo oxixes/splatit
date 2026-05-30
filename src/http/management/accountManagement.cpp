@@ -2388,5 +2388,157 @@ async::Task<void> mgm_delete_account(http::Server* srv, std::shared_ptr<http::Co
     co_return;
 }
 
+/*
+ * Handler for GET /api/v1/security-status
+ *
+ * Retrieves the current security status from the account server.
+ */
+async::Task<void> mgm_get_security_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_GET && ctx->request->getMethod() != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = prepareCORSPreflightResponse(ctx, settingsMgr, "GET, PUT, OPTIONS", keepAlive);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    auto request = std::make_shared<google::protobuf::Empty>();
+
+    auto response = co_await callAccountServerWithFallback<
+        grpcimpl::accountmanagement::v1::AccountManagementService,
+        void (grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::*)(
+            grpc::ClientContext*,
+            const google::protobuf::Empty*,
+            grpcimpl::accountmanagement::v1::SecurityStatus*,
+            std::function<void(grpc::Status)>
+        ),
+        google::protobuf::Empty,
+        grpcimpl::accountmanagement::v1::SecurityStatus
+    >(
+        ctx,
+        &grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::GetSecurityStatus,
+        request,
+        settingsMgr->getManagementgRPCRequestTimeout()
+    );
+
+    if (!response.second.ok()) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_GATEWAY,
+            "Failed to get security status: " + response.second.error_message(),
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    const auto& status = *response.first;
+    json responseBody;
+    responseBody["allowAccountCreation"] = status.allowaccountcreation();
+    responseBody["allowRealWiiU"] = status.allowrealwiiu();
+    responseBody["allowGeneratedWiiU"] = status.allowgeneratedwiiu();
+    responseBody["maintenanceMode"] = status.maintenancemode();
+
+    bool keepAlive = false;
+    std::unique_ptr<http::Response> res = prepareResponse(ctx, responseBody, keepAlive,
+        settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+    co_return;
+}
+
+/*
+ * Handler for PUT /api/v1/security-status
+ *
+ * Updates the security status on the account server.
+ */
+async::Task<void> mgm_update_security_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_PUT && ctx->request->getMethod() != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = prepareCORSPreflightResponse(ctx, settingsMgr, "GET, PUT, OPTIONS", keepAlive);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    // Parse the request body
+    std::string body(ctx->request->getBody().begin(), ctx->request->getBody().end());
+    json requestBody;
+    try {
+        requestBody = json::parse(body);
+    } catch (const json::parse_error&) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_REQUEST,
+            "Invalid JSON body",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    auto request = std::make_shared<grpcimpl::accountmanagement::v1::SecurityStatus>();
+
+    if (requestBody.contains("allowAccountCreation")) {
+        request->set_allowaccountcreation(requestBody["allowAccountCreation"].get<bool>());
+    }
+    if (requestBody.contains("allowRealWiiU")) {
+        request->set_allowrealwiiu(requestBody["allowRealWiiU"].get<bool>());
+    }
+    if (requestBody.contains("allowGeneratedWiiU")) {
+        request->set_allowgeneratedwiiu(requestBody["allowGeneratedWiiU"].get<bool>());
+    }
+    if (requestBody.contains("maintenanceMode")) {
+        request->set_maintenancemode(requestBody["maintenanceMode"].get<bool>());
+    }
+
+    auto response = co_await callAccountServerWithFallback<
+        grpcimpl::accountmanagement::v1::AccountManagementService,
+        void (grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::*)(
+            grpc::ClientContext*,
+            const grpcimpl::accountmanagement::v1::SecurityStatus*,
+            google::protobuf::Empty*,
+            std::function<void(grpc::Status)>
+        ),
+        grpcimpl::accountmanagement::v1::SecurityStatus,
+        google::protobuf::Empty
+    >(
+        ctx,
+        &grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::UpdateSecurityStatus,
+        request,
+        settingsMgr->getManagementgRPCRequestTimeout()
+    );
+
+    if (!response.second.ok()) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::BAD_GATEWAY,
+            "Failed to update security status: " + response.second.error_message(),
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    json responseBody;
+    responseBody["allowAccountCreation"] = request->allowaccountcreation();
+    responseBody["allowRealWiiU"] = request->allowrealwiiu();
+    responseBody["allowGeneratedWiiU"] = request->allowgeneratedwiiu();
+    responseBody["maintenanceMode"] = request->maintenancemode();
+
+    bool keepAlive = false;
+    std::unique_ptr<http::Response> res = prepareResponse(ctx, responseBody, keepAlive,
+        settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+    co_return;
+}
+
 } // namespace mgm
 

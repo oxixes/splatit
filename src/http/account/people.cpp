@@ -185,7 +185,7 @@ Task<void> v1_api_people_nnid(http::Server* srv, std::shared_ptr<http::Context> 
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -232,7 +232,7 @@ Task<void> v1_api_people(http::Server* srv, std::shared_ptr<http::Context> ctx,
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -653,7 +653,7 @@ Task<void> v1_api_people_me(http::Server* srv, std::shared_ptr<http::Context> ct
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -939,7 +939,7 @@ Task<void> v1_api_people_me_emails(http::Server* srv, std::shared_ptr<http::Cont
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1006,7 +1006,7 @@ Task<void> v1_api_people_me_miis_primary(http::Server* srv, std::shared_ptr<http
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1123,7 +1123,7 @@ Task<void> v1_api_people_me_devices_current_attributes(http::Server* srv, std::s
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1223,7 +1223,7 @@ Task<void> v1_api_people_me_agreements(http::Server* srv, std::shared_ptr<http::
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1306,7 +1306,7 @@ Task<void> v1_api_people_me_profile(http::Server* srv, std::shared_ptr<http::Con
         }
 
         std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-        if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+        if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
             srv->sendResponse(std::move(ctx), std::move(res), false);
             co_return;
         }
@@ -1488,7 +1488,7 @@ Task<void> v1_api_people_me_devices_owner(http::Server* srv, std::shared_ptr<htt
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1535,7 +1535,7 @@ Task<void> v1_api_people_me_devices_get(http::Server* srv, std::shared_ptr<http:
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1613,7 +1613,7 @@ Task<void> v1_api_people_me_devices_post(http::Server* srv, std::shared_ptr<http
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1767,7 +1767,7 @@ Task<void> v1_api_people_me_devices_current_inactivate(http::Server* srv, std::s
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -1836,7 +1836,7 @@ Task<void> v1_api_people_me_deletion(http::Server* srv, std::shared_ptr<http::Co
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

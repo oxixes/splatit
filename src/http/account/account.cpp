@@ -43,7 +43,7 @@ Task<void> v1_api_access_token_gen(http::Server* srv, std::shared_ptr<http::Cont
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -502,18 +502,19 @@ Task<bool> checkDeviceBanned(uint32_t deviceId, const std::shared_ptr<db::Databa
     co_return false;
 }
 
-bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
-                        const std::shared_ptr<crypto::CertManager>& certManager, std::unique_ptr<http::Response>& resOut,
+async::Task<bool> checkRequestParams(const std::shared_ptr<http::Request>& req, const std::shared_ptr<SettingsManager>& settingsManager,
+                        const std::shared_ptr<crypto::CertManager>& certManager, const std::shared_ptr<db::Database>& db,
+                        std::unique_ptr<http::Response>& resOut,
                         bool checkDevice) {
     if (!req->hasHeader("x-nintendo-device-id")) {
         resOut = createError(req->getVersion(), 2, "X-Nintendo-Device-ID is invalid", "X-Nintendo-Device-ID", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (checkDevice) {
         if (!req->hasHeader("x-nintendo-device-cert")) {
             resOut = createError(req->getVersion(), 110, "Unlinked device", "", HTTP_STATUS_FORBIDDEN);
-            return false;
+            co_return false;
         }
 
         std::string deviceId = req->getHeader("x-nintendo-device-id")[0];
@@ -522,18 +523,32 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
         std::string deviceCert = req->getHeader("x-nintendo-device-cert")[0];
         EVP_PKEY* realWiiUKey = crypto::loadPublicKey(WII_U_PUB_KEY);
         EVP_PKEY* genWiiUKey = certManager->getDeviceKey();
-        if (!(settingsManager->allowRealWiiU() && checkDeviceCert(deviceCert, realWiiUKey, certDeviceId))
-            && !(settingsManager->allowGeneratedWiiU() && checkDeviceCert(deviceCert, genWiiUKey, certDeviceId))) {
+
+        // Read security settings from DB each time (supports multi-instance deployments)
+        auto allowRealWiiUCmd = db::Database::craftGetSettingCommand("allowRealWiiU");
+        auto allowRealWiiUResult = co_await db->runCommand(std::move(allowRealWiiUCmd));
+        bool allowRealWiiU = (allowRealWiiUResult.getStatus() == db::DBResultStatus::SUCCESS
+                              && allowRealWiiUResult.hasData()
+                              && allowRealWiiUResult.getData<std::string>() == "true");
+
+        auto allowGeneratedWiiUCmd = db::Database::craftGetSettingCommand("allowGeneratedWiiU");
+        auto allowGeneratedWiiUResult = co_await db->runCommand(std::move(allowGeneratedWiiUCmd));
+        bool allowGeneratedWiiU = (allowGeneratedWiiUResult.getStatus() == db::DBResultStatus::SUCCESS
+                                   && allowGeneratedWiiUResult.hasData()
+                                   && allowGeneratedWiiUResult.getData<std::string>() == "true");
+
+        if (!(allowRealWiiU && checkDeviceCert(deviceCert, realWiiUKey, certDeviceId))
+            && !(allowGeneratedWiiU && checkDeviceCert(deviceCert, genWiiUKey, certDeviceId))) {
             EVP_PKEY_free(realWiiUKey);
             resOut = createError(req->getVersion(), 1600, "Unable to process request", "Bad Request", HTTP_STATUS_BAD_REQUEST);
-            return false;
+            co_return false;
         }
 
         EVP_PKEY_free(realWiiUKey);
 
         if (certDeviceId != deviceId) {
             resOut = createError(req->getVersion(), 2, "X-Nintendo-Device-ID is invalid", "X-Nintendo-Device-ID", HTTP_STATUS_BAD_REQUEST);
-            return false;
+            co_return false;
         }
     } else {
         // Check that device id is a valid number
@@ -541,21 +556,21 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
             uint32_t id = std::stoul(req->getHeader("x-nintendo-device-id")[0]);
         } catch (const std::invalid_argument&) {
             resOut = createError(req->getVersion(), 2, "X-Nintendo-Device-ID is invalid", "X-Nintendo-Device-ID", HTTP_STATUS_BAD_REQUEST);
-            return false;
+            co_return false;
         } catch (const std::out_of_range&) {
             resOut = createError(req->getVersion(), 2, "X-Nintendo-Device-ID is invalid", "X-Nintendo-Device-ID", HTTP_STATUS_BAD_REQUEST);
-            return false;
+            co_return false;
         }
     }
 
     if (!req->hasHeader("x-nintendo-country") || !timezones.contains(req->getHeader("x-nintendo-country")[0])) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Country", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (!req->hasHeader("x-nintendo-region")) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     try {
@@ -563,19 +578,19 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
 
         if (region != 1 && region != 2 && region != 4 && region != 8 && region != 16 && region != 32 && region != 64) {
             resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
-            return false;
+            co_return false;
         }
     } catch (const std::invalid_argument&) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     } catch (const std::out_of_range&) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Region", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (!req->hasHeader("x-nintendo-serial-number")) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Serial-Number", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     const std::string serialNumber = req->getHeader("x-nintendo-serial-number")[0];
@@ -585,30 +600,30 @@ bool checkRequestParams(const std::shared_ptr<http::Request>& req, const std::sh
 
     if (!std::regex_match(serialNumber, serialRegex)) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Serial-Number", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (!req->hasHeader("x-nintendo-system-version")) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-System-Version", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (req->getHeader("x-nintendo-system-version")[0].length() != 4 || !std::ranges::all_of(req->getHeader("x-nintendo-system-version")[0], ::isdigit)) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-System-Version", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (!req->hasHeader("x-nintendo-country")) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Country", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
     if (!timezones.contains(req->getHeader("x-nintendo-country")[0])) {
         resOut = createError(req->getVersion(), 2, "Bad request header", "X-Nintendo-Country", HTTP_STATUS_BAD_REQUEST);
-        return false;
+        co_return false;
     }
 
-    return true;
+    co_return true;
 }
 
 bool checkEmailAddress(const std::string& address) {
@@ -869,7 +884,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                });
 
     server->registerRegexRoute("account." + domain, R"(^/v1/api/content/time_zones/([A-Z]{2})/([a-z]{2})$)",
-                               [settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                               [db, settingsMgr, certMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
                                    const std::regex re(R"(^/v1/api/content/time_zones/([A-Z]{2})/([a-z]{2})$)");
                                    std::smatch match;
                                    const std::string path = ctx->request->getPath();
@@ -877,7 +892,7 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr
                                    const std::string country = match[1];
                                    const std::string language = match[2];
 
-                                   return v1_api_content_timezones(srv, std::move(ctx), country, language, settingsMgr, certMgr);
+                                   return v1_api_content_timezones(srv, std::move(ctx), country, language, db, settingsMgr, certMgr);
                                });
 
     server->registerRegexRoute("account." + domain, R"(^/v1/api/people/([A-Za-z0-9\-_]+)$)",

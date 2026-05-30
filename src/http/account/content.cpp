@@ -22,7 +22,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -217,6 +217,7 @@ Task<void> v1_api_content_agreements(http::Server* srv, std::shared_ptr<http::Co
  */
 Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                     std::string country, std::string language,
+                                    std::shared_ptr<db::Database> db,
                                     std::shared_ptr<SettingsManager> settingsManager,
                                     std::shared_ptr<crypto::CertManager> certManager) {
     if (ctx->request->getMethod() != http::Method::M_GET) {
@@ -226,7 +227,7 @@ Task<void> v1_api_content_timezones(http::Server* srv, std::shared_ptr<http::Con
     }
 
     std::unique_ptr<http::Response> res;
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

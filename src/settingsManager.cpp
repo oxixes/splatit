@@ -221,8 +221,6 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"email", {
                         {"enabled", false}
                     }},
-                    {"allowRealWiiU", true},
-                    {"allowGeneratedWiiU", true},
                     {"grpcRequestTimeout", 3000}, // in milliseconds
                     {"grpcConnectionPoolMaxSize", 1}
             }},
@@ -340,11 +338,17 @@ bool SettingsManager::isAccountEnabled() const {
 }
 
 bool SettingsManager::allowRealWiiU() const {
-    return settings["accounts"]["allowRealWiiU"];
+    if (settings["accounts"].contains("allowRealWiiU")) {
+        return settings["accounts"]["allowRealWiiU"];
+    }
+    return true; // default
 }
 
 bool SettingsManager::allowGeneratedWiiU() const {
-    return settings["accounts"]["allowGeneratedWiiU"];
+    if (settings["accounts"].contains("allowGeneratedWiiU")) {
+        return settings["accounts"]["allowGeneratedWiiU"];
+    }
+    return true; // default
 }
 
 bool SettingsManager::isBOSSEnabled() const {

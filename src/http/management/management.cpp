@@ -300,6 +300,16 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
                              return mgm_get_account_by_username(srv, std::move(ctx), settingsMgr);
                          });
 
+    // Security status
+    server->registerRoute("*", "/api/v1/security-status",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             auto method = ctx->request->getMethod();
+                             if (method == http::Method::M_PUT) {
+                                 return mgm_update_security_status(srv, std::move(ctx), settingsMgr);
+                             }
+                             return mgm_get_security_status(srv, std::move(ctx), settingsMgr);
+                         });
+
     // Generic prefix routing for subresources
     // NOTE: Any route that includes params/wildcards must use registerRegexRoute.
     server->registerRegexRoute("*", R"(^/api/v1/devices/([0-9]+)$)",

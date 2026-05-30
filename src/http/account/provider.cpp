@@ -23,7 +23,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }
@@ -66,10 +66,20 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
 
     if (!profileRes.hasData() || !profileRes.getData<db::DBUserProfileData>().active) {
         ctx->logger->log(Logger::level::INFO, Logger::group::ACCOUNT, "User " + std::to_string(accountToken.pid) + " tried to request game server credentials but is banned "
-                                                                          "(client " + util::ipv4ToString(ctx->client) + ", device id: " + std::to_string(accountToken.deviceId) + ").");
+                                                                           "(client " + util::ipv4ToString(ctx->client) + ", device id: " + std::to_string(accountToken.deviceId) + ").");
         res = createError(ctx->request->getVersion(), 108, "User is banned", "", HTTP_STATUS_FORBIDDEN);
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return; // Database error or user banned
+    }
+
+    auto maintenanceModeCmd = db::Database::craftGetSettingCommand("maintenanceMode");
+    auto maintenanceModeResult = co_await db->runCommand(std::move(maintenanceModeCmd));
+    if (maintenanceModeResult.getStatus() == db::DBResultStatus::SUCCESS
+        && maintenanceModeResult.hasData()
+        && maintenanceModeResult.getData<std::string>() == "true") {
+        res = createError(ctx->request->getVersion(), 2002, "The requested game server is under maintenance", "", HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
     }
 
     if (!gameServerHosts.contains(gameServerId)) {
@@ -192,7 +202,7 @@ Task<void> v1_api_provider_nex_token(http::Server* srv, std::shared_ptr<http::Co
  * Obtains the service token for the given client ID and title ID.
  * Requires authentication with an access token generated at /v1/api/oauth20/access_token/generate.
  *
- * Currently only returns a maintenance error.
+ * Currently only returns a maintenance error except for the account settings.
  */
 Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<http::Context> ctx,
                                             std::shared_ptr<db::Database> db,
@@ -205,7 +215,7 @@ Task<void> v1_api_provider_service_token_me(http::Server* srv, std::shared_ptr<h
     }
 
     std::unique_ptr<http::Response> res = std::make_unique<http::Response>(ctx->request->getVersion(), HTTP_STATUS_OK);
-    if (!checkRequestParams(ctx->request, settingsManager, certManager, res, false)) {
+    if (!co_await checkRequestParams(ctx->request, settingsManager, certManager, db, res, false)) {
         srv->sendResponse(std::move(ctx), std::move(res), false);
         co_return;
     }

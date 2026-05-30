@@ -12,7 +12,6 @@ namespace mgm {
 
 // TODO - Add authentication & authorization
 // TODO - Allow for SSL
-// TODO - Security Status for accounts server
 
 using json = nlohmann::json;
 
@@ -74,6 +73,10 @@ async::Task<void> mgm_update_account_device_status(http::Server* srv, std::share
 async::Task<void> mgm_list_account_device_attributes(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId);
 async::Task<void> mgm_set_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
 async::Task<void> mgm_remove_account_device_attribute(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr, uint32_t pid, uint32_t deviceId, const std::string& attributeName);
+
+// Account security status
+async::Task<void> mgm_get_security_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_update_security_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 
 // Friends management endpoints
 async::Task<void> mgm_get_friends_client_count(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);

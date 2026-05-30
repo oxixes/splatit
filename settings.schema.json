@@ -704,7 +704,7 @@
         }
       },
       "then": {
-        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "allowRealWiiU", "allowGeneratedWiiU", "hosts", "secureServerGrpcAddresses" ,"db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "email"]
+        "required": ["tokenKey", "refreshTokenKey", "deviceKeyPath", "miiImagesPath", "hosts", "secureServerGrpcAddresses" ,"db", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "email"]
       },
       "required": ["enabled"]
     },
