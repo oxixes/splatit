@@ -14,6 +14,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include <date/date.h>
+
 #include "../crypto/tools.hpp"
 
 namespace util {
@@ -407,14 +409,17 @@ async::Task<bool> GlobalTaskScheduler::processBossFestivalUpdate(int festivalId)
         auto parseTime = [](const std::string& s) -> google::protobuf::Timestamp {
             google::protobuf::Timestamp ts;
             if (s.empty()) return ts;
-            struct tm tm = {};
-            std::string trimmed = s;
-            if (trimmed.size() >= 16) {
-                std::istringstream ss(trimmed);
-                ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M");
-                if (!ss.fail()) {
-                    time_t t = timegm(&tm);
-                    ts.set_seconds(t);
+            if (s.size() >= 16) {
+                try {
+                    std::istringstream ss(s);
+                    date::sys_seconds timePoint;
+                    ss >> date::parse("%Y-%m-%dT%H:%M", timePoint);
+                    if (!ss.fail()) {
+                        auto seconds = timePoint.time_since_epoch().count();
+                        ts.set_seconds(seconds);
+                    }
+                } catch (...) {
+                    // On parse failure, return empty timestamp
                 }
             }
             return ts;
@@ -566,12 +571,17 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
 
         // afterFesBonusStart from active festival
         if (!afterFesBonusStartStr.empty() && afterFesBonusStartStr.size() >= 16) {
-            struct tm tm = {};
-            std::istringstream ss(afterFesBonusStartStr);
-            ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M");
-            if (!ss.fail()) {
-                config->mutable_after_fes_bonus_start()->set_seconds(timegm(&tm));
-            } else {
+            try {
+                std::istringstream ss(afterFesBonusStartStr);
+                date::sys_seconds timePoint;
+                ss >> date::parse("%Y-%m-%dT%H:%M", timePoint);
+                if (!ss.fail()) {
+                    auto seconds = timePoint.time_since_epoch().count();
+                    config->mutable_after_fes_bonus_start()->set_seconds(seconds);
+                } else {
+                    config->mutable_after_fes_bonus_start()->set_seconds(nowSeconds);
+                }
+            } catch (...) {
                 config->mutable_after_fes_bonus_start()->set_seconds(nowSeconds);
             }
         } else {
@@ -580,9 +590,15 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
 
         // Map first appearances
         std::vector<uint32_t> allMaps = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-        struct tm mapDateTm = {};
-        std::istringstream("2015-04-17") >> std::get_time(&mapDateTm, "%Y-%m-%d");
-        time_t mapDate = timegm(&mapDateTm);
+        time_t mapDate;
+        try {
+            std::istringstream ss("2015-04-17");
+            date::sys_days dayPoint;
+            ss >> date::parse("%Y-%m-%d", dayPoint);
+            mapDate = dayPoint.time_since_epoch().count();
+        } catch (...) {
+            mapDate = 0;
+        }
         for (uint32_t m : allMaps) {
             auto* mfa = config->add_map_first_appear();
             mfa->set_map_id(m);

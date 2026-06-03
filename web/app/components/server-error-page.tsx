@@ -168,14 +168,6 @@ export function ServerErrorPage({ error, apiUrl, onOverride }: ServerErrorPagePr
             </p>
           </div>
         </div>
-
-        {/* Cloudflare-style footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-400">
-            This page is powered by{" "}
-            <span className="font-semibold text-slate-300">SplatIt Server</span>
-          </p>
-        </div>
       </div>
     </div>
   );

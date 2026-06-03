@@ -394,11 +394,12 @@ bool CertManager::genECDSAKey(EVP_PKEY** pKey, Logger::group logGroup) {
     if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx, NID_sect233r1) <= 0) goto error;
     if (EVP_PKEY_keygen(ctx, pKey) <= 0) goto error;
 
+    EVP_PKEY_CTX_free(ctx);
     return true;
 
     error:
     logger->log(Logger::level::FAILURE, logGroup, "The ECDSA key couldn't be generated: " +
-                                                       util::getOpenSSLError());
+                                                        util::getOpenSSLError());
     if (ctx != nullptr) EVP_PKEY_CTX_free(ctx);
     return false;
 }
@@ -694,29 +695,23 @@ DeviceCemuFiles CertManager::genDeviceCemuFiles(uint32_t deviceId, uint8_t regio
     // Sign device certificate with device key using SHA256
     EVP_MD_CTX* signCtx = EVP_MD_CTX_new();
     if (!signCtx) {
-        EVP_PKEY_free(deviceCertKey);
         throw std::runtime_error("Failed to create EVP_MD_CTX for signing: " + util::getOpenSSLError());
     }
 
     if (EVP_DigestSignInit(signCtx, nullptr, EVP_sha256(), nullptr, this->deviceKey) != 1) {
         EVP_MD_CTX_free(signCtx);
-        EVP_PKEY_free(deviceCertKey);
         throw std::runtime_error("Failed to initialize EVP_MD_CTX for signing: " + util::getOpenSSLError());
     }
 
-    // Get signature length
     size_t sigLen = 0;
     if (EVP_DigestSign(signCtx, nullptr, &sigLen, deviceCert.data(), deviceCert.size()) != 1) {
         EVP_MD_CTX_free(signCtx);
-        EVP_PKEY_free(deviceCertKey);
         throw std::runtime_error("Failed to get signature length: " + util::getOpenSSLError());
     }
 
-    // Allocate buffer and sign
     std::vector<uint8_t> derSignature(sigLen);
     if (EVP_DigestSign(signCtx, derSignature.data(), &sigLen, deviceCert.data(), deviceCert.size()) != 1) {
         EVP_MD_CTX_free(signCtx);
-        EVP_PKEY_free(deviceCertKey);
         throw std::runtime_error("Failed to sign device certificate: " + util::getOpenSSLError());
     }
     derSignature.resize(sigLen);

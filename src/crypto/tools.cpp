@@ -232,6 +232,8 @@ std::vector<uint8_t> AES_128_CBC_ENC(const std::vector<uint8_t>& key, const std:
         throw std::runtime_error("Failed to initialize AES-128-CBC: " + util::getOpenSSLError());
     }
 
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
     std::vector<uint8_t> result(data.size());
     int length = 0;
     if (EVP_EncryptUpdate(ctx, result.data(), &length, data.data(), (int) data.size()) != 1) {

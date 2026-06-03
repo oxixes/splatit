@@ -302,7 +302,7 @@ redisContext* RedisSharedState::createConnection() const {
 
         timeval timeout = {};
         timeout.tv_sec = static_cast<time_t>(config.commandTimeoutMs / 1000);
-        timeout.tv_usec = static_cast<suseconds_t>((config.commandTimeoutMs % 1000) * 1000);
+        timeout.tv_usec = static_cast<long>((config.commandTimeoutMs % 1000) * 1000);
 
         ctx = redisConnectWithTimeout(config.host.c_str(), config.port, timeout);
 
@@ -1295,7 +1295,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getFriendsRegis
     Task redisTask;
     redisTask.operation = [this, taskPtr](redisContext* ctx) {
         VALIDATE_REDIS_CONTEXT(ctx, "getFriendsRegisteredClientCount",
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U)); return);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getFriendsRegisteredClientCount");
@@ -1304,7 +1304,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getFriendsRegis
         if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "friends:client:*", count)) {
             logger->log(Logger::level::FAILURE, Logger::group::REDIS,
                 "SCAN count failed for getFriendsRegisteredClientCount");
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U));
             return;
         }
 
@@ -1829,7 +1829,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonRegi
     Task redisTask;
     redisTask.operation = [this, taskPtr](redisContext* ctx) {
         VALIDATE_REDIS_CONTEXT(ctx, "getSplatoonRegisteredClientCount",
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U)); return);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getSplatoonRegisteredClientCount");
@@ -1841,7 +1841,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonRegi
         if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "splatoon:client:*", count, ":.*:.*:.*:")) {
             logger->log(Logger::level::FAILURE, Logger::group::REDIS,
                 "SCAN count failed for getSplatoonRegisteredClientCount");
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U));
             return;
         }
 
@@ -2467,7 +2467,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonMatc
     Task redisTask;
     redisTask.operation = [this, taskPtr](redisContext* ctx) {
         VALIDATE_REDIS_CONTEXT(ctx, "getSplatoonMatchmakeSessionCount",
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL)); return);
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U)); return);
 
         logger->log(Logger::level::DEBUG, Logger::group::REDIS,
             "getSplatoonMatchmakeSessionCount");
@@ -2477,7 +2477,7 @@ async::ManualTask<std::pair<Result, uint32_t>> RedisSharedState::getSplatoonMatc
         if (!countKeysByPattern(ctx, std::string(REDIS_KEY_PREFIX) + "splatoon:session:*", count, ":.*:.*:.*:")) {
             logger->log(Logger::level::FAILURE, Logger::group::REDIS,
                 "SCAN count failed for getSplatoonRegisteredClientCount");
-            taskPtr->complete(std::make_pair(Result::FAILURE, 0ULL));
+            taskPtr->complete(std::make_pair(Result::FAILURE, 0U));
             return;
         }
 

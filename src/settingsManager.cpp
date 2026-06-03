@@ -294,7 +294,11 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    {"port", 1204},
                    {"workerCount", 3},
                    {"grpcRequestTimeout", 3000}, // in milliseconds
-                   {"grpcConnectionPoolMaxSize", 1}
+                   {"grpcConnectionPoolMaxSize", 1},
+                   {"db", {
+                       {"type", "SQLite3"},
+                       {"path", (dataDirAbsPath/fs::path("splatoon.db")).string()}
+                   }}
            }},
            {"management", {
                    {"enabled", true},
@@ -312,7 +316,11 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    }},
                    {"grpcRequestTimeout", 3000}, // in milliseconds
                    {"grpcConnectionPoolMaxSize", 1},
-                   {"corsOrigin", "*"}
+                   {"corsOrigin", "*"},
+                   {"db", {
+                       {"type", "SQLite3"},
+                       {"path", (dataDirAbsPath/fs::path("management.db")).string()}
+                   }}
            }},
            {"nex", {
                    {"tokenKey", nexTokenKeyString},
