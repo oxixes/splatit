@@ -64,6 +64,9 @@ public:
     grpc::ServerUnaryReactor* GetAccountByUsername(grpc::CallbackServerContext* context,
         const AccountGetByUsernameRequest* request, Account* reply) override;
 
+    grpc::ServerUnaryReactor* AuthenticateManagementUser(grpc::CallbackServerContext* context,
+        const AuthenticateManagementUserRequest* request, AuthenticateManagementUserResponse* reply) override;
+
     grpc::ServerUnaryReactor* ListAccounts(grpc::CallbackServerContext* context,
         const ListAccountsRequest* request, ListAccountsResponse* reply) override;
 

@@ -997,6 +997,7 @@ Task<void> completeGetAccount(grpc::ServerUnaryReactor* reactor, const AccountGe
     reply->set_offdevice(profileData.offDevice);
     reply->set_birthdate(profileData.birthdate);
     reply->set_country(profileData.country);
+    reply->set_isadmin(profileData.isAdmin);
 
     // Set created timestamp
     auto* createdTs = reply->mutable_created();
@@ -1155,6 +1156,7 @@ Task<void> completeGetAccountByUsername(grpc::ServerUnaryReactor* reactor, const
     reply->set_offdevice(profileData.offDevice);
     reply->set_birthdate(profileData.birthdate);
     reply->set_country(profileData.country);
+    reply->set_isadmin(profileData.isAdmin);
 
     // Set created timestamp
     auto* createdTs = reply->mutable_created();
@@ -1275,6 +1277,56 @@ grpc::ServerUnaryReactor* AccountManagementServiceImpl::GetAccountByUsername(grp
     task.setContext(reactor);
     httpServer->scheduleArbitraryFunction(std::move(task));
 
+    return reactor;
+}
+
+Task<void> completeAuthenticateManagementUser(grpc::ServerUnaryReactor* reactor,
+                                              const AuthenticateManagementUserRequest* request,
+                                              AuthenticateManagementUserResponse* reply,
+                                              const std::shared_ptr<db::Database> db) {
+    auto getUserCmd = db::Database::craftGetUserByUsernameCommand(request->username());
+    const db::Result userResult = co_await db->runCommand(std::move(getUserCmd));
+
+    if (userResult.getStatus() != db::DBResultStatus::SUCCESS || !userResult.hasData()) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::PERMISSION_DENIED, "Invalid credentials"));
+        co_return;
+    }
+
+    const auto userData = userResult.getData<db::DBUserData>();
+    if (!userData.isAdmin) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::PERMISSION_DENIED, "Invalid credentials"));
+        co_return;
+    }
+
+    std::string nintendoPasswordHash;
+    try {
+        nintendoPasswordHash = crypto::genNintendoPasswordHash(userData.pid, request->password());
+    } catch (const std::exception&) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Password hash error"));
+        co_return;
+    }
+
+    if (!crypto::verifyPassword(nintendoPasswordHash, userData.password)) {
+        reactor->Finish(grpc::Status(grpc::StatusCode::PERMISSION_DENIED, "Invalid credentials"));
+        co_return;
+    }
+
+    reply->set_pid(userData.pid);
+    reply->set_username(userData.username);
+    reply->set_isadmin(userData.isAdmin);
+    reactor->Finish(grpc::Status::OK);
+}
+
+grpc::ServerUnaryReactor* AccountManagementServiceImpl::AuthenticateManagementUser(grpc::CallbackServerContext* context,
+    const AuthenticateManagementUserRequest* request, AuthenticateManagementUserResponse* reply) {
+    logger->log(Logger::level::DEBUG, Logger::group::GRPC,
+               "[" + std::string(AccountManagementService::service_full_name()) +
+               "] AuthenticateManagementUser called for username: " + request->username());
+
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
+    auto task = completeAuthenticateManagementUser(reactor, request, reply, db);
+    task.setContext(reactor);
+    httpServer->scheduleArbitraryFunction(std::move(task));
     return reactor;
 }
 
@@ -1478,7 +1530,8 @@ Task<void> completeUpdateAccount(grpc::ServerUnaryReactor* reactor, const Accoun
         request->has_birthdate() ? std::optional(request->birthdate()) : std::nullopt,
         request->has_country() ? std::optional(request->country()) : std::nullopt,
         std::nullopt, // created
-        std::optional(now) // updated
+        std::optional(now), // updated
+        request->has_isadmin() ? std::optional(request->isadmin()) : std::nullopt
     );
 
     const db::Result result = co_await db->runCommand(std::move(updateCmd));
@@ -1509,6 +1562,7 @@ Task<void> completeUpdateAccount(grpc::ServerUnaryReactor* reactor, const Accoun
     reply->set_offdevice(profileData.offDevice);
     reply->set_birthdate(profileData.birthdate);
     reply->set_country(profileData.country);
+    reply->set_isadmin(profileData.isAdmin);
 
     // Set created timestamp
     auto* createdTs = reply->mutable_created();

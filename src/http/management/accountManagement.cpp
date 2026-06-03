@@ -194,6 +194,7 @@ json accountToJson(const grpcimpl::accountmanagement::v1::Account& a) {
     j["offDevice"] = a.offdevice();
     j["birthdate"] = a.birthdate();
     j["country"] = a.country();
+    j["isAdmin"] = a.isadmin();
     if (a.has_created()) j["created"] = a.created().seconds();
     if (a.has_updated()) j["updated"] = a.updated().seconds();
 
@@ -1508,6 +1509,7 @@ async::Task<void> mgm_update_account(http::Server* srv, std::shared_ptr<http::Co
     if (body.contains("offDevice")) request->set_offdevice(body["offDevice"].get<bool>());
     if (body.contains("birthdate")) request->set_birthdate(body["birthdate"].get<std::string>());
     if (body.contains("country")) request->set_country(body["country"].get<std::string>());
+    if (body.contains("isAdmin")) request->set_isadmin(body["isAdmin"].get<bool>());
 
     auto response = co_await callAccountServerWithFallback<
         grpcimpl::accountmanagement::v1::AccountManagementService,
@@ -2541,4 +2543,3 @@ async::Task<void> mgm_update_security_status(http::Server* srv, std::shared_ptr<
 }
 
 } // namespace mgm
-

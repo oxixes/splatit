@@ -3,8 +3,11 @@
 
 #include "../../util/util.hpp"
 #include "../../constants.hpp"
+#include "../../crypto/tools.hpp"
 #include "../../grpc/services/serverStatusService.hpp"
 #include "../../grpc/asyncRequest.hpp"
+
+#include <accountManagement.grpc.pb.h>
 
 namespace mgm {
 
@@ -157,6 +160,125 @@ async::Task<void> mgm_server_status(http::Server* srv, std::shared_ptr<http::Con
     co_return;
 }
 
+async::Task<void> mgm_login(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr) {
+    if (ctx->request->getMethod() != http::Method::M_POST && ctx->request->getMethod() != http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = createError(ctx, ManagementError::METHOD_NOT_ALLOWED, "Method Not Allowed",
+            settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_METHOD_NOT_ALLOWED);
+        srv->sendResponse(std::move(ctx), std::move(res), false);
+        co_return;
+    }
+
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        bool keepAlive = false;
+        std::unique_ptr<http::Response> res = prepareCORSPreflightResponse(ctx, settingsMgr, "POST, OPTIONS", keepAlive);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    json requestBody;
+    try {
+        const auto& body = ctx->request->getBody();
+        requestBody = json::parse(std::string(body.begin(), body.end()));
+    } catch (const std::exception&) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::BAD_REQUEST, "Invalid JSON body",
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    if (!requestBody.contains("username") || !requestBody["username"].is_string() ||
+        !requestBody.contains("password") || !requestBody["password"].is_string()) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::BAD_REQUEST, "Missing username or password",
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_REQUEST);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    if (!serverHosts.contains(ServerType::ACCOUNT) || serverHosts[ServerType::ACCOUNT].empty()) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::BAD_GATEWAY, "No account server configured",
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_GATEWAY);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    const auto& hosts = serverHosts[ServerType::ACCOUNT];
+    size_t& nextHost = serverHostsIndexRoundRobin[ServerType::ACCOUNT];
+    const auto host = hosts[nextHost % hosts.size()];
+    nextHost = (nextHost + 1) % hosts.size();
+
+    auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+    if (!channel) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::BAD_GATEWAY, "Failed to create gRPC channel to account server",
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_BAD_GATEWAY);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    auto request = std::make_shared<grpcimpl::accountmanagement::v1::AuthenticateManagementUserRequest>();
+    request->set_username(requestBody["username"].get<std::string>());
+    request->set_password(requestBody["password"].get<std::string>());
+
+    auto stub = grpcimpl::accountmanagement::v1::AccountManagementService::NewStub(channel);
+    std::pair<std::shared_ptr<grpcimpl::accountmanagement::v1::AuthenticateManagementUserResponse>, grpc::Status> response =
+        co_await grpcimpl::callAsync<
+            grpcimpl::accountmanagement::v1::AccountManagementService::Stub,
+            void (grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::*)(
+                grpc::ClientContext*,
+                const grpcimpl::accountmanagement::v1::AuthenticateManagementUserRequest*,
+                grpcimpl::accountmanagement::v1::AuthenticateManagementUserResponse*,
+                std::function<void(grpc::Status)>
+            ),
+            grpcimpl::accountmanagement::v1::AuthenticateManagementUserRequest,
+            grpcimpl::accountmanagement::v1::AuthenticateManagementUserResponse
+        >(
+            stub,
+            &grpcimpl::accountmanagement::v1::AccountManagementService::Stub::async::AuthenticateManagementUser,
+            std::move(request),
+            settingsMgr->getManagementgRPCRequestTimeout()
+        );
+
+    if (!response.second.ok()) {
+        bool keepAlive = false;
+        const int status = response.second.error_code() == grpc::StatusCode::PERMISSION_DENIED ?
+            HTTP_STATUS_UNAUTHORIZED : HTTP_STATUS_BAD_GATEWAY;
+        auto res = createError(ctx, status == HTTP_STATUS_UNAUTHORIZED ? ManagementError::PERMISSION_DENIED : ManagementError::BAD_GATEWAY,
+                               status == HTTP_STATUS_UNAUTHORIZED ? "Invalid username or password" : response.second.error_message(),
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, status);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    const time_t now = time(nullptr);
+    const time_t expiration = now + MANAGEMENT_SESSION_DURATION_SECONDS;
+    json payload = {
+        {"iss", "management"},
+        {"sub", response.first->pid()},
+        {"username", response.first->username()},
+        {"is_admin", response.first->isadmin()},
+        {"iat", now},
+        {"exp", expiration}
+    };
+
+    const std::string token = crypto::signJWT(settingsMgr->getTokenKey(), payload);
+    json responseBody = {
+        {"token", token},
+        {"pid", response.first->pid()},
+        {"username", response.first->username()},
+        {"isAdmin", response.first->isadmin()},
+        {"expiresAt", expiration}
+    };
+
+    bool keepAlive = false;
+    auto res = prepareResponse(ctx, responseBody, keepAlive, settingsMgr->getManagementCORSAllowedOrigin(), HTTP_STATUS_OK);
+    srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+    co_return;
+}
+
 std::unique_ptr<http::Response> createError(const std::shared_ptr<http::Context>& ctx, ManagementError code, const std::string& message, const std::string& corsOrigin, bool& keepAlive, int httpStatus) {
     json errorBody;
     errorBody["error"]["code"] = code;
@@ -243,6 +365,60 @@ std::optional<uint32_t> parseU32(const std::string& s) {
         return std::nullopt;
     }
 }
+
+bool hasValidManagementToken(const std::shared_ptr<http::Context>& ctx, const std::shared_ptr<SettingsManager>& settingsMgr) {
+    if (!ctx->request->hasHeader("authorization")) {
+        return false;
+    }
+
+    const std::string authHeader = ctx->request->getHeader("authorization")[0];
+    if (authHeader.size() <= 7 || authHeader.substr(0, 7) != "Bearer ") {
+        return false;
+    }
+
+    const std::string token = authHeader.substr(7);
+    if (!crypto::verifyJWT(settingsMgr->getTokenKey(), token)) {
+        return false;
+    }
+
+    try {
+        const size_t firstDot = token.find('.');
+        const size_t lastDot = token.find_last_of('.');
+        if (firstDot == std::string::npos || lastDot == std::string::npos || firstDot == lastDot) {
+            return false;
+        }
+
+        const std::string payloadStr = token.substr(firstDot + 1, lastDot - firstDot - 1);
+        const auto payloadVec = crypto::base64UrlDecode(payloadStr);
+        const json payload = json::parse(std::string(payloadVec.begin(), payloadVec.end()));
+
+        return payload.contains("iss") && payload["iss"].get<std::string>() == "management" &&
+               payload.contains("exp") && time(nullptr) <= payload["exp"].get<time_t>() &&
+               payload.contains("is_admin") && payload["is_admin"].get<bool>();
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+using ManagementHandler = std::function<async::Task<void>(http::Server*, std::shared_ptr<http::Context>)>;
+
+async::Task<void> requireAdmin(http::Server* srv, std::shared_ptr<http::Context> ctx,
+                               std::shared_ptr<SettingsManager> settingsMgr, ManagementHandler handler) {
+    if (ctx->request->getMethod() == http::Method::M_OPTIONS) {
+        co_await handler(srv, std::move(ctx));
+        co_return;
+    }
+
+    if (!hasValidManagementToken(ctx, settingsMgr)) {
+        bool keepAlive = false;
+        auto res = createError(ctx, ManagementError::PERMISSION_DENIED, "Missing or invalid authorization token",
+                               settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_UNAUTHORIZED);
+        srv->sendResponse(std::move(ctx), std::move(res), keepAlive);
+        co_return;
+    }
+
+    co_await handler(srv, std::move(ctx));
+}
 } // namespace
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
@@ -258,86 +434,113 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
                              return mgm_status(srv, std::move(ctx), settingsMgr);
                          });
 
+    server->registerRoute("*", "/api/v1/auth/login",
+                         [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                             return mgm_login(srv, std::move(ctx), settingsMgr);
+                         });
+
     server->registerRoute("*", "/api/v1/server-status",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_server_status(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_server_status(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/agreements",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             // Route to appropriate handler based on method
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_POST) {
-                                 return mgm_publish_agreement(srv, std::move(ctx), settingsMgr);
-                             }
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_POST) {
+                                         return mgm_publish_agreement(srv, std::move(ctx), settingsMgr);
+                                     }
 
-                             if (method == http::Method::M_DELETE) {
-                                 return mgm_delete_agreement(srv, std::move(ctx), settingsMgr);
-                             }
+                                     if (method == http::Method::M_DELETE) {
+                                         return mgm_delete_agreement(srv, std::move(ctx), settingsMgr);
+                                     }
 
-                             return mgm_get_agreements(srv, std::move(ctx), settingsMgr);
+                                     return mgm_get_agreements(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Devices collection
     server->registerRoute("*", "/api/v1/devices",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_POST) return mgm_create_device(srv, std::move(ctx), settingsMgr);
-                             return mgm_list_devices(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_POST) return mgm_create_device(srv, std::move(ctx), settingsMgr);
+                                     return mgm_list_devices(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Accounts collection
     server->registerRoute("*", "/api/v1/accounts",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_POST) return mgm_create_account(srv, std::move(ctx), settingsMgr);
-                             return mgm_list_accounts(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_POST) return mgm_create_account(srv, std::move(ctx), settingsMgr);
+                                     return mgm_list_accounts(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Lookup by username
     server->registerRoute("*", "/api/v1/accounts:by-username",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_account_by_username(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_account_by_username(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Security status
     server->registerRoute("*", "/api/v1/security-status",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_PUT) {
-                                 return mgm_update_security_status(srv, std::move(ctx), settingsMgr);
-                             }
-                             return mgm_get_security_status(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_PUT) {
+                                         return mgm_update_security_status(srv, std::move(ctx), settingsMgr);
+                                     }
+                                     return mgm_get_security_status(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Generic prefix routing for subresources
     // NOTE: Any route that includes params/wildcards must use registerRegexRoute.
     server->registerRegexRoute("*", R"(^/api/v1/devices/([0-9]+)$)",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
-                             const auto parts = splitPath(ctx->request->getPath());
-                             // expected: api v1 devices {id}
-                             if (parts.size() < 4) {
-                                 return errorHandler(srv, std::move(ctx), settingsMgr);
-                             }
-                             auto id = parseU32(parts[3]);
-                             if (!id) {
-                                 ctx->status =  HTTP_STATUS_BAD_REQUEST;
-                                 return errorHandler(srv, std::move(ctx), settingsMgr);
-                             }
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                                     const auto parts = splitPath(ctx->request->getPath());
+                                     // expected: api v1 devices {id}
+                                     if (parts.size() < 4) {
+                                         return errorHandler(srv, std::move(ctx), settingsMgr);
+                                     }
+                                     auto id = parseU32(parts[3]);
+                                     if (!id) {
+                                         ctx->status =  HTTP_STATUS_BAD_REQUEST;
+                                         return errorHandler(srv, std::move(ctx), settingsMgr);
+                                     }
 
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_GET) {
-                                 return mgm_get_device(srv, std::move(ctx), settingsMgr, *id);
-                             }
-                             if (method == http::Method::M_DELETE) {
-                                 return mgm_delete_device(srv, std::move(ctx), settingsMgr, *id);
-                             }
-                             // PATCH/PUT for update
-                             return mgm_update_device(srv, std::move(ctx), settingsMgr, *id);
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_GET) {
+                                         return mgm_get_device(srv, std::move(ctx), settingsMgr, *id);
+                                     }
+                                     if (method == http::Method::M_DELETE) {
+                                         return mgm_delete_device(srv, std::move(ctx), settingsMgr, *id);
+                                     }
+                                     // PATCH/PUT for update
+                                     return mgm_update_device(srv, std::move(ctx), settingsMgr, *id);
+                                 });
                          });
 
     server->registerRegexRoute("*", R"(^/api/v1/accounts/([0-9]+)(/.*)?$)",
                          [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
                              const auto parts = splitPath(ctx->request->getPath());
                              // api v1 accounts {pid} ...
                              if (parts.size() < 4) {
@@ -422,78 +625,112 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 
                              ctx->status = HTTP_STATUS_NOT_FOUND;
                              return errorHandler(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/friends/client_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_friends_client_count(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_friends_client_count(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/splatoon/client_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_splatoon_client_count(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_splatoon_client_count(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/splatoon/lobby_count", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_splatoon_lobby_count(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_splatoon_lobby_count(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/splatoon/lobbies", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_splatoon_lobbies(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_splatoon_lobbies(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/splatoon/festival_totals", [settingsMgr] (http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_festival_totals(srv, std::move(ctx), settingsMgr);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_festival_totals(srv, std::move(ctx), settingsMgr);
+                                 });
                          });
 
     // Boss management: festivals & map rotation
     server->registerRoute("*", "/api/v1/festivals",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_POST) {
-                                 return mgm_save_festival(srv, std::move(ctx), settingsMgr, mgmDb);
-                             }
-                             return mgm_get_festivals(srv, std::move(ctx), settingsMgr, mgmDb);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_POST) {
+                                         return mgm_save_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                                     }
+                                     return mgm_get_festivals(srv, std::move(ctx), settingsMgr, mgmDb);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/festivals/active",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_get_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_get_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/festivals/switch",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_switch_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_switch_active_festival(srv, std::move(ctx), settingsMgr, mgmDb);
+                                 });
                          });
 
     server->registerRegexRoute("*", R"(^/api/v1/festivals/([0-9]+)$)",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
-                             const auto parts = splitPath(ctx->request->getPath());
-                             if (parts.size() < 4) {
-                                 return errorHandler(srv, std::move(ctx), settingsMgr);
-                             }
-                             auto id = parseU32(parts[3]);
-                             if (!id) {
-                                 ctx->status = HTTP_STATUS_BAD_REQUEST;
-                                 return errorHandler(srv, std::move(ctx), settingsMgr);
-                             }
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_GET) {
-                                 return mgm_get_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
-                             }
-                             return mgm_delete_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) -> async::Task<void> {
+                                     const auto parts = splitPath(ctx->request->getPath());
+                                     if (parts.size() < 4) {
+                                         return errorHandler(srv, std::move(ctx), settingsMgr);
+                                     }
+                                     auto id = parseU32(parts[3]);
+                                     if (!id) {
+                                         ctx->status = HTTP_STATUS_BAD_REQUEST;
+                                         return errorHandler(srv, std::move(ctx), settingsMgr);
+                                     }
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_GET) {
+                                         return mgm_get_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
+                                     }
+                                     return mgm_delete_festival(srv, std::move(ctx), settingsMgr, mgmDb, static_cast<int>(*id));
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/map-rotation",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             auto method = ctx->request->getMethod();
-                             if (method == http::Method::M_PUT) {
-                                 return mgm_update_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
-                             }
-                             return mgm_get_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     auto method = ctx->request->getMethod();
+                                     if (method == http::Method::M_PUT) {
+                                         return mgm_update_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                                     }
+                                     return mgm_get_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                                 });
                          });
 
     server->registerRoute("*", "/api/v1/map-rotation/randomize",
                          [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
-                             return mgm_randomize_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                             return requireAdmin(srv, std::move(ctx), settingsMgr,
+                                 [settingsMgr, mgmDb](http::Server* srv, std::shared_ptr<http::Context> ctx) {
+                                     return mgm_randomize_map_rotation(srv, std::move(ctx), settingsMgr, mgmDb);
+                                 });
                          });
 
     server->registerErrorPage("*",

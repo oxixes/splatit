@@ -50,6 +50,9 @@ export function EditPlayerDialog({
   const [marketing, setMarketing] = useState(false);
   const [offDevice, setOffDevice] = useState(false);
   const [active, setActive] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     if (!open || pid == null) return;
@@ -86,6 +89,7 @@ export function EditPlayerDialog({
         setMarketing(acc.marketing ?? false);
         setOffDevice(acc.offDevice ?? false);
         setActive(acc.active);
+        setIsAdmin(acc.isAdmin ?? false);
       } catch (e) {
         if (e instanceof ApiError) {
           switch (e.code) {
@@ -129,6 +133,7 @@ export function EditPlayerDialog({
     if (!username.trim()) return alert("Username is required");
     if (!email.trim()) return alert("Email is required");
     if (!region) return alert("Region is required");
+    if (newPassword && newPassword !== confirmPassword) return alert("Passwords do not match");
 
     const payload: UpdateAccountRequest = {
       username: username.trim(),
@@ -140,13 +145,20 @@ export function EditPlayerDialog({
       marketing,
       offDevice,
       active,
+      isAdmin,
       email: { address: email.trim() },
     };
+
+    if (newPassword) {
+      payload.password = newPassword;
+    }
 
     try {
       setSaving(true);
       setError(null);
       await updateAccount(config, pid, payload);
+      setNewPassword("");
+      setConfirmPassword("");
       onOpenChange(false);
       onUpdated?.();
     } catch (e) {
@@ -226,6 +238,16 @@ export function EditPlayerDialog({
               <div className="space-y-2 md:col-span-2">
                 <Label>Email</Label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Leave blank to keep current" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Confirm Password</Label>
+                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
               </div>
 
               <div className="space-y-2">
@@ -327,6 +349,13 @@ export function EditPlayerDialog({
                 <div className="flex items-center space-x-2">
                   <Checkbox id="active" checked={active} onCheckedChange={(checked) => setActive(checked as boolean)} />
                   <Label htmlFor="active" className="cursor-pointer font-semibold">Active (⚠️ Deactivating will ban the user)</Label>
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="isAdmin" checked={isAdmin} onCheckedChange={(checked) => setIsAdmin(checked as boolean)} />
+                  <Label htmlFor="isAdmin" className="cursor-pointer font-semibold">Admin (can access management UI)</Label>
                 </div>
               </div>
             </div>

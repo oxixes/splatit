@@ -49,6 +49,9 @@ service AccountManagementService {
   // Retrieves an account by username
   rpc GetAccountByUsername(AccountGetByUsernameRequest) returns (Account);
 
+  // Authenticates a management user account
+  rpc AuthenticateManagementUser(AuthenticateManagementUserRequest) returns (AuthenticateManagementUserResponse);
+
   // Lists accounts with optional filtering and pagination
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
 
@@ -100,6 +103,7 @@ service AccountManagementService {
   // Cemu files
   // Gets the Cemu files for an account
   rpc GetCemuFiles(CemuFilesGetRequest) returns (CemuFilesResponse);
+
 }
 
 message SecurityStatus {
@@ -328,6 +332,7 @@ message Account {
   repeated AccountAgreement signedAgreements = 17;
 
   repeated AccountOwnership ownedDevices = 18;
+  bool isAdmin = 19;
 }
 
 // Account Management Messages
@@ -359,6 +364,7 @@ message AccountUpdate {
   optional bool offDevice = 10;
   optional string birthdate = 11;
   optional string country = 12;
+  optional bool isAdmin = 13;
 }
 
 message AccountGetRequest {
@@ -367,6 +373,17 @@ message AccountGetRequest {
 
 message AccountGetByUsernameRequest {
   string username = 1;
+}
+
+message AuthenticateManagementUserRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthenticateManagementUserResponse {
+  uint32 pid = 1;
+  string username = 2;
+  bool isAdmin = 3;
 }
 
 enum ListAccountsRequestSorting {

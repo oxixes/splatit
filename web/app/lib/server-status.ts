@@ -2,6 +2,8 @@ import { createApiClient } from "~/lib/api-client";
 import type { AppConfig } from "~/hooks/useAppConfig";
 import type { ServerStatus } from "~/types/server-status";
 
+export type { ServerStatus } from "~/types/server-status";
+
 export class ServerStatusError extends Error {
   constructor(
     message: string,
@@ -65,4 +67,3 @@ export async function checkServerStatus(
     );
   }
 }
-

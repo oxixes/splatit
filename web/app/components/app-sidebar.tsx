@@ -1,4 +1,4 @@
-import {Home, Users, Settings, Activity, Gamepad2, Info, Smartphone} from "lucide-react"
+import {Home, Users, Settings, Activity, Gamepad2, Info, Smartphone, LogOut} from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/sidebar"
 import {NavLink} from "react-router";
 import { useConfig } from "~/contexts/AppConfigContext";
+import { useAuth } from "~/contexts/AuthContext";
+import { Button } from "~/components/ui/button";
 import {
     Tooltip,
     TooltipContent,
@@ -62,6 +64,7 @@ const systemItems = [
 
 export function AppSidebar() {
     const { config } = useConfig();
+    const { user, logout } = useAuth();
 
     return (
         <Sidebar>
@@ -115,6 +118,12 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter>
                 <div className="px-4 py-2 text-xs text-muted-foreground space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{user?.username}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={logout} title="Sign out">
+                            <LogOut className="h-4 w-4" />
+                        </Button>
+                    </div>
                     <div className="flex items-center gap-1">
                         {__APP_VERSION__} • <a href="https://github.com/oxixes/splatoon_server_cpp" className="underline" target="_blank">GitHub</a>
                         <TooltipProvider>

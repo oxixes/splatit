@@ -616,7 +616,8 @@ std::unique_ptr<Command> Database::craftUpdateUserProfileCommand(uint32_t pid, s
                                                                  std::optional<std::string> birthdate,
                                                                  std::optional<std::string> country,
                                                                  std::optional<datetime_t> created,
-                                                                 std::optional<datetime_t> updated) {
+                                                                 std::optional<datetime_t> updated,
+                                                                 std::optional<bool> isAdmin) {
     DBUserProfileUpdateQuery query {
         .pid = pid,
         .username = std::move(username),
@@ -633,7 +634,8 @@ std::unique_ptr<Command> Database::craftUpdateUserProfileCommand(uint32_t pid, s
         .birthdate = std::move(birthdate),
         .country = std::move(country),
         .created = created,
-        .updated = updated
+        .updated = updated,
+        .isAdmin = isAdmin
     };
 
     auto dbCommand = std::make_unique<Command>(DBCommandType::UPDATE_USER_PROFILE,

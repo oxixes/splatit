@@ -1,6 +1,7 @@
 #ifndef SPLATOON_SERVER_MANAGEMENT_HPP
 #define SPLATOON_SERVER_MANAGEMENT_HPP
 
+#include <ctime>
 #include <map>
 
 #include "../../db/database.hpp"
@@ -14,6 +15,7 @@ namespace mgm {
 // TODO - Allow for SSL
 
 using json = nlohmann::json;
+constexpr std::time_t MANAGEMENT_SESSION_DURATION_SECONDS = 8 * 60 * 60;
 
 enum class ManagementError {
     SUCCESS = 0,
@@ -32,6 +34,7 @@ extern std::map<ServerType, size_t> serverHostsIndexRoundRobin;
 
 async::Task<void> mgm_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 async::Task<void> mgm_server_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
+async::Task<void> mgm_login(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
 
 // Agreement management endpoints
 async::Task<void> mgm_get_agreements(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);
@@ -111,4 +114,3 @@ void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shar
 } // namespace mgm
 
 #endif //SPLATOON_SERVER_MANAGEMENT_HPP
-

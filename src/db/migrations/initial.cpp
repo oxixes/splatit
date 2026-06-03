@@ -1,8 +1,20 @@
 #include "migrations.hpp"
+#include "../../crypto/tools.hpp"
 
 namespace db::migrations {
 
 bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, const std::shared_ptr<Database>& db, DBType type) {
+    constexpr uint32_t defaultAdminPid = 1799999999;
+    std::string defaultAdminPasswordHash;
+    try {
+        const std::string nintendoPasswordHash = crypto::genNintendoPasswordHash(defaultAdminPid, "splatit");
+        defaultAdminPasswordHash = crypto::hashPassword(nintendoPasswordHash, crypto::genSalt());
+    } catch (const std::exception& e) {
+        logger->log(Logger::level::FAILURE, Logger::group::DB,
+                    "Failed to generate default admin password hash: " + std::string(e.what()));
+        return false;
+    }
+
     std::vector<std::string> sqlCmds;
     switch (type) {
         case DBType::SQLITE3:
@@ -20,7 +32,8 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                  "region INTEGER NOT NULL, tz TEXT NOT NULL,"
                                  "language TEXT NOT NULL, active INTEGER NOT NULL, marketing INTEGER NOT NULL,"
                                  "off_device INTEGER NOT NULL, birth_date TEXT NOT NULL, country TEXT NOT NULL,"
-                                 "create_date TEXT NOT NULL, last_updated TEXT NOT NULL, PRIMARY KEY (pid),"
+                                 "create_date TEXT NOT NULL, last_updated TEXT NOT NULL, is_admin INTEGER NOT NULL DEFAULT 0,"
+                                 "PRIMARY KEY (pid),"
                                  "FOREIGN KEY (email_id) REFERENCES emails(id) ON UPDATE CASCADE ON DELETE RESTRICT,"
                                  "FOREIGN KEY (mii_id) REFERENCES miis(id) ON UPDATE CASCADE ON DELETE RESTRICT);");
             sqlCmds.emplace_back("CREATE TABLE devices (id INTEGER, language TEXT NOT NULL, platform_id INTEGER NOT NULL,"
@@ -60,6 +73,16 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
                                  "UPDATE users SET pid = (SELECT value - 1 FROM pid_sequence) WHERE pid = NEW.pid; "
                                  "UPDATE pid_sequence SET value = value - 1; "
                                  "END;");
+
+            sqlCmds.emplace_back("INSERT INTO emails (id, address, parent, 'primary', reachable, type, updated_by, "
+                                 "validated, validated_date, validation_code) VALUES "
+                                 "(1, 'admin@splatit.local', 0, 1, 1, 'DEFAULT', 'SYSTEM', 1, '2000-01-01 00:00:00', '000000');");
+            sqlCmds.emplace_back("INSERT INTO miis (id, hash, name, 'primary', data) VALUES "
+                                 "(1, 'admin00000000', 'admin', 1, '');"); // TODO Add random default mii
+            sqlCmds.emplace_back("INSERT INTO users (pid, username, password, email_id, mii_id, gender, region, tz, "
+                                 "language, active, marketing, off_device, birth_date, country, create_date, "
+                                 "last_updated, is_admin) VALUES (1799999999, 'admin', '" + defaultAdminPasswordHash + "', 1, 1, "
+                                 "0, 1761607680, 'Europe/Madrid', 'en', 1, 0, 0, '', '', '2000-01-01 00:00:00', '2000-01-01 00:00:00', 1);");
 
             sqlCmds.emplace_back("COMMIT;");
             break;

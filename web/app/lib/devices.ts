@@ -2,6 +2,8 @@ import { createApiClient } from "~/lib/api-client";
 import type { AppConfig } from "~/hooks/useAppConfig";
 import type { CreateDeviceRequest, DeviceResponse, DevicesResponse, ListDevicesFilters } from "~/types/devices";
 
+export type { CreateDeviceRequest, Device, DeviceResponse, DevicesResponse, ListDevicesFilters } from "~/types/devices";
+
 export async function listDevices(config: AppConfig, filters?: ListDevicesFilters): Promise<DevicesResponse> {
   const apiClient = createApiClient(config);
 
@@ -51,4 +53,3 @@ export async function banDevice(config: AppConfig, deviceId: number): Promise<De
 export async function unbanDevice(config: AppConfig, deviceId: number): Promise<DeviceResponse> {
   return updateDevice(config, deviceId, { banned: false });
 }
-

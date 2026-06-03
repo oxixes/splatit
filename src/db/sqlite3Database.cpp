@@ -287,12 +287,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
     } else if (command->type == DBCommandType::GET_USER_BY_PID || command->type == DBCommandType::GET_USER_BY_USERNAME) {
         // Since the statement is always the same, we can just prepare it once
         if (command->type == DBCommandType::GET_USER_BY_PID && getUserByPIDStatement == nullptr) {
-            if (!craftStatement("SELECT pid, username, password FROM users WHERE pid = ?;", &getUserByPIDStatement)) {
+            if (!craftStatement("SELECT pid, username, password, is_admin FROM users WHERE pid = ?;", &getUserByPIDStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
             }
         } else if (command->type == DBCommandType::GET_USER_BY_USERNAME && getUserByUsernameStatement == nullptr) {
-            if (!craftStatement("SELECT pid, username, password FROM users WHERE username = ?;", &getUserByUsernameStatement)) {
+            if (!craftStatement("SELECT pid, username, password, is_admin FROM users WHERE username = ?;", &getUserByUsernameStatement)) {
                 resultStatus = DBResultStatus::FAILURE_STMT;
                 goto push_results;
             }
@@ -318,7 +318,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             goto push_results;
         }
 
-        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING};
+        std::vector<DBDataType> returnedDataTypes {DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING, DBDataType::INTEGER};
 
         if (!runStatement(statement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -334,7 +334,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             DBUserData userData {
                 .pid = (uint32_t) std::any_cast<int64_t>((*returnedData)[0][0]->data),
                 .username = std::any_cast<std::string>((*returnedData)[0][1]->data),
-                .password = std::any_cast<std::string>((*returnedData)[0][2]->data)
+                .password = std::any_cast<std::string>((*returnedData)[0][2]->data),
+                .isAdmin = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][3]->data))
             };
             resultsData = std::move(userData);
         }
@@ -829,7 +830,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                                      "e.reachable AS email_reachable, e.type AS email_type, e.updated_by AS email_updated_by, "
                                      "e.validated AS email_validated, e.validated_date AS email_validated_date, "
                                      "e.validation_code AS email_validation_code, m.name AS mii_name, "
-                                     "m.data AS mii_data, m.`primary` AS mii_primary, m.hash AS mii_hash "
+                                     "m.data AS mii_data, m.`primary` AS mii_primary, m.hash AS mii_hash, u.is_admin "
                                      "FROM users u LEFT JOIN emails e ON u.email_id = e.id LEFT JOIN miis m ON u.mii_id = m.id "
                                      "WHERE u.pid = ?;";
 
@@ -856,7 +857,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                                                    DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
                                                    DBDataType::INTEGER, DBDataType::DATETIME, DBDataType::STRING,
                                                    DBDataType::STRING, DBDataType::STRING, DBDataType::INTEGER,
-                                                   DBDataType::STRING};
+                                                   DBDataType::STRING, DBDataType::INTEGER};
 
         if (!runStatement(getUserProfileStatement, returnedDataTypes, returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
@@ -869,35 +870,37 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlite3_clear_bindings(getUserProfileStatement);
 
         if (!returnedData->empty()) {
+            const auto& row = (*returnedData)[0];
             DBUserProfileData profileData {
-                .pid = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][0]->data)),
-                .username = std::any_cast<std::string>((*returnedData)[0][1]->data),
-                .emailId = std::any_cast<int64_t>((*returnedData)[0][2]->data),
-                .miiId = std::any_cast<int64_t>((*returnedData)[0][3]->data),
-                .gender = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][4]->data)),
-                .region = std::any_cast<int64_t>((*returnedData)[0][5]->data),
-                .tz = std::any_cast<std::string>((*returnedData)[0][6]->data),
-                .language = std::any_cast<std::string>((*returnedData)[0][7]->data),
-                .active = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][8]->data)),
-                .marketing = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][9]->data)),
-                .offDevice = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][10]->data)),
-                .birthdate = std::any_cast<std::string>((*returnedData)[0][11]->data),
-                .country = std::any_cast<std::string>((*returnedData)[0][12]->data),
-                .created = std::any_cast<datetime_t>((*returnedData)[0][13]->data),
-                .updated = std::any_cast<datetime_t>((*returnedData)[0][14]->data),
-                .email = std::any_cast<std::string>((*returnedData)[0][15]->data),
-                .emailParent = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][16]->data)),
-                .emailPrimary = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][17]->data)),
-                .emailReachable = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][18]->data)),
-                .emailType = std::any_cast<std::string>((*returnedData)[0][19]->data),
-                .emailUpdatedBy = std::any_cast<std::string>((*returnedData)[0][20]->data),
-                .emailValidated = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][21]->data)),
-                .emailValidatedDate = std::any_cast<datetime_t>((*returnedData)[0][22]->data),
-                .emailValidationCode = std::any_cast<std::string>((*returnedData)[0][23]->data),
-                .miiName = std::any_cast<std::string>((*returnedData)[0][24]->data),
-                .miiData = std::any_cast<std::string>((*returnedData)[0][25]->data),
-                .miiPrimary = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][26]->data)),
-                .miiHash = std::any_cast<std::string>((*returnedData)[0][27]->data)
+                .pid = static_cast<uint32_t>(std::any_cast<int64_t>(row[0]->data)),
+                .username = std::any_cast<std::string>(row[1]->data),
+                .emailId = row[2]->type == DBDataType::NULL_T ? 0 : std::any_cast<int64_t>(row[2]->data),
+                .miiId = row[3]->type == DBDataType::NULL_T ? 0 : std::any_cast<int64_t>(row[3]->data),
+                .gender = static_cast<bool>(std::any_cast<int64_t>(row[4]->data)),
+                .region = std::any_cast<int64_t>(row[5]->data),
+                .tz = std::any_cast<std::string>(row[6]->data),
+                .language = std::any_cast<std::string>(row[7]->data),
+                .active = static_cast<bool>(std::any_cast<int64_t>(row[8]->data)),
+                .marketing = static_cast<bool>(std::any_cast<int64_t>(row[9]->data)),
+                .offDevice = static_cast<bool>(std::any_cast<int64_t>(row[10]->data)),
+                .birthdate = std::any_cast<std::string>(row[11]->data),
+                .country = std::any_cast<std::string>(row[12]->data),
+                .created = std::any_cast<datetime_t>(row[13]->data),
+                .updated = std::any_cast<datetime_t>(row[14]->data),
+                .email = row[15]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[15]->data),
+                .emailParent = row[16]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[16]->data)),
+                .emailPrimary = row[17]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[17]->data)),
+                .emailReachable = row[18]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[18]->data)),
+                .emailType = row[19]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[19]->data),
+                .emailUpdatedBy = row[20]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[20]->data),
+                .emailValidated = row[21]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[21]->data)),
+                .emailValidatedDate = row[22]->type == DBDataType::NULL_T ? datetime_t{} : std::any_cast<datetime_t>(row[22]->data),
+                .emailValidationCode = row[23]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[23]->data),
+                .miiName = row[24]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[24]->data),
+                .miiData = row[25]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[25]->data),
+                .miiPrimary = row[26]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[26]->data)),
+                .miiHash = row[27]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[27]->data),
+                .isAdmin = static_cast<bool>(std::any_cast<int64_t>(row[28]->data))
             };
 
             resultsData = std::move(profileData);
@@ -934,13 +937,14 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         sqlite3_clear_bindings(getUserMiiStatement);
 
         if (!returnedData->empty()) {
+            const auto& row = (*returnedData)[0];
             DBUserMii userMii {
-                .username = std::any_cast<std::string>((*returnedData)[0][0]->data),
-                .miiId = static_cast<uint32_t>(std::any_cast<int64_t>((*returnedData)[0][1]->data)),
-                .miiName = std::any_cast<std::string>((*returnedData)[0][2]->data),
-                .miiData = std::any_cast<std::string>((*returnedData)[0][3]->data),
-                .miiPrimary = static_cast<bool>(std::any_cast<int64_t>((*returnedData)[0][4]->data)),
-                .miiHash = std::any_cast<std::string>((*returnedData)[0][5]->data)
+                .username = std::any_cast<std::string>(row[0]->data),
+                .miiId = row[1]->type == DBDataType::NULL_T ? 0 : static_cast<uint32_t>(std::any_cast<int64_t>(row[1]->data)),
+                .miiName = row[2]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[2]->data),
+                .miiData = row[3]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[3]->data),
+                .miiPrimary = row[4]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[4]->data)),
+                .miiHash = row[5]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[5]->data)
             };
 
             resultsData = std::move(userMii);
@@ -1480,7 +1484,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                 .blockedPid = static_cast<uint32_t>(std::any_cast<int64_t>(row[1]->data)),
                 .createdAt = std::any_cast<datetime_t>(row[2]->data),
                 .gameKey = std::any_cast<std::vector<uint8_t>>(row[3]->data),
-                .nnaInfo = std::any_cast<std::vector<uint8_t>>(row[4]->data)
+                .nnaInfo = row[4]->type == DBDataType::NULL_T ? std::vector<uint8_t>{} : std::any_cast<std::vector<uint8_t>>(row[4]->data)
             };
 
             results.push_back(blockedFriendData);
@@ -2373,6 +2377,12 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             data.emplace_back(std::make_shared<DBDateTime>(updateData->updated.value()));
         }
 
+        if (updateData->isAdmin.has_value()) {
+            sqlCommand += "is_admin = ?, ";
+            dataTypes.push_back(DBDataType::INTEGER);
+            data.emplace_back(std::make_shared<DBInteger>(static_cast<int64_t>(updateData->isAdmin.value())));
+        }
+
         // Remove the last comma and space and add the WHERE clause
         sqlCommand = sqlCommand.substr(0, sqlCommand.size() - 2) + " WHERE pid = ?;";
 
@@ -2949,7 +2959,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
         std::string sqlCommand = "SELECT u.pid, u.username, u.password, e.id, e.address, e.parent, e.\"primary\", "
                                  "e.reachable, e.type, e.updated_by, e.validated, e.validated_date, e.validation_code, "
                                  "m.id, m.hash, m.name, m.\"primary\", m.data, u.gender, u.region, u.tz, u.language, "
-                                 "u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated "
+                                 "u.active, u.marketing, u.off_device, u.birth_date, u.country, u.create_date, u.last_updated, u.is_admin "
                                  "FROM users u "
                                  "LEFT JOIN emails e ON u.email_id = e.id "
                                  "LEFT JOIN miis m ON u.mii_id = m.id";
@@ -3032,7 +3042,7 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                                                   DBDataType::INTEGER, DBDataType::INTEGER, DBDataType::STRING,
                                                   DBDataType::STRING, DBDataType::INTEGER, DBDataType::INTEGER,
                                                   DBDataType::INTEGER, DBDataType::STRING, DBDataType::STRING,
-                                                  DBDataType::DATETIME, DBDataType::DATETIME},
+                                                  DBDataType::DATETIME, DBDataType::DATETIME, DBDataType::INTEGER},
                           returnedData)) {
             resultStatus = DBResultStatus::FAILURE_EXEC;
             sqlite3_finalize(listAccountsStatement);
@@ -3044,8 +3054,8 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
             DBUserProfileData account {
                 .pid = static_cast<uint32_t>(std::any_cast<int64_t>(row[0]->data)),
                 .username = std::any_cast<std::string>(row[1]->data),
-                .emailId = std::any_cast<int64_t>(row[3]->data),
-                .miiId = std::any_cast<int64_t>(row[13]->data),
+                .emailId = row[3]->type == DBDataType::NULL_T ? 0 : std::any_cast<int64_t>(row[3]->data),
+                .miiId = row[13]->type == DBDataType::NULL_T ? 0 : std::any_cast<int64_t>(row[13]->data),
                 .gender = static_cast<bool>(std::any_cast<int64_t>(row[18]->data)),
                 .region = std::any_cast<int64_t>(row[19]->data),
                 .tz = std::any_cast<std::string>(row[20]->data),
@@ -3057,19 +3067,20 @@ void sqlite3Database::processCommand(const std::unique_ptr<Command>& command)
                 .country = std::any_cast<std::string>(row[26]->data),
                 .created = std::any_cast<datetime_t>(row[27]->data),
                 .updated = std::any_cast<datetime_t>(row[28]->data),
-                .email = std::any_cast<std::string>(row[4]->data),
-                .emailParent = static_cast<bool>(std::any_cast<int64_t>(row[5]->data)),
-                .emailPrimary = static_cast<bool>(std::any_cast<int64_t>(row[6]->data)),
-                .emailReachable = static_cast<bool>(std::any_cast<int64_t>(row[7]->data)),
-                .emailType = std::any_cast<std::string>(row[8]->data),
-                .emailUpdatedBy = std::any_cast<std::string>(row[9]->data),
-                .emailValidated = static_cast<bool>(std::any_cast<int64_t>(row[10]->data)),
-                .emailValidatedDate = std::any_cast<datetime_t>(row[11]->data),
-                .emailValidationCode = std::any_cast<std::string>(row[12]->data),
-                .miiName = std::any_cast<std::string>(row[15]->data),
-                .miiData = std::any_cast<std::string>(row[17]->data),
-                .miiPrimary = static_cast<bool>(std::any_cast<int64_t>(row[16]->data)),
-                .miiHash = std::any_cast<std::string>(row[14]->data)
+                .email = row[4]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[4]->data),
+                .emailParent = row[5]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[5]->data)),
+                .emailPrimary = row[6]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[6]->data)),
+                .emailReachable = row[7]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[7]->data)),
+                .emailType = row[8]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[8]->data),
+                .emailUpdatedBy = row[9]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[9]->data),
+                .emailValidated = row[10]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[10]->data)),
+                .emailValidatedDate = row[11]->type == DBDataType::NULL_T ? datetime_t{} : std::any_cast<datetime_t>(row[11]->data),
+                .emailValidationCode = row[12]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[12]->data),
+                .miiName = row[15]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[15]->data),
+                .miiData = row[17]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[17]->data),
+                .miiPrimary = row[16]->type == DBDataType::NULL_T ? false : static_cast<bool>(std::any_cast<int64_t>(row[16]->data)),
+                .miiHash = row[14]->type == DBDataType::NULL_T ? "" : std::any_cast<std::string>(row[14]->data),
+                .isAdmin = static_cast<bool>(std::any_cast<int64_t>(row[29]->data))
             };
             accounts.push_back(std::move(account));
         }

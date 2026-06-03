@@ -71,6 +71,7 @@ export interface Account {
   birthdate?: string;
   created?: number;
   updated?: number;
+  isAdmin?: boolean;
   primaryEmail: AccountEmail;
   mii: AccountMii;
   signedAgreements: AccountAgreement[];
@@ -125,6 +126,7 @@ export interface CreateAccountRequest {
 
 export interface UpdateAccountRequest {
   username?: string;
+  password?: string;
   gender?: string;
   region?: number | string;
   timezone?: string;
@@ -134,6 +136,7 @@ export interface UpdateAccountRequest {
   offDevice?: boolean;
   birthdate?: string;
   active?: boolean;
+  isAdmin?: boolean;
   email?: {
     address?: string;
     parent?: boolean;

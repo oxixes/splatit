@@ -3,6 +3,15 @@ import type { AppConfig } from "~/hooks/useAppConfig";
 import { GAME_MODE_NAMES } from "~/constants/game-modes";
 import type { ClientCountResponse, LobbiesResponse, LobbyCountResponse, FestivalTotalsResponse } from "~/types/splatoon";
 
+export type {
+  ClientCountResponse,
+  FestivalTeamTotal,
+  FestivalTotalsResponse,
+  LobbiesResponse,
+  Lobby,
+  LobbyCountResponse,
+} from "~/types/splatoon";
+
 export async function getClientCount(config: AppConfig): Promise<ClientCountResponse> {
   const apiClient = createApiClient(config);
   return apiClient.get<ClientCountResponse>("/api/v1/splatoon/client_count");
@@ -26,4 +35,3 @@ export async function getFestivalTotals(config: AppConfig, festivalId: number): 
 export function getGameModeName(gameMode: number): string {
   return GAME_MODE_NAMES[gameMode] || `Mode ${gameMode}`;
 }
-

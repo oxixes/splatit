@@ -298,6 +298,7 @@ struct DBUserProfileUpdateQuery {
     std::optional<std::string> country;
     std::optional<datetime_t> created;
     std::optional<datetime_t> updated;
+    std::optional<bool> isAdmin;
 };
 
 struct DBDeviceAttributesInsertOrUpdateQuery {
@@ -398,6 +399,7 @@ struct DBUserData {
     uint32_t pid;
     std::string username;
     std::string password;
+    bool isAdmin;
 };
 
 struct DBGameServerAccessData {
@@ -486,6 +488,7 @@ struct DBUserProfileData {
     std::string miiData;
     bool miiPrimary;
     std::string miiHash;
+    bool isAdmin;
 };
 
 struct DBUserMii {
@@ -818,7 +821,8 @@ public:
                                                                   std::optional<std::string> birthdate,
                                                                   std::optional<std::string> country,
                                                                   std::optional<datetime_t> created,
-                                                                  std::optional<datetime_t> updated);
+                                                                  std::optional<datetime_t> updated,
+                                                                  std::optional<bool> isAdmin = std::nullopt);
     static std::unique_ptr<Command> craftInsertOrUpdateSettingCommand(const std::string& key, const std::string& value);
     static std::unique_ptr<Command> craftInsertOrUpdateFileCommand(const std::string& hash, const std::vector<uint8_t>& data);
     static std::unique_ptr<Command> craftDeleteMiiCommand(int64_t miiId);

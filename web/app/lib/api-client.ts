@@ -1,4 +1,5 @@
 import type { AppConfig } from "~/hooks/useAppConfig";
+import { AUTH_TOKEN_KEY } from "~/contexts/AuthContext";
 
 /**
  * Management API error codes
@@ -49,15 +50,26 @@ export class ApiClient {
     this.baseUrl = config.apiUrl;
   }
 
+  private getHeaders(): HeadersInit {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
   /**
    * Make a GET request to the API
    */
   async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getHeaders(),
     });
 
     if (!response.ok) {
@@ -73,9 +85,7 @@ export class ApiClient {
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
 
@@ -92,9 +102,7 @@ export class ApiClient {
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
 
@@ -111,9 +119,7 @@ export class ApiClient {
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getHeaders(),
     });
 
     if (!response.ok) {
@@ -129,9 +135,7 @@ export class ApiClient {
   async deleteWithBody<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
 
@@ -146,6 +150,14 @@ export class ApiClient {
    * Handle error response from API
    */
   private async handleErrorResponse(response: Response): Promise<never> {
+    if (response.status === 401) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+      throw new ApiError(ManagementError.PERMISSION_DENIED, "Unauthorized", response.status);
+    }
+
     try {
       const errorData = await response.json() as ApiErrorResponse;
       throw new ApiError(errorData.error.code, errorData.error.message, response.status);
@@ -165,4 +177,3 @@ export class ApiClient {
 export function createApiClient(config: AppConfig): ApiClient {
   return new ApiClient(config);
 }
-

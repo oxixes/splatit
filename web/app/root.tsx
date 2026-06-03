@@ -12,7 +12,7 @@ import "./app.css";
 import { AppConfigProvider } from "./contexts/AppConfigContext";
 import { ServerStatusGuard } from "./components/server-status-guard";
 import { ServerStatusProvider } from "./contexts/ServerStatusContext";
-import { SplatoonStatsProvider } from "./contexts/SplatoonStatsContext";
+import { AuthProvider } from "./contexts/AuthContext";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -29,10 +29,11 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add(localStorage.getItem("vite-ui-theme") || "dark")` }} />
         <Meta />
         <Links />
       </head>
@@ -48,13 +49,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AppConfigProvider>
-      <ServerStatusProvider>
-        <SplatoonStatsProvider>
+      <AuthProvider>
+        <ServerStatusProvider>
           <ServerStatusGuard>
             <Outlet />
           </ServerStatusGuard>
-        </SplatoonStatsProvider>
-      </ServerStatusProvider>
+        </ServerStatusProvider>
+      </AuthProvider>
     </AppConfigProvider>
   );
 }
