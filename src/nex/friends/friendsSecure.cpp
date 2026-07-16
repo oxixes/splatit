@@ -26,12 +26,13 @@ using namespace async;
 
 FriendsSecureRMC::FriendsSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
                                    std::string base64JWTKey, std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
-                                   int gRCPPoolMaxSize, int gRCPRequestTimeout):
+                                   int gRCPPoolMaxSize, int gRCPRequestTimeout,
+                                   std::shared_ptr<grpc::ChannelCredentials> grpcCredentials):
         Server(std::move(logger), serverId), db(std::move(db)), base64JWTKey(std::move(base64JWTKey)),
         sharedState(std::move(sharedState)) {
     logGroup = Logger::group::FRIENDS_SECURE;
 
-    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize);
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize, grpcCredentials);
     this->gRCPRequestTimeout = gRCPRequestTimeout;
 
     // Protocol 11 - Secure connection

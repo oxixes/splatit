@@ -63,6 +63,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::shared_ptr<grpc::ChannelCredentials> grpcCredentials = nullptr;
+    if (settingsMgr->isgRPCTlsEnabled()) {
+        try {
+            grpcCredentials = grpcimpl::createTlsChannelCredentials(
+                settingsMgr->getgRPCTlsCertPath(),
+                settingsMgr->getgRPCTlsKeyPath(),
+                settingsMgr->getgRPCTlsCaCertPath());
+            logger->log(Logger::level::INFO, Logger::group::SETUP, "gRPC TLS credentials loaded");
+        } catch (const std::exception& e) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        std::string("Failed to load gRPC TLS credentials: ") + e.what());
+            sock::cleanup();
+            return 1;
+        }
+    }
+
     std::shared_ptr<SocketManager> socketManager(new SocketManager(logger));
 
     std::shared_ptr<db::Database> friendsAuthDB = nullptr;
@@ -201,7 +217,8 @@ int main(int argc, char** argv) {
         friendsSecureRMC = std::make_shared<nex::rmc::FriendsSecureRMC>(logger, friendsSecureDB,
                                                                          settingsMgr->getNEXTokenKey(), sharedState, settingsMgr->getNEXServerID(),
                                                                          settingsMgr->getFriendsSecuregRPCConnectionPoolMaxSize(),
-                                                                         settingsMgr->getFriendsSecuregRPCRequestTimeout());
+                                                                         settingsMgr->getFriendsSecuregRPCRequestTimeout(),
+                                                                         grpcCredentials);
         friendsSecureRMC->registerPRUDPServer(friendsSecureSrv, 1, settingsMgr->getFriendsSecureWorkerCount());
 
         friendsSecureSrv->listen(stop);
@@ -303,7 +320,8 @@ int main(int argc, char** argv) {
                                                                   false);
 
         splatoonSecureRMC = std::make_shared<nex::rmc::SplatoonSecureRMC>(logger, splatoonSecureDB, sharedState, settingsMgr->getNEXServerID(),
-            settingsMgr->getSplatoonSecuregRPCConnectionPoolMaxSize(), settingsMgr->getSplatoonSecuregRPCRequestTimeout());
+            settingsMgr->getSplatoonSecuregRPCConnectionPoolMaxSize(), settingsMgr->getSplatoonSecuregRPCRequestTimeout(),
+            grpcCredentials);
         splatoonSecureRMC->registerPRUDPServer(splatoonSecureSrv, 1, settingsMgr->getSplatoonSecureWorkerCount());
 
         splatoonSecureSrv->listen(stop);
@@ -425,7 +443,7 @@ int main(int argc, char** argv) {
                 return 1;
             }
 
-            acc::registerRoutes(httpServer, settingsMgr, certManager, accountsDB);
+            acc::registerRoutes(httpServer, settingsMgr, certManager, accountsDB, grpcCredentials);
         }
 
         if (settingsMgr->isBOSSEnabled())
@@ -496,7 +514,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        mgm::registerRoutes(managementServer, settingsMgr, managementDB, logger);
+        mgm::registerRoutes(managementServer, settingsMgr, managementDB, logger, grpcCredentials);
         managementServer->listen(settingsMgr->getManagementWorkerCount(), stop);
     }
 
@@ -518,7 +536,11 @@ int main(int argc, char** argv) {
 
             grpcServer = std::make_shared<grpcimpl::Server>(logger, settingsMgr->getgRPCListenAddress(),
                                                             settingsMgr->isgRPCReflectionEnabled(),
-                                                            serverPtrs);
+                                                            serverPtrs,
+                                                            settingsMgr->isgRPCTlsEnabled(),
+                                                            settingsMgr->getgRPCTlsCertPath(),
+                                                            settingsMgr->getgRPCTlsKeyPath(),
+                                                            settingsMgr->getgRPCTlsCaCertPath());
             grpcServer->listen();
         } catch (const std::exception& e) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
@@ -539,7 +561,7 @@ int main(int argc, char** argv) {
     }
 
     // Create a channel pool for the global task scheduler to make boss gRPC calls
-    auto taskSchedulerChannelPool = std::make_shared<grpcimpl::ChannelPool>(10);
+    auto taskSchedulerChannelPool = std::make_shared<grpcimpl::ChannelPool>(10, grpcCredentials);
     util::GlobalTaskScheduler::createInstance(accountsDB, logger, settingsMgr, managementDB, taskSchedulerChannelPool);
 
 #ifdef _WIN32

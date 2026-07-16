@@ -422,8 +422,10 @@ async::Task<void> requireAdmin(http::Server* srv, std::shared_ptr<http::Context>
 } // namespace
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
-                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger) {
-    channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getManagementgRPCConnectionPoolMaxSize());
+                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger,
+                    std::shared_ptr<grpc::ChannelCredentials> grpcCredentials) {
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(
+        settingsMgr->getManagementgRPCConnectionPoolMaxSize(), grpcCredentials);
     serverHosts = std::move(settingsMgr->getManagementServerAddresses());
     for (const auto& [type, hostList] : serverHosts) {
         serverHostsIndexRoundRobin[type] = 0;

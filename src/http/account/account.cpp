@@ -765,9 +765,11 @@ bool init(const std::shared_ptr<Logger::Logger>& logger) {
 }
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<crypto::CertManager> certMgr, std::shared_ptr<db::Database> db) {
+                    std::shared_ptr<crypto::CertManager> certMgr, std::shared_ptr<db::Database> db,
+                    std::shared_ptr<grpc::ChannelCredentials> grpcCredentials) {
 
-    channelPool = std::make_shared<grpcimpl::ChannelPool>(settingsMgr->getAccountsgRPCConnectionPoolMaxSize());
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(
+        settingsMgr->getAccountsgRPCConnectionPoolMaxSize(), grpcCredentials);
     gameServerHosts = std::move(settingsMgr->getGameServerHosts());
     for (const auto& host : gameServerHosts) {
         gameServerHostIndexRoundRobin[host.first] = 0;

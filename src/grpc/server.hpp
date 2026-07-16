@@ -3,7 +3,10 @@
 
 #include <memory>
 #include <thread>
+#include <filesystem>
 #include <grpcpp/grpcpp.h>
+
+namespace fs = std::filesystem;
 
 #include "../logger.hpp"
 #include "../socket/socket.hpp"
@@ -36,7 +39,8 @@ struct gRPCServerData {
 
 class Server {
 public:
-    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData);
+    Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData,
+           bool tlsEnabled = false, fs::path tlsCertPath = {}, fs::path tlsKeyPath = {}, fs::path tlsCaCertPath = {});
     ~Server();
 
     void listen();
@@ -63,6 +67,10 @@ private:
     std::shared_ptr<grpcimpl::boss_config::v1::BossServiceImpl> bossService;
 
     bool reflectionEnabled = false;
+    bool tlsEnabled = false;
+    fs::path tlsCertPath;
+    fs::path tlsKeyPath;
+    fs::path tlsCaCertPath;
 };
 
 } // namespace grpc

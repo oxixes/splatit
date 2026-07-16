@@ -561,6 +561,24 @@ bool SettingsManager::isgRPCReflectionEnabled() const {
     return settings["grpc"].contains("reflection") && settings["grpc"]["reflection"].get<bool>();
 }
 
+bool SettingsManager::isgRPCTlsEnabled() const {
+    return settings.contains("grpc") && settings["grpc"].contains("tls") && settings["grpc"]["tls"].contains("certPath") &&
+        settings.contains("grpc") && settings["grpc"].contains("tls") && settings["grpc"]["tls"].contains("keyPath") &&
+        settings.contains("grpc") && settings["grpc"].contains("tls") && settings["grpc"]["tls"].contains("caCertPath");
+}
+
+fs::path SettingsManager::getgRPCTlsCertPath() const {
+    return settings["grpc"]["tls"]["certPath"].get<std::string>();
+}
+
+fs::path SettingsManager::getgRPCTlsKeyPath() const {
+    return settings["grpc"]["tls"]["keyPath"].get<std::string>();
+}
+
+fs::path SettingsManager::getgRPCTlsCaCertPath() const {
+    return settings["grpc"]["tls"]["caCertPath"].get<std::string>();
+}
+
 json SettingsManager::getAccountsDBSettings() const {
     return settings["accounts"]["db"];
 }

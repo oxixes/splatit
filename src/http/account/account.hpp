@@ -218,7 +218,8 @@ bool sendEmail(const std::shared_ptr<Logger::Logger>& logger, const std::shared_
 bool init(const std::shared_ptr<Logger::Logger>& logger);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, std::shared_ptr<SettingsManager> settingsMgr,
-                    std::shared_ptr<crypto::CertManager> certMgr, std::shared_ptr<db::Database> db);
+                    std::shared_ptr<crypto::CertManager> certMgr, std::shared_ptr<db::Database> db,
+                    std::shared_ptr<grpc::ChannelCredentials> grpcCredentials = nullptr);
 
 async::Task<bool> deleteFriendsServerAccountForAccount(
     uint32_t pid,

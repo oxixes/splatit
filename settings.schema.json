@@ -109,6 +109,25 @@
         "publicFacingAddress": {
           "description": "Public facing address for other servers to connect to",
           "type": "string"
+        },
+        "tls": {
+          "description": "TLS settings for gRPC mutual authentication",
+          "type": "object",
+          "properties": {
+            "certPath": {
+              "description": "Path to the certificate file used as both server and client cert",
+              "type": "string"
+            },
+            "keyPath": {
+              "description": "Path to the private key file",
+              "type": "string"
+            },
+            "caCertPath": {
+              "description": "Path to the CA certificate file for verifying peers",
+              "type": "string"
+            }
+          },
+          "required": ["certPath", "keyPath", "caCertPath"]
         }
       },
       "if": {

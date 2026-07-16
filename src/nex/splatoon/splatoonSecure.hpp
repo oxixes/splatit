@@ -22,7 +22,8 @@ class SplatoonSecureRMC : public Server {
 public:
     explicit SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
                                std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
-                               int gRCPPoolMaxSize, int gRCPRequestTimeout);
+                               int gRCPPoolMaxSize, int gRCPRequestTimeout,
+                               const std::shared_ptr<grpc::ChannelCredentials>& grpcCredentials = nullptr);
     ~SplatoonSecureRMC() override = default;
 
     async::Task<bool> sendNotification(ClientInfo client, NotificationType type, uint32_t srcPid, uint32_t param1, uint32_t param2,

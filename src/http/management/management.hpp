@@ -109,7 +109,8 @@ std::unique_ptr<http::Response> prepareResponse(const std::shared_ptr<http::Cont
 std::unique_ptr<http::Response> prepareCORSPreflightResponse(const std::shared_ptr<http::Context>& ctx, const std::shared_ptr<SettingsManager>& settingsMgr, const std::string& allowedMethods, bool& keepAlive);
 
 void registerRoutes(const std::shared_ptr<http::Server>& server, const std::shared_ptr<SettingsManager>& settingsMgr,
-                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger);
+                    const std::shared_ptr<db::Database>& mgmDb, const std::shared_ptr<Logger::Logger>& logger,
+                    std::shared_ptr<grpc::ChannelCredentials> grpcCredentials = nullptr);
 
 } // namespace mgm
 

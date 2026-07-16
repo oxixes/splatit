@@ -2,16 +2,33 @@
 
 #include <utility>
 #include <thread>
+#include <fstream>
+#include <sstream>
 
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
 namespace grpcimpl {
 
-Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData) {
+static std::string readFile(const fs::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + path.string());
+    }
+    std::stringstream ss;
+    ss << file.rdbuf();
+    return ss.str();
+}
+
+Server::Server(std::shared_ptr<Logger::Logger> logger, sock::IPv4Addr listenDir, bool reflection, gRPCServerData serverData,
+               bool tlsEnabled, fs::path tlsCertPath, fs::path tlsKeyPath, fs::path tlsCaCertPath) {
     this->logger = std::move(logger);
     this->listenDir = listenDir;
     this->reflectionEnabled = reflection;
     this->serverData = std::move(serverData);
+    this->tlsEnabled = tlsEnabled;
+    this->tlsCertPath = std::move(tlsCertPath);
+    this->tlsKeyPath = std::move(tlsKeyPath);
+    this->tlsCaCertPath = std::move(tlsCaCertPath);
 }
 
 Server::~Server() {
@@ -60,7 +77,24 @@ void Server::listen() {
         grpc::reflection::InitProtoReflectionServerBuilderPlugin();
     }
     grpc::ServerBuilder builder;
-    builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), grpc::InsecureServerCredentials());
+
+    std::shared_ptr<grpc::ServerCredentials> creds;
+    if (tlsEnabled) {
+        grpc::SslServerCredentialsOptions tlsOptions;
+        tlsOptions.pem_root_certs = readFile(tlsCaCertPath);
+        tlsOptions.pem_key_cert_pairs.push_back({
+            readFile(tlsKeyPath),
+            readFile(tlsCertPath)
+        });
+        tlsOptions.client_certificate_request = GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
+        creds = grpc::SslServerCredentials(tlsOptions);
+        logger->log(Logger::level::INFO, Logger::group::GRPC,
+                    "gRPC server using TLS with client certificate verification");
+    } else {
+        creds = grpc::InsecureServerCredentials();
+    }
+
+    builder.AddListeningPort(listenIPv4 + ":" + std::to_string(listenDir.port), creds);
 
     if (authService != nullptr) builder.RegisterService(authService.get());
     if (internalAccountManagementService != nullptr) builder.RegisterService(internalAccountManagementService.get());

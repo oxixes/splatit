@@ -94,6 +94,10 @@ public:
     [[nodiscard]] sock::IPv4Addr getgRPCListenAddress() const;
     [[nodiscard]] std::string getgRCPPublicFacingAddress() const;
     [[nodiscard]] bool isgRPCReflectionEnabled() const;
+    [[nodiscard]] bool isgRPCTlsEnabled() const;
+    [[nodiscard]] fs::path getgRPCTlsCertPath() const;
+    [[nodiscard]] fs::path getgRPCTlsKeyPath() const;
+    [[nodiscard]] fs::path getgRPCTlsCaCertPath() const;
 
     [[nodiscard]] std::vector<std::string> getDomains() const;
 

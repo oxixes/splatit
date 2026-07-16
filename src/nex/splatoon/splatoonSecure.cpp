@@ -47,12 +47,13 @@ Task<std::optional<std::unordered_map<uint32_t, SessionInfo>>> getAllSplatoonMat
 
 SplatoonSecureRMC::SplatoonSecureRMC(std::shared_ptr<Logger::Logger> logger, std::shared_ptr<db::Database> db,
                                      std::shared_ptr<ss::SharedState> sharedState, uint32_t serverId,
-                                     int gRCPPoolMaxSize, int gRCPRequestTimeout):
+                                     int gRCPPoolMaxSize, int gRCPRequestTimeout,
+                                     const std::shared_ptr<grpc::ChannelCredentials>& grpcCredentials):
                                      Server(std::move(logger), serverId), db(std::move(db)),
                                      sharedState(std::move(sharedState)), gRCPRequestTimeout(gRCPRequestTimeout) {
     logGroup = Logger::group::SPLATOON_SECURE;
 
-    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize);
+    channelPool = std::make_shared<grpcimpl::ChannelPool>(gRCPPoolMaxSize, grpcCredentials);
 
     // Protocol 3 - NAT Traversal
     REGISTER_CALL(SplatoonSecureRMC::requestProbeInitiationExt, 3, 3);

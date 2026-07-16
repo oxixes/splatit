@@ -26,7 +26,7 @@ add_subdirectory(lib/pugixml)
 target_link_libraries(splatoon_server PRIVATE pugixml::pugixml)
 
 find_package(SQLite3 REQUIRED)
-target_link_libraries(splatoon_server PRIVATE SQLite::SQLite3)
+target_link_libraries(splatoon_server PRIVATE SQLite3::SQLite3)
 
 find_package(mailio CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE mailio::mailio)
