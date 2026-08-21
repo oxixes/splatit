@@ -38,7 +38,10 @@ jobs:
             build_dir: build
             exe: splatoon_server
           - platform: windows-x64
-            os: windows-latest
+            # Pinned rather than windows-latest: that label moved to an
+            # image without Visual Studio 2022, and the vcpkg baseline
+            # this project pins predates the newer toolset.
+            os: windows-2022
             triplet: x64-windows
             build_dir: build/Release
             exe: splatoon_server.exe
@@ -105,7 +108,9 @@ jobs:
           # The first run compiles gRPC, Boost and OpenSSL from source and takes
           # the best part of an hour. Later runs hit the binary cache.
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cmake -B build -S . -G "Visual Studio 17 2022" -A x64 \
+            # No -G: CMake picks the newest Visual Studio present, so a
+            # future runner bump needs no edit here.
+            cmake -B build -S . -A x64 \
               -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
               -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}"
           else
