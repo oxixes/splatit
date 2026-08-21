@@ -17,7 +17,7 @@ Nothing here is scheduled. It is a list of the gaps worth closing.
   a website that shows statistics and other information about the game. The game can be played 
   without SplatNet, but it is a nice feature to have.
 
-## Not Panned
+## Not Planned
 
 The following are not planned to be implemented as they require a lot of work and the game does not need them.
 
