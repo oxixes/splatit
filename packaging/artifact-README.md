@@ -8,7 +8,8 @@ Full documentation: <https://github.com/oxixes/splatit>
 
 ```text
 splatoon_server[.exe]        the server
-*.dll                        runtime libraries (Windows only)
+*.dll                        bundled dependencies, Windows only; the Microsoft
+                             C and C++ runtime is not among them, see below
 settings.schema.json         validates data/settings.json
 boss.schema.json             validates the BOSS manifest
 account_settings.html        the in-game account settings web view
@@ -25,6 +26,26 @@ fetch-tzdata.ps1             time zone database installer (Windows only)
 
 The server opens every file in that list by relative path, so run it from this
 directory. Moving the binary somewhere else on its own will not work.
+
+## Windows: install the Visual C++ Redistributable
+
+The `.dll` files beside the executable cover the libraries this server was built
+against, but not the Microsoft C and C++ runtime itself. Without it Windows
+refuses to start the process, reporting `VCRUNTIME140.dll` or `MSVCP140.dll` as
+missing.
+
+Install the x64 **Visual C++ Redistributable for Visual Studio 2015-2022** from
+Microsoft, or through a package manager:
+
+```text
+winget install Microsoft.VCRedist.2015+.x64
+```
+
+Machines with Visual Studio, or with almost any other native application
+installed, usually have it already.
+
+Linux and macOS need no equivalent. Every dependency is linked statically into
+the binary there, so it relies only on the system C and C++ runtime.
 
 ## Windows: install the time zone database first
 
