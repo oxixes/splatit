@@ -1244,9 +1244,9 @@ export default function SplatfestEditor({ params }: Route.ComponentProps) {
                                   <div className="space-y-2">
                                       <p className="text-sm font-medium text-blue-500">Timing Guidelines</p>
                                       <ul className="text-sm text-muted-foreground space-y-1">
-                                          <li>• Announce Time should be before Start Time</li>
-                                          <li>• Start Time should be before End Time</li>
-                                          <li>• Result Time should be after End Time</li>
+                                          <li>• Announce Time must be before Start Time</li>
+                                          <li>• Start Time must be before End Time</li>
+                                          <li>• Result Time must be after End Time</li>
                                           <li>• Festival can be in the past but must always have one active</li>
                                       </ul>
                                   </div>

@@ -47,6 +47,8 @@ export function CreateDeviceDialog({
       platform: platform,
       region: region,
       systemVersion: systemVersion.trim(),
+      updatedBy: 'SYSTEM',
+      status: 'ACTIVE',
       type: type.trim(),
     };
 

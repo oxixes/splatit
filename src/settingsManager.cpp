@@ -384,7 +384,7 @@ bool SettingsManager::isgRPCEnabled() const {
 }
 
 bool SettingsManager::isManagementEnabled() const {
-    return settings["management"]["enabled"];
+    return settings.contains("management") && settings["management"]["enabled"];
 }
 
 bool SettingsManager::hasCAKey() const {
@@ -554,6 +554,7 @@ sock::IPv4Addr SettingsManager::getgRPCListenAddress() const {
 }
 
 std::string SettingsManager::getgRCPPublicFacingAddress() const {
+    if (!settings.contains("grpc") || !settings["grpc"].contains("publicFacingAddress")) return "";
     return settings["grpc"]["publicFacingAddress"];
 }
 
@@ -568,14 +569,17 @@ bool SettingsManager::isgRPCTlsEnabled() const {
 }
 
 fs::path SettingsManager::getgRPCTlsCertPath() const {
+    if (!isgRPCTlsEnabled()) return {};
     return settings["grpc"]["tls"]["certPath"].get<std::string>();
 }
 
 fs::path SettingsManager::getgRPCTlsKeyPath() const {
+    if (!isgRPCTlsEnabled()) return {};
     return settings["grpc"]["tls"]["keyPath"].get<std::string>();
 }
 
 fs::path SettingsManager::getgRPCTlsCaCertPath() const {
+    if (!isgRPCTlsEnabled()) return {};
     return settings["grpc"]["tls"]["caCertPath"].get<std::string>();
 }
 

@@ -25,8 +25,11 @@ target_link_libraries(splatoon_server PRIVATE nlohmann_json::nlohmann_json)
 add_subdirectory(lib/pugixml)
 target_link_libraries(splatoon_server PRIVATE pugixml::pugixml)
 
-find_package(SQLite3 REQUIRED)
-target_link_libraries(splatoon_server PRIVATE SQLite3::SQLite3)
+find_package(unofficial-sqlite3 CONFIG REQUIRED)
+target_link_libraries(splatoon_server PRIVATE unofficial::sqlite3::sqlite3)
+
+find_package(PostgreSQL REQUIRED)
+target_link_libraries(splatoon_server PRIVATE PostgreSQL::PostgreSQL)
 
 find_package(mailio CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE mailio::mailio)

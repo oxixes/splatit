@@ -188,7 +188,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -290,7 +290,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -384,7 +384,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -478,7 +478,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -576,7 +576,8 @@
                     "type": "string",
                     "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
                   }
-                }
+                },
+                "required": ["address", "grpcAddress"]
               },
               "minItems": 1
             }
@@ -612,7 +613,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -741,7 +742,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -845,7 +846,7 @@
             "type": {
               "description": "The database type to use",
               "type": "string",
-              "enum": ["SQLite3"]
+              "enum": ["SQLite3", "PostgreSQL"]
             },
             "path": {
               "description": "Path to the database file",
@@ -1115,7 +1116,7 @@
     {
       "required": ["management"],
       "properties": {
-        "splatoonSecure": {
+        "management": {
           "properties": {
             "enabled": {
               "const": true
@@ -1176,6 +1177,36 @@
         "required": ["splatoonAuth"],
         "properties": {
           "splatoonAuth": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["nex"]
+      }
+    },
+    {
+      "if": {
+        "required": ["friendsAuth"],
+        "properties": {
+          "friendsAuth": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["nex"]
+      }
+    },
+    {
+      "if": {
+        "required": ["splatoonSecure"],
+        "properties": {
+          "splatoonSecure": {
             "properties": {
               "enabled": { "const": true }
             }

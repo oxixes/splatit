@@ -1,5 +1,6 @@
 #include "database.hpp"
 #include "sqlite3Database.hpp"
+#include "postgresDatabase.hpp"
 
 #include <utility>
 
@@ -1070,6 +1071,13 @@ std::unique_ptr<Command> Database::craftGetFestivalTotalsCommand(uint32_t festiv
 std::shared_ptr<Database> Database::createDatabase(const json& config, const std::shared_ptr<Logger::Logger>& logger) {
     if (config["type"].get<std::string>() == "SQLite3") {
         auto* db = new sqlite3Database(logger, config["path"].get<std::string>());
+        return std::shared_ptr<Database>(static_cast<Database *>(db));
+    }
+
+    if (config["type"].get<std::string>() == "PostgreSQL") {
+        auto* db = new postgresDatabase(logger, config["host"].get<std::string>(),
+                                        config["port"].get<uint16_t>(), config["user"].get<std::string>(),
+                                        config["password"].get<std::string>(), config["name"].get<std::string>());
         return std::shared_ptr<Database>(static_cast<Database *>(db));
     }
 

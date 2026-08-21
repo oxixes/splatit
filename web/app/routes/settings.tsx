@@ -283,20 +283,6 @@ export default function Settings() {
                           </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                          <div className="rounded-lg border border-blue-500/50 bg-blue-500/5 p-4">
-                              <div className="flex items-start gap-3">
-                                  <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
-                                  <div className="space-y-1">
-                                      <p className="text-sm font-medium text-blue-500">Agreement Structure</p>
-                                      <p className="text-sm text-muted-foreground">
-                                          Each agreement is specific to a <strong>type</strong> (EULA or Privacy Policy),
-                                          <strong> country</strong>, and <strong>language</strong>.
-                                          A default agreement is used if no specific combination is found.
-                                      </p>
-                                  </div>
-                              </div>
-                          </div>
-
                           <div className="space-y-2">
                               <div className="overflow-x-auto">
                                   <table className="w-full">
@@ -408,17 +394,6 @@ export default function Settings() {
                       </CardContent>
                   </Card>
 
-                  {/* Default Agreement Info */}
-                  <Card className="border-yellow-500/50 bg-yellow-500/5">
-                      <CardHeader>
-                          <CardTitle className="text-yellow-500">Default Agreement Behavior</CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                          <p>• If no agreement exists for a specific country/language combination, a default message is shown</p>
-                          <p>• Players will see: "Hey, if you are reading this, it means the server administrator has not set up the agreements..."</p>
-                      </CardContent>
-                  </Card>
-
                   {/* Agreement Editor Modal */}
                   <AgreementEditor
                       open={editorOpen}
@@ -484,20 +459,6 @@ export default function Settings() {
                                   <p className="text-sm text-green-500">{festivalMsg}</p>
                               </div>
                           )}
-
-                          <div className="rounded-lg border border-blue-500/50 bg-blue-500/5 p-4">
-                              <div className="flex items-start gap-3">
-                                  <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
-                                  <div className="space-y-1">
-                                      <p className="text-sm font-medium text-blue-500">Splatfest Requirements</p>
-                                      <p className="text-sm text-muted-foreground">
-                                          At least one Splatfest must be active at all times.
-                                          The game requires festival data even if the festival has ended.
-                                          Switch the active festival by clicking the star button.
-                                      </p>
-                                  </div>
-                              </div>
-                          </div>
 
                           <div className="space-y-2">
                               {festivalsLoading ? (
@@ -578,20 +539,6 @@ export default function Settings() {
                                   </div>
                               )}
                           </div>
-                      </CardContent>
-                  </Card>
-
-                   {/* Splatfest Info */}
-                  <Card className="border-blue-500/50 bg-blue-500/5">
-                      <CardHeader>
-                          <CardTitle className="text-blue-500">Festival Configuration</CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                          <p>• <strong>Multi-language:</strong> Support for all 9 languages (EU: DE/EN/ES/FR/IT, JP, US: EN/ES/FR)</p>
-                          <p>• <strong>Dialogue:</strong> Configure announcements, start, and result news with Callie & Marie</p>
-                          <p>• <strong>Teams:</strong> Custom team names, colors, and short names per language</p>
-                          <p>• <strong>Stages:</strong> Select 3 stages for the festival rotation</p>
-                          <p>• <strong>Timing:</strong> Announcement, start, end, result, and bonus periods</p>
                       </CardContent>
                   </Card>
 

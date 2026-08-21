@@ -90,21 +90,6 @@ export default function Home() {
 
           {/* Distributed Architecture Status */}
           <ServerStatusCard showTitle={true} />
-
-          {/* Recent Activity */}
-          <Card>
-              <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest server events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                      <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No recent activity</p>
-                      <p className="text-sm mt-2">Events will appear here when players connect</p>
-                  </div>
-              </CardContent>
-          </Card>
       </div>
   )
 }

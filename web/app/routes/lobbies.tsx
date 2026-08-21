@@ -199,20 +199,6 @@ export default function Lobbies() {
               </CardContent>
           </Card>
 
-          {/* Info Card */}
-          <Card className="border-blue-500/50 bg-blue-500/5">
-              <CardHeader>
-                  <CardTitle className="text-blue-500">Lobby System Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                  <p>• <strong>Regular Play:</strong> Lobbies use the current map rotation from BOSS server</p>
-                  <p>• <strong>Private Lobbies:</strong> Players can choose any map</p>
-                  <p>• <strong>Map Selection:</strong> Players vote on maps - server doesn't track individual matches</p>
-                  <p>• <strong>Multiple Matches:</strong> Each lobby can play several matches before disbanding</p>
-                  <p>• <strong>Auto-refresh:</strong> Lobby list automatically refreshes every minute</p>
-              </CardContent>
-          </Card>
-
           <LobbyDetailsDialog
             config={config}
             lobby={selectedLobby}

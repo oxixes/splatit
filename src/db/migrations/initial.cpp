@@ -86,6 +86,81 @@ bool migration_initial_accounts(const std::shared_ptr<Logger::Logger>& logger, c
 
             sqlCmds.emplace_back("COMMIT;");
             break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE emails (id BIGSERIAL, address TEXT NOT NULL, parent BIGINT NOT NULL,"
+                                 "\"primary\" BIGINT NOT NULL, reachable BIGINT NOT NULL, type TEXT NOT NULL,"
+                                 "updated_by TEXT NOT NULL, validated BIGINT NOT NULL, validated_date TIMESTAMP,"
+                                 "validation_code TEXT, PRIMARY KEY (id));");
+            sqlCmds.emplace_back("CREATE TABLE miis (id BIGSERIAL, hash TEXT NOT NULL, name TEXT NOT NULL,"
+                                 "\"primary\" BIGINT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (id));");
+            sqlCmds.emplace_back("CREATE TABLE users (pid BIGINT, username TEXT NOT NULL, password TEXT NOT NULL,"
+                                 "email_id BIGINT NOT NULL, mii_id BIGINT NOT NULL, gender BIGINT NOT NULL,"
+                                 "region BIGINT NOT NULL, tz TEXT NOT NULL,"
+                                 "language TEXT NOT NULL, active BIGINT NOT NULL, marketing BIGINT NOT NULL,"
+                                 "off_device BIGINT NOT NULL, birth_date TEXT NOT NULL, country TEXT NOT NULL,"
+                                 "create_date TIMESTAMP NOT NULL, last_updated TIMESTAMP NOT NULL, is_admin BIGINT NOT NULL DEFAULT 0,"
+                                 "PRIMARY KEY (pid),"
+                                 "FOREIGN KEY (email_id) REFERENCES emails(id) ON UPDATE CASCADE ON DELETE RESTRICT,"
+                                 "FOREIGN KEY (mii_id) REFERENCES miis(id) ON UPDATE CASCADE ON DELETE RESTRICT);");
+            sqlCmds.emplace_back("CREATE TABLE devices (id BIGINT, language TEXT NOT NULL, platform_id BIGINT NOT NULL,"
+                                 "region BIGINT NOT NULL, serial_num TEXT NOT NULL, system_ver TEXT NOT NULL,"
+                                 "type TEXT NOT NULL, updated_by TEXT NOT NULL, status TEXT NOT NULL,"
+                                 "banned BIGINT NOT NULL, last_updated TIMESTAMP NOT NULL, PRIMARY KEY (id));");
+            sqlCmds.emplace_back("CREATE TABLE device_attributes (device_id BIGINT NOT NULL, pid BIGINT NOT NULL,"
+                                 "name TEXT NOT NULL, value TEXT NOT NULL, created_date TIMESTAMP NOT NULL,"
+                                 "PRIMARY KEY (device_id, pid, name), FOREIGN KEY (device_id) REFERENCES devices(id) "
+                                 "ON UPDATE CASCADE ON DELETE CASCADE, FOREIGN KEY (pid) REFERENCES users(pid) "
+                                 "ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE ownerships (pid BIGINT NOT NULL, device_id BIGINT NOT NULL,"
+                                 "status TEXT NOT NULL, last_updated TIMESTAMP NOT NULL, PRIMARY KEY (pid, device_id),"
+                                 "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY (device_id) REFERENCES devices(id) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE agreements (type TEXT NOT NULL, version BIGINT NOT NULL,"
+                                   "country TEXT NOT NULL, language TEXT NOT NULL, language_name TEXT NOT NULL,"
+                                   "publish_date TIMESTAMP NOT NULL, main_title TEXT NOT NULL, sub_title TEXT NOT NULL,"
+                                   "agree_text TEXT NOT NULL, non_agree_text TEXT NOT NULL, main_text TEXT NOT NULL,"
+                                   "sub_text TEXT NOT NULL, PRIMARY KEY (type, version, country, language));");
+            sqlCmds.emplace_back("CREATE TABLE user_agreements (pid BIGINT NOT NULL, type TEXT NOT NULL, version BIGINT NOT NULL, "
+                                   "country TEXT NOT NULL, signed_date TIMESTAMP NOT NULL, PRIMARY KEY (pid, type, version, country), "
+                                   "FOREIGN KEY (pid) REFERENCES users(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE pending_tasks (id BIGSERIAL PRIMARY KEY, type BIGINT NOT NULL, "
+                                   "params TEXT NOT NULL);");
+            sqlCmds.emplace_back("CREATE TABLE settings (key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (key));");
+
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_username ON users(username);");
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_active_user ON ownerships(pid) WHERE status = 'ACTIVE';");
+
+            sqlCmds.emplace_back("CREATE TABLE pid_sequence (value BIGINT);");
+            sqlCmds.emplace_back("INSERT INTO pid_sequence (value) VALUES (1800000000);");
+            sqlCmds.emplace_back("CREATE FUNCTION set_pid() RETURNS trigger AS $$ "
+                                 "BEGIN "
+                                 "IF NEW.pid = 0 THEN "
+                                 "SELECT value - 1 INTO NEW.pid FROM pid_sequence; "
+                                 "UPDATE pid_sequence SET value = value - 1; "
+                                 "END IF; "
+                                 "RETURN NEW; "
+                                 "END; $$ LANGUAGE plpgsql;");
+            sqlCmds.emplace_back("CREATE TRIGGER set_pid BEFORE INSERT ON users "
+                                 "FOR EACH ROW EXECUTE FUNCTION set_pid();");
+
+            sqlCmds.emplace_back("INSERT INTO emails (id, address, parent, \"primary\", reachable, type, updated_by, "
+                                 "validated, validated_date, validation_code) VALUES "
+                                 "(1, 'admin@splatit.local', 0, 1, 1, 'DEFAULT', 'SYSTEM', 1, '2000-01-01 00:00:00', '000000');");
+            sqlCmds.emplace_back("INSERT INTO miis (id, hash, name, \"primary\", data) VALUES "
+                                 "(1, 'admin00000000', 'admin', 1, '');"); // TODO Add random default mii
+            sqlCmds.emplace_back("ALTER SEQUENCE emails_id_seq RESTART WITH 2;");
+            sqlCmds.emplace_back("ALTER SEQUENCE miis_id_seq RESTART WITH 2;");
+            sqlCmds.emplace_back("INSERT INTO users (pid, username, password, email_id, mii_id, gender, region, tz, "
+                                 "language, active, marketing, off_device, birth_date, country, create_date, "
+                                 "last_updated, is_admin) VALUES (1799999999, 'admin', '" + defaultAdminPasswordHash + "', 1, 1, "
+                                 "0, 1761607680, 'Europe/Madrid', 'en', 1, 0, 0, '', '', '2000-01-01 00:00:00', '2000-01-01 00:00:00', 1);");
+
+            sqlCmds.emplace_back("COMMIT;");
+            break;
     }
 
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
@@ -102,6 +177,15 @@ bool migration_initial_friendsAuth(const std::shared_ptr<Logger::Logger>& logger
                                  "password TEXT NOT NULL, PRIMARY KEY (pid));");
             sqlCmds.emplace_back("COMMIT;");
             break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE game_server_access (pid BIGINT NOT NULL, "
+                                 "password TEXT NOT NULL, PRIMARY KEY (pid));");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
     }
 
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
@@ -115,6 +199,15 @@ bool migration_initial_splatoonAuth(const std::shared_ptr<Logger::Logger>& logge
             sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
             sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
             sqlCmds.emplace_back("CREATE TABLE game_server_access (pid INTEGER NOT NULL, "
+                                 "password TEXT NOT NULL, PRIMARY KEY (pid));");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE game_server_access (pid BIGINT NOT NULL, "
                                  "password TEXT NOT NULL, PRIMARY KEY (pid));");
             sqlCmds.emplace_back("COMMIT;");
             break;
@@ -161,6 +254,39 @@ bool migration_initial_friends(const std::shared_ptr<Logger::Logger>& logger, co
             sqlCmds.emplace_back("INSERT INTO sqlite_sequence (seq, name) VALUES (79999999, 'friend_requests');");
             sqlCmds.emplace_back("COMMIT;");
             break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE user_info (pid BIGINT NOT NULL, username TEXT NOT NULL, show_presence BIGINT NOT NULL DEFAULT (1), "
+                                 "show_playing BIGINT NOT NULL DEFAULT (1), block_requests BIGINT NOT NULL DEFAULT (0), "
+                                 "nna_info BYTEA NOT NULL, presence BYTEA NOT NULL, comment BYTEA NOT NULL, last_online TIMESTAMP NOT NULL, "
+                                 "PRIMARY KEY (pid));");
+            sqlCmds.emplace_back("CREATE TABLE friendships (pid BIGINT NOT NULL, friend_pid BIGINT NOT NULL, became_friends TIMESTAMP NOT NULL,"
+                                 "uidx_u1 BIGINT NOT NULL, uidx_u2 BIGINT NOT NULL, "
+                                 "PRIMARY KEY (pid, friend_pid), FOREIGN KEY(pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY(friend_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE notifications (id BIGSERIAL PRIMARY KEY, \"for\" BIGINT NOT NULL,"
+                                 "value1 BIGINT NOT NULL, value2 BIGINT NOT NULL, value3 BIGINT NOT NULL, value4 BIGINT NOT NULL, "
+                                 "text TEXT NOT NULL, FOREIGN KEY(\"for\") REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE friend_requests (id BIGSERIAL PRIMARY KEY, from_pid BIGINT NOT NULL,"
+                                 "to_pid BIGINT NOT NULL, expiration TIMESTAMP NOT NULL, created_at TIMESTAMP NOT NULL, data BYTEA NOT NULL,"
+                                 "uidx_u1 BIGINT NOT NULL, uidx_u2 BIGINT NOT NULL, "
+                                 "FOREIGN KEY(from_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY(to_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+            sqlCmds.emplace_back("CREATE TABLE blocks (pid BIGINT NOT NULL, blocked_pid BIGINT NOT NULL, created_at TIMESTAMP NOT NULL, "
+                                 "game_key BYTEA NOT NULL, PRIMARY KEY (pid, blocked_pid), "
+                                 "FOREIGN KEY(pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE,"
+                                 "FOREIGN KEY(blocked_pid) REFERENCES user_info(pid) ON UPDATE CASCADE ON DELETE CASCADE);");
+
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_username ON user_info(username);");
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_friendship ON friendships(uidx_u1, uidx_u2);");
+            sqlCmds.emplace_back("CREATE UNIQUE INDEX unique_friend_request ON friend_requests(uidx_u1, uidx_u2);");
+
+            sqlCmds.emplace_back("ALTER SEQUENCE friend_requests_id_seq RESTART WITH 80000000;");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
     }
 
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
@@ -177,6 +303,15 @@ bool migration_initial_boss(const std::shared_ptr<Logger::Logger>& logger, const
             sqlCmds.emplace_back("CREATE TABLE files (hash TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY (hash));");
             sqlCmds.emplace_back("COMMIT;");
             break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE settings (key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (key));");
+            sqlCmds.emplace_back("CREATE TABLE files (hash TEXT NOT NULL, data BYTEA NOT NULL, PRIMARY KEY (hash));");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
     }
 
     return runVoidCommandsSync(logger, db, sqlCmds, "ROLLBACK;");
@@ -191,6 +326,16 @@ bool migration_initial_management(const std::shared_ptr<Logger::Logger>& logger,
             sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
             sqlCmds.emplace_back("CREATE TABLE settings (key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (key));");
             sqlCmds.emplace_back("CREATE TABLE pending_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, type INTEGER NOT NULL, "
+                                 "params TEXT NOT NULL);");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE settings (key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (key));");
+            sqlCmds.emplace_back("CREATE TABLE pending_tasks (id BIGSERIAL PRIMARY KEY, type BIGINT NOT NULL, "
                                  "params TEXT NOT NULL);");
             sqlCmds.emplace_back("COMMIT;");
             break;
@@ -214,6 +359,21 @@ bool migration_initial_splatoonSecure(const std::shared_ptr<Logger::Logger>& log
                                  "total_wins INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
             sqlCmds.emplace_back("CREATE TABLE festival_team_user_counts (festival_id INTEGER NOT NULL, team INTEGER NOT NULL, "
                                  "user_count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
+            sqlCmds.emplace_back("COMMIT;");
+            break;
+
+        case DBType::POSTGRESQL:
+            sqlCmds.emplace_back("BEGIN TRANSACTION;");
+            sqlCmds.emplace_back("CREATE TABLE db_info (version TEXT);");
+            sqlCmds.emplace_back("INSERT INTO db_info (version) VALUES ('0.0.1');");
+            sqlCmds.emplace_back("CREATE TABLE festival_user_teams (festival_id BIGINT NOT NULL, pid BIGINT NOT NULL, "
+                                 "team BIGINT NOT NULL, PRIMARY KEY (festival_id, pid));");
+            sqlCmds.emplace_back("CREATE TABLE festival_user_wins (festival_id BIGINT NOT NULL, pid BIGINT NOT NULL, "
+                                 "won_matches BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, pid));");
+            sqlCmds.emplace_back("CREATE TABLE festival_team_totals (festival_id BIGINT NOT NULL, team BIGINT NOT NULL, "
+                                 "total_wins BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
+            sqlCmds.emplace_back("CREATE TABLE festival_team_user_counts (festival_id BIGINT NOT NULL, team BIGINT NOT NULL, "
+                                 "user_count BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (festival_id, team));");
             sqlCmds.emplace_back("COMMIT;");
             break;
     }

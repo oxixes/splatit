@@ -20,7 +20,8 @@ using json = nlohmann::json;
 namespace db {
 
 enum class DBType {
-    SQLITE3
+    SQLITE3,
+    POSTGRESQL
 };
 
 enum class SystemType {
@@ -637,7 +638,7 @@ protected:
 
 public:
     friend class Database;
-    friend class sqlite3Database;
+    friend class sqlDatabase;
 
     explicit Command(DBCommandType type, std::any data) {
         this->type = type;

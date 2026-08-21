@@ -24,18 +24,6 @@ export default function ServerStatus() {
           </div>
 
           <ServerStatusCard showTitle={true} />
-
-          <Card className="border-blue-500/50 bg-blue-500/5">
-              <CardHeader>
-                  <CardTitle className="text-blue-500">Distributed Architecture</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                  <p>• All servers communicate via <strong>gRPC</strong></p>
-                  <p>• Servers can run on the same machine or distributed across multiple hosts</p>
-                  <p>• Authentication and game servers support load balancing (future feature)</p>
-                  <p>• Each server manages its own database independently</p>
-              </CardContent>
-          </Card>
       </div>
   )
 }

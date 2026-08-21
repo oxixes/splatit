@@ -9,6 +9,10 @@
     "name" : "sqlite3",
     "version>=" : "3.40.1#2"
   }, {
+    "name" : "libpq",
+    "default-features" : false,
+    "features" : [ "openssl" ]
+  }, {
     "name" : "nlohmann-json",
     "version>=" : "3.11.2"
   }, {

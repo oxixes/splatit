@@ -38,6 +38,8 @@ export interface CreateDeviceRequest {
     region: string;
     systemVersion: string;
     type: string;
+    updatedBy: string;
+    status: string;
     banned?: boolean;
 }
 

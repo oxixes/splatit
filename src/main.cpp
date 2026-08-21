@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
         }
 
         if (friendsAuthDB->getVersion() != db::CURRENT_VERSION) {
-            if (!db::migrations::migrate(logger, friendsAuthDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_AUTH,
+            if (!db::migrations::migrate(logger, friendsAuthDB, friendsAuthDB->getType(), db::SystemType::FRIENDS_AUTH,
                                          friendsAuthDB->getVersion())) {
                 friendsAuthDB->close();
                 socketManager->cleanup();
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
         }
 
         if (friendsSecureDB->getVersion() != db::CURRENT_VERSION) {
-            if (!db::migrations::migrate(logger, friendsSecureDB, db::DBType::SQLITE3, db::SystemType::FRIENDS_SECURE,
+            if (!db::migrations::migrate(logger, friendsSecureDB, friendsSecureDB->getType(), db::SystemType::FRIENDS_SECURE,
                                          friendsSecureDB->getVersion())) {
                 friendsSecureDB->close();
                 if (sharedState != nullptr) sharedState->close();
@@ -243,7 +243,7 @@ int main(int argc, char** argv) {
         }
 
         if (splatoonAuthDB->getVersion() != db::CURRENT_VERSION) {
-            if (!db::migrations::migrate(logger, splatoonAuthDB, db::DBType::SQLITE3, db::SystemType::SPLATOON_AUTH,
+            if (!db::migrations::migrate(logger, splatoonAuthDB, splatoonAuthDB->getType(), db::SystemType::SPLATOON_AUTH,
                                          splatoonAuthDB->getVersion())) {
                 splatoonAuthDB->close();
                 if (sharedState != nullptr) sharedState->close();
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
         }
 
         if (splatoonSecureDB->getVersion() != db::CURRENT_VERSION) {
-            if (!db::migrations::migrate(logger, splatoonSecureDB, db::DBType::SQLITE3, db::SystemType::SPLATOON_SECURE,
+            if (!db::migrations::migrate(logger, splatoonSecureDB, splatoonSecureDB->getType(), db::SystemType::SPLATOON_SECURE,
                                          splatoonSecureDB->getVersion())) {
                 splatoonSecureDB->close();
                 if (sharedState != nullptr) sharedState->close();
@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
             }
 
             if (bossDB->getVersion() != db::CURRENT_VERSION) {
-                if (!db::migrations::migrate(logger, bossDB, db::DBType::SQLITE3, db::SystemType::BOSS, bossDB->getVersion())) {
+                if (!db::migrations::migrate(logger, bossDB, bossDB->getType(), db::SystemType::BOSS, bossDB->getVersion())) {
                     bossDB->close();
                     if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
                     if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
             }
 
             if (accountsDB->getVersion() != db::CURRENT_VERSION) {
-                if (!db::migrations::migrate(logger, accountsDB, db::DBType::SQLITE3, db::SystemType::ACCOUNTS,
+                if (!db::migrations::migrate(logger, accountsDB, accountsDB->getType(), db::SystemType::ACCOUNTS,
                                              accountsDB->getVersion())) {
                     accountsDB->close();
                     httpServer->stop();
@@ -474,7 +474,7 @@ int main(int argc, char** argv) {
         }
 
         if (managementDB->getVersion() != db::CURRENT_VERSION) {
-            if (!db::migrations::migrate(logger, managementDB, db::DBType::SQLITE3, db::SystemType::MANAGEMENT,
+            if (!db::migrations::migrate(logger, managementDB, managementDB->getType(), db::SystemType::MANAGEMENT,
                                          managementDB->getVersion())) {
                 managementDB->close();
                 managementDB = nullptr;
