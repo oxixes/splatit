@@ -211,7 +211,6 @@ vcpkg resolves these from `vcpkg.json`:
 | `date` | Time zone conversion |
 | `mailio` | Sending verification and password reset email |
 | `boost-uuid` | Identifier generation |
-| `getopt-win32` | Command line parsing on Windows |
 
 Three more come in as git submodules under `lib/`:
 

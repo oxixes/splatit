@@ -34,11 +34,6 @@ target_link_libraries(splatoon_server PRIVATE PostgreSQL::PostgreSQL)
 find_package(mailio CONFIG REQUIRED)
 target_link_libraries(splatoon_server PRIVATE mailio::mailio)
 
-if(MSVC)
-find_package(unofficial-getopt-win32 REQUIRED)
-target_link_libraries(splatoon_server PRIVATE unofficial::getopt-win32::getopt)
-endif()
-
 add_subdirectory(lib/json-schema-validator)
 target_link_libraries(splatoon_server PRIVATE nlohmann_json_schema_validator)
 
