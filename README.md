@@ -10,9 +10,7 @@ subsystem on a laptop, or several processes can split the work across machines
 and share their live state through Redis. A React admin panel sits on top of a
 REST management API.
 
-**Documentation:** [full docs](docs/index.md), starting with
-[building](docs/building.md), [deployment](docs/deployment.md) and
-[architecture](docs/architecture.md).
+**Documentation:** [full docs](https://splatit.readthedocs.io/en/latest/).
 
 ## What it implements
 
