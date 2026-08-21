@@ -572,9 +572,9 @@
                     "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
                   },
                   "grpcAddress": {
-                    "description": "IP address and port of the gRPC server",
+                    "description": "Host name or IP address, with port, of the gRPC server",
                     "type": "string",
-                    "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                    "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
                   }
                 },
                 "required": ["address", "grpcAddress"]
@@ -592,7 +592,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               },
               "minItems": 1
             }
@@ -825,6 +825,32 @@
           "type": "integer",
           "minimum": 1
         },
+        "ssl": {
+          "description": "TLS settings for the management API. Omit the block to serve plain HTTP.",
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "Enable or disable TLS on the management API",
+              "type": "boolean"
+            },
+            "certPath": {
+              "description": "Path to the certificate the management API presents",
+              "type": "string"
+            },
+            "keyPath": {
+              "description": "Path to the matching private key",
+              "type": "string"
+            }
+          },
+          "required": ["enabled"],
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "required": ["certPath", "keyPath"]
+          }
+        },
         "grpcRequestTimeout": {
           "description": "Timeout for gRPC requests (in milliseconds)",
           "type": "integer",
@@ -898,7 +924,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             },
             "boss": {
@@ -906,7 +932,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             },
             "friendsAuth": {
@@ -914,7 +940,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             },
             "splatoonAuth": {
@@ -922,7 +948,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             },
             "friendsSecure": {
@@ -930,7 +956,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             },
             "splatoonSecure": {
@@ -938,7 +964,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]{1,4})(:[0-9]{1,4})?$"
+                "pattern": "^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?)*):[0-9]{1,5}$"
               }
             }
           },

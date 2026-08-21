@@ -125,7 +125,7 @@ export function AppSidebar() {
                         </Button>
                     </div>
                     <div className="flex items-center gap-1">
-                        {__APP_VERSION__} • <a href="https://github.com/oxixes/splatoon_server_cpp" className="underline" target="_blank">GitHub</a>
+                        {__APP_VERSION__} • <a href="https://github.com/oxixes/splatit" className="underline" target="_blank">GitHub</a>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>

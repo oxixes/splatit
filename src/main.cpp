@@ -493,10 +493,30 @@ int main(int argc, char** argv) {
             }
         }
 
+        const bool managementSSL = settingsMgr->isManagementSSLEnabled();
+        if (managementSSL && !certManager->initManagementTLS()) {
+            managementDB->close();
+            managementDB = nullptr;
+            if (accountsDB != nullptr) accountsDB->close();
+            if (httpServer != nullptr) httpServer->stop();
+            if (splatoonSecureSrv != nullptr) splatoonSecureSrv->stop();
+            if (splatoonSecureDB != nullptr) splatoonSecureDB->close();
+            if (friendsSecureDB != nullptr) friendsSecureDB->close();
+            if (friendsSecureSrv != nullptr) friendsSecureSrv->stop();
+            if (friendsAuthDB != nullptr) friendsAuthDB->close();
+            if (friendsAuthSrv != nullptr) friendsAuthSrv->stop();
+            socketManager->cleanup();
+            certManager->cleanup();
+            sock::cleanup();
+            return 1;
+        }
+
         try {
             managementServer = std::make_shared<http::Server>(logger, socketManager, settingsMgr->getManagementListenAddress(),
                                                               settingsMgr->getManagementKeepAliveTimeout(),
-                                                              false);
+                                                              managementSSL,
+                                                              managementSSL ? certManager->getManagementSSLKey() : nullptr,
+                                                              managementSSL ? certManager->getManagementSSLCert() : nullptr);
         } catch (const std::exception& e) {
             logger->log(Logger::level::FAILURE, Logger::group::SETUP,
                         std::string("An error occurred while initializing the Management server: ") + e.what());

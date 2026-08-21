@@ -281,7 +281,7 @@ bool sqlite3Database::runStatement(sqlite3_stmt* statement, const std::vector<DB
                             std::string datetimeStr(reinterpret_cast<const char *>(sqlite3_column_text(statement, i)));
                             std::istringstream ss(datetimeStr);
                             date::sys_seconds tp;
-                            ss >> date::parse("%Y-%m-%d %H:%M:%S", tp);
+                            date::from_stream(ss, "%Y-%m-%d %H:%M:%S", tp);
                             if (ss.fail()) {
                                 logger->log(Logger::level::FAILURE, Logger::group::DB,
                                             "Failed to parse datetime: " + datetimeStr);

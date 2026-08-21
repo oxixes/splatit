@@ -1,0 +1,117 @@
+{
+  "domain": "nintendo.net",
+
+  "ssl": {
+    "caCert": "/app/data/certs/ca.crt",
+    "caKey": "/app/data/certs/ca.key",
+    "cert": "/app/data/certs/any.nintendo.net.crt",
+    "key": "/app/data/certs/any.nintendo.net.key"
+  },
+
+  "http": {
+    "listenAddress": "0.0.0.0",
+    "listenPort": 443,
+    "workerCount": 4,
+    "keepAliveTimeout": 10,
+    "ssl": true
+  },
+
+  "nex": {
+    "tokenKey": "REPLACE_WITH_THE_SHARED_NEX_TOKEN_KEY_BASE64=",
+    "serverId": 0,
+    "knownProxies": []
+  },
+
+  "grpc": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1999,
+    "reflection": false,
+    "publicFacingAddress": "gateway:1999"
+  },
+
+  "sharedState": {
+    "type": "local"
+  },
+
+  "accounts": {
+    "enabled": true,
+    "tokenKey": "REPLACE_WITH_32_RANDOM_BYTES_BASE64_ENCODED=",
+    "refreshTokenKey": "REPLACE_WITH_32_RANDOM_BYTES_BASE64_ENCODED=",
+    "deviceKeyPath": "/app/data/certs/device.key",
+    "miiImagesPath": "/app/data/miis",
+    "allowRealWiiU": true,
+    "allowGeneratedWiiU": true,
+    "hosts": {
+      "00003200": [
+        { "address": "192.168.1.10:1201", "grpcAddress": "node-a:1999" },
+        { "address": "192.168.1.10:1211", "grpcAddress": "node-b:1999" }
+      ],
+      "10162B00": [
+        { "address": "192.168.1.10:1203", "grpcAddress": "node-a:1999" },
+        { "address": "192.168.1.10:1213", "grpcAddress": "node-b:1999" }
+      ]
+    },
+    "secureServerGrpcAddresses": {
+      "00003200": ["node-a:1999", "node-b:1999"],
+      "10162B00": ["node-a:1999", "node-b:1999"]
+    },
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "accounts"
+    },
+    "email": {
+      "enabled": false
+    },
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 8
+  },
+
+  "boss": {
+    "enabled": true,
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "boss"
+    }
+  },
+
+  "friendsAuth": { "enabled": false },
+  "friendsSecure": { "enabled": false },
+  "splatoonAuth": { "enabled": false },
+  "splatoonSecure": { "enabled": false },
+
+  "management": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "listenPort": 3000,
+    "workerCount": 2,
+    "keepAliveTimeout": 10,
+    "corsOrigin": "http://localhost:8080",
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 8,
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "management"
+    },
+    "servers": {
+      "accounts": ["gateway:1999"],
+      "boss": ["gateway:1999"],
+      "friendsAuth": ["node-a:1999", "node-b:1999"],
+      "splatoonAuth": ["node-a:1999", "node-b:1999"],
+      "friendsSecure": ["node-a:1999", "node-b:1999"],
+      "splatoonSecure": ["node-a:1999", "node-b:1999"]
+    }
+  }
+}

@@ -70,6 +70,9 @@ public:
     [[nodiscard]] sock::IPv4Addr getManagementListenAddress() const;
     [[nodiscard]] int getManagementWorkerCount() const;
     [[nodiscard]] int getManagementKeepAliveTimeout() const;
+    [[nodiscard]] bool isManagementSSLEnabled() const;
+    [[nodiscard]] fs::path getManagementSSLCertPath() const;
+    [[nodiscard]] fs::path getManagementSSLKeyPath() const;
 
     [[nodiscard]] std::set<sock::IPv4Addr> getKnownProxies() const;
 
@@ -113,7 +116,9 @@ public:
     [[nodiscard]] int getAccountsgRPCRequestTimeout() const;
     [[nodiscard]] int getAccountsgRPCConnectionPoolMaxSize() const;
 
-    [[nodiscard]] std::map<ServerType, std::vector<sock::IPv4Addr>> getManagementServerAddresses() const;
+    // gRPC targets stay as strings so they can be host names, not just literal
+    // IPv4 addresses. gRPC resolves them itself.
+    [[nodiscard]] std::map<ServerType, std::vector<std::string>> getManagementServerAddresses() const;
     [[nodiscard]] std::string getManagementCORSAllowedOrigin() const;
     [[nodiscard]] int getManagementgRPCRequestTimeout() const;
     [[nodiscard]] int getManagementgRPCConnectionPoolMaxSize() const;

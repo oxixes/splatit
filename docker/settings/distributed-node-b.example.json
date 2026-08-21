@@ -1,0 +1,122 @@
+{
+  "domain": "nintendo.net",
+
+  "ssl": {
+    "caCert": "/app/data/certs/ca.crt",
+    "cert": "/app/data/certs/any.nintendo.net.crt",
+    "key": "/app/data/certs/any.nintendo.net.key"
+  },
+
+  "http": {
+    "listenAddress": "0.0.0.0",
+    "listenPort": 443,
+    "workerCount": 1,
+    "keepAliveTimeout": 10,
+    "ssl": true
+  },
+
+  "nex": {
+    "tokenKey": "REPLACE_WITH_THE_SHARED_NEX_TOKEN_KEY_BASE64=",
+    "serverId": 2,
+    "knownProxies": []
+  },
+
+  "grpc": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1999,
+    "reflection": false,
+    "publicFacingAddress": "node-b:1999"
+  },
+
+  "sharedState": {
+    "type": "redis",
+    "redis": {
+      "host": "redis",
+      "port": 6379,
+      "password": "",
+      "database": 0,
+      "connectionTimeoutMs": 2000,
+      "commandTimeoutMs": 2000,
+      "useSSL": false,
+      "workerThreads": 2,
+      "clientTTLSeconds": 300
+    }
+  },
+
+  "accounts": { "enabled": false },
+  "boss": { "enabled": false },
+  "management": { "enabled": false },
+
+  "friendsAuth": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1211,
+    "workerCount": 2,
+    "secure": {
+      "address": "192.168.1.10",
+      "port": 1212
+    },
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "friends_auth"
+    }
+  },
+
+  "friendsSecure": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1212,
+    "workerCount": 4,
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 8,
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "friends_secure"
+    }
+  },
+
+  "splatoonAuth": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1213,
+    "workerCount": 2,
+    "secure": {
+      "address": "192.168.1.10",
+      "port": 1214
+    },
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "splatoon_auth"
+    }
+  },
+
+  "splatoonSecure": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1214,
+    "workerCount": 4,
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 8,
+    "db": {
+      "type": "PostgreSQL",
+      "host": "postgres",
+      "port": 5432,
+      "user": "splatit",
+      "password": "REPLACE_ME",
+      "name": "splatoon_secure"
+    }
+  }
+}

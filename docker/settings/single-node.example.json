@@ -1,0 +1,160 @@
+{
+  "domain": "nintendo.net",
+
+  "ssl": {
+    "caCert": "/app/data/certs/ca.crt",
+    "caKey": "/app/data/certs/ca.key",
+    "cert": "/app/data/certs/any.nintendo.net.crt",
+    "key": "/app/data/certs/any.nintendo.net.key"
+  },
+
+  "http": {
+    "listenAddress": "0.0.0.0",
+    "listenPort": 443,
+    "workerCount": 3,
+    "keepAliveTimeout": 10,
+    "ssl": true
+  },
+
+  "nex": {
+    "tokenKey": "REPLACE_WITH_32_RANDOM_BYTES_BASE64_ENCODED=",
+    "serverId": 0,
+    "knownProxies": []
+  },
+
+  "grpc": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1999,
+    "reflection": false,
+    "publicFacingAddress": "127.0.0.1:1999"
+  },
+
+  "sharedState": {
+    "type": "local"
+  },
+
+  "accounts": {
+    "enabled": true,
+    "tokenKey": "REPLACE_WITH_32_RANDOM_BYTES_BASE64_ENCODED=",
+    "refreshTokenKey": "REPLACE_WITH_32_RANDOM_BYTES_BASE64_ENCODED=",
+    "deviceKeyPath": "/app/data/certs/device.key",
+    "miiImagesPath": "/app/data/miis",
+    "allowRealWiiU": true,
+    "allowGeneratedWiiU": true,
+    "hosts": {
+      "00003200": [
+        {
+          "address": "192.168.1.10:1201",
+          "grpcAddress": "127.0.0.1:1999"
+        }
+      ],
+      "10162B00": [
+        {
+          "address": "192.168.1.10:1203",
+          "grpcAddress": "127.0.0.1:1999"
+        }
+      ]
+    },
+    "secureServerGrpcAddresses": {
+      "00003200": ["127.0.0.1:1999"],
+      "10162B00": ["127.0.0.1:1999"]
+    },
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/accounts.db"
+    },
+    "email": {
+      "enabled": false
+    },
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 4
+  },
+
+  "boss": {
+    "enabled": true,
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/boss.db"
+    }
+  },
+
+  "friendsAuth": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1201,
+    "workerCount": 2,
+    "secure": {
+      "address": "192.168.1.10",
+      "port": 1202
+    },
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/friendsAuth.db"
+    }
+  },
+
+  "friendsSecure": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1202,
+    "workerCount": 2,
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 4,
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/friendsSecure.db"
+    }
+  },
+
+  "splatoonAuth": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1203,
+    "workerCount": 2,
+    "secure": {
+      "address": "192.168.1.10",
+      "port": 1204
+    },
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/splatoonAuth.db"
+    }
+  },
+
+  "splatoonSecure": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "port": 1204,
+    "workerCount": 2,
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 4,
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/splatoonSecure.db"
+    }
+  },
+
+  "management": {
+    "enabled": true,
+    "listenAddress": "0.0.0.0",
+    "listenPort": 3000,
+    "workerCount": 1,
+    "keepAliveTimeout": 10,
+    "corsOrigin": "http://localhost:8080",
+    "grpcRequestTimeout": 3000,
+    "grpcConnectionPoolMaxSize": 4,
+    "db": {
+      "type": "SQLite3",
+      "path": "/app/data/management.db"
+    },
+    "servers": {
+      "accounts": ["127.0.0.1:1999"],
+      "boss": ["127.0.0.1:1999"],
+      "friendsAuth": ["127.0.0.1:1999"],
+      "splatoonAuth": ["127.0.0.1:1999"],
+      "friendsSecure": ["127.0.0.1:1999"],
+      "splatoonSecure": ["127.0.0.1:1999"]
+    }
+  }
+}

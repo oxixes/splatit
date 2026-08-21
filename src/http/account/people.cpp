@@ -53,7 +53,7 @@ bool checkAgreement(const pugi::xml_node& agreement) {
     try {
         date::sys_seconds parsedDate;
         std::istringstream ss{agreementDate};
-        ss >> date::parse("%Y-%m-%dT%H:%M:%S", parsedDate);
+        date::from_stream(ss, "%Y-%m-%dT%H:%M:%S", parsedDate);
         if (ss.fail()) {
             return false; // Invalid date format
         }

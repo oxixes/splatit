@@ -38,8 +38,17 @@ public:
     ~CertManager();
 
     bool init();
+
+    // Loads the operator supplied certificate for the management API. Unlike the
+    // console facing certificate, this one is never generated: a management
+    // certificate that no browser trusts would look like working TLS while
+    // offering none.
+    bool initManagementTLS();
+
     EVP_PKEY* getSSLKey();
     X509* getSSLCert();
+    EVP_PKEY* getManagementSSLKey();
+    X509* getManagementSSLCert();
     EVP_PKEY* getDeviceKey();
     DeviceCemuFiles genDeviceCemuFiles(uint32_t deviceId, uint8_t region, const std::string& serialNumber);
     void cleanup();
@@ -53,6 +62,8 @@ private:
     EVP_PKEY* key;
     X509* cert;
     EVP_PKEY* deviceKey;
+    EVP_PKEY* managementKey = nullptr;
+    X509* managementCert = nullptr;
 
     bool loadKey(const fs::path& keyPath, EVP_PKEY** pKey);
     bool loadCert(const fs::path& certPath, X509** outCert);

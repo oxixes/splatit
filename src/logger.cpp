@@ -20,10 +20,13 @@ void Logger::log(level level, group group, const std::string& msg) {
             << "[" << getGroupName(group) << "] "
             << msg << "\n";
 
-#ifndef NDEBUG
-    // Flush the stream to ensure the message is written immediately
+    // Always flush, including in release builds. Whenever stdout is a pipe
+    // rather than a terminal, which is the case under Docker, systemd and any
+    // redirect to a file, the stream is block buffered and nothing appears
+    // until several kilobytes have piled up. That turns the log into a useless
+    // diagnostic exactly where it matters most. At the default log level the
+    // volume is low enough that the extra syscall costs nothing.
     std::cout.flush();
-#endif
 }
 
 void Logger::setMinLevel(level minLevel) {

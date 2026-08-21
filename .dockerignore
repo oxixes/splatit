@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+cmake-build-*/
+build/
+vcpkg_installed/
+data/
+data.zip
+docs/
+node_modules/
+web/node_modules/
+web/build/
+web/.react-router/
+*.log

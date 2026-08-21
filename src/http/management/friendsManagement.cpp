@@ -14,10 +14,10 @@ using json = nlohmann::json;
  * Helper function to try connecting to friends servers in round-robin fashion
  * Returns a pair of channel and the address used (empty if all failed)
  */
-std::pair<std::shared_ptr<grpc::Channel>, sock::IPv4Addr> getSplatoonServerChannel() {
+std::pair<std::shared_ptr<grpc::Channel>, std::string> getSplatoonServerChannel() {
     auto it = serverHosts.find(ServerType::FRIENDS_SECURE);
     if (it == serverHosts.end() || it->second.empty()) {
-        return {nullptr, sock::IPv4Addr{}};
+        return {nullptr, std::string{}};
     }
 
     const auto& hostList = it->second;
@@ -27,7 +27,7 @@ std::pair<std::shared_ptr<grpc::Channel>, sock::IPv4Addr> getSplatoonServerChann
     // Try all servers in round-robin fashion
     do {
         const auto& host = hostList[currentIndex];
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+        auto channel = channelPool->getChannel(host);
 
         if (channel) {
             // Update the round-robin index for next time
@@ -38,7 +38,7 @@ std::pair<std::shared_ptr<grpc::Channel>, sock::IPv4Addr> getSplatoonServerChann
         currentIndex = (currentIndex + 1) % hostList.size();
     } while (currentIndex != startIndex);
 
-    return {nullptr, sock::IPv4Addr{}};
+    return {nullptr, std::string{}};
 }
 
 /*
@@ -65,9 +65,9 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callSplatoonServ
     do {
         const auto& host = hostList[currentIndex];
         ctx->logger->log(Logger::level::DEBUG, Logger::group::MANAGEMENT,
-                        "Trying friends server at " + util::ipv4WPortToString(host));
+                        "Trying friends server at " + host);
 
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+        auto channel = channelPool->getChannel(host);
         if (channel) {
             auto stub = Service::NewStub(channel);
 
@@ -94,11 +94,11 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callSplatoonServ
             }
 
             ctx->logger->log(Logger::level::WARN, Logger::group::MANAGEMENT,
-                            "Failed to contact friends server at " + util::ipv4WPortToString(host) +
+                            "Failed to contact friends server at " + host +
                             ": " + response.second.error_message());
         } else {
             ctx->logger->log(Logger::level::WARN, Logger::group::MANAGEMENT,
-                            "Failed to create channel to friends server at " + util::ipv4WPortToString(host));
+                            "Failed to create channel to friends server at " + host);
         }
 
         currentIndex = (currentIndex + 1) % hostList.size();

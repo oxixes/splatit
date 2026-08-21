@@ -12,7 +12,7 @@
 namespace mgm {
 
 std::shared_ptr<grpcimpl::ChannelPool> channelPool;
-std::map<ServerType, std::vector<sock::IPv4Addr>> serverHosts;
+std::map<ServerType, std::vector<std::string>> serverHosts;
 std::map<ServerType, size_t> serverHostsIndexRoundRobin;
 
 /*
@@ -98,18 +98,18 @@ async::Task<void> mgm_server_status(http::Server* srv, std::shared_ptr<http::Con
             }
 
             serverStatus["type"] = typeStr;
-            serverStatus["address"] = util::ipv4WPortToString(host);
+            serverStatus["address"] = host;
 
             ctx->logger->log(Logger::level::DEBUG, Logger::group::MANAGEMENT,
-                             "Pinging " + typeStr + " server at " + util::ipv4WPortToString(host));
+                             "Pinging " + typeStr + " server at " + host);
 
             // Ping the server
-            auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+            auto channel = channelPool->getChannel(host);
             if (!channel) {
                 // Return error response
                 bool keepAlive = false;
                 std::unique_ptr<http::Response> res = createError(ctx, ManagementError::INTERNAL_ERROR,
-                    "Failed to create gRPC channel to " + util::ipv4ToString(host),
+                    "Failed to create gRPC channel to " + host,
                     settingsMgr->getManagementCORSAllowedOrigin(), keepAlive, HTTP_STATUS_INTERNAL_SERVER_ERROR);
                 srv->sendResponse(std::move(ctx), std::move(res), false);
                 co_return;
@@ -210,7 +210,7 @@ async::Task<void> mgm_login(http::Server* srv, std::shared_ptr<http::Context> ct
     const auto host = hosts[nextHost % hosts.size()];
     nextHost = (nextHost + 1) % hosts.size();
 
-    auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+    auto channel = channelPool->getChannel(host);
     if (!channel) {
         bool keepAlive = false;
         auto res = createError(ctx, ManagementError::BAD_GATEWAY, "Failed to create gRPC channel to account server",

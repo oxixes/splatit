@@ -122,7 +122,48 @@ bool CertManager::init() {
     return true;
 }
 
+bool CertManager::initManagementTLS() {
+    const fs::path certPath = settingsManager->getManagementSSLCertPath();
+    const fs::path keyPath = settingsManager->getManagementSSLKeyPath();
+
+    if (!fs::exists(certPath) || !fs::is_regular_file(certPath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The management certificate " + certPath.string() + " does not exist or is not a file.");
+        return false;
+    }
+
+    if (!fs::exists(keyPath) || !fs::is_regular_file(keyPath)) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The management private key " + keyPath.string() + " does not exist or is not a file.");
+        return false;
+    }
+
+    logger->log(Logger::level::INFO, Logger::group::SETUP, "Loading management certificate...");
+    if (!loadCert(certPath, &managementCert)) return false;
+    if (!loadKey(keyPath, &managementKey)) return false;
+
+    // Catch a mismatched pair here rather than during the first TLS handshake,
+    // where it would surface as an opaque client side error.
+    if (X509_check_private_key(managementCert, managementKey) != 1) {
+        logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                    "The management certificate and private key do not match: " + util::getOpenSSLError());
+        return false;
+    }
+
+    return true;
+}
+
 void CertManager::cleanup() {
+    if (managementCert) {
+        X509_free(managementCert);
+        managementCert = nullptr;
+    }
+
+    if (managementKey) {
+        EVP_PKEY_free(managementKey);
+        managementKey = nullptr;
+    }
+
     if (cert) {
         X509_free(cert);
         cert = nullptr;
@@ -854,6 +895,14 @@ EVP_PKEY* CertManager::getSSLKey() {
 
 X509* CertManager::getSSLCert() {
     return cert;
+}
+
+EVP_PKEY* CertManager::getManagementSSLKey() {
+    return managementKey;
+}
+
+X509* CertManager::getManagementSSLCert() {
+    return managementCert;
 }
 
 EVP_PKEY* CertManager::getDeviceKey() {

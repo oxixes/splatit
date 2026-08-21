@@ -451,6 +451,21 @@ int SettingsManager::getManagementKeepAliveTimeout() const {
     return settings["management"]["keepAliveTimeout"];
 }
 
+bool SettingsManager::isManagementSSLEnabled() const {
+    // The block is optional, so a settings file written before management TLS
+    // existed keeps working and stays on plain HTTP.
+    if (!settings["management"].contains("ssl")) return false;
+    return settings["management"]["ssl"]["enabled"].get<bool>();
+}
+
+fs::path SettingsManager::getManagementSSLCertPath() const {
+    return {settings["management"]["ssl"]["certPath"].get<std::string>()};
+}
+
+fs::path SettingsManager::getManagementSSLKeyPath() const {
+    return {settings["management"]["ssl"]["keyPath"].get<std::string>()};
+}
+
 std::set<sock::IPv4Addr> SettingsManager::getKnownProxies() const {
     std::set<sock::IPv4Addr> knownProxies;
 
@@ -689,8 +704,8 @@ int SettingsManager::getAccountsgRPCConnectionPoolMaxSize() const {
     return settings["accounts"]["grpcConnectionPoolMaxSize"];
 }
 
-std::map<ServerType, std::vector<sock::IPv4Addr>> SettingsManager::getManagementServerAddresses() const {
-    std::map<ServerType, std::vector<sock::IPv4Addr>> serverAddresses;
+std::map<ServerType, std::vector<std::string>> SettingsManager::getManagementServerAddresses() const {
+    std::map<ServerType, std::vector<std::string>> serverAddresses;
 
     for (const auto& [serverName, addressList] : settings["management"]["servers"].items()) {
         ServerType serverType;
@@ -702,9 +717,9 @@ std::map<ServerType, std::vector<sock::IPv4Addr>> SettingsManager::getManagement
         else if (serverName == "splatoonSecure") serverType = ServerType::SPLATOON_SECURE;
         else continue;
 
-        std::vector<sock::IPv4Addr> addresses;
+        std::vector<std::string> addresses;
         for (const auto& addressStr : addressList) {
-            addresses.push_back(util::stringToIPv4WPort(addressStr.get<std::string>()));
+            addresses.push_back(addressStr.get<std::string>());
         }
 
         serverAddresses[serverType] = std::move(addresses);

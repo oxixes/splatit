@@ -1,0 +1,143 @@
+# Distributed deployment: a gateway node that serves accounts, BOSS and the
+# management API, plus two game nodes that each run an auth and a secure server
+# pair. PostgreSQL holds the persistent data and Redis holds the live session
+# state that the secure servers share.
+#
+# The services reach each other by service name over Docker's embedded DNS, so
+# the settings files name them directly: gateway, node-a, node-b, postgres and
+# redis. Only the addresses the console dials stay as literal IPv4.
+#
+# Before the first start:
+#   1. cp docker/settings/distributed-gateway.example.json data/gateway/settings.json
+#      cp docker/settings/distributed-node-a.example.json  data/node-a/settings.json
+#      cp docker/settings/distributed-node-b.example.json  data/node-b/settings.json
+#   2. Replace REPLACE_ME and every REPLACE_WITH_... placeholder. The three
+#      files must share the same nex.tokenKey and each must keep a different
+#      nex.serverId.
+#   3. Replace 192.168.1.10 with the LAN address the console reaches.
+#   4. Start postgres on its own once, so it creates the databases, then bring
+#      up the gateway alone, then the two game nodes. Starting everything at the
+#      same time makes several processes race to run the initial migration.
+#
+# See docs/deployment.md for the full walkthrough.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: splatit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: splatit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: splatit
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-databases.sql:ro
+    networks:
+      - splatit
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U splatit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: splatit-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    networks:
+      - splatit
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: splatit/server:latest
+    container_name: splatit-gateway
+    restart: unless-stopped
+    command: ["--data", "/app/data", "--log-level", "1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data/gateway:/app/data
+    ports:
+      - "443:443/tcp"
+      - "3000:3000/tcp"
+    networks:
+      - splatit
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/v1/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  node-a:
+    image: splatit/server:latest
+    container_name: splatit-node-a
+    restart: unless-stopped
+    command: ["--data", "/app/data", "--log-level", "1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data/node-a:/app/data
+    ports:
+      - "1201:1201/udp"
+      - "1202:1202/udp"
+      - "1203:1203/udp"
+      - "1204:1204/udp"
+    networks:
+      - splatit
+
+  node-b:
+    image: splatit/server:latest
+    container_name: splatit-node-b
+    restart: unless-stopped
+    command: ["--data", "/app/data", "--log-level", "1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data/node-b:/app/data
+    ports:
+      - "1211:1211/udp"
+      - "1212:1212/udp"
+      - "1213:1213/udp"
+      - "1214:1214/udp"
+    networks:
+      - splatit
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: splatit/web:latest
+    container_name: splatit-web
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    volumes:
+      - ./docker/web-config.json:/usr/share/nginx/html/config.json:ro
+    ports:
+      - "8080:80/tcp"
+    networks:
+      - splatit
+
+networks:
+  splatit:
+    driver: bridge
+
+volumes:
+  postgres-data:

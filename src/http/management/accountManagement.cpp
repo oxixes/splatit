@@ -260,9 +260,9 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callAccountServe
     do {
         const auto& host = hostList[currentIndex];
         ctx->logger->log(Logger::level::DEBUG, Logger::group::MANAGEMENT,
-                        "Trying account server at " + util::ipv4WPortToString(host));
+                        "Trying account server at " + host);
 
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(host));
+        auto channel = channelPool->getChannel(host);
         if (channel) {
             auto stub = Service::NewStub(channel);
 
@@ -289,11 +289,11 @@ async::Task<std::pair<std::shared_ptr<Response>, grpc::Status>> callAccountServe
             }
 
             ctx->logger->log(Logger::level::WARN, Logger::group::MANAGEMENT,
-                            "Failed to contact account server at " + util::ipv4WPortToString(host) +
+                            "Failed to contact account server at " + host +
                             ": " + response.second.error_message());
         } else {
             ctx->logger->log(Logger::level::WARN, Logger::group::MANAGEMENT,
-                            "Failed to create channel to account server at " + util::ipv4WPortToString(host));
+                            "Failed to create channel to account server at " + host);
         }
 
         currentIndex = (currentIndex + 1) % hostList.size();

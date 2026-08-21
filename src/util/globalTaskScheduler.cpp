@@ -246,18 +246,18 @@ async::Task<bool> GlobalTaskScheduler::processBossFestivalUpdate(int festivalId)
 
     auto bAddrs = settingsManager->getManagementServerAddresses();
     auto bit = bAddrs.find(ServerType::BOSS);
-    std::vector<sock::IPv4Addr> bAddrList;
+    std::vector<std::string> bAddrList;
     if (bit != bAddrs.end() && !bit->second.empty()) {
         bAddrList = bit->second;
     }
     if (bAddrList.empty()) {
-        bAddrList.push_back(settingsManager->getgRPCListenAddress());
+        bAddrList.push_back(util::ipv4WPortToString(settingsManager->getgRPCListenAddress()));
     }
     if (bAddrList.empty()) co_return false;
 
     bool success = false;
     for (const auto& addr : bAddrList) {
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(addr));
+        auto channel = channelPool->getChannel(addr);
         if (!channel) continue;
 
         auto stub = grpcimpl::boss_config::v1::BossService::NewStub(channel);
@@ -413,7 +413,7 @@ async::Task<bool> GlobalTaskScheduler::processBossFestivalUpdate(int festivalId)
                 try {
                     std::istringstream ss(s);
                     date::sys_seconds timePoint;
-                    ss >> date::parse("%Y-%m-%dT%H:%M", timePoint);
+                    date::from_stream(ss, "%Y-%m-%dT%H:%M", timePoint);
                     if (!ss.fail()) {
                         auto seconds = timePoint.time_since_epoch().count();
                         ts.set_seconds(seconds);
@@ -492,7 +492,7 @@ async::Task<bool> GlobalTaskScheduler::processBossFestivalUpdate(int festivalId)
         }
         logger->log(Logger::level::WARN, Logger::group::GLOBAL_TASKS,
                     "Boss update for festival " + std::to_string(festivalId) + " failed at " +
-                    util::ipv4WPortToString(addr) + ": " + response.second.error_message());
+                    addr + ": " + response.second.error_message());
     }
 
     co_return success;
@@ -537,18 +537,18 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
 
     auto bossAddrs = settingsManager->getManagementServerAddresses();
     auto it = bossAddrs.find(ServerType::BOSS);
-    std::vector<sock::IPv4Addr> addrList;
+    std::vector<std::string> addrList;
     if (it != bossAddrs.end() && !it->second.empty()) {
         addrList = it->second;
     }
     if (addrList.empty()) {
-        addrList.push_back(settingsManager->getgRPCListenAddress());
+        addrList.push_back(util::ipv4WPortToString(settingsManager->getgRPCListenAddress()));
     }
     if (addrList.empty()) co_return false;
 
     bool success = false;
     for (const auto& addr : addrList) {
-        auto channel = channelPool->getChannel(util::ipv4WPortToString(addr));
+        auto channel = channelPool->getChannel(addr);
         if (!channel) continue;
 
         auto stub = grpcimpl::boss_config::v1::BossService::NewStub(channel);
@@ -574,7 +574,7 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
             try {
                 std::istringstream ss(afterFesBonusStartStr);
                 date::sys_seconds timePoint;
-                ss >> date::parse("%Y-%m-%dT%H:%M", timePoint);
+                date::from_stream(ss, "%Y-%m-%dT%H:%M", timePoint);
                 if (!ss.fail()) {
                     auto seconds = timePoint.time_since_epoch().count();
                     config->mutable_after_fes_bonus_start()->set_seconds(seconds);
@@ -594,7 +594,7 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
         try {
             std::istringstream ss("2015-04-17");
             date::sys_days dayPoint;
-            ss >> date::parse("%Y-%m-%d", dayPoint);
+            date::from_stream(ss, "%Y-%m-%d", dayPoint);
             mapDate = dayPoint.time_since_epoch().count();
         } catch (...) {
             mapDate = 0;
@@ -679,7 +679,7 @@ async::Task<bool> GlobalTaskScheduler::processBossVSSettingUpdate() const {
             break;
         }
         logger->log(Logger::level::WARN, Logger::group::GLOBAL_TASKS,
-                    "Boss VS setting update failed at " + util::ipv4WPortToString(addr) + ": " + response.second.error_message());
+                    "Boss VS setting update failed at " + addr + ": " + response.second.error_message());
     }
 
     co_return success;

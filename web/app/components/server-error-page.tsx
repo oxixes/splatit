@@ -151,7 +151,7 @@ export function ServerErrorPage({ error, apiUrl, onOverride }: ServerErrorPagePr
               className="w-full sm:w-auto"
               onClick={() =>
                 window.open(
-                  "https://github.com/oxixes/splatoon_server_cpp",
+                  "https://github.com/oxixes/splatit",
                   "_blank"
                 )
               }

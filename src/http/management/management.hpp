@@ -11,8 +11,7 @@
 
 namespace mgm {
 
-// TODO - Add authentication & authorization
-// TODO - Allow for SSL
+// TODO - Add finer grained authorization than the single admin flag
 
 using json = nlohmann::json;
 constexpr std::time_t MANAGEMENT_SESSION_DURATION_SECONDS = 8 * 60 * 60;
@@ -29,7 +28,7 @@ enum class ManagementError {
 };
 
 extern std::shared_ptr<grpcimpl::ChannelPool> channelPool;
-extern std::map<ServerType, std::vector<sock::IPv4Addr>> serverHosts;
+extern std::map<ServerType, std::vector<std::string>> serverHosts;
 extern std::map<ServerType, size_t> serverHostsIndexRoundRobin;
 
 async::Task<void> mgm_status(http::Server* srv, std::shared_ptr<http::Context> ctx, std::shared_ptr<SettingsManager> settingsMgr);

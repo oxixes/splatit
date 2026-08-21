@@ -236,7 +236,7 @@ bool postgresDatabase::parseResult(PGresult* result, const std::vector<DBDataTyp
                     std::string datetimeStr(value);
                     std::istringstream ss(datetimeStr);
                     date::sys_seconds tp;
-                    ss >> date::parse("%Y-%m-%d %H:%M:%S", tp);
+                    date::from_stream(ss, "%Y-%m-%d %H:%M:%S", tp);
                     if (ss.fail()) {
                         logger->log(Logger::level::FAILURE, Logger::group::DB,
                                     "Failed to parse datetime: " + datetimeStr);

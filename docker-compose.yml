@@ -1,0 +1,59 @@
+# Single node deployment: one server process running every subsystem, backed by
+# SQLite and the in-process shared state, plus the admin web UI.
+#
+# Before the first start:
+#   1. git submodule update --init --recursive
+#   2. mkdir -p data/certs data/miis
+#   3. cp docker/settings/single-node.example.json data/settings.json
+#   4. Edit data/settings.json and replace 192.168.1.10 with the LAN address
+#      that the console reaches this machine on.
+#
+# See docs/deployment.md for the full walkthrough.
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: splatit/server:latest
+    container_name: splatit-server
+    restart: unless-stopped
+    command: ["--data", "/app/data", "--log-level", "1"]
+    volumes:
+      - ./data:/app/data
+    ports:
+      # Account and BOSS over HTTPS
+      - "443:443/tcp"
+      # friends auth / friends secure / Splatoon auth / Splatoon secure
+      - "1201:1201/udp"
+      - "1202:1202/udp"
+      - "1203:1203/udp"
+      - "1204:1204/udp"
+      # Management REST API, consumed by the web UI
+      - "3000:3000/tcp"
+    # The gRPC port stays on the internal network. Publish it only when another
+    # node has to reach this one.
+    expose:
+      - "1999"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/v1/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: splatit/web:latest
+    container_name: splatit-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    volumes:
+      # The UI fetches /config.json at run time, so pointing it at a different
+      # management API needs no rebuild.
+      - ./docker/web-config.json:/usr/share/nginx/html/config.json:ro
+    ports:
+      - "8080:80/tcp"
