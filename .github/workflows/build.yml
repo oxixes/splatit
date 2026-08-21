@@ -120,11 +120,11 @@ jobs:
 
       - name: Package
         shell: bash
-        run: packaging/package.sh "${{ matrix.platform }}" "${{ matrix.build_dir }}" "${{ matrix.exe }}"
+        run: bash packaging/package.sh "${{ matrix.platform }}" "${{ matrix.build_dir }}" "${{ matrix.exe }}"
 
       - name: Smoke test the packaged build
         shell: bash
-        run: packaging/smoke-test.sh "dist/splatit-server-${{ matrix.platform }}" "${{ matrix.exe }}"
+        run: bash packaging/smoke-test.sh "dist/splatit-server-${{ matrix.platform }}" "${{ matrix.exe }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

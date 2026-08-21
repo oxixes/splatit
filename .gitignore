@@ -1,3 +1,8 @@
 cmake-build-*/
 .idea/
 data/
+# Release packages built by packaging/package.sh
+dist/
+
+# Stray root level npm install; the web app has its own
+node_modules/

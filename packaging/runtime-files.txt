@@ -1,0 +1,24 @@
+# Files the server opens by relative path at run time, so they have to sit in
+# the working directory next to the binary. Keep this list in step with the COPY
+# lines in the Dockerfile.
+#
+# Blank lines and lines starting with # are ignored.
+
+# Schemas
+settings.schema.json
+boss.schema.json
+
+# Account server content
+account_settings.html
+countries_languages.json
+regions.json
+timezones.json
+
+# Default Mii images
+miiDefault.png
+miiDefault.tga
+
+# Default Splatfest textures
+PanelTexture.default.png
+BodyTeamA.default.png
+BodyTeamB.default.png
