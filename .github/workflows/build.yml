@@ -1,0 +1,254 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# A new push to the same branch makes the previous run pointless. Let release
+# and tag builds finish regardless, since their artifacts get published.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Must match builtin-baseline in vcpkg.json.
+  VCPKG_BASELINE: 0cb95c860ea83aafc1b24350510b30dec535989a
+  BUILD_TYPE: Release
+  VCPKG_DISABLE_METRICS: 1
+
+jobs:
+  server:
+    name: Server (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            os: ubuntu-latest
+            triplet: x64-linux
+            build_dir: build
+            exe: splatoon_server
+          - platform: windows-x64
+            os: windows-latest
+            triplet: x64-windows
+            build_dir: build/Release
+            exe: splatoon_server.exe
+          - platform: macos-arm64
+            os: macos-latest
+            triplet: arm64-osx
+            build_dir: build
+            exe: splatoon_server
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # pugixml, json-schema-validator and stb come in as submodules and the
+          # build fails immediately without them.
+          submodules: recursive
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build autoconf automake autoconf-archive libtool \
+            bison flex gettext pkg-config tzdata
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja autoconf automake autoconf-archive libtool pkg-config
+
+      - name: Set up vcpkg
+        shell: bash
+        run: |
+          # A full clone is required. In manifest mode vcpkg resolves port
+          # versions by reading tree objects out of the history, so a shallow
+          # clone fails with "failed to unpack tree object".
+          git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          git -C "$RUNNER_TEMP/vcpkg" checkout "$VCPKG_BASELINE"
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_DEFAULT_BINARY_CACHE=$RUNNER_TEMP/vcpkg-cache" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/vcpkg-cache"
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/vcpkg-cache
+          # The baseline and the manifest together decide what gets built, so a
+          # change to either has to invalidate the cache.
+          key: vcpkg-${{ matrix.triplet }}-${{ env.VCPKG_BASELINE }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ matrix.triplet }}-${{ env.VCPKG_BASELINE }}-
+
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            "$VCPKG_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          else
+            "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+
+      - name: Configure
+        shell: bash
+        run: |
+          # The first run compiles gRPC, Boost and OpenSSL from source and takes
+          # the best part of an hour. Later runs hit the binary cache.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmake -B build -S . -G "Visual Studio 17 2022" -A x64 \
+              -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+              -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}"
+          else
+            cmake -B build -S . -G Ninja \
+              -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+              -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+              -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}"
+          fi
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Package
+        shell: bash
+        run: packaging/package.sh "${{ matrix.platform }}" "${{ matrix.build_dir }}" "${{ matrix.exe }}"
+
+      - name: Smoke test the packaged build
+        shell: bash
+        run: packaging/smoke-test.sh "dist/splatit-server-${{ matrix.platform }}" "${{ matrix.exe }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: splatit-server-${{ matrix.platform }}
+          path: dist/splatit-server-${{ matrix.platform }}/
+          if-no-files-found: error
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: splatit-server-${{ matrix.platform }}-archive
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
+
+  web:
+    name: Admin panel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The lock file is deliberately not committed, so the built in npm cache
+      # has nothing to key on. Cache the download directory and key it on
+      # package.json instead.
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - name: Install
+        working-directory: web
+        run: |
+          # npm ci refuses to run without a lock file. Resolving from
+          # package.json keeps this working, and the branch picks ci back up on
+          # its own if a lock file ever lands in the repository.
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Type check
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Package
+        shell: bash
+        run: |
+          # SPA mode puts the whole site under build/client, so that is the
+          # directory a web server should be pointed at.
+          out=dist/splatit-web
+          mkdir -p "$out"
+          cp -r web/build/client/. "$out/"
+          cp packaging/artifact-README.md "$out/README.md"
+          test -f "$out/index.html"
+          test -f "$out/config.json"
+          (cd dist && cmake -E tar czf splatit-web.tar.gz splatit-web)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: splatit-web
+          path: dist/splatit-web/
+          if-no-files-found: error
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: splatit-web-archive
+          path: dist/splatit-web.tar.gz
+          if-no-files-found: error
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -r docs/requirements.txt
+
+      - name: Build
+        run: python -m sphinx -b html docs docs/_build/html
+
+  release:
+    name: Attach to release
+    if: github.event_name == 'release'
+    needs: [server, web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-archive"
+          merge-multiple: true
+          path: archives
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -la archives
+          gh release upload "${{ github.event.release.tag_name }}" \
+            archives/* --clobber --repo "${{ github.repository }}"
