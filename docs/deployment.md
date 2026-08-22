@@ -292,11 +292,6 @@ on the first start, then reuses them. A console rejects that certificate until
 its CA is trusted, which is what the emulator file bundle handles by shipping the
 CA in the `scerts` folder.
 
-For a real console, either install the CA into its certificate store or patch the
-game to skip verification. The repository also carries a development CA under
-`certs/`, useful for local testing and unsuitable for anything else, since its
-private key is public.
-
 ## TLS between nodes
 
 Add a `grpc.tls` block to every node to encrypt and mutually authenticate the
