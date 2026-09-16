@@ -208,6 +208,7 @@ requires `host`, `port`, `authMethod`, `username`, `password`, `sender` and
 | `listenAddress`, `port` | UDP bind address and port. |
 | `workerCount` | Worker threads. |
 | `secure.address`, `secure.port` | Where this auth server sends clients afterwards. The console connects here directly, so use a routable address. |
+| `secure.serverKey` | Optional 32 random bytes, base64 encoded, used to encrypt Kerberos tickets for the secure server. If omitted, the key is taken from the corresponding secure server block (`friendsSecure.serverKey` or `splatoonSecure.serverKey`). Required in distributed setups where the auth server runs without the secure server on the same node. |
 | `db` | Database holding issued credentials. |
 
 ### `friendsSecure` and `splatoonSecure`
@@ -215,6 +216,7 @@ requires `host`, `port`, `authMethod`, `username`, `password`, `sender` and
 | Key | Meaning |
 | --- | --- |
 | `listenAddress`, `port` | UDP bind address and port. |
+| `serverKey` | 32 random bytes, base64 encoded. Secret key used by the secure server to decrypt Kerberos tickets and authenticate sessions. |
 | `workerCount` | Worker threads. Raise this one first when matchmaking feels slow. |
 | `grpcRequestTimeout` | Milliseconds before an outbound gRPC call gives up. |
 | `grpcConnectionPoolMaxSize` | Channels kept per target address. |
@@ -254,8 +256,8 @@ HTTP. [Managing a server](management.md) covers generating one.
 
 ## Generating keys
 
-`tokenKey`, `refreshTokenKey` and `nex.tokenKey` all take 32 random bytes, base64
-encoded:
+`tokenKey`, `refreshTokenKey`, `nex.tokenKey`, `friendsSecure.serverKey` and
+`splatoonSecure.serverKey` all take 32 random bytes, base64 encoded:
 
 ```bash
 openssl rand -base64 32
@@ -268,7 +270,9 @@ openssl rand -base64 32
 Rotating `accounts.tokenKey` invalidates every access token and every management
 session at once. Rotating `nex.tokenKey` invalidates NEX tokens, which drops
 players mid-session, so change it while nobody is playing and change it on every
-node at the same time.
+node at the same time. Rotating `friendsSecure.serverKey` or
+`splatoonSecure.serverKey` invalidates active tickets, and all nodes running or
+routing to that service must share the same key.
 
 ## A minimal single node file
 

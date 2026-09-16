@@ -34,8 +34,9 @@ git clone https://github.com/oxixes/splatit.git && cd splatit && git submodule u
 mkdir -p data/certs data/miis && cp docker/settings/single-node.example.json data/settings.json
 ```
 
-Generate three keys with `openssl rand -base64 32` and paste them into
-`accounts.tokenKey`, `accounts.refreshTokenKey` and `nex.tokenKey`. Then replace
+Generate five keys with `openssl rand -base64 32` and paste them into
+`accounts.tokenKey`, `accounts.refreshTokenKey`, `nex.tokenKey`,
+`friendsSecure.serverKey` and `splatoonSecure.serverKey`. Then replace
 every `192.168.1.10` in `data/settings.json` with the LAN address that the
 console reaches this machine on.
 

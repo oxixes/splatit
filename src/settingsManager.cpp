@@ -156,6 +156,40 @@ bool SettingsManager::validateSettings(const argParser::options& serverOptions) 
         return false;
     }
 
+    bool friendsAuthEnabled = settings.contains("friendsAuth") && settings["friendsAuth"].value("enabled", false);
+    bool friendsSecureEnabled = settings.contains("friendsSecure") && settings["friendsSecure"].value("enabled", false);
+    if (friendsAuthEnabled || friendsSecureEnabled) {
+        try {
+            auto key = getFriendsSecureServerKey();
+            auto decoded = crypto::base64Decode(key);
+            if (decoded.empty()) {
+                logger->log(Logger::level::FAILURE, Logger::group::SETUP, "Friends secure server key is empty");
+                return false;
+            }
+        } catch (const std::exception& ex) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        "Failed to validate friends secure server key: " + std::string(ex.what()));
+            return false;
+        }
+    }
+
+    bool splatoonAuthEnabled = settings.contains("splatoonAuth") && settings["splatoonAuth"].value("enabled", false);
+    bool splatoonSecureEnabled = settings.contains("splatoonSecure") && settings["splatoonSecure"].value("enabled", false);
+    if (splatoonAuthEnabled || splatoonSecureEnabled) {
+        try {
+            auto key = getSplatoonSecureServerKey();
+            auto decoded = crypto::base64Decode(key);
+            if (decoded.empty()) {
+                logger->log(Logger::level::FAILURE, Logger::group::SETUP, "Splatoon secure server key is empty");
+                return false;
+            }
+        } catch (const std::exception& ex) {
+            logger->log(Logger::level::FAILURE, Logger::group::SETUP,
+                        "Failed to validate splatoon secure server key: " + std::string(ex.what()));
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -166,6 +200,8 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
     std::string tokenKeyString;
     std::string refreshTokenKeyString;
     std::string nexTokenKeyString;
+    std::string friendsSecureServerKeyString;
+    std::string splatoonSecureServerKeyString;
 
     try {
         std::vector<unsigned char> tokenKey = crypto::genKey();
@@ -175,10 +211,16 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
         refreshTokenKeyString = crypto::base64Encode(refreshTokenKey);
 
         std::vector<unsigned char> nexTokenKey = crypto::genKey();
-        nexTokenKeyString = crypto::base64Encode(refreshTokenKey);
+        nexTokenKeyString = crypto::base64Encode(nexTokenKey);
+
+        std::vector<unsigned char> friendsSecureServerKey = crypto::genKey();
+        friendsSecureServerKeyString = crypto::base64Encode(friendsSecureServerKey);
+
+        std::vector<unsigned char> splatoonSecureServerKey = crypto::genKey();
+        splatoonSecureServerKeyString = crypto::base64Encode(splatoonSecureServerKey);
     } catch (const std::exception& ex) {
         logger->log(Logger::level::FAILURE, Logger::group::SETUP,
-                    "An error occurred while generating the token keys: " + std::string(ex.what()));
+                    "An error occurred while generating the keys: " + std::string(ex.what()));
         return false;
     }
 
@@ -280,6 +322,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                     {"enabled", true},
                     {"listenAddress", "0.0.0.0"},
                     {"port", 1202},
+                    {"serverKey", friendsSecureServerKeyString},
                     {"workerCount", 3},
                     {"db", {
                         {"type", "SQLite3"},
@@ -292,6 +335,7 @@ bool SettingsManager::generateDefaultSettingsJSON(const argParser::options& serv
                    {"enabled", true},
                    {"listenAddress", "0.0.0.0"},
                    {"port", 1204},
+                   {"serverKey", splatoonSecureServerKeyString},
                    {"workerCount", 3},
                    {"grpcRequestTimeout", 3000}, // in milliseconds
                    {"grpcConnectionPoolMaxSize", 1},
@@ -662,6 +706,28 @@ std::string SettingsManager::getRefreshTokenKey() const {
 
 std::string SettingsManager::getNEXTokenKey() const {
     return settings["nex"]["tokenKey"];
+}
+
+std::string SettingsManager::getFriendsSecureServerKey() const {
+    if (settings.contains("friendsAuth") && settings["friendsAuth"].contains("secure") &&
+        settings["friendsAuth"]["secure"].contains("serverKey")) {
+        return settings["friendsAuth"]["secure"]["serverKey"];
+    }
+    if (settings.contains("friendsSecure") && settings["friendsSecure"].contains("serverKey")) {
+        return settings["friendsSecure"]["serverKey"];
+    }
+    throw std::runtime_error("Friends secure server key not configured");
+}
+
+std::string SettingsManager::getSplatoonSecureServerKey() const {
+    if (settings.contains("splatoonAuth") && settings["splatoonAuth"].contains("secure") &&
+        settings["splatoonAuth"]["secure"].contains("serverKey")) {
+        return settings["splatoonAuth"]["secure"]["serverKey"];
+    }
+    if (settings.contains("splatoonSecure") && settings["splatoonSecure"].contains("serverKey")) {
+        return settings["splatoonSecure"]["serverKey"];
+    }
+    throw std::runtime_error("Splatoon secure server key not configured");
 }
 
 uint32_t SettingsManager::getNEXServerID() const {

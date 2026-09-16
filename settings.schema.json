@@ -177,6 +177,10 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 65535
+            },
+            "serverKey": {
+              "description": "The key to use for encrypting tickets for the friends secure server (base64 encoded). Optional if friendsSecure is configured on the same node",
+              "type": "string"
             }
           },
           "required": ["address", "port"]
@@ -279,6 +283,10 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 65535
+            },
+            "serverKey": {
+              "description": "The key to use for encrypting tickets for the Splatoon secure server (base64 encoded). Optional if splatoonSecure is configured on the same node",
+              "type": "string"
             }
           },
           "required": ["address", "port"]
@@ -351,6 +359,10 @@
           "description": "Enable or disable the friends secure server",
           "type": "boolean"
         },
+        "serverKey": {
+          "description": "The key to use for the friends secure server (32 bytes base64 encoded)",
+          "type": "string"
+        },
         "listenAddress": {
           "description": "IP address to listen to",
           "type": "string",
@@ -434,7 +446,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "db"]
+        "required": ["serverKey", "listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "db"]
       },
       "required": ["enabled"]
     },
@@ -442,8 +454,12 @@
       "description": "Settings for the Splatoon secure server",
       "properties": {
         "enabled": {
-          "description": "Enable or disable the friends secure server",
+          "description": "Enable or disable the Splatoon secure server",
           "type": "boolean"
+        },
+        "serverKey": {
+          "description": "The key to use for the Splatoon secure server (32 bytes base64 encoded)",
+          "type": "string"
         },
         "listenAddress": {
           "description": "IP address to listen to",
@@ -528,7 +544,7 @@
         }
       },
       "then": {
-        "required": ["listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "db"]
+        "required": ["serverKey", "listenAddress", "port", "workerCount", "grpcRequestTimeout", "grpcConnectionPoolMaxSize", "db"]
       },
       "required": ["enabled"]
     },
@@ -1288,6 +1304,68 @@
       },
       "then": {
         "required": ["sharedState"]
+      }
+    },
+    {
+      "if": {
+        "required": ["friendsAuth"],
+        "properties": {
+          "friendsAuth": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          },
+          "friendsSecure": {
+            "not": {
+              "properties": {
+                "enabled": { "const": true }
+              },
+              "required": ["enabled"]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "friendsAuth": {
+            "properties": {
+              "secure": {
+                "required": ["serverKey"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["splatoonAuth"],
+        "properties": {
+          "splatoonAuth": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          },
+          "splatoonSecure": {
+            "not": {
+              "properties": {
+                "enabled": { "const": true }
+              },
+              "required": ["enabled"]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "splatoonAuth": {
+            "properties": {
+              "secure": {
+                "required": ["serverKey"]
+              }
+            }
+          }
+        }
       }
     }
   ]

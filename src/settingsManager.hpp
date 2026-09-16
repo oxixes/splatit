@@ -108,6 +108,8 @@ public:
     [[nodiscard]] std::string getTokenKey() const;
     [[nodiscard]] std::string getRefreshTokenKey() const;
     [[nodiscard]] std::string getNEXTokenKey() const;
+    [[nodiscard]] std::string getFriendsSecureServerKey() const;
+    [[nodiscard]] std::string getSplatoonSecureServerKey() const;
 
     [[nodiscard]] uint32_t getNEXServerID() const;
 

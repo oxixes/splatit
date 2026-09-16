@@ -69,8 +69,9 @@ cp docker/settings/single-node.example.json data/settings.json
 openssl rand -base64 32
 ```
 
-Run it three times and paste the results into `accounts.tokenKey`,
-`accounts.refreshTokenKey` and `nex.tokenKey`.
+Run it five times and paste the results into `accounts.tokenKey`,
+`accounts.refreshTokenKey`, `nex.tokenKey`, `friendsSecure.serverKey` and
+`splatoonSecure.serverKey`.
 
 ### 3. Set the address the console reaches
 
@@ -168,11 +169,15 @@ cp docker/settings/distributed-node-b.example.json  data/node-b/settings.json
 
 ### 2. Fill in the placeholders
 
-Every file contains `REPLACE_ME` and `REPLACE_WITH_...` markers. Three rules
+Every file contains `REPLACE_ME` and `REPLACE_WITH_...` markers. Four rules
 govern the values:
 
 - All three files share one `nex.tokenKey`. A mismatch makes the secure servers
   reject tickets that the auth servers issued.
+- All nodes running the same secure service must share the same secure server key
+  (`friendsSecure.serverKey` and `splatoonSecure.serverKey`). If an auth server runs
+  without the secure server on the same node, set `secure.serverKey` in the auth block
+  to the same key.
 - Each file keeps a different `nex.serverId`. The examples use 0, 1 and 2.
 - Each file keeps its own `grpc.publicFacingAddress`, matching the static
   address that Compose assigns it.
